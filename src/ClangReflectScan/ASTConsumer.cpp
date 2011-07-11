@@ -206,6 +206,7 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name)
 	case (clang::Decl::Enum): AddEnumDecl(decl, name, parent_name); break;
 	case (clang::Decl::Function): AddFunctionDecl(decl, name, parent_name); break;
 	case (clang::Decl::CXXMethod): AddMethodDecl(decl, name, parent_name); break;
+	case (clang::Decl::Field): AddFieldDecl(decl, name, parent_name); break;
 	}
 }
 
@@ -303,6 +304,29 @@ void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const crdb::Name& name, 
 
 	// Parse and add the method
 	MakeFunction(m_DB, decl, name, parent_name, parameters);
+}
+
+
+void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
+{
+	// Cast to a field
+	clang::FieldDecl* field_decl = dyn_cast<clang::FieldDecl>(decl);
+	assert(field_decl != 0 && "Failed to cast to field declaration");
+
+	// Parse and add the field
+	crdb::Field field;
+	if (!MakeField(m_DB, field_decl->getType(), field_decl->getNameAsString().c_str(), parent_name, 0, field))
+	{
+		printf("WARNING: Unsupported type for field %s\n", field_decl->getNameAsString().c_str());
+		return;
+	}
+
+	printf("   Field: %s%s%s %s\n",
+		field.is_const ? "const " : "",
+		field.type->second.c_str(),
+		field.modifier == crdb::Field::MODIFIER_POINTER ? "*" : field.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "",
+		field.name->second.c_str());
+	m_DB.AddPrimitive(field);
 }
 
 

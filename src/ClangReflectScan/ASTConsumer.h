@@ -25,6 +25,7 @@ private:
 	void AddEnumDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name);
 	void AddFunctionDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name);
 	void AddMethodDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name);
+	void AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name);
 	void AddContainedDecls(clang::NamedDecl* decl, const crdb::Name& parent_name);
 
 	crdb::Database m_DB;

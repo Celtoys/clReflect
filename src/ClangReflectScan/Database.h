@@ -81,8 +81,6 @@ namespace crdb
 		Class() : Type(Primitive::KIND_CLASS) { }
 		Class(Name n, Name p) : Type(Primitive::KIND_CLASS, n, p) { }
 
-		// list of fields
-
 		// classes derived from
 	};
 
@@ -121,6 +119,9 @@ namespace crdb
 	};
 
 
+	//
+	// Can be either a class/struct field or a function parameter
+	//
 	struct Field : public Primitive
 	{
 		enum Modifier
@@ -137,6 +138,7 @@ namespace crdb
 		Modifier modifier;
 		bool is_const;
 
+		// Index of the field parameter within its parent function
 		int index;
 
 		// TODO: arrays
