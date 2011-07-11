@@ -43,12 +43,12 @@ namespace
 		const clang::Type* type = sqt.first;
 
 		// Only handle one level of recursion for pointers and references
-		crdb::Parameter::PassBy pass = crdb::Parameter::PASSBY_VALUE;
+		crdb::Parameter::Modifier pass = crdb::Parameter::MODIFIER_VALUE;
 
 		// Get pointee type info if this is a pointer
 		if (const clang::PointerType* ptr_type = dyn_cast<clang::PointerType>(type))
 		{
-			pass = crdb::Parameter::PASSBY_POINTER;
+			pass = crdb::Parameter::MODIFIER_POINTER;
 			qual_type = ptr_type->getPointeeType();
 			sqt = qual_type.split();
 		}
@@ -56,7 +56,7 @@ namespace
 		// Get pointee type info if this is a reference
 		else if (const clang::LValueReferenceType* ref_type = dyn_cast<clang::LValueReferenceType>(type))
 		{
-			pass = crdb::Parameter::PASSBY_REFERENCE;
+			pass = crdb::Parameter::MODIFIER_REFERENCE;
 			qual_type = ref_type->getPointeeType();
 			sqt = qual_type.split();
 		}
@@ -132,7 +132,7 @@ namespace
 			printf("   Returns: %s%s%s\n",
 				return_parameter.is_const ? "const " : "",
 				return_parameter.type->second.c_str(),
-				return_parameter.pass_by == crdb::Parameter::PASSBY_POINTER ? "*" : return_parameter.pass_by == crdb::Parameter::PASSBY_REFERENCE ? "&" : "");
+				return_parameter.modifier == crdb::Parameter::MODIFIER_POINTER ? "*" : return_parameter.modifier == crdb::Parameter::MODIFIER_REFERENCE ? "&" : "");
 			db.AddPrimitive(return_parameter);
 		}
 		else
@@ -146,7 +146,7 @@ namespace
 			printf("   %s%s%s %s\n",
 				i->is_const ? "const " : "",
 				i->type->second.c_str(),
-				i->pass_by == crdb::Parameter::PASSBY_POINTER ? "*" : i->pass_by == crdb::Parameter::PASSBY_REFERENCE ? "&" : "",
+				i->modifier == crdb::Parameter::MODIFIER_POINTER ? "*" : i->modifier == crdb::Parameter::MODIFIER_REFERENCE ? "&" : "",
 				i->name->second.c_str());
 			db.AddPrimitive(*i);
 		}

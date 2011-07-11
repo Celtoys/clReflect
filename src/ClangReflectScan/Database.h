@@ -124,18 +124,18 @@ namespace crdb
 
 	struct Parameter : public Primitive
 	{
-		enum PassBy
+		enum Modifier
 		{
-			PASSBY_VALUE,
-			PASSBY_POINTER,
-			PASSBY_REFERENCE
+			MODIFIER_VALUE,
+			MODIFIER_POINTER,
+			MODIFIER_REFERENCE
 		};
 
-		Parameter() : Primitive(Primitive::KIND_PARAMETER), pass_by(PASSBY_VALUE), is_const(false), index(-1) { }
-		Parameter(Name n, Name p, Name t, PassBy pass, bool c, int i) : Primitive(Primitive::KIND_PARAMETER, n, p), type(t), pass_by(pass), is_const(c), index(i) { }
+		Parameter() : Primitive(Primitive::KIND_PARAMETER), modifier(MODIFIER_VALUE), is_const(false), index(-1) { }
+		Parameter(Name n, Name p, Name t, Modifier pass, bool c, int i) : Primitive(Primitive::KIND_PARAMETER, n, p), type(t), modifier(pass), is_const(c), index(i) { }
 
 		Name type;
-		PassBy pass_by;
+		Modifier modifier;
 		bool is_const;
 
 		int index;
