@@ -4,6 +4,15 @@
 // TODO: inheritance
 // TODO: Parameter names no longer need to be unique
 // TODO: Do we really need fully qualified names at this point, given the use of a multimap?
+// TODO: Could make the hash key a pair of name/parent. This would require multiple lookups but it's linear only with scope depth
+//
+// Primitives that require full names:
+//
+//    * Functions: No. Nothing references functions in code that we are going to reflect.
+//    * Namespaces: No. Nothing references namespaces.
+//    * Enums: Yes. These are types and can be used as fields.
+//    * Classes: Yes. They can be used as fields.
+//    * Fields: No. Nothing references fields.
 //
 // A downside of having everything named is that usually anonymous entities need to be catered for. An example
 // is function return values - they're not named and would usually be stored as a property of the function.
@@ -234,8 +243,40 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 		return;
 	}
 
+	// Can only inherit from one base class for now - offsets change based on derived type
+	if (record_decl->getNumBases() > 1)
+	{
+		printf("WARNING: Class %s has too many bases\n", name->second.c_str());
+		return;
+	}
+
+	// Parse any base classes
+	crdb::Name base_name = m_DB.GetNoName();
+	if (record_decl->getNumBases() > 0)
+	{
+		// Can't support virtual base classes - offsets change at runtime
+		clang::CXXBaseSpecifier& base = *record_decl->bases_begin();
+		if (base.isVirtual())
+		{
+			printf("WARNING: Class has an unsupported virtual base class\n", name->second.c_str());
+			return;
+		}
+
+		// Parse the type name
+		clang::QualType base_type = base.getType();
+		std::string type_name_str = base_type.getAsString();
+		Remove(type_name_str, "struct ");
+		Remove(type_name_str, "class ");
+		base_name = m_DB.GetName(type_name_str.c_str());
+	}
+
+	// Add to the database
 	printf("class %s\n", name->second.c_str());
-	m_DB.AddPrimitive(crdb::Class(name, parent_name));
+	if (base_name != m_DB.GetNoName())
+	{
+		printf("   BASE: %s\n", base_name->second.c_str());
+	}
+	m_DB.AddPrimitive(crdb::Class(name, parent_name, base_name));
 	AddContainedDecls(decl, name);
 }
 

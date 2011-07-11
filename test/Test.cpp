@@ -141,6 +141,30 @@ struct StructGlobalA
 
 
 // --------------------------------------------------------------------------------------------
+// Inheritance relationships
+// --------------------------------------------------------------------------------------------
+namespace Inheritance
+{
+	struct BaseClass
+	{
+	};
+	struct DerivedClass : public BaseClass
+	{
+	};
+	struct ErrorClass
+	{
+	};
+	// These two should kick up warnings
+	struct MultipleInheritanceClass : public BaseClass, public ErrorClass
+	{
+	};
+	struct VirtualInheritanceClass : virtual public BaseClass
+	{
+	};
+}
+
+
+// --------------------------------------------------------------------------------------------
 // Varying field parameter types
 // --------------------------------------------------------------------------------------------
 class FieldTypes

@@ -76,12 +76,17 @@ namespace crdb
 	};
 
 
+	//
+	// Description of a C++ struct or class with containing fields, functions, classes, etc.
+	// Only one base class is supported until it becomes necessary to do otherwise.
+	//
 	struct Class : public Type
 	{
 		Class() : Type(Primitive::KIND_CLASS) { }
-		Class(Name n, Name p) : Type(Primitive::KIND_CLASS, n, p) { }
+		Class(Name n, Name p, Name b) : Type(Primitive::KIND_CLASS, n, p), base_class(b) { }
 
-		// classes derived from
+		// Single base class
+		Name base_class;
 	};
 
 
