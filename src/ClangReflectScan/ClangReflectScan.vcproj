@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!-- PiBDigest: 0S0CDauac-Uz2cr0CAe_yQ== -->
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="ClangReflectScan"
+	ProjectGUID="{51AD9810-A7E7-11E0-885A-F46D04D48D5F}"
+	RootNamespace="ClangReflectScan"
+	Keyword="Win32Proj"
+	>
+	<Platforms>
+		<Platform
+			Name="Win32"
+		/>
+	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="..\..\bin\Debug"
+			IntermediateDirectory="..\..\obj\Debug"
+			ConfigurationType="0"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cd ..\.. &amp; pib debug"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug"
+				CleanCommandLine="cd ..\.. &amp; pib clean debug"
+				Output="..\..\bin\Debug\ClangReflectScan.exe"
+				PreprocessorDefinitions=""
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="..\..\bin\Release"
+			IntermediateDirectory="..\..\obj\Release"
+			ConfigurationType="0"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cd ..\.. &amp; pib release"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release"
+				CleanCommandLine="cd ..\.. &amp; pib clean release"
+				Output="..\..\bin\Release\ClangReflectScan.exe"
+				PreprocessorDefinitions=""
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
+		</Configuration>
+	</Configurations>
+	<References>
+	</References>
+	<Files>
+		<File
+			RelativePath="ASTConsumer.cpp"
+			>
+		</File>
+		<File
+			RelativePath="ASTConsumer.h"
+			>
+		</File>
+		<File
+			RelativePath="ClangReflectScan.cpp"
+			>
+		</File>
+		<File
+			RelativePath="ClangReflectScan.h"
+			>
+		</File>
+		<File
+			RelativePath="Database.cpp"
+			>
+		</File>
+		<File
+			RelativePath="Database.h"
+			>
+		</File>
+		<File
+			RelativePath="Main.cpp"
+			>
+		</File>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>
