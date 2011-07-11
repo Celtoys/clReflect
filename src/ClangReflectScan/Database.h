@@ -112,6 +112,9 @@ namespace crdb
 	};
 
 
+	//
+	// A function or class method with a list of parameters and a return value.
+	//
 	struct Function : public Primitive
 	{
 		Function() : Primitive(Primitive::KIND_FUNCTION), nb_parameters(0) { }

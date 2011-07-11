@@ -83,7 +83,7 @@ crdb::u32 crdb::MurmurHash3(const void* key, int len, u32 seed)
 crdb::Database::Database()
 {
 	// Create the global namespace that everything should ultimately reference
-	Name parent = GetName("Global");
+	Name parent = GetNoName();
 	AddPrimitive(Namespace(parent, m_Names.end()));
 
 	// Create a selection of basic C++ types

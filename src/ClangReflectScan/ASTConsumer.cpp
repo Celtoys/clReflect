@@ -3,6 +3,7 @@
 // TODO: unnamed parameters
 // TODO: inheritance
 // TODO: Parameter names no longer need to be unique
+// TODO: Do we really need fully qualified names at this point, given the use of a multimap?
 //
 // A downside of having everything named is that usually anonymous entities need to be catered for. An example
 // is function return values - they're not named and would usually be stored as a property of the function.
@@ -165,7 +166,8 @@ ASTConsumer::~ASTConsumer()
 
 void ASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef d)
 {
-	crdb::Name parent_name = m_DB.GetName("Global");
+	// Root namespace
+	crdb::Name parent_name = m_DB.GetNoName();
 
 	// Iterate over every named declaration
 	for (clang::DeclGroupRef::iterator i = d.begin(); i != d.end(); ++i)
@@ -257,11 +259,17 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const crdb::Name& name, co
 		llvm::APSInt value = constant_decl->getInitVal();
 		__int64 value_int = value.getRawData()[0];
 
-		// Add to the databse - the name of the constant is relative to the parent of the enum
-		// while the parent of the constant is the enum itself
-		crdb::Name constant_name = m_DB.GetName((parent_name->second + "::" + constant_decl->getNameAsString()).c_str());
-		m_DB.AddPrimitive(crdb::EnumConstant(constant_name, name, value_int));
-		printf("   %s = 0x%x\n", constant_name->second.c_str(), value_int);
+		// Clang doesn't construct the enum name as a C++ compiler would see it so do that first
+		// NOTE: May want to revisit this later
+		std::string constant_name = constant_decl->getNameAsString();
+		if (parent_name != m_DB.GetNoName())
+		{
+			constant_name = parent_name->second + "::" + constant_name;
+		}
+
+		// Add to the database
+		m_DB.AddPrimitive(crdb::EnumConstant(m_DB.GetName(constant_name.c_str()), name, value_int));
+		printf("   %s = 0x%x\n", constant_name.c_str(), value_int);
 	}
 }
 
