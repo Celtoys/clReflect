@@ -7,9 +7,9 @@
 //	* references to other types
 //	64-bit types
 //	wchar_t
-//	overloaded functions
+//	* overloaded functions
 //	* unnamed function parameters
-//	method constness
+//	* method constness
 //	typedef
 //	arrays
 //	inheritance
@@ -128,6 +128,15 @@ struct StructGlobalA
 	void OverloadTest(int a) { }
 	void OverloadTest(int a, int b) { }
 	void OverloadTest(int a, int b, int c) { }
+
+	// Constness of the 'this' pointer
+	char TestConstMethod(int a, float fb) const { return 0; }
+
+	// Static with no 'this'
+	static void StaticEmptyFunction() { }
+	static int StaticRetFunction() { return 0; }
+	static void StaticParamFunction(int a) { }
+	static int StaticRetParamFunction(int a) { return a; }
 };
 
 

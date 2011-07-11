@@ -1,5 +1,6 @@
 
 #include "ClangReflectScan.h"
+#include "ASTConsumer.h"
 
 #include "llvm/Support/Host.h"
 #include "llvm/Support/raw_ostream.h"
@@ -49,7 +50,7 @@ ClangReflectScan::ClangReflectScan()
 }
 
 
-void ClangReflectScan::ConsumeAST(const char* filename, clang::ASTConsumer& ast_consumer)
+void ClangReflectScan::ConsumeAST(const char* filename)
 {
 	// Need a source manager for managing all loaded C++ files
 	clang::SourceManager source_manager(*m_Diagnostic, *m_FileManager);
@@ -69,6 +70,7 @@ void ClangReflectScan::ConsumeAST(const char* filename, clang::ASTConsumer& ast_
 	clang::ASTContext ast_context(m_LangOptions, source_manager, *m_TargetInfo, id_table, selector_table, builtin_context, 0);
 
 	// Create a semantic analysis object
+	ASTConsumer ast_consumer(ast_context);
 	clang::Sema sema(preprocessor, ast_context, ast_consumer);
 
 	// Get the file  from the file system

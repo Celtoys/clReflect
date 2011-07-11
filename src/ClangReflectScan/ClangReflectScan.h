@@ -18,7 +18,7 @@ class ClangReflectScan
 public:
 	ClangReflectScan();
 
-	void ConsumeAST(const char* filename, clang::ASTConsumer& ast_consumer);
+	void ConsumeAST(const char* filename);
 
 private:
 	clang::LangOptions m_LangOptions;

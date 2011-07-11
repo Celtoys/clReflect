@@ -118,9 +118,6 @@ namespace crdb
 		Function(Name n, Name p, int np) : Primitive(Primitive::KIND_FUNCTION, n, p), nb_parameters(np) { }
 
 		int nb_parameters;
-
-		// return parameter
-		// list of parameters
 	};
 
 

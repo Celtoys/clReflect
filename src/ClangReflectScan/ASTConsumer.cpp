@@ -2,6 +2,7 @@
 // TODO: Is it worth reflecting anonymous enumerations, given they can only be used to pass function parameters?
 // TODO: unnamed parameters
 // TODO: inheritance
+// TODO: Parameter names no longer need to be unique
 //
 // A downside of having everything named is that usually anonymous entities need to be catered for. An example
 // is function return values - they're not named and would usually be stored as a property of the function.
@@ -82,10 +83,77 @@ namespace
 		parameter = crdb::Parameter(db.GetName(param_name), parent_name, type_name, pass, qualifiers.hasConst(), index);
 		return true;
 	}
+
+
+	void MakeFunction(crdb::Database& db, clang::NamedDecl* decl, crdb::Name function_name, crdb::Name parent_name, std::vector<crdb::Parameter>& parameters)
+	{
+		// Cast to a function
+		clang::FunctionDecl* function_decl = dyn_cast<clang::FunctionDecl>(decl);
+		assert(function_decl != 0 && "Failed to cast to function declaration");
+
+		// Only add the function once
+		if (!function_decl->isFirstDeclaration())
+		{
+			return;
+		}
+
+		// Parse the return type
+		crdb::Parameter return_parameter;
+		if (!MakeParameter(db, function_decl->getResultType(), 0, function_name, -1, return_parameter))
+		{
+			printf("WARNING: Unsupported return type for %s\n", function_name->second.c_str());
+			return;
+		}
+
+		// Try to gather every parameter successfully before adding the function
+		int index = parameters.size();
+		for (clang::FunctionDecl::param_iterator i = function_decl->param_begin(); i != function_decl->param_end(); ++i)
+		{
+			clang::ParmVarDecl* param_decl = *i;
+
+			// Collect a list of constructed parameters in case evaluating one of them fails
+			crdb::Parameter parameter;
+			if (!MakeParameter(db, param_decl->getType(),param_decl->getNameAsString().c_str(), function_name, index++, parameter))
+			{
+				printf("WARNING: Unsupported parameter type for %s\n", param_decl->getNameAsString().c_str());
+				return;
+			}
+			parameters.push_back(parameter);
+		}
+
+		// Add the function
+		printf("function %s\n", function_name->second.c_str());
+		db.AddPrimitive(crdb::Function(function_name, parent_name, index));
+
+		// Only add the return parameter if it's non-void
+		if (return_parameter.type->second != "void")
+		{
+			printf("   Returns: %s%s%s\n",
+				return_parameter.is_const ? "const " : "",
+				return_parameter.type->second.c_str(),
+				return_parameter.pass_by == crdb::Parameter::PASSBY_POINTER ? "*" : return_parameter.pass_by == crdb::Parameter::PASSBY_REFERENCE ? "&" : "");
+			db.AddPrimitive(return_parameter);
+		}
+		else
+		{
+			printf("   Returns: void (not added)\n");
+		}
+
+		// Add the parameters
+		for (std::vector<crdb::Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+		{
+			printf("   %s%s%s %s\n",
+				i->is_const ? "const " : "",
+				i->type->second.c_str(),
+				i->pass_by == crdb::Parameter::PASSBY_POINTER ? "*" : i->pass_by == crdb::Parameter::PASSBY_REFERENCE ? "&" : "",
+				i->name->second.c_str());
+			db.AddPrimitive(*i);
+		}
+	}
 }
 
 
-ASTConsumer::ASTConsumer()
+ASTConsumer::ASTConsumer(clang::ASTContext& context) : m_ASTContext(context)
 {
 }
 
@@ -200,86 +268,33 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const crdb::Name& name, co
 
 void ASTConsumer::AddFunctionDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
 {
-	// Cast to a function
-	clang::FunctionDecl* function_decl = dyn_cast<clang::FunctionDecl>(decl);
-	assert(function_decl != 0 && "Failed to cast to function declaration");
-
-	// Only add the function once
-	if (!function_decl->isFirstDeclaration())
-	{
-		return;
-	}
-
-	// Parse the return type
-	crdb::Parameter return_parameter;
-	if (!MakeParameter(m_DB, function_decl->getResultType(), 0, name, -1, return_parameter))
-	{
-		printf("WARNING: Unsupported return type for %s\n", name->second.c_str());
-		return;
-	}
-
-	// Try to gather every parameter successfully before adding the function
-	int index = 0;
+	// Parse and add the function
 	std::vector<crdb::Parameter> parameters;
-	for (clang::FunctionDecl::param_iterator i = function_decl->param_begin(); i != function_decl->param_end(); ++i)
-	{
-		clang::ParmVarDecl* param_decl = *i;
-
-		// Collect a list of constructed parameters in case evaluating one of them fails
-		crdb::Parameter parameter;
-		if (!MakeParameter(m_DB, param_decl->getType(),param_decl->getNameAsString().c_str(), name, index++, parameter))
-		{
-			printf("WARNING: Unsupported parameter type for %s\n", param_decl->getNameAsString().c_str());
-			return;
-		}
-		parameters.push_back(parameter);
-	}
-
-	// Add the function
-	printf("function %s\n", name->second.c_str());
-	m_DB.AddPrimitive(crdb::Function(name, parent_name, index));
-
-	// Only add the return parameter if it's non-void
-	if (return_parameter.type->second != "void")
-	{
-		printf("   Returns: %s%s%s\n",
-			return_parameter.is_const ? "const " : "",
-			return_parameter.type->second.c_str(),
-			return_parameter.pass_by == crdb::Parameter::PASSBY_POINTER ? "*" : return_parameter.pass_by == crdb::Parameter::PASSBY_REFERENCE ? "&" : "");
-	}
-	else
-	{
-		printf("   Returns: void (not added)\n");
-	}
-
-	// Add the parameters
-	for (std::vector<crdb::Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
-	{
-		printf("   %s%s%s %s\n",
-			i->is_const ? "const " : "",
-			i->type->second.c_str(),
-			i->pass_by == crdb::Parameter::PASSBY_POINTER ? "*" : i->pass_by == crdb::Parameter::PASSBY_REFERENCE ? "&" : "",
-			i->name->second.c_str());
-		m_DB.AddPrimitive(*i);
-	}
+	MakeFunction(m_DB, decl, name, parent_name, parameters);
 }
 
 
 void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
 {
-	clang::FunctionDecl* function_decl = dyn_cast<clang::FunctionDecl>(decl);
+	// Cast to a method
 	clang::CXXMethodDecl* method_decl = dyn_cast<clang::CXXMethodDecl>(decl);
+	assert(method_decl != 0 && "Failed to cast to C++ method declaration");
 
-	// Only add the function once
-	if (!method_decl->isFirstDeclaration())
+	std::vector<crdb::Parameter> parameters;
+	if (method_decl->isInstance())
 	{
-		return;
+		// Parse the 'this' type, treating it as the first parameter to the method
+		crdb::Parameter this_param;
+		if (!MakeParameter(m_DB, method_decl->getThisType(m_ASTContext), "this", name, 0, this_param))
+		{
+			printf("WARNING: Unsupported 'this' type for %s\n", name->second.c_str());
+			return;
+		}
+		parameters.push_back(this_param);
 	}
 
-	// TODO: enum parameters
-	// TODO: get return parameter
-	printf("method %s\n", name->second.c_str());
-	m_DB.AddPrimitive(crdb::Function(name, parent_name, 0));
+	// Parse and add the method
+	MakeFunction(m_DB, decl, name, parent_name, parameters);
 }
 
 
