@@ -124,7 +124,7 @@ namespace
 
 		// Add the function
 		printf("function %s\n", function_name->second.c_str());
-		db.AddPrimitive(crdb::Function(function_name, parent_name, index));
+		db.AddPrimitive(crdb::Function(function_name, parent_name));
 
 		// Only add the return parameter if it's non-void
 		if (return_parameter.type->second != "void")

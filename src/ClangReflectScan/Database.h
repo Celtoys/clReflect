@@ -65,6 +65,9 @@ namespace crdb
 	};
 
 
+	//
+	// A basic built-in type that classes/structs can also inherit from
+	//
 	struct Type : public Primitive
 	{
 		Type() : Primitive(Primitive::KIND_TYPE) { }
@@ -80,9 +83,6 @@ namespace crdb
 		Class(Name n, Name p) : Type(Primitive::KIND_CLASS, n, p) { }
 
 		// list of fields
-		// list of functions
-		// list of enums
-		// list of classes
 
 		// classes derived from
 	};
@@ -117,10 +117,8 @@ namespace crdb
 	//
 	struct Function : public Primitive
 	{
-		Function() : Primitive(Primitive::KIND_FUNCTION), nb_parameters(0) { }
-		Function(Name n, Name p, int np) : Primitive(Primitive::KIND_FUNCTION, n, p), nb_parameters(np) { }
-
-		int nb_parameters;
+		Function() : Primitive(Primitive::KIND_FUNCTION) { }
+		Function(Name n, Name p) : Primitive(Primitive::KIND_FUNCTION, n, p) { }
 	};
 
 
