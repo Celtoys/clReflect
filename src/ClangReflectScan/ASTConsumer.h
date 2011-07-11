@@ -13,7 +13,7 @@ namespace clang
 class ASTConsumer : public clang::ASTConsumer
 {
 public:
-	ASTConsumer(clang::ASTContext& context);
+	ASTConsumer(clang::ASTContext& context, crdb::Database& db);
     virtual ~ASTConsumer();
 
     virtual void HandleTopLevelDecl(clang::DeclGroupRef d);
@@ -28,7 +28,7 @@ private:
 	void AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name);
 	void AddContainedDecls(clang::NamedDecl* decl, const crdb::Name& parent_name);
 
-	crdb::Database m_DB;
+	crdb::Database& m_DB;
 
 	clang::ASTContext& m_ASTContext;
 };

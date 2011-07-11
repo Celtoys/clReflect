@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="Windows-1252"?>
-<!-- PiBDigest: 0S0CDauac-Uz2cr0CAe_yQ== -->
+<!-- PiBDigest: A8YhTKizhl9uk5jaSCAIoQ== -->
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="ClangReflectScan"
-	ProjectGUID="{51AD9810-A7E7-11E0-885A-F46D04D48D5F}"
+	ProjectGUID="{DFDF846E-ABDB-11E0-9C68-F46D04D48D5F}"
 	RootNamespace="ClangReflectScan"
 	Keyword="Win32Proj"
 	>
@@ -28,7 +28,7 @@
 				BuildCommandLine="cd ..\.. &amp; pib debug"
 				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug"
 				CleanCommandLine="cd ..\.. &amp; pib clean debug"
-				Output="..\..\bin\Debug\ClangReflectScan.exe"
+				Output="..\..\bin\Debug\crscan.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -49,7 +49,7 @@
 				BuildCommandLine="cd ..\.. &amp; pib release"
 				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release"
 				CleanCommandLine="cd ..\.. &amp; pib clean release"
-				Output="..\..\bin\Release\ClangReflectScan.exe"
+				Output="..\..\bin\Release\crscan.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -84,6 +84,14 @@
 		</File>
 		<File
 			RelativePath="Database.h"
+			>
+		</File>
+		<File
+			RelativePath="DatabaseTextSerialiser.cpp"
+			>
+		</File>
+		<File
+			RelativePath="DatabaseTextSerialiser.h"
 			>
 		</File>
 		<File

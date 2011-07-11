@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 9.00
 # Visual Studio 2005
-Project("{B96EC0F0-A715-11E0-976D-F46D04D48D5F}") = "ClangReflectScan", "src\ClangReflectScan\ClangReflectScan.vcproj", "{B96D8870-A715-11E0-A898-F46D04D48D5F}"
+Project("{DFE0E400-ABDB-11E0-8364-F46D04D48D5F}") = "ClangReflectScan", "src\ClangReflectScan\ClangReflectScan.vcproj", "{DFDF846E-ABDB-11E0-9C68-F46D04D48D5F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -8,10 +8,10 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B96D8870-A715-11E0-A898-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
-		{B96D8870-A715-11E0-A898-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
-		{B96D8870-A715-11E0-A898-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
-		{B96D8870-A715-11E0-A898-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
+		{DFDF846E-ABDB-11E0-9C68-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DFDF846E-ABDB-11E0-9C68-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
+		{DFDF846E-ABDB-11E0-9C68-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
+		{DFDF846E-ABDB-11E0-9C68-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

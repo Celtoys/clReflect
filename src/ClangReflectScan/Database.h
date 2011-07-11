@@ -183,7 +183,6 @@ namespace crdb
 		void AddPrimitive(const Function& prim);
 		void AddPrimitive(const Field& prim);
 
-	private:
 		// All unique, scope-qualified names
 		NameMap m_Names;
 

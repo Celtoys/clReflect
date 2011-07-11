@@ -50,7 +50,7 @@ ClangReflectScan::ClangReflectScan()
 }
 
 
-void ClangReflectScan::ConsumeAST(const char* filename)
+void ClangReflectScan::ConsumeAST(const char* filename, crdb::Database& db)
 {
 	// Need a source manager for managing all loaded C++ files
 	clang::SourceManager source_manager(*m_Diagnostic, *m_FileManager);
@@ -70,7 +70,7 @@ void ClangReflectScan::ConsumeAST(const char* filename)
 	clang::ASTContext ast_context(m_LangOptions, source_manager, *m_TargetInfo, id_table, selector_table, builtin_context, 0);
 
 	// Create a semantic analysis object
-	ASTConsumer ast_consumer(ast_context);
+	ASTConsumer ast_consumer(ast_context, db);
 	clang::Sema sema(preprocessor, ast_context, ast_consumer);
 
 	// Get the file  from the file system

@@ -163,7 +163,9 @@ namespace
 }
 
 
-ASTConsumer::ASTConsumer(clang::ASTContext& context) : m_ASTContext(context)
+ASTConsumer::ASTConsumer(clang::ASTContext& context, crdb::Database& db)
+	: m_ASTContext(context)
+	, m_DB(db)
 {
 }
 

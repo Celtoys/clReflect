@@ -32,7 +32,8 @@ lib_paths_release = [
 ]
 
 defines = [
-    "_SCL_SECURE_NO_WARNINGS"
+    "_SCL_SECURE_NO_WARNINGS",
+    "_CRT_SECURE_NO_WARNINGS"
 ]
 
 # These are to allow clang/llvm to compile without hogging the output window
@@ -71,7 +72,7 @@ hpp_files = Glob("src/ClangReflectScan", "*.h")
 lib_files = [ env.NewFile(file) for file in libs ]
 obj_files = [ env.CPPFile(file) for file in cpp_files ]
 
-exe = env.Link("ClangReflectScan.exe", obj_files, lib_files)
+exe = env.Link("crscan.exe", obj_files, lib_files)
 env.Build(exe)
 
 VCGenerateProjectFile(env, "src/ClangReflectScan/ClangReflectScan", cpp_files + hpp_files, exe)

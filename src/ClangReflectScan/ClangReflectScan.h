@@ -13,12 +13,18 @@
 #include "clang/Lex/HeaderSearch.h"
 
 
+namespace crdb
+{
+	class Database;
+}
+
+
 class ClangReflectScan
 {
 public:
 	ClangReflectScan();
 
-	void ConsumeAST(const char* filename);
+	void ConsumeAST(const char* filename, crdb::Database& db);
 
 private:
 	clang::LangOptions m_LangOptions;
