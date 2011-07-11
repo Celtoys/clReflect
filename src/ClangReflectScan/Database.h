@@ -43,7 +43,6 @@ namespace crdb
 			KIND_ENUM,
 			KIND_ENUM_CONSTANT,
 			KIND_FUNCTION,
-			KIND_PARAMETER,
 			KIND_FIELD
 		};
 
@@ -122,7 +121,7 @@ namespace crdb
 	};
 
 
-	struct Parameter : public Primitive
+	struct Field : public Primitive
 	{
 		enum Modifier
 		{
@@ -131,8 +130,8 @@ namespace crdb
 			MODIFIER_REFERENCE
 		};
 
-		Parameter() : Primitive(Primitive::KIND_PARAMETER), modifier(MODIFIER_VALUE), is_const(false), index(-1) { }
-		Parameter(Name n, Name p, Name t, Modifier pass, bool c, int i) : Primitive(Primitive::KIND_PARAMETER, n, p), type(t), modifier(pass), is_const(c), index(i) { }
+		Field() : Primitive(Primitive::KIND_FIELD), modifier(MODIFIER_VALUE), is_const(false), index(-1) { }
+		Field(Name n, Name p, Name t, Modifier pass, bool c, int i) : Primitive(Primitive::KIND_FIELD, n, p), type(t), modifier(pass), is_const(c), index(i) { }
 
 		Name type;
 		Modifier modifier;
@@ -142,16 +141,6 @@ namespace crdb
 
 		// TODO: arrays
 		// TODO: bit fields
-	};
-
-
-	struct Field : public Primitive
-	{
-		Field() : Primitive(Primitive::KIND_FIELD) { }
-		Field(Name n, Name p) : Primitive(Primitive::KIND_FIELD, n, p) { }
-
-		// name
-		// a single parameter describing its type/info
 	};
 
 
@@ -185,7 +174,6 @@ namespace crdb
 		void AddPrimitive(const Enum& prim);
 		void AddPrimitive(const EnumConstant& prim);
 		void AddPrimitive(const Function& prim);
-		void AddPrimitive(const Parameter& prim);
 		void AddPrimitive(const Field& prim);
 
 	private:
@@ -199,7 +187,6 @@ namespace crdb
 		PrimitiveStore<Enum> m_Enums;
 		PrimitiveStore<EnumConstant> m_EnumConstants;
 		PrimitiveStore<Function> m_Functions;
-		PrimitiveStore<Parameter> m_Parameters;
 		PrimitiveStore<Field> m_Fields;
 	};
 

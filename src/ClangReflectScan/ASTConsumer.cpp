@@ -36,19 +36,19 @@ namespace
 	}
 
 
-	bool MakeParameter(crdb::Database& db, clang::QualType qual_type, const char* param_name, crdb::Name parent_name, int index, crdb::Parameter& parameter)
+	bool MakeField(crdb::Database& db, clang::QualType qual_type, const char* param_name, crdb::Name parent_name, int index, crdb::Field& field)
 	{
-		// Get type info for the parameter
+		// Get type info for the field
 		clang::SplitQualType sqt = qual_type.split();
 		const clang::Type* type = sqt.first;
 
 		// Only handle one level of recursion for pointers and references
-		crdb::Parameter::Modifier pass = crdb::Parameter::MODIFIER_VALUE;
+		crdb::Field::Modifier pass = crdb::Field::MODIFIER_VALUE;
 
 		// Get pointee type info if this is a pointer
 		if (const clang::PointerType* ptr_type = dyn_cast<clang::PointerType>(type))
 		{
-			pass = crdb::Parameter::MODIFIER_POINTER;
+			pass = crdb::Field::MODIFIER_POINTER;
 			qual_type = ptr_type->getPointeeType();
 			sqt = qual_type.split();
 		}
@@ -56,7 +56,7 @@ namespace
 		// Get pointee type info if this is a reference
 		else if (const clang::LValueReferenceType* ref_type = dyn_cast<clang::LValueReferenceType>(type))
 		{
-			pass = crdb::Parameter::MODIFIER_REFERENCE;
+			pass = crdb::Field::MODIFIER_REFERENCE;
 			qual_type = ref_type->getPointeeType();
 			sqt = qual_type.split();
 		}
@@ -66,7 +66,7 @@ namespace
 		qual_type.removeLocalFastQualifiers();
 		std::string type_name_str = qual_type.getAsString();
 
-		// Is this a parameter that can be safely recorded?
+		// Is this a field that can be safely recorded?
 		type = sqt.first;
 		clang::Type::TypeClass tc = type->getTypeClass();
 		if (tc != clang::Type::Builtin && tc != clang::Type::Enum && tc != clang::Type::Elaborated && tc != clang::Type::Record)
@@ -79,14 +79,14 @@ namespace
 		Remove(type_name_str, "struct ");
 		Remove(type_name_str, "class ");
 
-		// Construct the parameter
+		// Construct the field
 		crdb::Name type_name = db.GetName(type_name_str.c_str());
-		parameter = crdb::Parameter(db.GetName(param_name), parent_name, type_name, pass, qualifiers.hasConst(), index);
+		field = crdb::Field(db.GetName(param_name), parent_name, type_name, pass, qualifiers.hasConst(), index);
 		return true;
 	}
 
 
-	void MakeFunction(crdb::Database& db, clang::NamedDecl* decl, crdb::Name function_name, crdb::Name parent_name, std::vector<crdb::Parameter>& parameters)
+	void MakeFunction(crdb::Database& db, clang::NamedDecl* decl, crdb::Name function_name, crdb::Name parent_name, std::vector<crdb::Field>& parameters)
 	{
 		// Cast to a function
 		clang::FunctionDecl* function_decl = dyn_cast<clang::FunctionDecl>(decl);
@@ -99,8 +99,8 @@ namespace
 		}
 
 		// Parse the return type
-		crdb::Parameter return_parameter;
-		if (!MakeParameter(db, function_decl->getResultType(), 0, function_name, -1, return_parameter))
+		crdb::Field return_parameter;
+		if (!MakeField(db, function_decl->getResultType(), 0, function_name, -1, return_parameter))
 		{
 			printf("WARNING: Unsupported return type for %s\n", function_name->second.c_str());
 			return;
@@ -113,8 +113,8 @@ namespace
 			clang::ParmVarDecl* param_decl = *i;
 
 			// Collect a list of constructed parameters in case evaluating one of them fails
-			crdb::Parameter parameter;
-			if (!MakeParameter(db, param_decl->getType(),param_decl->getNameAsString().c_str(), function_name, index++, parameter))
+			crdb::Field parameter;
+			if (!MakeField(db, param_decl->getType(),param_decl->getNameAsString().c_str(), function_name, index++, parameter))
 			{
 				printf("WARNING: Unsupported parameter type for %s\n", param_decl->getNameAsString().c_str());
 				return;
@@ -132,7 +132,7 @@ namespace
 			printf("   Returns: %s%s%s\n",
 				return_parameter.is_const ? "const " : "",
 				return_parameter.type->second.c_str(),
-				return_parameter.modifier == crdb::Parameter::MODIFIER_POINTER ? "*" : return_parameter.modifier == crdb::Parameter::MODIFIER_REFERENCE ? "&" : "");
+				return_parameter.modifier == crdb::Field::MODIFIER_POINTER ? "*" : return_parameter.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "");
 			db.AddPrimitive(return_parameter);
 		}
 		else
@@ -141,12 +141,12 @@ namespace
 		}
 
 		// Add the parameters
-		for (std::vector<crdb::Parameter>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+		for (std::vector<crdb::Field>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 		{
 			printf("   %s%s%s %s\n",
 				i->is_const ? "const " : "",
 				i->type->second.c_str(),
-				i->modifier == crdb::Parameter::MODIFIER_POINTER ? "*" : i->modifier == crdb::Parameter::MODIFIER_REFERENCE ? "&" : "",
+				i->modifier == crdb::Field::MODIFIER_POINTER ? "*" : i->modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "",
 				i->name->second.c_str());
 			db.AddPrimitive(*i);
 		}
@@ -225,7 +225,7 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 {
 	// Cast to a record (NOTE: CXXRecord is a temporary clang type and will change in future revisions)
 	clang::CXXRecordDecl* record_decl = dyn_cast<clang::CXXRecordDecl>(decl);
-	//assert(record_decl != 0 && "Failed to cast to record declaration");
+	assert(record_decl != 0 && "Failed to cast to record declaration");
 
 	// Ignore forward declarations
 	if (record_decl->isDefinition() == false)
@@ -277,7 +277,7 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const crdb::Name& name, co
 void ASTConsumer::AddFunctionDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
 {
 	// Parse and add the function
-	std::vector<crdb::Parameter> parameters;
+	std::vector<crdb::Field> parameters;
 	MakeFunction(m_DB, decl, name, parent_name, parameters);
 }
 
@@ -288,12 +288,12 @@ void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const crdb::Name& name, 
 	clang::CXXMethodDecl* method_decl = dyn_cast<clang::CXXMethodDecl>(decl);
 	assert(method_decl != 0 && "Failed to cast to C++ method declaration");
 
-	std::vector<crdb::Parameter> parameters;
+	std::vector<crdb::Field> parameters;
 	if (method_decl->isInstance())
 	{
 		// Parse the 'this' type, treating it as the first parameter to the method
-		crdb::Parameter this_param;
-		if (!MakeParameter(m_DB, method_decl->getThisType(m_ASTContext), "this", name, 0, this_param))
+		crdb::Field this_param;
+		if (!MakeField(m_DB, method_decl->getThisType(m_ASTContext), "this", name, 0, this_param))
 		{
 			printf("WARNING: Unsupported 'this' type for %s\n", name->second.c_str());
 			return;

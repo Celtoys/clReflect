@@ -166,12 +166,6 @@ void crdb::Database::AddPrimitive(const Function& prim)
 }
 
 
-void crdb::Database::AddPrimitive(const Parameter& prim)
-{
-	::AddPrimitive(prim.name, m_Names.end(), prim, m_Parameters);
-}
-
-
 void crdb::Database::AddPrimitive(const Field& prim)
 {
 	::AddPrimitive(prim.name, m_Names.end(), prim, m_Fields);
