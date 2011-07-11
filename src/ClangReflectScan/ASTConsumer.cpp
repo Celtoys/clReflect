@@ -222,9 +222,10 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name)
 
 void ASTConsumer::AddNamespaceDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
 {
-	// TODO: Same namespace opened multiple times
 	// TODO: Anonymous namespaces
 
+	// If the same namespace gets opened multiple times then that simply results in recreation of the same record
+	// Due to the database nature of storage during collection, everything within the namespace is maintained
 	printf("namespace %s\n", name->second.c_str());
 	m_DB.AddPrimitive(crdb::Namespace(name, parent_name));
 	AddContainedDecls(decl, name);

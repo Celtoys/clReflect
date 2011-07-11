@@ -3,7 +3,7 @@
 //	defines introducing new stuff
 //	includes
 //	bitfields
-//	enums
+//	* enums
 //	* references to other types
 //	64-bit types
 //	wchar_t
@@ -20,6 +20,8 @@
 //	default parameters on functions
 //	global variables
 //	static class variables
+//	multiple inheritance
+//	virtual inheritance
 
 
 // --------------------------------------------------------------------------------------------
