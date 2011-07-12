@@ -91,11 +91,8 @@ crdb::u32 crdb::HashNameString(const char* name_string)
 
 crdb::Database::Database()
 {
-	// Create the global namespace that everything should ultimately reference
-	Name parent = GetNoName();
-	AddPrimitive(Namespace(parent, m_Names.end()));
-
 	// Create a selection of basic C++ types
+	Name parent = GetNoName();
 	AddPrimitive(Type(GetName("void"), parent));
 	AddPrimitive(Type(GetName("bool"), parent));
 	AddPrimitive(Type(GetName("char"), parent));
