@@ -1,6 +1,5 @@
 
 // TODO: Is it worth reflecting anonymous enumerations, given they can only be used to pass function parameters?
-// TODO: unnamed parameters
 // TODO: Parameter names no longer need to be unique
 // TODO: Do we really need fully qualified names at this point, given the use of a multimap?
 // TODO: Could make the hash key a pair of name/parent. This would require multiple lookups but it's linear only with scope depth
@@ -155,7 +154,7 @@ namespace
 				i->is_const ? "const " : "",
 				i->type->second.c_str(),
 				i->modifier == crdb::Field::MODIFIER_POINTER ? "*" : i->modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "",
-				i->name->second.c_str());
+				i->name == db.GetNoName() ? "" : i->name->second.c_str());
 			db.AddPrimitive(*i);
 		}
 	}

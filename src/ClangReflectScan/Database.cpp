@@ -91,6 +91,11 @@ crdb::u32 crdb::HashNameString(const char* name_string)
 
 crdb::Database::Database()
 {
+}
+
+
+void crdb::Database::AddBaseTypePrimitives()
+{
 	// Create a selection of basic C++ types
 	Name parent = GetNoName();
 	AddPrimitive(Type(GetName("void"), parent));
@@ -116,13 +121,18 @@ crdb::Name crdb::Database::GetNoName() const
 
 crdb::Name crdb::Database::GetName(const char* text)
 {
+	// Check for nullptr and empty string representations of a "noname"
 	if (text == 0)
+	{
+		return GetNoName();
+	}
+	u32 hash = HashNameString(text);
+	if (hash == 0)
 	{
 		return GetNoName();
 	}
 
 	// See if the name has already been created
-	u32 hash = HashNameString(text);
 	Name name = m_Names.find(hash);
 	if (name != m_Names.end())
 	{
@@ -133,4 +143,10 @@ crdb::Name crdb::Database::GetName(const char* text)
 
 	// Add to the database
 	return m_Names.insert(NameMap::value_type(hash, text)).first;
+}
+
+
+crdb::Name crdb::Database::GetName(u32 hash) const
+{
+	return m_Names.find(hash);
 }

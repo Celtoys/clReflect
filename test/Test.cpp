@@ -1,18 +1,18 @@
 
 // test:
-//	defines introducing new stuff
-//	includes
-//	bitfields
+//	* inheritance
 //	* enums
 //	* references to other types
-//	64-bit types
-//	wchar_t
 //	* overloaded functions
 //	* unnamed function parameters
 //	* method constness
-//	typedef
+//	defines introducing new stuff
+//	includes
+//	bitfields
 //	arrays
-//	inheritance
+//	64-bit types
+//	wchar_t
+//	typedef
 //	anonymous namespaces from different compilation units
 //	enum forward declaration
 //

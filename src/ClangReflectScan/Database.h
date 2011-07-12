@@ -172,8 +172,11 @@ namespace crdb
 	public:
 		Database();
 
+		void AddBaseTypePrimitives();
+
 		Name GetNoName() const;
 		Name GetName(const char* text);
+		Name GetName(u32 hash) const;
 
 		template <typename TYPE> void AddPrimitive(const TYPE& prim)
 		{
