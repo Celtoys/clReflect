@@ -32,51 +32,60 @@ namespace
 			db.named.insert(DBTYPE::NamedStore::value_type(name->first, object));
 		}
 	}
-}
 
 
-crdb::u32 crdb::MurmurHash3(const void* key, int len, u32 seed)
-{
-	const u8* data = (const u8*)key;
-	int nb_blocks = len / 4;
-
-	u32 h1 = seed;
-	u32 c1 = 0xcc9e2d51;
-	u32 c2 = 0x1b873593;
-
-	// Body
-	const u32* blocks = (const u32*)(data + nb_blocks * 4);
-	for (int i = -nb_blocks; i; i++)
+	//
+	// Austin Appleby's MurmurHash 3: http://code.google.com/p/smhasher
+	//
+	crdb::u32 MurmurHash3(const void* key, int len, crdb::u32 seed)
 	{
-		u32 k1 = blocks[i];
+		const crdb::u8* data = (const crdb::u8*)key;
+		int nb_blocks = len / 4;
 
-		k1 *= c1;
-		k1 = _rotl(k1, 15);
-		k1 *= c2;
+		crdb::u32 h1 = seed;
+		crdb::u32 c1 = 0xcc9e2d51;
+		crdb::u32 c2 = 0x1b873593;
 
-		h1 ^= k1;
-		h1 = _rotl(h1, 13);
-		h1 = h1 * 5 + 0xe6546b64;
-	}
+		// Body
+		const crdb::u32* blocks = (const crdb::u32*)(data + nb_blocks * 4);
+		for (int i = -nb_blocks; i; i++)
+		{
+			crdb::u32 k1 = blocks[i];
 
-	// Tail
-	const u8* tail = (const u8*)(data + nb_blocks * 4);
-	u32 k1 = 0;
-	switch (len & 3)
-	{
+			k1 *= c1;
+			k1 = _rotl(k1, 15);
+			k1 *= c2;
+
+			h1 ^= k1;
+			h1 = _rotl(h1, 13);
+			h1 = h1 * 5 + 0xe6546b64;
+		}
+
+		// Tail
+		const crdb::u8* tail = (const crdb::u8*)(data + nb_blocks * 4);
+		crdb::u32 k1 = 0;
+		switch (len & 3)
+		{
 		case (3): k1 ^= tail[2] << 16;
 		case (2): k1 ^= tail[1] << 8;
 		case (1): k1 ^= tail[0];
-				  k1 *= c1;
-				  k1 = _rotl(k1, 15);
-				  k1 *= c2;
-				  h1 ^= k1;
-	}
+			k1 *= c1;
+			k1 = _rotl(k1, 15);
+			k1 *= c2;
+			h1 ^= k1;
+		}
 
-	// Finalisation
-	h1 ^= len;
-	h1 = fmix(h1);
-	return h1;
+		// Finalisation
+		h1 ^= len;
+		h1 = fmix(h1);
+		return h1;
+	}
+}
+
+
+crdb::u32 crdb::HashNameString(const char* name_string)
+{
+	return MurmurHash3(name_string, strlen(name_string), 0);
 }
 
 
@@ -102,7 +111,7 @@ crdb::Database::Database()
 }
 
 
-crdb::Name crdb::Database::GetNoName()
+crdb::Name crdb::Database::GetNoName() const
 {
 	return m_Names.end();
 }
@@ -116,7 +125,7 @@ crdb::Name crdb::Database::GetName(const char* text)
 	}
 
 	// See if the name has already been created
-	u32 hash = MurmurHash3(text, strlen(text), 0);
+	u32 hash = HashNameString(text);
 	Name name = m_Names.find(hash);
 	if (name != m_Names.end())
 	{
@@ -127,46 +136,4 @@ crdb::Name crdb::Database::GetName(const char* text)
 
 	// Add to the database
 	return m_Names.insert(NameMap::value_type(hash, text)).first;
-}
-
-
-void crdb::Database::AddPrimitive(const Namespace& prim)
-{
-	::AddPrimitive(prim.name, m_Names.end(), prim, m_Namespaces);
-}
-
-
-void crdb::Database::AddPrimitive(const Type& prim)
-{
-	::AddPrimitive(prim.name, m_Names.end(), prim, m_Types);
-}
-
-
-void crdb::Database::AddPrimitive(const Class& prim)
-{
-	::AddPrimitive(prim.name, m_Names.end(), prim, m_Classes);
-}
-
-
-void crdb::Database::AddPrimitive(const Enum& prim)
-{
-	::AddPrimitive(prim.name, m_Names.end(), prim, m_Enums);
-}
-
-
-void crdb::Database::AddPrimitive(const EnumConstant& prim)
-{
-	::AddPrimitive(prim.name, m_Names.end(), prim, m_EnumConstants);
-}
-
-
-void crdb::Database::AddPrimitive(const Function& prim)
-{
-	::AddPrimitive(prim.name, m_Names.end(), prim, m_Functions);
-}
-
-
-void crdb::Database::AddPrimitive(const Field& prim)
-{
-	::AddPrimitive(prim.name, m_Names.end(), prim, m_Fields);
 }

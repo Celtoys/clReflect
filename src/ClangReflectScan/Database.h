@@ -18,16 +18,16 @@ namespace crdb
 
 
 	//
-	// Austin Appleby's MurmurHash 3: http://code.google.com/p/smhasher
+	// Hashes the full string int a 32-bit value
 	//
-	u32 MurmurHash3(const void* key, int len, u32 seed);
+	u32 HashNameString(const char* name_string);
 
 
 	//
 	// A convenient way to quickly share and map names within the database
 	//
 	typedef std::map<u32, std::string> NameMap;
-	typedef NameMap::iterator Name;
+	typedef NameMap::const_iterator Name;
 
 
 	//
@@ -172,16 +172,58 @@ namespace crdb
 	public:
 		Database();
 
-		Name GetNoName();
+		Name GetNoName() const;
 		Name GetName(const char* text);
 
-		void AddPrimitive(const Namespace& prim);
-		void AddPrimitive(const Type& prim);
-		void AddPrimitive(const Class& prim);
-		void AddPrimitive(const Enum& prim);
-		void AddPrimitive(const EnumConstant& prim);
-		void AddPrimitive(const Function& prim);
-		void AddPrimitive(const Field& prim);
+		template <typename TYPE> void AddPrimitive(const TYPE& prim);
+		{
+			// Get the store associated with this type
+			PrimitiveStore<TYPE>& store = GetPrimitiveStore<TYPE>();
+
+			// Add to unnamed vector or named multimap
+			if (prim.name == GetNoName())
+			{
+				store.unnamed.push_back(prim);
+			}
+			else
+			{
+				store.named.insert(PrimitiveStore<TYPE>::NamedStore::value_type(prim.name->first, prim));
+			}
+		}
+
+		template <typename TYPE> const TYPE* GetFirstPrimitive(const char* name_string) const
+		{
+			// Get the store associated with this type
+			const PrimitiveStore<TYPE>& store = GetPrimitiveStore<TYPE>();
+
+			// Return the first instance of an object with this name
+			u32 name = HashNameString(name_string);
+			PrimitiveStore<TYPE>::NamedStore::const_iterator i = store.named.find(name);
+			if (i != store.named.end())
+			{
+				return &i->second;
+			}
+
+			return 0;
+		}
+
+		// A compile-time map to runtime data stores for each primitive type
+		template <typename TYPE> PrimitiveStore<TYPE>& GetPrimitiveStore() { }
+		template <> PrimitiveStore<Namespace>& GetPrimitiveStore() { return m_Namespaces; }
+		template <> PrimitiveStore<Type>& GetPrimitiveStore() { return m_Types; }
+		template <> PrimitiveStore<Class>& GetPrimitiveStore() { return m_Classes; }
+		template <> PrimitiveStore<Enum>& GetPrimitiveStore() { return m_Enums; }
+		template <> PrimitiveStore<EnumConstant>& GetPrimitiveStore() { return m_EnumConstants; }
+		template <> PrimitiveStore<Function>& GetPrimitiveStore() { return m_Functions; }
+		template <> PrimitiveStore<Field>& GetPrimitiveStore() { return m_Fields; }
+
+		// Single pass-through const retrieval of the primitive stores. This strips the const-ness
+		// of the 'this' pointer to remove the need to copy-past the GetPrimitiveStore implementations
+		// with const added.
+		template <typename TYPE> const PrimitiveStore<TYPE>& GetPrimitiveStore() const
+		{
+			return const_cast<Database*>(this)->GetPrimitiveStore<TYPE>();
+		}
 
 		// All unique, scope-qualified names
 		NameMap m_Names;
