@@ -51,6 +51,154 @@ namespace
 		out[1] = (unsigned char)(in[1] << 4 | in[2] >> 2);
 		out[2] = (unsigned char)(((in[2] << 6) & 0xc0) | in[3]);
 	}
+
+
+	const char* itoa64(__int64 value)
+	{
+		static const int MAX_SZ = 20;
+		static char text[MAX_SZ];
+
+		// Null terminate and start at the end
+		text[MAX_SZ - 1] = 0;
+		char* tptr = text + MAX_SZ - 1;
+
+		// Get the absolute and record if the value is negative
+		bool negative = false;
+		if (value < 0)
+		{
+			negative = true;
+			value = -value;
+		}
+
+		// Loop through the value with radix 10
+		do 
+		{
+			int v = value % 10;
+			*--tptr = '0' + v;
+			value /= 10;
+		} while (value);
+
+		if (negative)
+		{
+			*--tptr = '-';
+		}
+
+		return tptr;
+	}
+
+
+	void WriteNamedRuler(FILE* fp, const char* text)
+	{
+		char ruler[] = "---- --------------------------------------------------------------------\n";
+		strcpy(ruler + 5, text);
+		ruler[5 + strlen(text)] = ' ';
+		fputs(ruler, fp);
+	}
+
+
+	void WriteRuler(FILE* fp)
+	{
+		fputs("-------------------------------------------------------------------------\n", fp);
+	}
+
+
+	void WriteTableHeader(FILE* fp, const char* title, const char* headers)
+	{
+		WriteNamedRuler(fp, title);
+		fputs(headers, fp);
+		fputs("\n", fp);
+		WriteRuler(fp);
+	}
+
+
+	void WriteTableFooter(FILE* fp)
+	{
+		WriteRuler(fp);
+		fputs("\n\n", fp);
+	}
+
+
+	const char* b64StringFromName(crdb::Name name, const crdb::Database& db)
+	{
+		static char name_b64[8];
+
+		// Safely handle no-names
+		crdb::u32 name_u32 = 0;
+		if (name != db.GetNoName())
+		{
+			name_u32 = name->first;
+		}
+
+		// Encode 4 bytes as 6 readable bytes
+		crdb::u8* name_b256 = (crdb::u8*)&name_u32;
+		encodeblock(name_b256 + 0, name_b64, 3);
+		encodeblock(name_b256 + 3, name_b64 + 4, 1);
+		name_b64[6] = 0;
+
+		return name_b64;
+	}
+
+
+	void WritePrimitive(const crdb::Primitive& primitive, const crdb::Database& db, FILE* fp)
+	{
+		fputs(b64StringFromName(primitive.name, db), fp);
+		fputs("\t", fp);
+		fputs(b64StringFromName(primitive.parent, db), fp);
+	}
+
+
+	void WriteClass(const crdb::Class& primitive, const crdb::Database& db, FILE* fp)
+	{
+		WritePrimitive(primitive, db, fp);
+		fputs("\t", fp);
+		fputs(b64StringFromName(primitive.base_class, db), fp);
+	}
+
+	
+	void WriteEnumConstant(const crdb::EnumConstant& primitive, const crdb::Database& db, FILE* fp)
+	{
+		WritePrimitive(primitive, db, fp);
+		fputs("\t", fp);
+		fputs(itoa64(primitive.value), fp);
+	}
+
+
+	void WriteField(const crdb::Field& primitive, const crdb::Database& db, FILE* fp)
+	{
+		WritePrimitive(primitive, db, fp);
+		fputs("\t", fp);
+		fputs(b64StringFromName(primitive.type, db), fp);
+		fputs("\t", fp);
+
+		switch (primitive.modifier)
+		{
+		case (crdb::Field::MODIFIER_VALUE): fputs("v", fp); break;
+		case (crdb::Field::MODIFIER_POINTER): fputs("p", fp); break;
+		case (crdb::Field::MODIFIER_REFERENCE): fputs("r", fp); break;
+		}
+
+		fputs(primitive.is_const ? "\t1" : "\t0", fp);
+	}
+
+
+	template <typename TYPE, typename PRINT_FUNC>
+	void WritePrimitives(const crdb::Database& db, FILE* fp, PRINT_FUNC print_func, const char* title, const char* headers)
+	{
+		WriteTableHeader(fp, title, headers);
+
+		// Map from the type to the DB store
+		const crdb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>();
+
+		// Write each primitive
+		for (crdb::PrimitiveStore<TYPE>::NamedStore::const_iterator i = store.named.begin(); i != store.named.end(); ++i)
+		{
+			const TYPE& primitive = i->second;
+			print_func(primitive, db, fp);
+			fputs("\n", fp);
+		}
+
+		WriteTableFooter(fp);
+	}
 }
 
 
@@ -58,26 +206,23 @@ void crdb::WriteTextDatabase(const char* filename, const Database& db)
 {
 	FILE* fp = fopen(filename, "w");
 
-	fputs("Names\n", fp);
-	fputs("-------------------------------------------------------------------------\n", fp);
-	fputs("HashID\tName\n", fp);
-	fputs("-------------------------------------------------------------------------\n", fp);
-
+	WriteTableHeader(fp, "Names", "Hash\tName");
 	for (NameMap::const_iterator i = db.m_Names.begin(); i != db.m_Names.end(); ++i)
 	{
-		u8* name_b256 = (u8*)&i->first;
-		char name_b64[8];
-		encodeblock(name_b256 + 0, name_b64, 3);
-		encodeblock(name_b256 + 3, name_b64 + 3, 1);
-		name_b64[5] = 0;
-
-		fputs(name_b64, fp);
+		fputs(b64StringFromName(i, db), fp);
 		fputs("\t", fp);
 		fputs(i->second.c_str(), fp);
 		fputs("\n", fp);
 	}
+	WriteTableFooter(fp);
 
-	fputs("-------------------------------------------------------------------------\n", fp);
+	WritePrimitives<Namespace>(db, fp, WritePrimitive, "Named Namespaces", "Name\tParent");
+	WritePrimitives<Type>(db, fp, WritePrimitive, "Named Types", "Name\tParent");
+	WritePrimitives<Class>(db, fp, WriteClass, "Named Classes", "Name\tParent\tBase");
+	WritePrimitives<Enum>(db, fp, WritePrimitive, "Named Enums", "Name\tParent");
+	WritePrimitives<EnumConstant>(db, fp, WriteEnumConstant, "Enum Constants", "Name\tParent\tValue");
+	WritePrimitives<Function>(db, fp, WritePrimitive, "Named Functions", "Name\tParent");
+	WritePrimitives<Field>(db, fp, WriteField, "Named Fields", "Name\tParent\tType\tMod\tConst");
 
 	fclose(fp);
 }

@@ -175,7 +175,7 @@ namespace crdb
 		Name GetNoName() const;
 		Name GetName(const char* text);
 
-		template <typename TYPE> void AddPrimitive(const TYPE& prim);
+		template <typename TYPE> void AddPrimitive(const TYPE& prim)
 		{
 			// Get the store associated with this type
 			PrimitiveStore<TYPE>& store = GetPrimitiveStore<TYPE>();
@@ -218,7 +218,7 @@ namespace crdb
 		template <> PrimitiveStore<Field>& GetPrimitiveStore() { return m_Fields; }
 
 		// Single pass-through const retrieval of the primitive stores. This strips the const-ness
-		// of the 'this' pointer to remove the need to copy-past the GetPrimitiveStore implementations
+		// of the 'this' pointer to remove the need to copy-paste the GetPrimitiveStore implementations
 		// with const added.
 		template <typename TYPE> const PrimitiveStore<TYPE>& GetPrimitiveStore() const
 		{

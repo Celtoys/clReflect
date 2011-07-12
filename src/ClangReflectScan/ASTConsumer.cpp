@@ -1,7 +1,6 @@
 
 // TODO: Is it worth reflecting anonymous enumerations, given they can only be used to pass function parameters?
 // TODO: unnamed parameters
-// TODO: inheritance
 // TODO: Parameter names no longer need to be unique
 // TODO: Do we really need fully qualified names at this point, given the use of a multimap?
 // TODO: Could make the hash key a pair of name/parent. This would require multiple lookups but it's linear only with scope depth
