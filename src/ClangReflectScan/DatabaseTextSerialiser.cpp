@@ -178,16 +178,19 @@ namespace
 		}
 
 		fputs(primitive.is_const ? "\t1" : "\t0", fp);
+
+		fputs("\t", fp);
+		fputs(itoa64(primitive.index), fp);
 	}
 
 
 	template <typename TYPE, typename PRINT_FUNC>
 	void WritePrimitives(const crdb::Database& db, FILE* fp, PRINT_FUNC print_func, const char* title, const char* headers)
 	{
-		WriteTableHeader(fp, title, headers);
-
 		// Map from the type to the DB store
 		const crdb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>();
+
+		WriteTableHeader(fp, title, headers);
 
 		// Write each primitive
 		for (crdb::PrimitiveStore<TYPE>::NamedStore::const_iterator i = store.named.begin(); i != store.named.end(); ++i)
@@ -216,13 +219,13 @@ void crdb::WriteTextDatabase(const char* filename, const Database& db)
 	}
 	WriteTableFooter(fp);
 
-	WritePrimitives<Namespace>(db, fp, WritePrimitive, "Named Namespaces", "Name\tParent");
-	WritePrimitives<Type>(db, fp, WritePrimitive, "Named Types", "Name\tParent");
-	WritePrimitives<Class>(db, fp, WriteClass, "Named Classes", "Name\tParent\tBase");
-	WritePrimitives<Enum>(db, fp, WritePrimitive, "Named Enums", "Name\tParent");
+	WritePrimitives<Namespace>(db, fp, WritePrimitive, "Namespaces", "Name\tParent");
+	WritePrimitives<Type>(db, fp, WritePrimitive, "Types", "Name\tParent");
+	WritePrimitives<Class>(db, fp, WriteClass, "Classes", "Name\tParent\tBase");
+	WritePrimitives<Enum>(db, fp, WritePrimitive, "Enums", "Name\tParent");
 	WritePrimitives<EnumConstant>(db, fp, WriteEnumConstant, "Enum Constants", "Name\tParent\tValue");
-	WritePrimitives<Function>(db, fp, WritePrimitive, "Named Functions", "Name\tParent");
-	WritePrimitives<Field>(db, fp, WriteField, "Named Fields", "Name\tParent\tType\tMod\tConst");
+	WritePrimitives<Function>(db, fp, WritePrimitive, "Functions", "Name\tParent");
+	WritePrimitives<Field>(db, fp, WriteField, "Fields", "Name\tParent\tType\tMod\tCst\tIdx");
 
 	fclose(fp);
 }
