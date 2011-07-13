@@ -68,14 +68,26 @@ namespace
 
 
 	template <typename TYPE>
-	void CopyPrimitiveStoreToTable(const crdb::PrimitiveStore<TYPE>& store, std::vector<TYPE>& table)
+	void CopyPrimitiveStoreToTable(const crdb::PrimitiveStore<TYPE>& store, std::vector<TYPE>& table, bool named)
 	{
-		// Make a local copy of all entries in the table
-		table.resize(store.named.size());
 		int dest_index = 0;
-		for (crdb::PrimitiveStore<TYPE>::NamedStore::const_iterator i = store.named.begin(); i != store.named.end(); ++i)
+
+		// Make a local copy of all entries in the table
+		if (named)
 		{
-			table[dest_index++] = i->second;
+			table.resize(store.named.size());
+			for (crdb::PrimitiveStore<TYPE>::NamedStore::const_iterator i = store.named.begin(); i != store.named.end(); ++i)
+			{
+				table[dest_index++] = i->second;
+			}
+		}
+		else
+		{
+			table.resize(store.unnamed.size());
+			for (crdb::PrimitiveStore<TYPE>::UnnamedStore::const_iterator i = store.unnamed.begin(); i != store.unnamed.end(); ++i)
+			{
+				table[dest_index++] = *i;
+			}
 		}
 	}
 
@@ -107,23 +119,41 @@ namespace
 
 
 	template <typename TYPE>
+	void WriteTable(FILE* fp, const crdb::Database& db, const crdb::meta::DatabaseTypes& dbtypes, bool named)
+	{
+		// Generate a memory-contiguous table
+		std::vector<TYPE> table;
+		CopyPrimitiveStoreToTable(db.GetPrimitiveStore<TYPE>(), table, named);
+
+		// Record the table size
+		int table_size = table.size();
+		fwrite(&table_size, sizeof(int), 1, fp);
+
+		if (table_size)
+		{
+			// Allocate enough memory to store the table in packed binary format
+			const crdb::meta::DatabaseType& type = dbtypes.GetType<TYPE>();
+			int packed_size = table_size * type.packed_size;
+			char* data = new char[packed_size];
+
+			// Binary pack the table
+			PackTable(db, table, type, data);
+
+			// Write to file and cleanup
+			fwrite(data, packed_size, 1, fp);
+			delete [] data;
+		}
+	}
+
+
+	template <typename TYPE>
 	void WriteTable(FILE* fp, const crdb::Database& db, const crdb::meta::DatabaseTypes& dbtypes)
 	{
-		// Generate a memory-contigous table
-		std::vector<TYPE> table;
-		CopyPrimitiveStoreToTable(db.GetPrimitiveStore<TYPE>(), table);
-
-		// Allocate enough memory to store the table in packed binary format
-		const crdb::meta::DatabaseType& type = dbtypes.GetType<TYPE>();
-		int packed_size = table.size() * type.packed_size;
-		char* data = new char[packed_size];
-
-		// Binary pack the table
-		PackTable(db, table, type, data);
-
-		// Write to file and cleanup
-		fwrite(data, packed_size, 1, fp);
-		delete [] data;
+		// Write both named and unnamed tables
+		// The unnamed tables contain the empty names, but this makes the code much simpler
+		// at the expense of file sizes that are little larger
+		WriteTable<TYPE>(fp, db, dbtypes, true);
+		WriteTable<TYPE>(fp, db, dbtypes, false);
 	}
 }
 
