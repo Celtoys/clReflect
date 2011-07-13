@@ -155,6 +155,23 @@ namespace
 		WriteTable<TYPE>(fp, db, dbtypes, true);
 		WriteTable<TYPE>(fp, db, dbtypes, false);
 	}
+
+
+	void WriteNameTable(FILE* fp, const crdb::Database& db)
+	{
+		// Write the table header
+		int nb_names = db.m_Names.size();
+		fwrite(&nb_names, sizeof(int), 1, fp);
+
+		// Write each name
+		for (crdb::Name i = db.m_Names.begin(); i != db.m_Names.end(); ++i)
+		{
+			fwrite(&i->first, sizeof(int), 1, fp);
+			int len = i->second.length();
+			fwrite(&len, sizeof(int), 1, fp);
+			fwrite(i->second.c_str(), len, 1, fp);
+		}
+	}
 }
 
 
@@ -162,7 +179,9 @@ void crdb::WriteBinaryDatabase(const char* filename, const Database& db)
 {
 	FILE* fp = fopen(filename, "wb");
 
+	// Write each table with explicit ordering
 	crdb::meta::DatabaseTypes dbtypes;
+	WriteNameTable(fp, db);
 	WriteTable<crdb::Namespace>(fp, db, dbtypes);
 	WriteTable<crdb::Type>(fp, db, dbtypes);
 	WriteTable<crdb::Class>(fp, db, dbtypes);
