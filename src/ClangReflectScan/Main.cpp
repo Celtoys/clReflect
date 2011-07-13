@@ -19,5 +19,9 @@ int main()
 	crdb::ReadTextDatabase("output.csv", indb_text);
 	crdb::WriteTextDatabase("output2.csv", indb_text);
 
+	crdb::Database indb_bin;
+	crdb::ReadBinaryDatabase("output.bin", indb_bin);
+	crdb::WriteBinaryDatabase("output2.bin", indb_bin);
+
 	return 0;
 }
