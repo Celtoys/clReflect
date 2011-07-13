@@ -240,5 +240,4 @@ namespace crdb
 		PrimitiveStore<Function> m_Functions;
 		PrimitiveStore<Field> m_Fields;
 	};
-
 }

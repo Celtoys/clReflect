@@ -7,6 +7,10 @@
 
 namespace
 {
+	// Serialisation version
+	const int CURRENT_VERSION = 1;
+
+
 	bool startswith(const char* text, const char* cmp)
 	{
 		return strstr(text, cmp) == text;
@@ -284,6 +288,12 @@ void crdb::WriteTextDatabase(const char* filename, const Database& db)
 {
 	FILE* fp = fopen(filename, "w");
 
+	// Write the header
+	fputs("\nClang Reflect Database\n", fp);
+	fputs("Format Version: ", fp);
+	fputs(itoa(CURRENT_VERSION), fp);
+	fputs("\n\n\n", fp);
+
 	// Write the name table
 	WriteUnnamedTable(fp, db, db.m_Names, WriteName, "Names", "Hash\t\tName");
 
@@ -542,6 +552,18 @@ void crdb::ReadTextDatabase(const char* filename, Database& db)
 	// Parse the tables in whatever order they arrive
 	while (char* line = ReadLine(fp))
 	{
+		// Parse the header to see if the version is readable
+		if (startswith(line, "Format Version: "))
+		{
+			StringTokeniser tok(line, ":");
+			tok.Get();
+			const char* version = tok.Get();
+			if (atoi(version) != CURRENT_VERSION)
+			{
+				return;
+			}
+		}
+
 		ParseTable(fp, line, db, "Names", ParseName);
 		ParseTable(fp, line, db, "Namespaces", ParsePrimitive<crdb::Namespace>);
 		ParseTable(fp, line, db, "Types", ParsePrimitive<crdb::Type>);

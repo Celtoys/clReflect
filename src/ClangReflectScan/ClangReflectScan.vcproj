@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="Windows-1252"?>
-<!-- PiBDigest: A8YhTKizhl9uk5jaSCAIoQ== -->
+<!-- PiBDigest: RS6MoYT7xOHxo08I2CNIrA== -->
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="ClangReflectScan"
-	ProjectGUID="{DFDF846E-ABDB-11E0-9C68-F46D04D48D5F}"
+	ProjectGUID="{D4CEBF30-AD46-11E0-845D-F46D04D48D5F}"
 	RootNamespace="ClangReflectScan"
 	Keyword="Win32Proj"
 	>
@@ -84,6 +84,22 @@
 		</File>
 		<File
 			RelativePath="Database.h"
+			>
+		</File>
+		<File
+			RelativePath="DatabaseBinarySerialiser.cpp"
+			>
+		</File>
+		<File
+			RelativePath="DatabaseBinarySerialiser.h"
+			>
+		</File>
+		<File
+			RelativePath="DatabaseMetadata.cpp"
+			>
+		</File>
+		<File
+			RelativePath="DatabaseMetadata.h"
 			>
 		</File>
 		<File

@@ -2,6 +2,7 @@
 #include "ClangReflectScan.h"
 #include "Database.h"
 #include "DatabaseTextSerialiser.h"
+#include "DatabaseBinarySerialiser.h"
 
 int main()
 {
@@ -12,10 +13,11 @@ int main()
 	clrs.ConsumeAST("../../test/Test.cpp", db);
 
 	crdb::WriteTextDatabase("output.csv", db);
+	crdb::WriteBinaryDatabase("output.bin", db);
 
-	crdb::Database indb;
-	crdb::ReadTextDatabase("output.csv", indb);
-	crdb::WriteTextDatabase("output2.csv", indb);
+	crdb::Database indb_text;
+	crdb::ReadTextDatabase("output.csv", indb_text);
+	crdb::WriteTextDatabase("output2.csv", indb_text);
 
 	return 0;
 }
