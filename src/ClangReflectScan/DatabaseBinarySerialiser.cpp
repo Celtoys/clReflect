@@ -8,6 +8,11 @@
 
 namespace
 {
+	// 'crdb'
+	static const unsigned int FILE_HEADER = 0x62647263;
+	static const unsigned int FILE_VERSION = 1;
+
+
 	template <typename TYPE>
 	void Write(FILE* fp, const TYPE& val)
 	{
@@ -194,6 +199,10 @@ void crdb::WriteBinaryDatabase(const char* filename, const Database& db)
 {
 	FILE* fp = fopen(filename, "wb");
 
+	// Write the header
+	Write(fp, FILE_HEADER);
+	Write(fp, FILE_VERSION);
+
 	// Write each table with explicit ordering
 	crdb::meta::DatabaseTypes dbtypes;
 	WriteNameTable(fp, db);
@@ -318,6 +327,16 @@ void crdb::ReadBinaryDatabase(const char* filename, Database& db)
 {
 	FILE* fp = fopen(filename, "rb");
 
+	// Read the header and check it
+	unsigned int header = Read<unsigned int>(fp);
+	unsigned int version = Read<unsigned int>(fp);
+	if (header != FILE_HEADER || version != FILE_VERSION)
+	{
+		fclose(fp);
+		return;
+	}
+
+	// Read each table with explicit ordering
 	crdb::meta::DatabaseTypes dbtypes;
 	ReadNameTable(fp, db);
 	ReadTables<crdb::Namespace>(fp, db, dbtypes);

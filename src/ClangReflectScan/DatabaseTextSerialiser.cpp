@@ -560,6 +560,7 @@ void crdb::ReadTextDatabase(const char* filename, Database& db)
 			const char* version = tok.Get();
 			if (atoi(version) != CURRENT_VERSION)
 			{
+				fclose(fp);
 				return;
 			}
 		}
