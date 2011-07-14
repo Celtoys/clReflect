@@ -1,22 +1,21 @@
 
-#include "clang/AST/ASTConsumer.h"
-
 #include "Database.h"
 
 
 namespace clang
 {
+	class ASTContext;
 	class NamedDecl;
+	class TranslationUnitDecl;
 }
 
 
-class ASTConsumer : public clang::ASTConsumer
+class ASTConsumer
 {
 public:
 	ASTConsumer(clang::ASTContext& context, crdb::Database& db);
-    virtual ~ASTConsumer();
 
-    virtual void HandleTopLevelDecl(clang::DeclGroupRef d);
+	void WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl);
 
 private:
 	void AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name);

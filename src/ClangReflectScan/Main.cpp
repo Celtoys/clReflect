@@ -1,5 +1,7 @@
 
-#include "ClangReflectScan.h"
+#include "ClangFrontend.h"
+#include "ASTConsumer.h"
+
 #include "Database.h"
 #include "DatabaseTextSerialiser.h"
 #include "DatabaseBinarySerialiser.h"
@@ -9,8 +11,13 @@ int main()
 	crdb::Database db;
 	db.AddBaseTypePrimitives();
 
-	ClangReflectScan clrs;
-	clrs.ConsumeAST("../../test/Test.cpp", db);
+	ClangHost clang_host;
+	ClangASTParser ast_parser(clang_host);
+	ast_parser.ParseAST("../../test/Test.cpp");
+
+	clang::ASTContext& ast_context = ast_parser.GetASTContext();
+	ASTConsumer ast_consumer(ast_context, db);
+	ast_consumer.WalkTranlationUnit(ast_context.getTranslationUnitDecl());
 
 	crdb::WriteTextDatabase("output.csv", db);
 	crdb::WriteBinaryDatabase("output.bin", db);

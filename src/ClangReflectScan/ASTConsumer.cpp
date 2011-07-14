@@ -168,18 +168,13 @@ ASTConsumer::ASTConsumer(clang::ASTContext& context, crdb::Database& db)
 }
 
 
-ASTConsumer::~ASTConsumer()
-{
-}
-
-
-void ASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef d)
+void ASTConsumer::WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl)
 {
 	// Root namespace
 	crdb::Name parent_name = m_DB.GetNoName();
 
 	// Iterate over every named declaration
-	for (clang::DeclGroupRef::iterator i = d.begin(); i != d.end(); ++i)
+	for (clang::DeclContext::decl_iterator i = tu_decl->decls_begin(); i != tu_decl->decls_end(); ++i)
 	{
 		clang::NamedDecl* named_decl = dyn_cast<clang::NamedDecl>(*i);
 		if (named_decl == 0)

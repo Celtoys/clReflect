@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="Windows-1252"?>
-<!-- PiBDigest: RS6MoYT7xOHxo08I2CNIrA== -->
+<!-- PiBDigest: Gq3PjKwTI-IBJzICn1PzBw== -->
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="ClangReflectScan"
-	ProjectGUID="{D4CEBF30-AD46-11E0-845D-F46D04D48D5F}"
+	ProjectGUID="{60FD4FA2-AE08-11E0-9AA2-F46D04D48D5F}"
 	RootNamespace="ClangReflectScan"
 	Keyword="Win32Proj"
 	>
@@ -71,11 +71,11 @@
 			>
 		</File>
 		<File
-			RelativePath="ClangReflectScan.cpp"
+			RelativePath="ClangFrontend.cpp"
 			>
 		</File>
 		<File
-			RelativePath="ClangReflectScan.h"
+			RelativePath="ClangFrontend.h"
 			>
 		</File>
 		<File

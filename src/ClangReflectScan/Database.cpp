@@ -4,6 +4,25 @@
 #include <assert.h>
 
 
+
+#define REFLECT_NAMESPACE
+#define REFLECT_CLASS
+#define REFLECT_FUNCTION
+#define REFLECT_ENUM
+
+
+
+namespace crdb_type_register
+{
+	struct crdb_type_register_crdb_Field : public crdb::Field
+	{
+	};
+}
+
+
+//
+
+
 namespace
 {
 	crdb::u32 fmix(crdb::u32 h)

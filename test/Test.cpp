@@ -1,4 +1,34 @@
 
+#define UNIQUE_SYMBOL2(x, y) x##y
+#define UNIQUE_SYMBOL1(x, y) UNIQUE_SYMBOL2(x, y)
+#define UNIQUE_SYMBOL(x) UNIQUE_SYMBOL1(x, __COUNTER__)
+
+
+#ifdef __clang__
+
+#define crcpp_register(type, name)						\
+														\
+	namespace crdb_internal								\
+	{													\
+		__attribute__((annotate(#name)))				\
+		struct UNIQUE_SYMBOL(crdb_register_##type) { };	\
+	}
+
+
+#define crcpp_reflect_namespace(name) crcpp_register(namespace, name)
+#define crcpp_reflect_class(name) crcpp_register(class, name)
+#define crcpp_reflect_enum(name) crcpp_register(enum, name)
+#define crcpp_reflect_function(name) crcpp_register(function, name)
+
+#define crcpp_attr(...) __attribute__((annotate("attr:" #__VA_ARGS__)))
+#define crcpp_push_attr(...) struct UNIQUE_SYMBOL(push_attr) { } __attribute__((annotate(#__VA_ARGS__)));
+#define crcpp_pop_attr(...) struct UNIQUE_SYMBOL(pop_attr) { } __attribute__((annotate(#__VA_ARGS__)));
+
+#endif
+
+crcpp_reflect_namespace(NamespaceA)
+crcpp_reflect_namespace(NamespaceB)
+
 // test:
 //	* inheritance
 //	* enums
@@ -27,6 +57,7 @@
 // --------------------------------------------------------------------------------------------
 // Named global enumeration
 // --------------------------------------------------------------------------------------------
+crcpp_attr(reflect)
 enum NamedGlobalEnum
 {
 	VALUE_UNASSIGNED,
@@ -116,9 +147,11 @@ struct StructGlobalA
 	enum Enum { VALUE_A, VALUE_B };
 
 	// Basic field types
+	crcpp_push_attr(noreflect)
 	unsigned char a;
 	unsigned short b;
 	unsigned short c;
+	crcpp_pop_attr(noreflect)
 
 	// Inline implementation of varying function types
 	void InlineEmptyFunction() { }
