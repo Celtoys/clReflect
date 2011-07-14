@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="Windows-1252"?>
-<!-- PiBDigest: Gq3PjKwTI-IBJzICn1PzBw== -->
+<!-- PiBDigest: bQ_B3hPKYBqlfaxrF4OtEw== -->
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="ClangReflectScan"
-	ProjectGUID="{60FD4FA2-AE08-11E0-9AA2-F46D04D48D5F}"
+	ProjectGUID="{B96B38C0-AE0B-11E0-B035-F46D04D48D5F}"
 	RootNamespace="ClangReflectScan"
 	Keyword="Win32Proj"
 	>
@@ -112,6 +112,14 @@
 		</File>
 		<File
 			RelativePath="Main.cpp"
+			>
+		</File>
+		<File
+			RelativePath="ReflectionSpecs.cpp"
+			>
+		</File>
+		<File
+			RelativePath="ReflectionSpecs.h"
 			>
 		</File>
 	</Files>

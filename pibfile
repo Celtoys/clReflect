@@ -53,6 +53,7 @@ config_debug.CPPOptions.IncludePaths = include_paths
 config_debug.CPPOptions.Defines += defines
 config_debug.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DEBUG_DLL
 config_debug.CPPOptions.DisabledWarnings = disabled_warnings
+config_debug.CPPOptions.ReportSingleClassLayout = [ 'crdb_type_register_crdb_Field' ]
 config_debug.CPPOptions.UpdateCommandLine()
 config_debug.LinkOptions.LibPaths = lib_paths_debug
 config_debug.LinkOptions.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
@@ -76,4 +77,4 @@ exe = env.Link("crscan.exe", obj_files, lib_files)
 env.Build(exe)
 
 VCGenerateProjectFile(env, "src/ClangReflectScan/ClangReflectScan", cpp_files + hpp_files, exe)
-VCGenerateSolutionFile(env, "ClangReflect", [ "src/ClangReflectScan/ClangReflectScan" ])
+VCGenerateSolutionFile(env, "ClangReflect", [ "src/ClangReflectScan/ClangReflectScan", "src/ClangReflectTest/ClangReflectTest" ])

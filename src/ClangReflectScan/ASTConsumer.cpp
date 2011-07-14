@@ -25,6 +25,7 @@
 //
 
 #include "ASTConsumer.h"
+#include "ReflectionSpecs.h"
 #include "Database.h"
 
 #include "clang/AST/Decl.h"
@@ -161,9 +162,10 @@ namespace
 }
 
 
-ASTConsumer::ASTConsumer(clang::ASTContext& context, crdb::Database& db)
+ASTConsumer::ASTConsumer(clang::ASTContext& context, crdb::Database& db, const ReflectionSpecs& rspecs)
 	: m_ASTContext(context)
 	, m_DB(db)
+	, m_ReflectionSpecs(rspecs)
 {
 }
 
@@ -201,6 +203,11 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name)
 	// Generate a name for the decl
 	//crdb::Name name = m_DB.GetName(decl->getDeclName().getAsString().c_str());
 	crdb::Name name = m_DB.GetName(decl->getQualifiedNameAsString().c_str());
+
+	if (!m_ReflectionSpecs.IsReflected(name->second.c_str()))
+	{
+		return;
+	}
 
 	clang::Decl::Kind kind = decl->getKind();
 	switch (kind)

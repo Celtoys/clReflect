@@ -2,6 +2,9 @@
 #include "Database.h"
 
 
+class ReflectionSpecs;
+
+
 namespace clang
 {
 	class ASTContext;
@@ -13,7 +16,7 @@ namespace clang
 class ASTConsumer
 {
 public:
-	ASTConsumer(clang::ASTContext& context, crdb::Database& db);
+	ASTConsumer(clang::ASTContext& context, crdb::Database& db, const ReflectionSpecs& rspecs);
 
 	void WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl);
 
@@ -30,4 +33,6 @@ private:
 	crdb::Database& m_DB;
 
 	clang::ASTContext& m_ASTContext;
+
+	const ReflectionSpecs& m_ReflectionSpecs;
 };

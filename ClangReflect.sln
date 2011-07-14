@@ -1,6 +1,8 @@
 Microsoft Visual Studio Solution File, Format Version 9.00
 # Visual Studio 2005
-Project("{DFE0E400-ABDB-11E0-8364-F46D04D48D5F}") = "ClangReflectScan", "src\ClangReflectScan\ClangReflectScan.vcproj", "{DFDF846E-ABDB-11E0-9C68-F46D04D48D5F}"
+Project("{BC28DCB0-AE0C-11E0-A112-F46D04D48D5F}") = "ClangReflectScan", "src\ClangReflectScan\ClangReflectScan.vcproj", "{B96B38C0-AE0B-11E0-B035-F46D04D48D5F}"
+EndProject
+Project("{BC28DCB1-AE0C-11E0-A89B-F46D04D48D5F}") = "ClangReflectTest", "src\ClangReflectTest\ClangReflectTest.vcproj", "{A5E0A651-5786-4AC9-B118-6B3B55D7656B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -8,15 +10,19 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{DFDF846E-ABDB-11E0-9C68-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
-		{DFDF846E-ABDB-11E0-9C68-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
-		{DFDF846E-ABDB-11E0-9C68-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
-		{DFDF846E-ABDB-11E0-9C68-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
+		{B96B38C0-AE0B-11E0-B035-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{B96B38C0-AE0B-11E0-B035-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
+		{B96B38C0-AE0B-11E0-B035-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
+		{B96B38C0-AE0B-11E0-B035-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
+		{A5E0A651-5786-4AC9-B118-6B3B55D7656B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{A5E0A651-5786-4AC9-B118-6B3B55D7656B}.Debug|Win32.Build.0 = Debug|Win32
+		{A5E0A651-5786-4AC9-B118-6B3B55D7656B}.Release|Win32.ActiveCfg = Release|Win32
+		{A5E0A651-5786-4AC9-B118-6B3B55D7656B}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		PiBDigest = qBjaXEEcl8mG7k3Fe96yhQ==
+		PiBDigest = 5pvo59BT63vZTWIcFdB_IA==
 	EndGlobalSection
 EndGlobal

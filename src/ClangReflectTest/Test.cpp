@@ -1,33 +1,7 @@
 
-#define UNIQUE_SYMBOL2(x, y) x##y
-#define UNIQUE_SYMBOL1(x, y) UNIQUE_SYMBOL2(x, y)
-#define UNIQUE_SYMBOL(x) UNIQUE_SYMBOL1(x, __COUNTER__)
 
+#include "crcpp.h"
 
-#ifdef __clang__
-
-#define crcpp_register(type, name)						\
-														\
-	namespace crdb_internal								\
-	{													\
-		__attribute__((annotate(#name)))				\
-		struct UNIQUE_SYMBOL(crdb_register_##type) { };	\
-	}
-
-
-#define crcpp_reflect_namespace(name) crcpp_register(namespace, name)
-#define crcpp_reflect_class(name) crcpp_register(class, name)
-#define crcpp_reflect_enum(name) crcpp_register(enum, name)
-#define crcpp_reflect_function(name) crcpp_register(function, name)
-
-#define crcpp_attr(...) __attribute__((annotate("attr:" #__VA_ARGS__)))
-#define crcpp_push_attr(...) struct UNIQUE_SYMBOL(push_attr) { } __attribute__((annotate(#__VA_ARGS__)));
-#define crcpp_pop_attr(...) struct UNIQUE_SYMBOL(pop_attr) { } __attribute__((annotate(#__VA_ARGS__)));
-
-#endif
-
-crcpp_reflect_namespace(NamespaceA)
-crcpp_reflect_namespace(NamespaceB)
 
 // test:
 //	* inheritance
@@ -52,6 +26,11 @@ crcpp_reflect_namespace(NamespaceB)
 //	static class variables
 //	multiple inheritance
 //	virtual inheritance
+
+
+// Reflect outside the namespace
+crcpp_reflect_namespace(NamespaceA)
+crcpp_reflect_namespace(NamespaceB)
 
 
 // --------------------------------------------------------------------------------------------
@@ -178,11 +157,15 @@ struct StructGlobalA
 // --------------------------------------------------------------------------------------------
 // Inheritance relationships
 // --------------------------------------------------------------------------------------------
+// Reflect from outside the namespace
+crcpp_reflect_class(Inheritance::BaseClass)
 namespace Inheritance
 {
 	struct BaseClass
 	{
 	};
+	// Reflect from inside the namespace
+	crcpp_reflect_class(Inheritance::DerivedClass)
 	struct DerivedClass : public BaseClass
 	{
 	};
