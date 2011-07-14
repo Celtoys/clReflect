@@ -23,6 +23,11 @@ namespace
 			return 0;
 		}
 
+		// Immediately prevent this namespace from being parsed by subsequent passes
+		// NOTE: I tried calling removeDecl from within the translation unit but it was asserting
+		// in some context-singleton code which I couldn't fully grep. This is an alternative.
+		ns_decl->setInvalidDecl();
+
 		// Get the first declaration
 		clang::DeclContext::decl_iterator j = ns_decl->decls_begin();
 		if (j == ns_decl->decls_end())
@@ -91,11 +96,9 @@ void ReflectionSpecs::Gather(clang::TranslationUnitDecl* tu_decl)
 		}
 
 		m_ReflectionSpecs[reflect_spec] = partial_reflect;
-
 		printf("Reflection Spec: %s (%s)\n", reflect_spec.str().c_str(), partial_reflect ? "partial" : "full");
 
 		++i;
-		//tu_decl->removeDecl(ns_decl);
 	}
 
 	for (llvm::StringMap<bool>::const_iterator i = m_ReflectionSpecs.begin(); i != m_ReflectionSpecs.end(); ++i)

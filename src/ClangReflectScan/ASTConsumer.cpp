@@ -200,10 +200,17 @@ void ASTConsumer::WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl)
 
 void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name)
 {
+	// Skip decls with errors and those marked by the Reflection Spec pass to ignore
+	if (decl->isInvalidDecl())
+	{
+		return;
+	}
+
 	// Generate a name for the decl
 	//crdb::Name name = m_DB.GetName(decl->getDeclName().getAsString().c_str());
 	crdb::Name name = m_DB.GetName(decl->getQualifiedNameAsString().c_str());
 
+	// Has this decl been marked for reflection?
 	if (!m_ReflectionSpecs.IsReflected(name->second.c_str()))
 	{
 		return;
