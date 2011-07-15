@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "llvm/ADT/StringMap.h"
+#include <map>
 
 
 namespace clang
@@ -10,13 +10,14 @@ namespace clang
 }
 
 
+// TODO: Optimise the use of strings in this class - it's not really any good
 class ReflectionSpecs
 {
 public:
 	void Gather(clang::TranslationUnitDecl* tu_decl);
 
-	bool IsReflected(llvm::StringRef name) const;
+	bool IsReflected(std::string name) const;
 
 private:
-	llvm::StringMap<bool> m_ReflectionSpecs;
+	std::map<std::string, bool> m_ReflectionSpecs;
 };

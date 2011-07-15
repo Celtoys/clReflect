@@ -18,7 +18,7 @@ namespace
 		}
 
 		// Looking for internal registration namespaces
-		if (ns_decl->getNameAsString() != "crdb_internal")
+		if (ns_decl->getNameAsString() != "crcpp_internal")
 		{
 			return 0;
 		}
@@ -54,6 +54,99 @@ namespace
 
 		return *k;
 	}
+
+
+	std::string TrimWhitespace(std::string source)
+	{
+		std::string dest;
+
+		// Ignore anything that's classed as whitespace
+		for (size_t i = 0; i < source.size(); i++)
+		{
+			char c = source[i];
+			if (c != ' ' && c != '\t')
+			{
+				dest += c;
+			}
+		}
+
+		return dest;
+	}
+
+
+	std::string MakeSymbolName(std::string spec)
+	{
+		spec = TrimWhitespace(spec);
+
+		std::string symbol;
+		size_t start_pos = 0;
+
+		while (true)
+		{
+			size_t end_pos = spec.find(',', start_pos);
+			if (end_pos == spec.npos)
+			{
+				symbol += spec.substr(start_pos);
+				break;
+			}
+			symbol += spec.substr(start_pos, end_pos - start_pos) + "::";
+			start_pos = end_pos + 1;
+		}
+
+		return symbol;
+	}
+
+
+	void AddUnmarkedSpecs(std::map<std::string, bool>& specs)
+	{
+		// Loop up through the parent scopes looking for unmarked names
+		for (std::map<std::string, bool>::const_iterator i = specs.begin(); i != specs.end(); ++i)
+		{
+			std::string spec = i->first;
+			while (true)
+			{
+				size_t sep_pos = spec.rfind("::");
+				if (sep_pos == spec.npos)
+				{
+					break;
+				}
+
+				// Insert partial reflection requests to ensure their primitives are created
+				// to contain the children
+				spec = spec.substr(0, sep_pos);
+				std::map<std::string, bool>::const_iterator j = specs.find(spec);
+				if (j == specs.end())
+				{
+					specs[spec] = true;
+				}
+			}
+		}
+	}
+
+
+	void CheckForWarnings(std::map<std::string, bool>& specs)
+	{
+		// Loop through the parents of all scoped names
+		for (std::map<std::string, bool>::const_iterator i = specs.begin(); i != specs.end(); ++i)
+		{
+			std::string spec = i->first;
+			while (true)
+			{
+				size_t sep_pos = spec.rfind("::");
+				if (sep_pos == spec.npos)
+				{
+					break;
+				}
+
+				spec = spec.substr(0, sep_pos);
+				std::map<std::string, bool>::const_iterator j = specs.find(spec);
+				if (j != specs.end() && j->second == false)
+				{
+					printf("WARNING: Reflection Spec for '%s' unnecessary as the parent '%s' has already been marked for full Reflection\n", i->first.c_str(), spec.c_str());
+				}
+			}
+		}
+	}
 }
 
 
@@ -86,52 +179,27 @@ void ReflectionSpecs::Gather(clang::TranslationUnitDecl* tu_decl)
 			printf("WARNING: Ill-formed Reflection Spec; can't determine if it's full or partial reflection\n");
 		}
 
-		// Strip the partial descriptor and check for existence in the map
-		reflect_spec = reflect_spec.substr(5);
-		if (m_ReflectionSpecs.find(reflect_spec) != m_ReflectionSpecs.end())
+		// Build the symbol name and check for existence in the map
+		std::string symbol = MakeSymbolName(reflect_spec.substr(5));
+		if (m_ReflectionSpecs.find(symbol) != m_ReflectionSpecs.end())
 		{
-			printf("WARNING: Ignoring duplicate Reflection Spec '%s'\n", reflect_spec.str().c_str());
+			printf("WARNING: Ignoring duplicate Reflection Spec '%s'\n", symbol.c_str());
 			++i;
 			continue;
 		}
 
-		m_ReflectionSpecs[reflect_spec] = partial_reflect;
-		printf("Reflection Spec: %s (%s)\n", reflect_spec.str().c_str(), partial_reflect ? "partial" : "full");
+		m_ReflectionSpecs[symbol] = partial_reflect;
+		printf("Reflection Spec: %s (%s)\n", symbol.c_str(), partial_reflect ? "partial" : "full");
 
 		++i;
 	}
 
-	for (llvm::StringMap<bool>::const_iterator i = m_ReflectionSpecs.begin(); i != m_ReflectionSpecs.end(); ++i)
-	{
-		llvm::StringRef spec = i->getKey();
-		if (spec.find("::") == spec.npos)
-		{
-			continue;
-		}
-
-		// Loop up through the parent scopes looking for unmarked names
-		while (true)
-		{
-			size_t sep_pos = spec.rfind("::");
-			if (sep_pos == spec.npos)
-			{
-				break;
-			}
-
-			// Insert partial reflection requests to ensure their primitives are created
-			// to contain the children
-			spec = spec.substr(0, sep_pos);
-			llvm::StringMap<bool>::const_iterator i = m_ReflectionSpecs.find(spec);
-			if (i == m_ReflectionSpecs.end())
-			{
-				m_ReflectionSpecs[spec] = true;
-			}
-		}
-	}
+	AddUnmarkedSpecs(m_ReflectionSpecs);
+	CheckForWarnings(m_ReflectionSpecs);
 }
 
 
-bool ReflectionSpecs::IsReflected(llvm::StringRef name) const
+bool ReflectionSpecs::IsReflected(std::string name) const
 {
 	// If the symbol itself has been marked for reflection, it's irrelevant whether it's for partial
 	// or full reflection - just reflect it. It's the contents that vary on this.
@@ -151,10 +219,10 @@ bool ReflectionSpecs::IsReflected(llvm::StringRef name) const
 
 		// If a parent has a reflection spec entry, only reflect if it's full reflection
 		name = name.substr(0, sep_pos);
-		llvm::StringMap<bool>::const_iterator i = m_ReflectionSpecs.find(name);
+		std::map<std::string, bool>::const_iterator i = m_ReflectionSpecs.find(name);
 		if (i != m_ReflectionSpecs.end())
 		{
-			return i->getValue() == false;
+			return i->second == false;
 		}
 	}
 

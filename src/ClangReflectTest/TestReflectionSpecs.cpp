@@ -42,10 +42,10 @@ void FunctionA() { }
 
 // --------------------------------------------------------------------------------------------
 // Reflect all primitives in a namespace from outside before the definition
-crcpp_reflect(NamespaceB::NamespaceA)
-crcpp_reflect(NamespaceB::ClassA)
-crcpp_reflect(NamespaceB::EnumA)
-crcpp_reflect(NamespaceB::FunctionA)
+crcpp_reflect(NamespaceB, NamespaceA)
+crcpp_reflect(NamespaceB, ClassA)
+crcpp_reflect(NamespaceB, EnumA)
+crcpp_reflect(NamespaceB, FunctionA)
 namespace NamespaceB
 {
 	namespace NamespaceA { class ShouldReflect { }; }
@@ -57,10 +57,10 @@ namespace NamespaceB
 
 // --------------------------------------------------------------------------------------------
 // Reflect all primitives in a nested namespace from global scope before the definition
-crcpp_reflect(NamespaceD::Inner::NamespaceA)
-crcpp_reflect(NamespaceD::Inner::ClassA)
-crcpp_reflect(NamespaceD::Inner::EnumA)
-crcpp_reflect(NamespaceD::Inner::FunctionA)
+crcpp_reflect(NamespaceD, Inner, NamespaceA)
+crcpp_reflect(NamespaceD, Inner, ClassA)
+crcpp_reflect(NamespaceD, Inner, EnumA)
+crcpp_reflect(NamespaceD, Inner, FunctionA)
 namespace NamespaceD
 {
 	namespace Inner
@@ -75,10 +75,10 @@ namespace NamespaceD
 
 // --------------------------------------------------------------------------------------------
 // Partial reflect a namespace with only half the contents reflected
-crcpp_reflect(NamespaceE::NamespaceA)
-crcpp_reflect(NamespaceE::ClassA)
-crcpp_reflect(NamespaceE::EnumA)
-crcpp_reflect(NamespaceE::FunctionA)
+crcpp_reflect(NamespaceE, NamespaceA)
+crcpp_reflect(NamespaceE, ClassA)
+crcpp_reflect(NamespaceE, EnumA)
+crcpp_reflect(NamespaceE, FunctionA)
 namespace NamespaceE
 {
 	namespace NamespaceA { class ShouldReflect { }; }
@@ -93,19 +93,39 @@ namespace NamespaceE
 }
 
 
-// Trigger ill-formed Reflection Spec warnings
-namespace crdb_internal { }
-namespace crdb_internal { int x; }
-namespace crdb_internal { struct crdb_reflect_ { }; }
+// --------------------------------------------------------------------------------------------
+// Full reflect of the contents of the namespace
+crcpp_reflect(NamespaceF)
+namespace NamespaceF
+{
+	namespace NamespaceA { class ShouldReflect { }; }
+	class ClassA { int ShouldReflect; };
+	enum EnumA { };
+	void FunctionA() { }
+}
 
+
+// --------------------------------------------------------------------------------------------
+// Trigger ill-formed Reflection Spec warnings
+namespace crcpp_internal { }
+namespace crcpp_internal { int x; }
+namespace crcpp_internal { struct crdb_reflect_ { }; }
+
+
+// --------------------------------------------------------------------------------------------
 // Trigger duplicate spec warning
 crcpp_reflect(NamespaceA)
 
-// Trigger no parent specification found
-crcpp_reflect(NamespaceUnreflected::Reflected)
-namespace NamespaceUnreflected
+
+// --------------------------------------------------------------------------------------------
+// Trigger unnecessary reflection spec warnings
+crcpp_reflect(NamespaceG)
+crcpp_reflect(NamespaceG, NamespaceA)
+crcpp_reflect(NamespaceG, NamespaceA, C)
+namespace G
 {
-	namespace Reflected
+	namespace A
 	{
+		class C { };
 	}
 }

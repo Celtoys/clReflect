@@ -29,8 +29,8 @@
 
 
 // Reflect outside the namespace
-crcpp_reflect_namespace(NamespaceA)
-crcpp_reflect_namespace(NamespaceB)
+crcpp_reflect(NamespaceA)
+crcpp_reflect(NamespaceB)
 
 
 // --------------------------------------------------------------------------------------------

@@ -7,6 +7,33 @@
 #include "DatabaseTextSerialiser.h"
 #include "DatabaseBinarySerialiser.h"
 
+
+namespace crcpp_internal
+{
+	template <typename bool, typename TRUE_TYPE, typename FALSE_TYPE> struct Select
+	{
+		typedef TRUE_TYPE Type;
+	};
+	template <typename TRUE_TYPE, typename FALSE_TYPE> struct Select<false, TRUE_TYPE, FALSE_TYPE>
+	{
+		typedef FALSE_TYPE Type;
+	};
+
+	struct EmptyClass
+	{
+	};
+	template <typename TYPE> struct InheritIfClass
+	{
+		typedef typename Select<__is_class(TYPE), TYPE, EmptyClass>::Type Type;
+	};
+
+	struct crdb_reflect_crdb_Field : public InheritIfClass<crdb::Field::Modifier>::Type
+	{
+		int x;
+	};
+}
+
+
 int main()
 {
 	crdb::Database db;
