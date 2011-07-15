@@ -157,15 +157,11 @@ struct StructGlobalA
 // --------------------------------------------------------------------------------------------
 // Inheritance relationships
 // --------------------------------------------------------------------------------------------
-// Reflect from outside the namespace
-crcpp_reflect_class(Inheritance::BaseClass)
 namespace Inheritance
 {
 	struct BaseClass
 	{
 	};
-	// Reflect from inside the namespace
-	crcpp_reflect_class(Inheritance::DerivedClass)
 	struct DerivedClass : public BaseClass
 	{
 	};

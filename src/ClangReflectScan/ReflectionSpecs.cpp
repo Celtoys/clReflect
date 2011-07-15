@@ -1,5 +1,6 @@
 
 #include "ReflectionSpecs.h"
+#include "Database.h"
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCxx.h"
@@ -56,6 +57,18 @@ namespace
 	}
 
 
+	std::string StringReplace(const std::string& str, const std::string& find, const std::string& replace)
+	{
+		std::string res = str;
+		for (size_t i = res.find(find); i != res.npos; i = res.find(find, i))
+		{
+			res.replace(i, find.length(), replace);
+			i += replace.length();
+		}
+		return res;
+	}
+
+
 	std::string TrimWhitespace(std::string source)
 	{
 		std::string dest;
@@ -77,23 +90,8 @@ namespace
 	std::string MakeSymbolName(std::string spec)
 	{
 		spec = TrimWhitespace(spec);
-
-		std::string symbol;
-		size_t start_pos = 0;
-
-		while (true)
-		{
-			size_t end_pos = spec.find(',', start_pos);
-			if (end_pos == spec.npos)
-			{
-				symbol += spec.substr(start_pos);
-				break;
-			}
-			symbol += spec.substr(start_pos, end_pos - start_pos) + "::";
-			start_pos = end_pos + 1;
-		}
-
-		return symbol;
+		spec = StringReplace(spec, ",", "::");
+		return spec;
 	}
 
 
@@ -150,6 +148,12 @@ namespace
 }
 
 
+ReflectionSpecs::ReflectionSpecs(bool reflect_all)
+	: m_ReflectAll(reflect_all)
+{
+}
+
+
 void ReflectionSpecs::Gather(clang::TranslationUnitDecl* tu_decl)
 {
 	// Iterate over every reflection spec in the translation unit
@@ -201,6 +205,12 @@ void ReflectionSpecs::Gather(clang::TranslationUnitDecl* tu_decl)
 
 bool ReflectionSpecs::IsReflected(std::string name) const
 {
+	// Check the optional override first
+	if (m_ReflectAll)
+	{
+		return true;
+	}
+
 	// If the symbol itself has been marked for reflection, it's irrelevant whether it's for partial
 	// or full reflection - just reflect it. It's the contents that vary on this.
 	if (m_ReflectionSpecs.find(name) != m_ReflectionSpecs.end())
@@ -227,4 +237,28 @@ bool ReflectionSpecs::IsReflected(std::string name) const
 	}
 
 	return false;
+}
+
+
+void ReflectionSpecs::Write(const char* filename, const crdb::Database& db) const
+{
+	FILE* fp = fopen(filename, "w");
+
+	// Loop over every reflected class
+	const crdb::PrimitiveStore<crdb::Class>& primitives = db.GetPrimitiveStore<crdb::Class>();
+	for (crdb::PrimitiveStore<crdb::Class>::NamedStore::const_iterator i = primitives.named.begin(); i != primitives.named.end(); ++i)
+	{
+		std::string name = i->second.name->second;
+		if (!IsReflected(name))
+		{
+			continue;
+		}
+
+		// Output the mapping from class name to VC type layout name
+		std::string us_name = StringReplace(name, "::", "_");
+		std::string line = name + ", crcpp_reflect_" + us_name + "\n";
+		fputs(line.c_str(), fp);
+	}
+
+	fclose(fp);
 }

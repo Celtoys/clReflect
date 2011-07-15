@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="Windows-1252"?>
-<!-- PiBDigest: bQ_B3hPKYBqlfaxrF4OtEw== -->
+<!-- PiBDigest: dyVeuUhBV9eWilsvp7GQKQ== -->
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="ClangReflectScan"
-	ProjectGUID="{B96B38C0-AE0B-11E0-B035-F46D04D48D5F}"
+	ProjectGUID="{59D6E130-AEF5-11E0-8D01-F46D04D48D5F}"
 	RootNamespace="ClangReflectScan"
 	Keyword="Win32Proj"
 	>
@@ -68,6 +68,10 @@
 		</File>
 		<File
 			RelativePath="ASTConsumer.h"
+			>
+		</File>
+		<File
+			RelativePath="Arguments.h"
 			>
 		</File>
 		<File

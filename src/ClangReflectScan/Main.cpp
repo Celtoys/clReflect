@@ -4,45 +4,60 @@
 #include "ClangFrontend.h"
 #include "ASTConsumer.h"
 #include "ReflectionSpecs.h"
+#include "Arguments.h"
 
 #include "Database.h"
 #include "DatabaseTextSerialiser.h"
 #include "DatabaseBinarySerialiser.h"
 
 
-crcpp_reflect(crdb, Field)
-
-
-int main()
+int main(int argc, const char* argv[])
 {
-	crdb::Database db;
-	db.AddBaseTypePrimitives();
+	// Leave early if there aren't enough arguments
+	Arguments args(argc, argv);
+	if (args.Count() < 2)
+	{
+		printf("Not enough arguments\n");
+		return 1;
+	}
 
 	// Parse the AST
 	ClangHost clang_host;
 	ClangASTParser ast_parser(clang_host);
-	ast_parser.ParseAST("../../src/ClangReflectTest/TestReflectionSpecs.cpp");
-
-	clang::ASTContext& ast_context = ast_parser.GetASTContext();
+	ast_parser.ParseAST(args[1].c_str());
 
 	// Gather reflection specs for the translation unit
-	ReflectionSpecs reflection_specs;
+	clang::ASTContext& ast_context = ast_parser.GetASTContext();
+	ReflectionSpecs reflection_specs(args.Have("-reflect_specs_all"));
 	reflection_specs.Gather(ast_context.getTranslationUnitDecl());
 
 	// On the second pass, build the reflection database
+	crdb::Database db;
+	db.AddBaseTypePrimitives();
 	ASTConsumer ast_consumer(ast_context, db, reflection_specs);
 	ast_consumer.WalkTranlationUnit(ast_context.getTranslationUnitDecl());
 
-	/*crdb::WriteTextDatabase("output.csv", db);
-	crdb::WriteBinaryDatabase("output.bin", db);
+	// Write any reflection specs to file so that the next stage in the compilation
+	// sequence can pick them up and instruct the compiler to report layout data
+	std::string reflect_specs_file = args.GetProperty("-reflect_specs");
+	if (reflect_specs_file != "")
+	{
+		reflection_specs.Write(reflect_specs_file.c_str(), db);
+	}
 
-	crdb::Database indb_text;
-	crdb::ReadTextDatabase("output.csv", indb_text);
-	crdb::WriteTextDatabase("output2.csv", indb_text);
+	if (args.Have("-test"))
+	{
+		crdb::WriteTextDatabase("output.csv", db);
+		crdb::WriteBinaryDatabase("output.bin", db);
 
-	crdb::Database indb_bin;
-	crdb::ReadBinaryDatabase("output.bin", indb_bin);
-	crdb::WriteBinaryDatabase("output2.bin", indb_bin);*/
+		crdb::Database indb_text;
+		crdb::ReadTextDatabase("output.csv", indb_text);
+		crdb::WriteTextDatabase("output2.csv", indb_text);
+
+		crdb::Database indb_bin;
+		crdb::ReadBinaryDatabase("output.bin", indb_bin);
+		crdb::WriteBinaryDatabase("output2.bin", indb_bin);
+	}
 
 	return 0;
 }
