@@ -16,6 +16,7 @@ crdb::meta::DatabaseTypes::DatabaseTypes()
 	DatabaseField class_fields[] =
 	{
 		DatabaseField(&crdb::Class::base_class),
+		DatabaseField(&crdb::Class::size),
 	};
 
 	DatabaseField enum_constant_fields[] =
@@ -28,7 +29,7 @@ crdb::meta::DatabaseTypes::DatabaseTypes()
 		DatabaseField(&crdb::Field::type),
 		DatabaseField(&crdb::Field::modifier),
 		DatabaseField(&crdb::Field::is_const),
-		DatabaseField(&crdb::Field::index),
+		DatabaseField(&crdb::Field::offset),
 	};
 
 	// Create the descriptions of each type

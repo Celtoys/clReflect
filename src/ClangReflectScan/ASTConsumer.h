@@ -8,6 +8,7 @@ class ReflectionSpecs;
 namespace clang
 {
 	class ASTContext;
+	class ASTRecordLayout;
 	class NamedDecl;
 	class TranslationUnitDecl;
 }
@@ -21,14 +22,14 @@ public:
 	void WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl);
 
 private:
-	void AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name);
+	void AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name, const clang::ASTRecordLayout* layout);
 	void AddNamespaceDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name);
 	void AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name);
 	void AddEnumDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name);
 	void AddFunctionDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name);
 	void AddMethodDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name);
-	void AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name);
-	void AddContainedDecls(clang::NamedDecl* decl, const crdb::Name& parent_name);
+	void AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name, const clang::ASTRecordLayout* layout);
+	void AddContainedDecls(clang::NamedDecl* decl, const crdb::Name& parent_name, const clang::ASTRecordLayout* layout);
 
 	crdb::Database& m_DB;
 

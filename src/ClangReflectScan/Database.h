@@ -83,10 +83,13 @@ namespace crdb
 	struct Class : public Type
 	{
 		Class() : Type(Primitive::KIND_CLASS) { }
-		Class(Name n, Name p, Name b) : Type(Primitive::KIND_CLASS, n, p), base_class(b) { }
+		Class(Name n, Name p, Name b, u32 s) : Type(Primitive::KIND_CLASS, n, p), base_class(b), size(s) { }
 
 		// Single base class
 		Name base_class;
+
+		// Total size of the class, including alignment
+		u32 size;
 	};
 
 
@@ -136,15 +139,15 @@ namespace crdb
 			MODIFIER_REFERENCE
 		};
 
-		Field() : Primitive(Primitive::KIND_FIELD), modifier(MODIFIER_VALUE), is_const(false), index(-1) { }
-		Field(Name n, Name p, Name t, Modifier pass, bool c, int i) : Primitive(Primitive::KIND_FIELD, n, p), type(t), modifier(pass), is_const(c), index(i) { }
+		Field() : Primitive(Primitive::KIND_FIELD), modifier(MODIFIER_VALUE), is_const(false), offset(-1) { }
+		Field(Name n, Name p, Name t, Modifier pass, bool c, int o) : Primitive(Primitive::KIND_FIELD, n, p), type(t), modifier(pass), is_const(c), offset(o) { }
 
 		Name type;
 		Modifier modifier;
 		bool is_const;
 
-		// Index of the field parameter within its parent function
-		int index;
+		// Index of the field parameter within its parent function or byte offset within its parent class
+		int offset;
 
 		// TODO: arrays
 		// TODO: bit fields

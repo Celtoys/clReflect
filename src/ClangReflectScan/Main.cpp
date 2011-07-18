@@ -59,14 +59,6 @@ int main(int argc, const char* argv[])
 	ASTConsumer ast_consumer(ast_context, db, reflection_specs);
 	ast_consumer.WalkTranlationUnit(ast_context.getTranslationUnitDecl());
 
-	// Write any reflection specs to file so that the next stage in the compilation
-	// sequence can pick them up and instruct the compiler to report layout data
-	std::string reflect_specs_file = args.GetProperty("-reflect_specs");
-	if (reflect_specs_file != "")
-	{
-		reflection_specs.Write(reflect_specs_file.c_str(), db);
-	}
-
 	if (args.Have("-test"))
 	{
 		crdb::WriteTextDatabase("output.csv", db);

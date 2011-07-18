@@ -26,8 +26,6 @@ public:
 
 	bool IsReflected(std::string name) const;
 
-	void Write(const char* filename, const crdb::Database& db) const;
-
 private:
 	bool m_ReflectAll;
 

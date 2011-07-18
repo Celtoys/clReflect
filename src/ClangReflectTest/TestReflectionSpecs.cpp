@@ -42,10 +42,10 @@ void FunctionA() { }
 
 // --------------------------------------------------------------------------------------------
 // Reflect all primitives in a namespace from outside before the definition
-crcpp_reflect(NamespaceB, NamespaceA)
-crcpp_reflect(NamespaceB, ClassA)
-crcpp_reflect(NamespaceB, EnumA)
-crcpp_reflect(NamespaceB, FunctionA)
+crcpp_reflect(NamespaceB::NamespaceA)
+crcpp_reflect(NamespaceB::ClassA)
+crcpp_reflect(NamespaceB::EnumA)
+crcpp_reflect(NamespaceB::FunctionA)
 namespace NamespaceB
 {
 	namespace NamespaceA { class ShouldReflect { }; }
@@ -57,10 +57,10 @@ namespace NamespaceB
 
 // --------------------------------------------------------------------------------------------
 // Reflect all primitives in a nested namespace from global scope before the definition
-crcpp_reflect(NamespaceD, Inner, NamespaceA)
-crcpp_reflect(NamespaceD, Inner, ClassA)
-crcpp_reflect(NamespaceD, Inner, EnumA)
-crcpp_reflect(NamespaceD, Inner, FunctionA)
+crcpp_reflect(NamespaceD::Inner::NamespaceA)
+crcpp_reflect(NamespaceD::Inner::ClassA)
+crcpp_reflect(NamespaceD::Inner::EnumA)
+crcpp_reflect(NamespaceD::Inner::FunctionA)
 namespace NamespaceD
 {
 	namespace Inner
@@ -75,10 +75,10 @@ namespace NamespaceD
 
 // --------------------------------------------------------------------------------------------
 // Partial reflect a namespace with only half the contents reflected
-crcpp_reflect(NamespaceE, NamespaceA)
-crcpp_reflect(NamespaceE, ClassA)
-crcpp_reflect(NamespaceE, EnumA)
-crcpp_reflect(NamespaceE, FunctionA)
+crcpp_reflect(NamespaceE::NamespaceA)
+crcpp_reflect(NamespaceE::ClassA)
+crcpp_reflect(NamespaceE::EnumA)
+crcpp_reflect(NamespaceE::FunctionA)
 namespace NamespaceE
 {
 	namespace NamespaceA { class ShouldReflect { }; }
@@ -119,9 +119,10 @@ crcpp_reflect(NamespaceA)
 
 // --------------------------------------------------------------------------------------------
 // Trigger unnecessary reflection spec warnings
+// TODO: See if specs map to actual symbols
 crcpp_reflect(NamespaceG)
-crcpp_reflect(NamespaceG, NamespaceA)
-crcpp_reflect(NamespaceG, NamespaceA, C)
+crcpp_reflect(NamespaceG::NamespaceA)
+crcpp_reflect(NamespaceG::NamespaceA::C)
 namespace G
 {
 	namespace A

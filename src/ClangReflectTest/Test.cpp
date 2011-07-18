@@ -10,6 +10,7 @@
 //	* overloaded functions
 //	* unnamed function parameters
 //	* method constness
+//  offsets match between clang and msvc
 //	defines introducing new stuff
 //	includes
 //	bitfields
@@ -26,17 +27,13 @@
 //	static class variables
 //	multiple inheritance
 //	virtual inheritance
+//  unnamed enums
 
-
-// Reflect outside the namespace
-crcpp_reflect(NamespaceA)
-crcpp_reflect(NamespaceB)
 
 
 // --------------------------------------------------------------------------------------------
 // Named global enumeration
 // --------------------------------------------------------------------------------------------
-crcpp_attr(reflect)
 enum NamedGlobalEnum
 {
 	VALUE_UNASSIGNED,
@@ -77,6 +74,10 @@ void GlobalParamFunction(int pa, char pb);
 void GlobalParamFunction(int pa, char pb) { }
 char GlobalReturnParamFunction(float x, double y);
 char GlobalReturnParamFunction(float x, double y) { return 0; }
+crcpp_reflect(GlobalEmptyFunction)
+crcpp_reflect(GlobalReturnFunction)
+crcpp_reflect(GlobalParamFunction)
+crcpp_reflect(GlobalReturnParamFunction)
 
 
 // --------------------------------------------------------------------------------------------
@@ -85,11 +86,13 @@ char GlobalReturnParamFunction(float x, double y) { return 0; }
 void OverloadTest(int a) { }
 void OverloadTest(int a, int b) { }
 void OverloadTest(int a, int b, int c) { }
+crcpp_reflect(OverloadTest)
 
 
 // --------------------------------------------------------------------------------------------
 // Forward declaration and definition of a global class
 // --------------------------------------------------------------------------------------------
+crcpp_reflect(ClassGlobalA)
 class ClassGlobalA;
 class ClassGlobalA
 {
@@ -120,17 +123,16 @@ char ClassGlobalA::DeclReturnParamFunction(float x, double y) { return 0; }
 // --------------------------------------------------------------------------------------------
 // Forward declaration and definition of a global struct
 // --------------------------------------------------------------------------------------------
+crcpp_reflect(StructGlobalA)
 struct StructGlobalA;
 struct StructGlobalA
 {
 	enum Enum { VALUE_A, VALUE_B };
 
 	// Basic field types
-	crcpp_push_attr(noreflect)
 	unsigned char a;
 	unsigned short b;
 	unsigned short c;
-	crcpp_pop_attr(noreflect)
 
 	// Inline implementation of varying function types
 	void InlineEmptyFunction() { }
@@ -157,6 +159,7 @@ struct StructGlobalA
 // --------------------------------------------------------------------------------------------
 // Inheritance relationships
 // --------------------------------------------------------------------------------------------
+crcpp_reflect(Inheritance)
 namespace Inheritance
 {
 	struct BaseClass
@@ -181,6 +184,7 @@ namespace Inheritance
 // --------------------------------------------------------------------------------------------
 // Varying field parameter types
 // --------------------------------------------------------------------------------------------
+crcpp_reflect(FieldTypes)
 class FieldTypes
 {
 	// Just to keep the compiler happy about the reference types stored below
@@ -246,75 +250,83 @@ class FieldTypes
 // --------------------------------------------------------------------------------------------
 // Varying function parameter types
 // --------------------------------------------------------------------------------------------
-void FunctionTypes(char a, short b, int c, long d, unsigned char e, unsigned short f, unsigned int g, unsigned long h, float i, double j) { }
-void FunctionTypesPtr(char* a, short* b, int* c, long* d, unsigned char* e, unsigned short* f, unsigned int* g, unsigned long* h, float* i, double* j) { }
-void FunctionTypesConstPtr(const char* a, const short* b, const int* c, const long* d, const unsigned char* e, const unsigned short* f, const unsigned int* g, const unsigned long* h, const float* i, const double* j) { }
-void FunctionTypesRef(char& a, short& b, int& c, long& d, unsigned char& e, unsigned short& f, unsigned int& g, unsigned long& h, float& i, double& j) { }
-void FunctionTypesConstRef(const char& a, const short& b, const int& c, const long& d, const unsigned char& e, const unsigned short& f, const unsigned int& g, const unsigned long& h, const float& i, const double& j) { }
+crcpp_reflect(FuncParams)
+namespace FuncParams
+{
+	void FunctionTypes(char a, short b, int c, long d, unsigned char e, unsigned short f, unsigned int g, unsigned long h, float i, double j) { }
+	void FunctionTypesPtr(char* a, short* b, int* c, long* d, unsigned char* e, unsigned short* f, unsigned int* g, unsigned long* h, float* i, double* j) { }
+	void FunctionTypesConstPtr(const char* a, const short* b, const int* c, const long* d, const unsigned char* e, const unsigned short* f, const unsigned int* g, const unsigned long* h, const float* i, const double* j) { }
+	void FunctionTypesRef(char& a, short& b, int& c, long& d, unsigned char& e, unsigned short& f, unsigned int& g, unsigned long& h, float& i, double& j) { }
+	void FunctionTypesConstRef(const char& a, const short& b, const int& c, const long& d, const unsigned char& e, const unsigned short& f, const unsigned int& g, const unsigned long& h, const float& i, const double& j) { }
+}
 
 
 // --------------------------------------------------------------------------------------------
 // Varying function return types
 // --------------------------------------------------------------------------------------------
-char FunctionRetChar() { return 0; }
-short FunctionRetShort() { return 0; }
-int FunctionRetInt() { return 0; }
-long FunctionRetLong() { return 0; }
-unsigned char FunctionRetUnsignedChar() { return 0; }
-unsigned short FunctionRetUnsignedShort() { return 0; }
-unsigned int FunctionRetUnsignedInt() { return 0; }
-unsigned long FunctionRetUnsignedLong() { return 0; }
-float FunctionRetFloat() { return 0; }
-double FunctionRetDouble() { return 0; }
-// --- Pointers
-char* FunctionRetCharPtr() { return 0; }
-short* FunctionRetShortPtr() { return 0; }
-int* FunctionRetIntPtr() { return 0; }
-long* FunctionRetLongPtr() { return 0; }
-unsigned char* FunctionRetUnsignedCharPtr() { return 0; }
-unsigned short* FunctionRetUnsignedShortPtr() { return 0; }
-unsigned int* FunctionRetUnsignedIntPtr() { return 0; }
-unsigned long* FunctionRetUnsignedLongPtr() { return 0; }
-float* FunctionRetFloatPtr() { return 0; }
-double* FunctionRetDoublePtr() { return 0; }
+crcpp_reflect(FuncReturns)
+namespace FuncReturns
+{
+	char FunctionRetChar() { return 0; }
+	short FunctionRetShort() { return 0; }
+	int FunctionRetInt() { return 0; }
+	long FunctionRetLong() { return 0; }
+	unsigned char FunctionRetUnsignedChar() { return 0; }
+	unsigned short FunctionRetUnsignedShort() { return 0; }
+	unsigned int FunctionRetUnsignedInt() { return 0; }
+	unsigned long FunctionRetUnsignedLong() { return 0; }
+	float FunctionRetFloat() { return 0; }
+	double FunctionRetDouble() { return 0; }
+	// --- Pointers
+	char* FunctionRetCharPtr() { return 0; }
+	short* FunctionRetShortPtr() { return 0; }
+	int* FunctionRetIntPtr() { return 0; }
+	long* FunctionRetLongPtr() { return 0; }
+	unsigned char* FunctionRetUnsignedCharPtr() { return 0; }
+	unsigned short* FunctionRetUnsignedShortPtr() { return 0; }
+	unsigned int* FunctionRetUnsignedIntPtr() { return 0; }
+	unsigned long* FunctionRetUnsignedLongPtr() { return 0; }
+	float* FunctionRetFloatPtr() { return 0; }
+	double* FunctionRetDoublePtr() { return 0; }
 
-const char* FunctionRetCharConstPtr() { return 0; }
-const short* FunctionRetShortConstPtr() { return 0; }
-const int* FunctionRetIntConstPtr() { return 0; }
-const long* FunctionRetLongConstPtr() { return 0; }
-const unsigned char* FunctionRetUnsignedCharConstPtr() { return 0; }
-const unsigned short* FunctionRetUnsignedShortConstPtr() { return 0; }
-const unsigned int* FunctionRetUnsignedIntConstPtr() { return 0; }
-const unsigned long* FunctionRetUnsignedLongConstPtr() { return 0; }
-const float* FunctionRetFloatConstPtr() { return 0; }
-const double* FunctionRetDoubleConstPtr() { return 0; }
-// --- References
-char& FunctionRetCharRef() { return *(char*)0; }
-short& FunctionRetShortRef() { return *(short*)0; }
-int& FunctionRetIntRef() { return *(int*)0; }
-long& FunctionRetLongRef() { return *(long*)0; }
-unsigned char& FunctionRetUnsignedCharRef() { return *(unsigned char*)0; }
-unsigned short& FunctionRetUnsignedShortRef() { return *(unsigned short*)0; }
-unsigned int& FunctionRetUnsignedIntRef() { return *(unsigned int*)0; }
-unsigned long& FunctionRetUnsignedLongRef() { return *(unsigned long*)0; }
-float& FunctionRetFloatRef() { return *(float*)0; }
-double& FunctionRetDoubleRef() { return *(double*)0; }
+	const char* FunctionRetCharConstPtr() { return 0; }
+	const short* FunctionRetShortConstPtr() { return 0; }
+	const int* FunctionRetIntConstPtr() { return 0; }
+	const long* FunctionRetLongConstPtr() { return 0; }
+	const unsigned char* FunctionRetUnsignedCharConstPtr() { return 0; }
+	const unsigned short* FunctionRetUnsignedShortConstPtr() { return 0; }
+	const unsigned int* FunctionRetUnsignedIntConstPtr() { return 0; }
+	const unsigned long* FunctionRetUnsignedLongConstPtr() { return 0; }
+	const float* FunctionRetFloatConstPtr() { return 0; }
+	const double* FunctionRetDoubleConstPtr() { return 0; }
+	// --- References
+	char& FunctionRetCharRef() { return *(char*)0; }
+	short& FunctionRetShortRef() { return *(short*)0; }
+	int& FunctionRetIntRef() { return *(int*)0; }
+	long& FunctionRetLongRef() { return *(long*)0; }
+	unsigned char& FunctionRetUnsignedCharRef() { return *(unsigned char*)0; }
+	unsigned short& FunctionRetUnsignedShortRef() { return *(unsigned short*)0; }
+	unsigned int& FunctionRetUnsignedIntRef() { return *(unsigned int*)0; }
+	unsigned long& FunctionRetUnsignedLongRef() { return *(unsigned long*)0; }
+	float& FunctionRetFloatRef() { return *(float*)0; }
+	double& FunctionRetDoubleRef() { return *(double*)0; }
 
-const char& FunctionRetCharConstRef() { return *(char*)0; }
-const short& FunctionRetShortConstRef() { return *(short*)0; }
-const int& FunctionRetIntConstRef() { return *(int*)0; }
-const long& FunctionRetLongConstRef() { return *(long*)0; }
-const unsigned char& FunctionRetUnsignedCharConstRef() { return *(unsigned char*)0; }
-const unsigned short& FunctionRetUnsignedShortConstRef() { return *(unsigned short*)0; }
-const unsigned int& FunctionRetUnsignedIntConstRef() { return *(unsigned int*)0; }
-const unsigned long& FunctionRetUnsignedLongConstRef() { return *(unsigned long*)0; }
-const float& FunctionRetFloatConstRef() { return *(float*)0; }
-const double& FunctionRetDoubleConstRef() { return *(double*)0; }
-
+	const char& FunctionRetCharConstRef() { return *(char*)0; }
+	const short& FunctionRetShortConstRef() { return *(short*)0; }
+	const int& FunctionRetIntConstRef() { return *(int*)0; }
+	const long& FunctionRetLongConstRef() { return *(long*)0; }
+	const unsigned char& FunctionRetUnsignedCharConstRef() { return *(unsigned char*)0; }
+	const unsigned short& FunctionRetUnsignedShortConstRef() { return *(unsigned short*)0; }
+	const unsigned int& FunctionRetUnsignedIntConstRef() { return *(unsigned int*)0; }
+	const unsigned long& FunctionRetUnsignedLongConstRef() { return *(unsigned long*)0; }
+	const float& FunctionRetFloatConstRef() { return *(float*)0; }
+	const double& FunctionRetDoubleConstRef() { return *(double*)0; }
+}
 
 // --------------------------------------------------------------------------------------------
 // Anonymous namespace
 // --------------------------------------------------------------------------------------------
+// TODO: Can't reflect because macro can't access!
 namespace
 {
 	enum AnonNSEnumA { A_VALUE_A, A_VALUE_B };
@@ -351,6 +363,7 @@ namespace
 // --------------------------------------------------------------------------------------------
 // Named namespace
 // --------------------------------------------------------------------------------------------
+crcpp_reflect(NamespaceA)
 namespace NamespaceA
 {
 	// Namespace functions with overload testing
@@ -374,6 +387,7 @@ namespace NamespaceA
 // --------------------------------------------------------------------------------------------
 // Another named namespace
 // --------------------------------------------------------------------------------------------
+crcpp_reflect(NamespaceB)
 namespace NamespaceB
 {
 	// Namespace functions with overload testing
@@ -425,6 +439,7 @@ namespace NamespaceA
 // --------------------------------------------------------------------------------------------
 // Namespace and class nesting
 // --------------------------------------------------------------------------------------------
+crcpp_reflect(OuterNamespace)
 namespace OuterNamespace
 {
 	namespace InnerNamespace
@@ -455,6 +470,7 @@ namespace OuterNamespace
 // --------------------------------------------------------------------------------------------
 // Referencing the already created classes as function parameters
 // --------------------------------------------------------------------------------------------
+crcpp_reflect(FunctionClasses)
 void FunctionClasses(
 					 ClassGlobalA a,
 					 StructGlobalA b,
@@ -468,6 +484,7 @@ void FunctionClasses(
 					 OuterNamespace::InnerNamespace::OuterClass j,
 					 OuterNamespace::InnerNamespace::OuterClass::InnerClass k) { }
 
+crcpp_reflect(FunctionEnums)
 void FunctionEnums(
 				   NamedGlobalEnum a,
 				   AnonNSEnumA b,

@@ -69,32 +69,6 @@ namespace
 	}
 
 
-	std::string TrimWhitespace(std::string source)
-	{
-		std::string dest;
-
-		// Ignore anything that's classed as whitespace
-		for (size_t i = 0; i < source.size(); i++)
-		{
-			char c = source[i];
-			if (c != ' ' && c != '\t')
-			{
-				dest += c;
-			}
-		}
-
-		return dest;
-	}
-
-
-	std::string MakeSymbolName(std::string spec)
-	{
-		spec = TrimWhitespace(spec);
-		spec = StringReplace(spec, ",", "::");
-		return spec;
-	}
-
-
 	void AddUnmarkedSpecs(std::map<std::string, bool>& specs)
 	{
 		// Loop up through the parent scopes looking for unmarked names
@@ -184,7 +158,7 @@ void ReflectionSpecs::Gather(clang::TranslationUnitDecl* tu_decl)
 		}
 
 		// Build the symbol name and check for existence in the map
-		std::string symbol = MakeSymbolName(reflect_spec.substr(5));
+		std::string symbol = reflect_spec.substr(5);
 		if (m_ReflectionSpecs.find(symbol) != m_ReflectionSpecs.end())
 		{
 			printf("WARNING: Ignoring duplicate Reflection Spec '%s'\n", symbol.c_str());
@@ -237,28 +211,4 @@ bool ReflectionSpecs::IsReflected(std::string name) const
 	}
 
 	return false;
-}
-
-
-void ReflectionSpecs::Write(const char* filename, const crdb::Database& db) const
-{
-	FILE* fp = fopen(filename, "w");
-
-	// Loop over every reflected class
-	const crdb::PrimitiveStore<crdb::Class>& primitives = db.GetPrimitiveStore<crdb::Class>();
-	for (crdb::PrimitiveStore<crdb::Class>::NamedStore::const_iterator i = primitives.named.begin(); i != primitives.named.end(); ++i)
-	{
-		std::string name = i->second.name->second;
-		if (!IsReflected(name))
-		{
-			continue;
-		}
-
-		// Output the mapping from class name to VC type layout name
-		std::string us_name = StringReplace(name, "::", "_");
-		std::string line = name + ", crcpp_reflect_" + us_name + "\n";
-		fputs(line.c_str(), fp);
-	}
-
-	fclose(fp);
 }

@@ -31,6 +31,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCxx.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/RecordLayout.h"
 
 
 namespace
@@ -192,13 +193,13 @@ void ASTConsumer::WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl)
 		case (clang::Decl::CXXRecord):
 		case (clang::Decl::Function):
 		case (clang::Decl::Enum):
-			AddDecl(named_decl, parent_name);
+			AddDecl(named_decl, parent_name, 0);
 		}
 	}
 }
 
 
-void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name)
+void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name, const clang::ASTRecordLayout* layout)
 {
 	// Skip decls with errors and those marked by the Reflection Spec pass to ignore
 	if (decl->isInvalidDecl())
@@ -206,15 +207,15 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name)
 		return;
 	}
 
-	// Generate a name for the decl
-	//crdb::Name name = m_DB.GetName(decl->getDeclName().getAsString().c_str());
-	crdb::Name name = m_DB.GetName(decl->getQualifiedNameAsString().c_str());
-
 	// Has this decl been marked for reflection?
-	if (!m_ReflectionSpecs.IsReflected(name->second.c_str()))
+	if (!m_ReflectionSpecs.IsReflected(decl->getQualifiedNameAsString().c_str()))
 	{
 		return;
 	}
+
+	// Generate a name for the decl
+	//crdb::Name name = m_DB.GetName(decl->getDeclName().getAsString().c_str());
+	crdb::Name name = m_DB.GetName(decl->getQualifiedNameAsString().c_str());
 
 	clang::Decl::Kind kind = decl->getKind();
 	switch (kind)
@@ -224,7 +225,7 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name)
 	case (clang::Decl::Enum): AddEnumDecl(decl, name, parent_name); break;
 	case (clang::Decl::Function): AddFunctionDecl(decl, name, parent_name); break;
 	case (clang::Decl::CXXMethod): AddMethodDecl(decl, name, parent_name); break;
-	case (clang::Decl::Field): AddFieldDecl(decl, name, parent_name); break;
+	case (clang::Decl::Field): AddFieldDecl(decl, name, parent_name, layout); break;
 	}
 }
 
@@ -241,7 +242,7 @@ void ASTConsumer::AddNamespaceDecl(clang::NamedDecl* decl, const crdb::Name& nam
 
 	// Add everything within the namespace
 	printf("namespace %s\n", name->second.c_str());
-	AddContainedDecls(decl, name);
+	AddContainedDecls(decl, name, 0);
 }
 
 
@@ -260,7 +261,7 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 	// Can only inherit from one base class for now - offsets change based on derived type
 	if (record_decl->getNumBases() > 1)
 	{
-		printf("WARNING: Class %s has too many bases\n", name->second.c_str());
+		printf("WARNING: Class '%s' has too many bases\n", name->second.c_str());
 		return;
 	}
 
@@ -272,7 +273,7 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 		clang::CXXBaseSpecifier& base = *record_decl->bases_begin();
 		if (base.isVirtual())
 		{
-			printf("WARNING: Class has an unsupported virtual base class\n", name->second.c_str());
+			printf("WARNING: Class '%s' has an unsupported virtual base class\n", name->second.c_str());
 			return;
 		}
 
@@ -290,8 +291,10 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 	{
 		printf("   BASE: %s\n", base_name->second.c_str());
 	}
-	m_DB.AddPrimitive(crdb::Class(name, parent_name, base_name));
-	AddContainedDecls(decl, name);
+	const clang::ASTRecordLayout& layout = m_ASTContext.getASTRecordLayout(record_decl);
+	crdb::u32 size = layout.getSize().getQuantity();
+	m_DB.AddPrimitive(crdb::Class(name, parent_name, base_name, size));
+	AddContainedDecls(decl, name, &layout);
 }
 
 
@@ -362,7 +365,7 @@ void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const crdb::Name& name, 
 }
 
 
-void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
+void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name, const clang::ASTRecordLayout* layout)
 {
 	// Cast to a field
 	clang::FieldDecl* field_decl = dyn_cast<clang::FieldDecl>(decl);
@@ -370,7 +373,8 @@ void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 
 	// Parse and add the field
 	crdb::Field field;
-	if (!MakeField(m_DB, field_decl->getType(), field_decl->getNameAsString().c_str(), parent_name, 0, field))
+	crdb::u32 offset = layout->getFieldOffset(field_decl->getFieldIndex()) / 8;
+	if (!MakeField(m_DB, field_decl->getType(), field_decl->getNameAsString().c_str(), parent_name, offset, field))
 	{
 		printf("WARNING: Unsupported type for field %s\n", field_decl->getNameAsString().c_str());
 		return;
@@ -385,7 +389,7 @@ void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 }
 
 
-void ASTConsumer::AddContainedDecls(clang::NamedDecl* decl, const crdb::Name& parent_name)
+void ASTConsumer::AddContainedDecls(clang::NamedDecl* decl, const crdb::Name& parent_name, const clang::ASTRecordLayout* layout)
 {
 	// Iterate over every contained named declaration
 	clang::DeclContext* decl_context = decl->castToDeclContext(decl);
@@ -394,7 +398,7 @@ void ASTConsumer::AddContainedDecls(clang::NamedDecl* decl, const crdb::Name& pa
 		clang::NamedDecl* named_decl = dyn_cast<clang::NamedDecl>(*i);
 		if (named_decl != 0)
 		{
-			AddDecl(named_decl, parent_name);
+			AddDecl(named_decl, parent_name, layout);
 		}
 	}
 }

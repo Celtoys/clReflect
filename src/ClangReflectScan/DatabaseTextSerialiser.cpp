@@ -207,6 +207,8 @@ namespace
 		WritePrimitive(fp, primitive, named, db);
 		fputs("\t", fp);
 		fputs(HexStringFromName(primitive.base_class, db), fp);
+		fputs("\t", fp);
+		fputs(itohex(primitive.size), fp);
 	}
 
 	
@@ -235,7 +237,7 @@ namespace
 		fputs(primitive.is_const ? "\t1" : "\t0", fp);
 
 		fputs("\t", fp);
-		fputs(itoa(primitive.index), fp);
+		fputs(itoa(primitive.offset), fp);
 	}
 
 
@@ -300,11 +302,11 @@ void crdb::WriteTextDatabase(const char* filename, const Database& db)
 	// Write all the primitive tables
 	WritePrimitives<Namespace>(fp, db, WritePrimitive, "Namespaces", "Name\t\tParent");
 	WritePrimitives<Type>(fp, db, WritePrimitive, "Types", "Name\t\tParent");
-	WritePrimitives<Class>(fp, db, WriteClass, "Classes", "Name\t\tParent\t\tBase");
+	WritePrimitives<Class>(fp, db, WriteClass, "Classes", "Name\t\tParent\t\tBase\tSize");
 	WritePrimitives<Enum>(fp, db, WritePrimitive, "Enums", "Name\t\tParent");
 	WritePrimitives<EnumConstant>(fp, db, WriteEnumConstant, "Enum Constants", "Name\t\tParent\t\tValue");
 	WritePrimitives<Function>(fp, db, WritePrimitive, "Functions", "Name\t\tParent");
-	WritePrimitives<Field>(fp, db, WriteField, "Fields", "Name\t\tParent\t\tType\t\tMod\tCst\tIdx");
+	WritePrimitives<Field>(fp, db, WriteField, "Fields", "Name\t\tParent\t\tType\t\tMod\tCst\tOffs");
 
 	fclose(fp);
 }
@@ -431,12 +433,14 @@ namespace
 
 		// Class parsing
 		crdb::u32 base = tok.GetHexInt();
+		crdb::u32 size = tok.GetHexInt();
 
 		// Add a new class to the database
 		crdb::Class primitive(
 			db.GetName(name),
 			db.GetName(parent),
-			db.GetName(base));
+			db.GetName(base),
+			size);
 
 		db.AddPrimitive(primitive);
 	}

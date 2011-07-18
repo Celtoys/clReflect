@@ -5,7 +5,6 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/Frontend/DiagnosticOptions.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"	
 #include "clang/Frontend/Utils.h"
 #include "clang/Parse/ParseAST.h"
@@ -31,8 +30,10 @@ ClangHost::ClangHost()
 	// shutdown as stdout hasn't been opened by the app in the first place.
 	: output_stream(1, false)
 {
+	// Error reporting format for Visual Studio clicking
+	diag_options.Format = diag_options.Msvc;
+
 	// Create a diagnostic object for reporting warnings and errors to the user
-	clang::DiagnosticOptions diag_options;
 	clang::TextDiagnosticPrinter* text_diag_printer = new clang::TextDiagnosticPrinter(output_stream, diag_options);
 	llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diag_id(new clang::DiagnosticIDs());
 	diagnostic.reset(new clang::Diagnostic(diag_id, text_diag_printer));
@@ -40,6 +41,7 @@ ClangHost::ClangHost()
 	// Setup the language parsing options for C++
 	lang_options.CPlusPlus = 1;
 	lang_options.Bool = 1;
+	lang_options.Microsoft = 1;
 
 	// Setup access to the filesystem
 	clang::FileSystemOptions fs_options;
@@ -53,9 +55,10 @@ ClangHost::ClangHost()
 	//		false,
 	//		false);
 
-	// Get the target machine info
+	// Setup target options - ensure record layout calculations use the MSVC C++ ABI
 	clang::TargetOptions target_options;
 	target_options.Triple = llvm::sys::getHostTriple();
+	target_options.CXXABI = "microsoft";
 	target_info.reset(clang::TargetInfo::CreateTargetInfo(*diagnostic, target_options));
 
 	// This will commit the header search options to the header search object

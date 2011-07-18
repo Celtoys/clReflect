@@ -10,6 +10,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Frontend/DiagnosticOptions.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/HeaderSearchOptions.h"
 #include "clang/Frontend/PreprocessorOptions.h"
@@ -36,6 +37,7 @@ struct ClangHost
 
 	llvm::raw_fd_ostream output_stream;
 
+	clang::DiagnosticOptions diag_options;
 	clang::LangOptions lang_options;
 	clang::HeaderSearchOptions header_search_options;
 
