@@ -1,8 +1,11 @@
 Microsoft Visual Studio Solution File, Format Version 9.00
 # Visual Studio 2005
-Project("{BC28DCB0-AE0C-11E0-A112-F46D04D48D5F}") = "ClangReflectScan", "src\ClangReflectScan\ClangReflectScan.vcproj", "{B96B38C0-AE0B-11E0-B035-F46D04D48D5F}"
+Project("{00D9C0F0-B122-11E0-A6FA-F46D04D48D5F}") = "ClangReflectScan", "src\ClangReflectScan\ClangReflectScan.vcproj", "{00D88870-B122-11E0-BED9-F46D04D48D5F}"
 EndProject
-Project("{BC28DCB1-AE0C-11E0-A89B-F46D04D48D5F}") = "ClangReflectTest", "src\ClangReflectTest\ClangReflectTest.vcproj", "{A5E0A651-5786-4AC9-B118-6B3B55D7656B}"
+Project("{00D9E800-B122-11E0-838B-F46D04D48D5F}") = "ClangReflectTest", "src\ClangReflectTest\ClangReflectTest.vcproj", "{A5E0A651-5786-4AC9-B118-6B3B55D7656B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{00D88870-B122-11E0-BED9-F46D04D48D5F} = {00D88870-B122-11E0-BED9-F46D04D48D5F}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -10,10 +13,10 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B96B38C0-AE0B-11E0-B035-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
-		{B96B38C0-AE0B-11E0-B035-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
-		{B96B38C0-AE0B-11E0-B035-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
-		{B96B38C0-AE0B-11E0-B035-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
+		{00D88870-B122-11E0-BED9-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{00D88870-B122-11E0-BED9-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
+		{00D88870-B122-11E0-BED9-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
+		{00D88870-B122-11E0-BED9-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
 		{A5E0A651-5786-4AC9-B118-6B3B55D7656B}.Debug|Win32.ActiveCfg = Debug|Win32
 		{A5E0A651-5786-4AC9-B118-6B3B55D7656B}.Debug|Win32.Build.0 = Debug|Win32
 		{A5E0A651-5786-4AC9-B118-6B3B55D7656B}.Release|Win32.ActiveCfg = Release|Win32

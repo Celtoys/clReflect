@@ -4,7 +4,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="ClangReflectScan"
-	ProjectGUID="{59D6E130-AEF5-11E0-8D01-F46D04D48D5F}"
+	ProjectGUID="{00D88870-B122-11E0-BED9-F46D04D48D5F}"
 	RootNamespace="ClangReflectScan"
 	Keyword="Win32Proj"
 	>
@@ -25,9 +25,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib debug"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug"
-				CleanCommandLine="cd ..\.. &amp; pib clean debug"
+				BuildCommandLine="cd ..\.. &amp; pib debug -target crscan"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target crscan"
+				CleanCommandLine="cd ..\.. &amp; pib clean debug -target crscan"
 				Output="..\..\bin\Debug\crscan.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
@@ -46,9 +46,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib release"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release"
-				CleanCommandLine="cd ..\.. &amp; pib clean release"
+				BuildCommandLine="cd ..\.. &amp; pib release -target crscan"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target crscan"
+				CleanCommandLine="cd ..\.. &amp; pib clean release -target crscan"
 				Output="..\..\bin\Release\crscan.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""

@@ -11,6 +11,20 @@
 #include "DatabaseBinarySerialiser.h"
 
 
+bool FileExists(const char* filename)
+{
+	// For now, just try to open the file
+	FILE* fp = fopen(filename, "r");
+	if (fp == 0)
+	{
+		fclose(fp);
+		return false;
+	}
+	fclose(fp);
+	return true;
+}
+
+
 int main(int argc, const char* argv[])
 {
 	// Leave early if there aren't enough arguments
@@ -21,10 +35,18 @@ int main(int argc, const char* argv[])
 		return 1;
 	}
 
+	// Does the input file exist?
+	const char* input_filename = argv[1];
+	if (!FileExists(input_filename))
+	{
+		printf("Couldn't find the input file %s\n", input_filename);
+		return 1;
+	}
+
 	// Parse the AST
 	ClangHost clang_host;
 	ClangASTParser ast_parser(clang_host);
-	ast_parser.ParseAST(args[1].c_str());
+	ast_parser.ParseAST(input_filename);
 
 	// Gather reflection specs for the translation unit
 	clang::ASTContext& ast_context = ast_parser.GetASTContext();

@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "llvm/Support/raw_ostream.h"
+
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/FileManager.h"
@@ -31,6 +33,8 @@ namespace clang
 struct ClangHost
 {
 	ClangHost();
+
+	llvm::raw_fd_ostream output_stream;
 
 	clang::LangOptions lang_options;
 	clang::HeaderSearchOptions header_search_options;

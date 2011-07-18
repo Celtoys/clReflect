@@ -2,7 +2,6 @@
 #include "ClangFrontend.h"
 
 #include "llvm/Support/Host.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/TargetOptions.h"
@@ -28,10 +27,13 @@ namespace
 
 
 ClangHost::ClangHost()
+	// VC2005: If shouldClose is set to true, this forces an assert in the CRT on program
+	// shutdown as stdout hasn't been opened by the app in the first place.
+	: output_stream(1, false)
 {
 	// Create a diagnostic object for reporting warnings and errors to the user
 	clang::DiagnosticOptions diag_options;
-	clang::TextDiagnosticPrinter* text_diag_printer = new clang::TextDiagnosticPrinter(llvm::outs(), diag_options);
+	clang::TextDiagnosticPrinter* text_diag_printer = new clang::TextDiagnosticPrinter(output_stream, diag_options);
 	llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diag_id(new clang::DiagnosticIDs());
 	diagnostic.reset(new clang::Diagnostic(diag_id, text_diag_printer));
 
