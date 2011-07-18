@@ -11,17 +11,26 @@
 #include "DatabaseBinarySerialiser.h"
 
 
-bool FileExists(const char* filename)
+namespace
 {
-	// For now, just try to open the file
-	FILE* fp = fopen(filename, "r");
-	if (fp == 0)
+	bool FileExists(const char* filename)
 	{
+		// For now, just try to open the file
+		FILE* fp = fopen(filename, "r");
+		if (fp == 0)
+		{
+			fclose(fp);
+			return false;
+		}
 		fclose(fp);
-		return false;
+		return true;
 	}
-	fclose(fp);
-	return true;
+
+	
+	bool EndsWith(const std::string& str, const std::string& end)
+	{
+		return str.rfind(end) == str.length() - end.length();
+	}
 }
 
 
@@ -58,6 +67,20 @@ int main(int argc, const char* argv[])
 	db.AddBaseTypePrimitives();
 	ASTConsumer ast_consumer(ast_context, db, reflection_specs);
 	ast_consumer.WalkTranlationUnit(ast_context.getTranslationUnitDecl());
+
+	// Write to a text/binary database depending upon extention
+	std::string output = args.GetProperty("-output");
+	if (output != "")
+	{
+		if (EndsWith(output, ".csv"))
+		{
+			crdb::WriteTextDatabase(output.c_str(), db);
+		}
+		else
+		{
+			crdb::WriteBinaryDatabase(output.c_str(), db);
+		}
+	}
 
 	if (args.Have("-test"))
 	{

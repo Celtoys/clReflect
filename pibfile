@@ -1,5 +1,8 @@
 
+# TODO: Configs should be build-specific, not environment specific
+
 import os
+import ClangReflect
 
 include_paths = [
     "../../sdk/llvm/llvm/include",
@@ -46,27 +49,28 @@ disabled_warnings = [
     4244,                   # 'return' : conversion from 'uint64_t' to 'unsigned int', possible loss of data
 ]
 
-config_debug = env.Configs["debug"]
-config_release = env.Configs["release"]
 
-config_debug.CPPOptions.IncludePaths = include_paths
-config_debug.CPPOptions.Defines += defines
-config_debug.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DEBUG_DLL
-config_debug.CPPOptions.DisabledWarnings = disabled_warnings
-config_debug.CPPOptions.ReportSingleClassLayout = [ 'crcpp_reflect_crdb_Field' ]
-config_debug.CPPOptions.UpdateCommandLine()
-config_debug.LinkOptions.LibPaths = lib_paths_debug
-config_debug.LinkOptions.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
-config_debug.LinkOptions.UpdateCommandLine()
+def SetCPPOptions(name, crt_type):
+    opts = env.Configs[name].CPPOptions
+    opts.IncludePaths = include_paths
+    opts.DisabledWarnings = disabled_warnings
+    opts.Defines += defines
+    opts.CRTType = crt_type
+    opts.UpdateCommandLine()
 
-config_release.CPPOptions.IncludePaths = include_paths
-config_release.CPPOptions.Defines += defines
-config_release.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DLL
-config_release.CPPOptions.DisabledWarnings = disabled_warnings
-config_release.CPPOptions.UpdateCommandLine()
-config_release.LinkOptions.LibPaths = lib_paths_release
-config_release.LinkOptions.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
-config_release.LinkOptions.UpdateCommandLine()
+def SetLinkOptions(name, lib_paths):
+    opts = env.Configs[name].LinkOptions
+    opts.LibPaths = lib_paths
+    opts.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
+    opts.UpdateCommandLine()
+
+
+SetCPPOptions("debug", MSVCPlatform.VCCRTType.MT_DEBUG_DLL)
+SetLinkOptions("debug", lib_paths_debug)
+
+SetCPPOptions("release", MSVCPlatform.VCCRTType.MT_DLL)
+SetLinkOptions("release", lib_paths_release)
+
 
 cpp_files = Glob("src/ClangReflectScan", "*.cpp")
 hpp_files = Glob("src/ClangReflectScan", "*.h")
@@ -74,7 +78,14 @@ lib_files = [ env.NewFile(file) for file in libs ]
 obj_files = [ env.CPPFile(file) for file in cpp_files ]
 
 exe = env.Link("crscan.exe", obj_files, lib_files)
-env.Build(exe)
+env.Build(exe, "crscan")
 
-VCGenerateProjectFile(env, "src/ClangReflectScan/ClangReflectScan", cpp_files + hpp_files, exe)
+# TODO: Probably going to have to flatten the graph before visiting
+# test_obj_files is traversed twice below!
+test_cpp_files = Glob("src/ClangReflectTest", "*.cpp")
+test_obj_files = [ env.CPPFile(file) for file in test_cpp_files ]
+test_cvs_files = [ ClangReflect.CppScanNode(file) for file in test_obj_files ]
+env.Build(test_obj_files + test_cvs_files, "crtest")
+
+VCGenerateProjectFile(env, "src/ClangReflectScan/ClangReflectScan", cpp_files + hpp_files, exe, "crscan")
 VCGenerateSolutionFile(env, "ClangReflect", [ "src/ClangReflectScan/ClangReflectScan", "src/ClangReflectTest/ClangReflectTest" ])

@@ -29,12 +29,12 @@
 	// Can only be called from the global namespace and results in the primitive and any children
 	// being fully reflected.
 	//
-	#define crcpp_reflect(...)								\
-															\
-		namespace crcpp_internal							\
-		{													\
-			__attribute__((annotate("full-"#__VA_ARGS__)))	\
-			struct crcpp_unique(crdb_reflect) { };			\
+	#define crcpp_reflect(name)						\
+													\
+		namespace crcpp_internal					\
+		{											\
+			__attribute__((annotate("full-"#name)))	\
+			struct crcpp_unique(crdb_reflect) { };	\
 		}
 
 
@@ -43,18 +43,28 @@
 	// is being partially reflected. Anything that is a child of that primitive has to be
 	// explicitly reflected as a result.
 	//
-	#define crcpp_reflect_part(...)							\
-															\
-		namespace crcpp_internal							\
-		{													\
-			__attribute__((annotate("part-"#__VA_ARGS__)))	\
-			struct crcpp_unique(crdb_reflect) { };			\
+	#define crcpp_reflect_part(name)				\
+													\
+		namespace crcpp_internal					\
+		{											\
+			__attribute__((annotate("part-"#name)))	\
+			struct crcpp_unique(crdb_reflect) { };	\
 		}
 
 
 	#define crcpp_attr(...) __attribute__((annotate("attr:" #__VA_ARGS__)))
 	#define crcpp_push_attr(...) struct crcpp_unique(push_attr) { } __attribute__((annotate(#__VA_ARGS__)));
 	#define crcpp_pop_attr(...) struct crcpp_unique(pop_attr) { } __attribute__((annotate(#__VA_ARGS__)));
+
+
+#else
+
+
+	//
+	// The main compiler does not need to see these
+	//
+	#define crcpp_reflect(name)
+	#define crcpp_reflect_part(name)
 
 
 #endif
