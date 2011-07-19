@@ -106,3 +106,24 @@ void ClangASTParser::ParseAST(const char* filename)
 	clang::ParseAST(*m_Preprocessor, &ast_consumer, *m_ASTContext);
 	client->EndSourceFile();
 }
+
+
+void ClangASTParser::GetIncludedFiles(std::vector<std::string>& files) const
+{
+	// First need a mapping from unique file ID to the File Entry
+	llvm::SmallVector<const clang::FileEntry*, 0> uid_to_files;
+	m_ClangHost.file_manager->GetUniqueIDMapping(uid_to_files);
+
+	// Now iterate over every included header file info
+	clang::HeaderSearch::header_file_iterator begin = m_ClangHost.header_search->header_file_begin();
+	clang::HeaderSearch::header_file_iterator end = m_ClangHost.header_search->header_file_end();
+	for (clang::HeaderSearch::header_file_iterator i = begin; i != end; ++i)
+	{
+		// Map from header file info to file entry and add to the filename list
+		// Header file infos are stored in their vector, indexed by file UID and this
+		// is the only way you can get at that index
+		size_t file_uid = std::distance(begin, i);
+		const clang::FileEntry* file_entry = uid_to_files[file_uid];
+		files.push_back(file_entry->getName());
+	}
+}

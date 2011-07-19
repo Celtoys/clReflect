@@ -85,7 +85,7 @@ env.Build(exe, "crscan")
 test_cpp_files = Glob("src/ClangReflectTest", "*.cpp")
 test_obj_files = [ env.CPPFile(file) for file in test_cpp_files ]
 test_cvs_files = [ ClangReflect.CppScanNode(file) for file in test_obj_files ]
-env.Build(test_obj_files + test_cvs_files, "crtest")
+env.Build(test_cvs_files, "crtest")
 
 VCGenerateProjectFile(env, "src/ClangReflectScan/ClangReflectScan", cpp_files + hpp_files, exe, "crscan")
 VCGenerateSolutionFile(env, "ClangReflect", [ "src/ClangReflectScan/ClangReflectScan", "src/ClangReflectTest/ClangReflectTest" ])

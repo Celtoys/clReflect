@@ -59,6 +59,8 @@ public:
 
 	void ParseAST(const char* filename);
 
+	void GetIncludedFiles(std::vector<std::string>& files) const;
+
 	clang::ASTContext& GetASTContext() { return *m_ASTContext; }
 
 private:

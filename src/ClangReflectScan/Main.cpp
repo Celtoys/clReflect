@@ -19,7 +19,6 @@ namespace
 		FILE* fp = fopen(filename, "r");
 		if (fp == 0)
 		{
-			fclose(fp);
 			return false;
 		}
 		fclose(fp);
@@ -30,6 +29,50 @@ namespace
 	bool EndsWith(const std::string& str, const std::string& end)
 	{
 		return str.rfind(end) == str.length() - end.length();
+	}
+
+
+	void PrintIncludedHeaders(const ClangASTParser& ast_parser, const char* input_filename)
+	{
+		std::vector<std::string> header_files;
+		ast_parser.GetIncludedFiles(header_files);
+
+		// Print to output, noting that the source file will also be in the list
+		for (size_t i = 0; i < header_files.size(); i++)
+		{
+			if (header_files[i] != input_filename)
+			{
+				printf("Included: %s\n", header_files[i].c_str());
+			}
+		}
+	}
+
+
+	void WriteDatabase(const crdb::Database& db, const std::string& filename)
+	{
+		if (EndsWith(filename, ".csv"))
+		{
+			crdb::WriteTextDatabase(filename.c_str(), db);
+		}
+		else
+		{
+			crdb::WriteBinaryDatabase(filename.c_str(), db);
+		}
+	}
+
+
+	void TestDBReadWrite(const crdb::Database& db)
+	{
+		crdb::WriteTextDatabase("output.csv", db);
+		crdb::WriteBinaryDatabase("output.bin", db);
+
+		crdb::Database indb_text;
+		crdb::ReadTextDatabase("output.csv", indb_text);
+		crdb::WriteTextDatabase("output2.csv", indb_text);
+
+		crdb::Database indb_bin;
+		crdb::ReadBinaryDatabase("output.bin", indb_bin);
+		crdb::WriteBinaryDatabase("output2.bin", indb_bin);
 	}
 }
 
@@ -52,6 +95,8 @@ int main(int argc, const char* argv[])
 		return 1;
 	}
 
+	printf("START!\n");
+
 	// Parse the AST
 	ClangHost clang_host;
 	ClangASTParser ast_parser(clang_host);
@@ -68,32 +113,22 @@ int main(int argc, const char* argv[])
 	ASTConsumer ast_consumer(ast_context, db, reflection_specs);
 	ast_consumer.WalkTranlationUnit(ast_context.getTranslationUnitDecl());
 
-	// Write to a text/binary database depending upon extention
+	// Gather included header files if requested
+	if (args.Have("-output_headers"))
+	{
+		PrintIncludedHeaders(ast_parser, input_filename);
+	}
+
+	// Write to a text/binary database depending upon extension
 	std::string output = args.GetProperty("-output");
 	if (output != "")
 	{
-		if (EndsWith(output, ".csv"))
-		{
-			crdb::WriteTextDatabase(output.c_str(), db);
-		}
-		else
-		{
-			crdb::WriteBinaryDatabase(output.c_str(), db);
-		}
+		WriteDatabase(db, output);
 	}
 
-	if (args.Have("-test"))
+	if (args.Have("-test_db"))
 	{
-		crdb::WriteTextDatabase("output.csv", db);
-		crdb::WriteBinaryDatabase("output.bin", db);
-
-		crdb::Database indb_text;
-		crdb::ReadTextDatabase("output.csv", indb_text);
-		crdb::WriteTextDatabase("output2.csv", indb_text);
-
-		crdb::Database indb_bin;
-		crdb::ReadBinaryDatabase("output.bin", indb_bin);
-		crdb::WriteBinaryDatabase("output2.bin", indb_bin);
+		TestDBReadWrite(db);
 	}
 
 	return 0;

@@ -9,8 +9,8 @@
 namespace
 {
 	// 'crdb'
-	static const unsigned int FILE_HEADER = 0x62647263;
-	static const unsigned int FILE_VERSION = 1;
+	const unsigned int FILE_HEADER = 0x62647263;
+	const unsigned int FILE_VERSION = 1;
 
 
 	template <typename TYPE>
