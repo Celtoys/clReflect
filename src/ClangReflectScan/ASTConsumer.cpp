@@ -96,6 +96,17 @@ namespace
 	}
 
 
+	crdb::u32 CalcFieldHash(const crdb::Field& field)
+	{
+		// Construct the fully-qualified type name and hash that
+		std::string name;
+		name += field.is_const ? "const " : "";
+		name += field.type->second;
+		name += field.modifier == crdb::Field::MODIFIER_POINTER ? "*" : field.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "";
+		return crdb::HashNameString(name.c_str());
+	}
+
+
 	void MakeFunction(crdb::Database& db, clang::NamedDecl* decl, crdb::Name function_name, crdb::Name parent_name, std::vector<crdb::Field>& parameters)
 	{
 		// Cast to a function
@@ -132,9 +143,25 @@ namespace
 			parameters.push_back(parameter);
 		}
 
+		// Generate a hash unique to this function among other functions of the same name
+		// This is so that its parameters/return code can re-parent themselves correctly
+		crdb::u32 unique_id = CalcFieldHash(return_parameter);
+		for (size_t i = 0; i < parameters.size(); i++)
+		{
+			crdb::u32 field_hash = CalcFieldHash(parameters[i]);
+			unique_id = crdb::MixHashes(unique_id, field_hash);
+		}
+
+		// Parent each parameter to the function
+		return_parameter.parent_unique_id = unique_id;
+		for (size_t i = 0; i < parameters.size(); i++)
+		{
+			parameters[i].parent_unique_id = unique_id;
+		}
+
 		// Add the function
 		LOG(ast, INFO, "function %s\n", function_name->second.c_str());
-		db.AddPrimitive(crdb::Function(function_name, parent_name));
+		db.AddPrimitive(crdb::Function(function_name, parent_name, unique_id));
 
 		LOG_PUSH_INDENT(ast);
 
@@ -311,6 +338,9 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 
 void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
 {
+	// Note that by unnamed enums are not explicitly discarded here. This is because they don't generally
+	// get this far because you can't can't reference them in reflection specs.
+
 	// Cast to an enum
 	clang::EnumDecl* enum_decl = dyn_cast<clang::EnumDecl>(decl);
 	assert(enum_decl != 0 && "Failed to cast to enum declaration");

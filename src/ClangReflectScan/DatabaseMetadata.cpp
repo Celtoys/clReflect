@@ -24,12 +24,18 @@ crdb::meta::DatabaseTypes::DatabaseTypes()
 		DatabaseField(&crdb::EnumConstant::value),
 	};
 
+	DatabaseField function_fields[] =
+	{
+		DatabaseField(&crdb::Function::unique_id),
+	};
+
 	DatabaseField field_fields[] =
 	{
 		DatabaseField(&crdb::Field::type),
 		DatabaseField(&crdb::Field::modifier),
 		DatabaseField(&crdb::Field::is_const),
 		DatabaseField(&crdb::Field::offset),
+		DatabaseField(&crdb::Field::parent_unique_id),
 	};
 
 	// Create the descriptions of each type
@@ -39,6 +45,6 @@ crdb::meta::DatabaseTypes::DatabaseTypes()
 	m_ClassType.Type<crdb::Class>().Base(&m_TypeType).Fields(class_fields);
 	m_EnumType.Type<crdb::Enum>().Base(&m_TypeType);
 	m_EnumConstantType.Type<crdb::EnumConstant>().Base(&m_PrimitiveType).Fields(enum_constant_fields);
-	m_FunctionType.Type<crdb::Function>().Base(&m_PrimitiveType);
+	m_FunctionType.Type<crdb::Function>().Base(&m_PrimitiveType).Fields(function_fields);
 	m_FieldType.Type<crdb::Field>().Base(&m_PrimitiveType).Fields(field_fields);
 }

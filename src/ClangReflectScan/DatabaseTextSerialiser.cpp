@@ -220,6 +220,14 @@ namespace
 	}
 
 
+	void WriteFunction(FILE* fp, const crdb::Function& primitive, bool named, const crdb::Database& db)
+	{
+		WritePrimitive(fp, primitive, named, db);
+		fputs("\t", fp);
+		fputs(itohex(primitive.unique_id), fp);
+	}
+
+
 	void WriteField(FILE* fp, const crdb::Field& primitive, bool named, const crdb::Database& db)
 	{
 		WritePrimitive(fp, primitive, named, db);
@@ -238,6 +246,8 @@ namespace
 
 		fputs("\t", fp);
 		fputs(itoa(primitive.offset), fp);
+		fputs("\t\t", fp);
+		fputs(itohex(primitive.parent_unique_id), fp);
 	}
 
 
@@ -305,8 +315,8 @@ void crdb::WriteTextDatabase(const char* filename, const Database& db)
 	WritePrimitives<Class>(fp, db, WriteClass, "Classes", "Name\t\tParent\t\tBase\tSize");
 	WritePrimitives<Enum>(fp, db, WritePrimitive, "Enums", "Name\t\tParent");
 	WritePrimitives<EnumConstant>(fp, db, WriteEnumConstant, "Enum Constants", "Name\t\tParent\t\tValue");
-	WritePrimitives<Function>(fp, db, WritePrimitive, "Functions", "Name\t\tParent");
-	WritePrimitives<Field>(fp, db, WriteField, "Fields", "Name\t\tParent\t\tType\t\tMod\tCst\tOffs");
+	WritePrimitives<Function>(fp, db, WriteFunction, "Functions", "Name\t\tParent\t\tUID");
+	WritePrimitives<Field>(fp, db, WriteField, "Fields", "Name\t\tParent\t\tType\t\tMod\tCst\tOffs\tUID");
 
 	fclose(fp);
 }
@@ -413,7 +423,7 @@ namespace
 		// Primitive parsing
 		crdb::u32 name, parent;
 		tok.GetNameAndParent(named, name, parent);
-
+		
 		// Add a new primitive to the database
 		TYPE primitive(
 			db.GetName(name),
@@ -467,6 +477,27 @@ namespace
 	}
 
 
+	void ParseFunction(char* line, crdb::Database& db, bool named)
+	{
+		StringTokeniser tok(line, "\t");
+
+		// Primitive parsing
+		crdb::u32 name, parent;
+		tok.GetNameAndParent(named, name, parent);
+
+		// Function parsing
+		crdb::u32 unique_id = tok.GetHexInt();
+
+		// Add a new function to the database
+		crdb::Function primitive(
+			db.GetName(name),
+			db.GetName(parent),
+			unique_id);
+
+		db.AddPrimitive(primitive);
+	}
+
+
 	void ParseField(char* line, crdb::Database& db, bool named)
 	{
 		StringTokeniser tok(line, "\t");
@@ -494,6 +525,8 @@ namespace
 		const char* idx = tok.Get();
 		int index = atoi(idx);
 
+		crdb::u32 parent_unique_id = tok.GetHexInt();
+
 		// Add a new field to the database
 		crdb::Field primitive(
 			db.GetName(name),
@@ -501,7 +534,8 @@ namespace
 			db.GetName(type),
 			modifier,
 			is_const,
-			index);
+			index,
+			parent_unique_id);
 
 		db.AddPrimitive(primitive);
 	}
@@ -575,7 +609,7 @@ void crdb::ReadTextDatabase(const char* filename, Database& db)
 		ParseTable(fp, line, db, "Classes", ParseClass);
 		ParseTable(fp, line, db, "Enums", ParsePrimitive<crdb::Enum>);
 		ParseTable(fp, line, db, "Enum Constants", ParseEnumConstant);
-		ParseTable(fp, line, db, "Functions", ParsePrimitive<crdb::Function>);
+		ParseTable(fp, line, db, "Functions", ParseFunction);
 		ParseTable(fp, line, db, "Fields", ParseField);
 	}
 

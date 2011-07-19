@@ -23,6 +23,9 @@ namespace crdb
 	u32 HashNameString(const char* name_string);
 
 
+	u32 MixHashes(u32 a, u32 b);
+
+
 	//
 	// A convenient way to quickly share and map names within the database
 	//
@@ -111,6 +114,14 @@ namespace crdb
 		EnumConstant() : Primitive(Primitive::KIND_ENUM_CONSTANT) { }
 		EnumConstant(Name n, Name p, __int64 v) : Primitive(Primitive::KIND_ENUM_CONSTANT, n, p), value(v) { }
 
+		bool operator == (const EnumConstant& rhs) const
+		{
+			return
+				name == rhs.name &&
+				parent == rhs.parent &&
+				value == rhs.value;
+		}
+
 		// Enumeration constants can have values that are signed/unsigned and of arbitrary width.
 		// For now I'm just assuming they're 32-bit signed.
 		__int64 value;
@@ -122,8 +133,18 @@ namespace crdb
 	//
 	struct Function : public Primitive
 	{
-		Function() : Primitive(Primitive::KIND_FUNCTION) { }
-		Function(Name n, Name p) : Primitive(Primitive::KIND_FUNCTION, n, p) { }
+		Function() : Primitive(Primitive::KIND_FUNCTION), unique_id(0) { }
+		Function(Name n, Name p, u32 uid) : Primitive(Primitive::KIND_FUNCTION, n, p), unique_id(uid) { }
+
+		bool operator == (const Function& rhs) const
+		{
+			return
+				name == rhs.name &&
+				parent == rhs.parent &&
+				unique_id == rhs.unique_id;
+		}
+
+		u32 unique_id;
 	};
 
 
@@ -139,8 +160,20 @@ namespace crdb
 			MODIFIER_REFERENCE
 		};
 
-		Field() : Primitive(Primitive::KIND_FIELD), modifier(MODIFIER_VALUE), is_const(false), offset(-1) { }
-		Field(Name n, Name p, Name t, Modifier pass, bool c, int o) : Primitive(Primitive::KIND_FIELD, n, p), type(t), modifier(pass), is_const(c), offset(o) { }
+		Field() : Primitive(Primitive::KIND_FIELD), modifier(MODIFIER_VALUE), is_const(false), offset(-1), parent_unique_id(0) { }
+		Field(Name n, Name p, Name t, Modifier pass, bool c, int o, u32 uid = 0) : Primitive(Primitive::KIND_FIELD, n, p), type(t), modifier(pass), is_const(c), offset(o), parent_unique_id(uid) { }
+
+		bool operator == (const Field& rhs) const
+		{
+			return
+				name == rhs.name &&
+				parent == rhs.parent &&
+				type == rhs.type &&
+				modifier == rhs.modifier &&
+				is_const == rhs.is_const &&
+				offset == rhs.offset &&
+				parent_unique_id == rhs.parent_unique_id;
+		}
 
 		Name type;
 		Modifier modifier;
@@ -148,6 +181,9 @@ namespace crdb
 
 		// Index of the field parameter within its parent function or byte offset within its parent class
 		int offset;
+
+		// If this is set then the field is a function parameter
+		u32 parent_unique_id;
 
 		// TODO: arrays
 		// TODO: bit fields
@@ -165,6 +201,13 @@ namespace crdb
 	{
 		typedef std::vector<TYPE> UnnamedStore;
 		typedef std::multimap<u32, TYPE> NamedStore;	// Allows overloaded functions/methods
+
+		// A few shortcut typedefs to make the source code a little easier to read
+		typedef typename NamedStore::iterator NamedIterator;
+		typedef typename NamedStore::const_iterator NamedConstIterator;
+		typedef std::pair<NamedIterator, NamedIterator> NamedRange;
+		typedef std::pair<NamedConstIterator, NamedConstIterator> NamedConstRange;
+
 		UnnamedStore unnamed;
 		NamedStore named;
 	};
@@ -180,6 +223,8 @@ namespace crdb
 		Name GetNoName() const;
 		Name GetName(const char* text);
 		Name GetName(u32 hash) const;
+
+		void Merge(const Database& db);
 
 		template <typename TYPE> void AddPrimitive(const TYPE& prim)
 		{

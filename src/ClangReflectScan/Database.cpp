@@ -1,5 +1,7 @@
 
 #include "Database.h"
+#include "Logging.h"
+
 #include <stdlib.h>
 #include <assert.h>
 
@@ -80,12 +82,114 @@ namespace
 		h1 = fmix(h1);
 		return h1;
 	}
+
+
+	void CheckClassMergeFailure(const crdb::Class& class_a, const crdb::Class& class_b)
+	{
+		const char* class_name = class_a.name->second.c_str();
+
+		// This has to be the same class included multiple times in different translation units
+		// Ensure that their descriptions match up as best as possible at this point
+		if (class_a.base_class != class_b.base_class)
+		{
+			LOG(main, WARNING, "Class %s differs in base class specification during merge\n", class_name);
+		}
+		if (class_a.size != class_b.size)
+		{
+			LOG(main, WARNING, "Class %s differs in size during merge\n", class_name);
+		}
+	}
+
+
+	template <typename TYPE>
+	void MergeUniques(
+		crdb::Database& db,
+		const typename crdb::PrimitiveStore<TYPE>::NamedStore& src_store,
+		typename crdb::PrimitiveStore<TYPE>::NamedStore& dest_store,
+		void (*check_failure)(const TYPE&, const TYPE&) = 0)
+	{
+		// Add primitives that don't already exist for primitives where the symbol name can't be overloaded
+		for (crdb::PrimitiveStore<TYPE>::NamedConstIterator src = src_store.begin();
+			src != src_store.end();
+			++src)
+		{
+			crdb::PrimitiveStore<TYPE>::NamedConstIterator dest = dest_store.find(src->first);
+			if (dest == dest_store.end())
+			{
+				db.AddPrimitive(src->second);
+			}
+
+			else if (check_failure != 0)
+			{
+				check_failure(src->second, dest->second);
+			}
+		}
+	}
+
+
+	bool EnumConstantsAreEqual(const crdb::EnumConstant& enum_a, const crdb::EnumConstant& enum_b)
+	{
+		return enum_a.parent == enum_b.parent;
+	}
+
+
+	bool FunctionsAreEqual(const crdb::Function& function_a, const crdb::Function& function_b)
+	{
+		return function_a.unique_id == function_b.unique_id;
+	}
+
+
+	template <typename TYPE>
+	void MergeOverloads(
+		crdb::Database& db,
+		const typename crdb::PrimitiveStore<TYPE>::NamedStore& src_store,
+		typename crdb::PrimitiveStore<TYPE>::NamedStore& dest_store)
+	{
+		// Unconditionally add primitives that don't already exist
+		for (crdb::PrimitiveStore<TYPE>::NamedConstIterator src = src_store.begin();
+			 src != src_store.end();
+			 ++src)
+		{
+			crdb::PrimitiveStore<TYPE>::NamedConstIterator dest = dest_store.find(src->first);
+			if (dest == dest_store.end())
+			{
+				db.AddPrimitive(src->second);
+			}
+
+			else
+			{
+				// A primitive of the same name exists so double-check all existing entries for a matching primitives before adding
+				bool add = true;
+				crdb::PrimitiveStore<TYPE>::NamedConstRange dest_range = dest_store.equal_range(src->first);
+				for (crdb::PrimitiveStore<TYPE>::NamedConstIterator i = dest_range.first; i != dest_range.second; ++i)
+				{
+					if (i->second == src->second)
+					{
+						add = false;
+						break;
+					}
+				}
+
+				if (add)
+				{
+					db.AddPrimitive(src->second);
+				}
+			}
+		}
+	}
+
 }
 
 
 crdb::u32 crdb::HashNameString(const char* name_string)
 {
 	return MurmurHash3(name_string, strlen(name_string), 0);
+}
+
+
+crdb::u32 crdb::MixHashes(u32 a, u32 b)
+{
+	return MurmurHash3(&b, sizeof(u32), a);
 }
 
 
@@ -149,4 +253,31 @@ crdb::Name crdb::Database::GetName(const char* text)
 crdb::Name crdb::Database::GetName(u32 hash) const
 {
 	return m_Names.find(hash);
+}
+
+
+void crdb::Database::Merge(const Database& db)
+{
+	// The symbol names for these primitives can't be overloaded
+	MergeUniques<Namespace>(*this, db.m_Namespaces.named, m_Namespaces.named);
+	MergeUniques<Type>(*this, db.m_Types.named, m_Types.named);
+	MergeUniques<Enum>(*this, db.m_Enums.named, m_Enums.named);
+
+	// Class symbol names can't be overloaded but extra checks can be used to make sure
+	// the same class isn't violating the One Definition Rule
+	MergeUniques<Class>(*this, db.m_Classes.named, m_Classes.named, CheckClassMergeFailure);
+
+	// Add enum constants as if they are overloadable
+	// NOTE: Technically don't need to do this enum constants are scoped. However, I might change
+	// that in future so this code will become useful.
+	MergeOverloads<EnumConstant>(*this, db.m_EnumConstants.named, m_EnumConstants.named);
+
+	// Functions can be overloaded so rely on their unique id to merge them
+	MergeOverloads<Function>(*this, db.m_Functions.named, m_Functions.named);
+
+	// Field names aren't scoped and hence overloadable. They are parented to unique functions so that will
+	// be the key deciding factor in whether fields should be merged or not.
+	MergeOverloads<Field>(*this, db.m_Fields.named, m_Fields.named);
+
+	// TODO: unnamed
 }
