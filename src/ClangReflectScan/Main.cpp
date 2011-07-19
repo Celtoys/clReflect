@@ -5,6 +5,7 @@
 #include "ASTConsumer.h"
 #include "ReflectionSpecs.h"
 #include "Arguments.h"
+#include "Logging.h"
 
 #include "Database.h"
 #include "DatabaseTextSerialiser.h"
@@ -79,6 +80,15 @@ namespace
 
 int main(int argc, const char* argv[])
 {
+	LOG_TO_STDOUT(test, ERROR);
+	LOG_TO_STDOUT(test, WARNING);
+	LOG_TO_FILE(test, ALL, "out.txt");
+
+	LOG(test, INFO, "hello %s, it is %d", "don", 3);
+	LOG(test, INFO, "append\n");
+	LOG(test, WARNING, "This is a warning\n");
+	LOG(test, ERROR, "This is an ERROOOR!\n");
+
 	// Leave early if there aren't enough arguments
 	Arguments args(argc, argv);
 	if (args.Count() < 2)

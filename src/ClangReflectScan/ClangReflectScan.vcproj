@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="Windows-1252"?>
-<!-- PiBDigest: dyVeuUhBV9eWilsvp7GQKQ== -->
+<!-- PiBDigest: Vn1yC2S-rIdDhfLSQswCUg== -->
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="ClangReflectScan"
-	ProjectGUID="{00D88870-B122-11E0-BED9-F46D04D48D5F}"
+	ProjectGUID="{93FEC8C0-B1FF-11E0-A8CD-F46D04D48D5F}"
 	RootNamespace="ClangReflectScan"
 	Keyword="Win32Proj"
 	>
@@ -112,6 +112,14 @@
 		</File>
 		<File
 			RelativePath="DatabaseTextSerialiser.h"
+			>
+		</File>
+		<File
+			RelativePath="Logging.cpp"
+			>
+		</File>
+		<File
+			RelativePath="Logging.h"
 			>
 		</File>
 		<File

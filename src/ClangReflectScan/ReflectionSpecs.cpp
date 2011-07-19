@@ -1,4 +1,10 @@
 
+// log requirements: verbose will print out the reflection specs as they're encountered
+// need to print warnings straight to stdout
+
+// log::SetLogToFile(ALL, "rflspec", "filename");
+// log::SetLogToStdout(log::TAG_WARNING | log::TAG_ERROR, "rflspec");
+
 #include "ReflectionSpecs.h"
 #include "Database.h"
 
