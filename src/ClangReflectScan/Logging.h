@@ -27,13 +27,20 @@ namespace logging
 	// Get a pre-created stream handle
 	//
 	typedef void* StreamHandle;
-	StreamHandle GetStreamHandle(const char* name, Tag tag);
+	StreamHandle GetStreamHandle(const char* name);
 
 
 	//
 	// Format and log the specified text to the given streams
 	//
 	void Log(StreamHandle handle, Tag tag, const char* format, ...);
+
+
+	//
+	// Manual control of the indentation level
+	//
+	void PushIndent(StreamHandle handle);
+	void PopIndent(StreamHandle handle);
 }
 
 
@@ -44,12 +51,33 @@ namespace logging
 #define LOG_TO_FILE(name, tag, filename) logging::SetLogToFile(#name, logging::TAG_##tag, filename)
 
 
+#define LOG_GET_STREAM_HANDLE(name)											\
+	static logging::StreamHandle handle = logging::GetStreamHandle(#name);
+
+
 //
 // Format and log, named and tagged text
 //
-#define LOG(name, tag, ...)												\
-{																		\
-	logging::Tag t = logging::TAG_##tag;								\
-	logging::StreamHandle handle = logging::GetStreamHandle(#name, t);	\
-	logging::Log(handle, t, __VA_ARGS__);								\
+#define LOG(name, tag, ...)					\
+{											\
+	LOG_GET_STREAM_HANDLE(name);			\
+	logging::Tag t = logging::TAG_##tag;	\
+	logging::Log(handle, t, __VA_ARGS__);	\
 }
+
+
+#define LOG_PUSH_INDENT(name)		\
+{									\
+	LOG_GET_STREAM_HANDLE(name);	\
+	logging::PushIndent(handle);	\
+}
+
+
+#define LOG_POP_INDENT(name)		\
+{									\
+	LOG_GET_STREAM_HANDLE(name);	\
+	logging::PopIndent(handle);		\
+}
+
+
+#define LOG_NEWLINE(name) LOG(name, INFO, "\n")

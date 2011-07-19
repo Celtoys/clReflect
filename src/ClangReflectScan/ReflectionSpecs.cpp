@@ -1,12 +1,7 @@
 
-// log requirements: verbose will print out the reflection specs as they're encountered
-// need to print warnings straight to stdout
-
-// log::SetLogToFile(ALL, "rflspec", "filename");
-// log::SetLogToStdout(log::TAG_WARNING | log::TAG_ERROR, "rflspec");
-
 #include "ReflectionSpecs.h"
 #include "Database.h"
+#include "Logging.h"
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCxx.h"
@@ -39,7 +34,7 @@ namespace
 		clang::DeclContext::decl_iterator j = ns_decl->decls_begin();
 		if (j == ns_decl->decls_end())
 		{
-			printf("WARNING: Ill-formed Reflection Spec; no body found\n");
+			LOG(spec, WARNING, "Ill-formed Reflection Spec; no body found\n");
 			return 0;
 		}
 
@@ -47,7 +42,7 @@ namespace
 		clang::CXXRecordDecl* record_decl = dyn_cast<clang::CXXRecordDecl>(*j);
 		if (record_decl == 0)
 		{
-			printf("WARNING: Ill-formed Reflection Spec; first declaration must be a reflection structure\n");
+			LOG(spec, WARNING, "Ill-formed Reflection Spec; first declaration must be a reflection structure\n");
 			return 0;
 		}
 
@@ -55,7 +50,7 @@ namespace
 		clang::specific_attr_iterator<clang::AnnotateAttr> k = record_decl->specific_attr_begin<clang::AnnotateAttr>();
 		if (k == record_decl->specific_attr_end<clang::AnnotateAttr>())
 		{
-			printf("WARNING: Ill-formed Reflection Spec; no annotation attribute found on the reflection structure\n");
+			LOG(spec, WARNING, "Ill-formed Reflection Spec; no annotation attribute found on the reflection structure\n");
 			return 0;
 		}
 
@@ -120,7 +115,7 @@ namespace
 				std::map<std::string, bool>::const_iterator j = specs.find(spec);
 				if (j != specs.end() && j->second == false)
 				{
-					printf("WARNING: Reflection Spec for '%s' unnecessary as the parent '%s' has already been marked for full Reflection\n", i->first.c_str(), spec.c_str());
+					LOG(spec, WARNING, "Reflection Spec for '%s' unnecessary as the parent '%s' has already been marked for full Reflection\n", i->first.c_str(), spec.c_str());
 				}
 			}
 		}
@@ -128,9 +123,16 @@ namespace
 }
 
 
-ReflectionSpecs::ReflectionSpecs(bool reflect_all)
+ReflectionSpecs::ReflectionSpecs(bool reflect_all, const std::string& spec_log)
 	: m_ReflectAll(reflect_all)
 {
+	LOG_TO_STDOUT(spec, WARNING);
+	LOG_TO_STDOUT(spec, ERROR);
+
+	if (spec_log != "")
+	{
+		LOG_TO_FILE(spec, ALL, spec_log.c_str());
+	}
 }
 
 
@@ -160,20 +162,20 @@ void ReflectionSpecs::Gather(clang::TranslationUnitDecl* tu_decl)
 		}
 		else
 		{
-			printf("WARNING: Ill-formed Reflection Spec; can't determine if it's full or partial reflection\n");
+			LOG(spec, WARNING, "Ill-formed Reflection Spec; can't determine if it's full or partial reflection\n");
 		}
 
 		// Build the symbol name and check for existence in the map
 		std::string symbol = reflect_spec.substr(5);
 		if (m_ReflectionSpecs.find(symbol) != m_ReflectionSpecs.end())
 		{
-			printf("WARNING: Ignoring duplicate Reflection Spec '%s'\n", symbol.c_str());
+			LOG(spec, WARNING, "Ignoring duplicate Reflection Spec '%s'\n", symbol.c_str());
 			++i;
 			continue;
 		}
 
 		m_ReflectionSpecs[symbol] = partial_reflect;
-		printf("Reflection Spec: %s (%s)\n", symbol.c_str(), partial_reflect ? "partial" : "full");
+		LOG(spec, INFO, "Reflection Spec: %s (%s)\n", symbol.c_str(), partial_reflect ? "partial" : "full");
 
 		++i;
 	}

@@ -20,7 +20,7 @@ namespace crdb
 class ReflectionSpecs
 {
 public:
-	ReflectionSpecs(bool reflect_all);
+	ReflectionSpecs(bool reflect_all, const std::string& spec_log);
 
 	void Gather(clang::TranslationUnitDecl* tu_decl);
 

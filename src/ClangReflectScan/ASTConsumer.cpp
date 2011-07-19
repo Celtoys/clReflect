@@ -27,6 +27,7 @@
 #include "ASTConsumer.h"
 #include "ReflectionSpecs.h"
 #include "Database.h"
+#include "Logging.h"
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCxx.h"
@@ -111,7 +112,7 @@ namespace
 		crdb::Field return_parameter;
 		if (!MakeField(db, function_decl->getResultType(), 0, function_name, -1, return_parameter))
 		{
-			printf("WARNING: Unsupported return type for %s\n", function_name->second.c_str());
+			LOG(ast, WARNING, "Unsupported return type for %s\n", function_name->second.c_str());
 			return;
 		}
 
@@ -125,20 +126,22 @@ namespace
 			crdb::Field parameter;
 			if (!MakeField(db, param_decl->getType(),param_decl->getNameAsString().c_str(), function_name, index++, parameter))
 			{
-				printf("WARNING: Unsupported parameter type for %s\n", param_decl->getNameAsString().c_str());
+				LOG(ast, WARNING, "Unsupported parameter type for %s\n", param_decl->getNameAsString().c_str());
 				return;
 			}
 			parameters.push_back(parameter);
 		}
 
 		// Add the function
-		printf("function %s\n", function_name->second.c_str());
+		LOG(ast, INFO, "function %s\n", function_name->second.c_str());
 		db.AddPrimitive(crdb::Function(function_name, parent_name));
+
+		LOG_PUSH_INDENT(ast);
 
 		// Only add the return parameter if it's non-void
 		if (return_parameter.type->second != "void")
 		{
-			printf("   Returns: %s%s%s\n",
+			LOG(ast, INFO, "Returns: %s%s%s\n",
 				return_parameter.is_const ? "const " : "",
 				return_parameter.type->second.c_str(),
 				return_parameter.modifier == crdb::Field::MODIFIER_POINTER ? "*" : return_parameter.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "");
@@ -146,28 +149,37 @@ namespace
 		}
 		else
 		{
-			printf("   Returns: void (not added)\n");
+			LOG(ast, INFO, "Returns: void (not added)\n");
 		}
 
 		// Add the parameters
 		for (std::vector<crdb::Field>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 		{
-			printf("   %s%s%s %s\n",
+			LOG(ast, INFO, "%s%s%s %s\n",
 				i->is_const ? "const " : "",
 				i->type->second.c_str(),
 				i->modifier == crdb::Field::MODIFIER_POINTER ? "*" : i->modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "",
 				i->name == db.GetNoName() ? "" : i->name->second.c_str());
 			db.AddPrimitive(*i);
 		}
+
+		LOG_POP_INDENT(ast);
 	}
 }
 
 
-ASTConsumer::ASTConsumer(clang::ASTContext& context, crdb::Database& db, const ReflectionSpecs& rspecs)
+ASTConsumer::ASTConsumer(clang::ASTContext& context, crdb::Database& db, const ReflectionSpecs& rspecs, const std::string& ast_log)
 	: m_ASTContext(context)
 	, m_DB(db)
 	, m_ReflectionSpecs(rspecs)
 {
+	LOG_TO_STDOUT(ast, WARNING);
+	LOG_TO_STDOUT(ast, ERROR);
+
+	if (ast_log != "")
+	{
+		LOG_TO_FILE(ast, ALL, ast_log.c_str());
+	}
 }
 
 
@@ -232,8 +244,6 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name,
 
 void ASTConsumer::AddNamespaceDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
 {
-	// TODO: Anonymous namespaces
-
 	// Only add the namespace if it doesn't exist yet
 	if (m_DB.GetFirstPrimitive<crdb::Namespace>(name->second.c_str()) == 0)
 	{
@@ -241,7 +251,7 @@ void ASTConsumer::AddNamespaceDecl(clang::NamedDecl* decl, const crdb::Name& nam
 	}
 
 	// Add everything within the namespace
-	printf("namespace %s\n", name->second.c_str());
+	LOG(ast, INFO, "namespace %s\n", name->second.c_str());
 	AddContainedDecls(decl, name, 0);
 }
 
@@ -261,7 +271,7 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 	// Can only inherit from one base class for now - offsets change based on derived type
 	if (record_decl->getNumBases() > 1)
 	{
-		printf("WARNING: Class '%s' has too many bases\n", name->second.c_str());
+		LOG(ast, WARNING, "Class '%s' has too many bases\n", name->second.c_str());
 		return;
 	}
 
@@ -273,7 +283,7 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 		clang::CXXBaseSpecifier& base = *record_decl->bases_begin();
 		if (base.isVirtual())
 		{
-			printf("WARNING: Class '%s' has an unsupported virtual base class\n", name->second.c_str());
+			LOG(ast, WARNING, "Class '%s' has an unsupported virtual base class\n", name->second.c_str());
 			return;
 		}
 
@@ -286,11 +296,12 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 	}
 
 	// Add to the database
-	printf("class %s\n", name->second.c_str());
+	LOG(ast, INFO, "class %s", name->second.c_str());
 	if (base_name != m_DB.GetNoName())
 	{
-		printf("   BASE: %s\n", base_name->second.c_str());
+		LOG(ast, INFO, " : %s", base_name->second.c_str());
 	}
+	LOG_NEWLINE(ast);
 	const clang::ASTRecordLayout& layout = m_ASTContext.getASTRecordLayout(record_decl);
 	crdb::u32 size = layout.getSize().getQuantity();
 	m_DB.AddPrimitive(crdb::Class(name, parent_name, base_name, size));
@@ -305,8 +316,10 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const crdb::Name& name, co
 	assert(enum_decl != 0 && "Failed to cast to enum declaration");
 
 	// Add to the database
-	printf("enum %s\n", name->second.c_str());
+	LOG(ast, INFO, "enum %s\n", name->second.c_str());
 	m_DB.AddPrimitive(crdb::Enum(name, parent_name));
+
+	LOG_PUSH_INDENT(ast);
 
 	// Iterate over all constants
 	for (clang::EnumDecl::enumerator_iterator i = enum_decl->enumerator_begin(); i != enum_decl->enumerator_end(); ++i)
@@ -328,8 +341,10 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const crdb::Name& name, co
 
 		// Add to the database
 		m_DB.AddPrimitive(crdb::EnumConstant(m_DB.GetName(constant_name.c_str()), name, value_int));
-		printf("   %s = 0x%x\n", constant_name.c_str(), value_int);
+		LOG(ast, INFO, "   %s = 0x%x\n", constant_name.c_str(), value_int);
 	}
+
+	LOG_POP_INDENT(ast);
 }
 
 
@@ -354,7 +369,7 @@ void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const crdb::Name& name, 
 		crdb::Field this_param;
 		if (!MakeField(m_DB, method_decl->getThisType(m_ASTContext), "this", name, 0, this_param))
 		{
-			printf("WARNING: Unsupported 'this' type for %s\n", name->second.c_str());
+			LOG(ast, WARNING, "Unsupported 'this' type for %s\n", name->second.c_str());
 			return;
 		}
 		parameters.push_back(this_param);
@@ -376,11 +391,11 @@ void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 	crdb::u32 offset = layout->getFieldOffset(field_decl->getFieldIndex()) / 8;
 	if (!MakeField(m_DB, field_decl->getType(), field_decl->getNameAsString().c_str(), parent_name, offset, field))
 	{
-		printf("WARNING: Unsupported type for field %s\n", field_decl->getNameAsString().c_str());
+		LOG(ast, WARNING, "Unsupported type for field %s\n", field_decl->getNameAsString().c_str());
 		return;
 	}
 
-	printf("   Field: %s%s%s %s\n",
+	LOG(ast, INFO, "Field: %s%s%s %s\n",
 		field.is_const ? "const " : "",
 		field.type->second.c_str(),
 		field.modifier == crdb::Field::MODIFIER_POINTER ? "*" : field.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "",
@@ -391,6 +406,8 @@ void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 
 void ASTConsumer::AddContainedDecls(clang::NamedDecl* decl, const crdb::Name& parent_name, const clang::ASTRecordLayout* layout)
 {
+	LOG_PUSH_INDENT(ast)
+
 	// Iterate over every contained named declaration
 	clang::DeclContext* decl_context = decl->castToDeclContext(decl);
 	for (clang::DeclContext::decl_iterator i = decl_context->decls_begin(); i != decl_context->decls_end(); ++i)
@@ -401,4 +418,6 @@ void ASTConsumer::AddContainedDecls(clang::NamedDecl* decl, const crdb::Name& pa
 			AddDecl(named_decl, parent_name, layout);
 		}
 	}
+
+	LOG_POP_INDENT(ast)
 }

@@ -17,7 +17,7 @@ namespace clang
 class ASTConsumer
 {
 public:
-	ASTConsumer(clang::ASTContext& context, crdb::Database& db, const ReflectionSpecs& rspecs);
+	ASTConsumer(clang::ASTContext& context, crdb::Database& db, const ReflectionSpecs& rspecs, const std::string& ast_log);
 
 	void WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl);
 

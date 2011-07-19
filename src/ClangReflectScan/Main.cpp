@@ -43,7 +43,7 @@ namespace
 		{
 			if (header_files[i] != input_filename)
 			{
-				printf("Included: %s\n", header_files[i].c_str());
+				LOG(main, INFO, "Included: %s\n", header_files[i].c_str());
 			}
 		}
 	}
@@ -80,20 +80,13 @@ namespace
 
 int main(int argc, const char* argv[])
 {
-	LOG_TO_STDOUT(test, ERROR);
-	LOG_TO_STDOUT(test, WARNING);
-	LOG_TO_FILE(test, ALL, "out.txt");
-
-	LOG(test, INFO, "hello %s, it is %d", "don", 3);
-	LOG(test, INFO, "append\n");
-	LOG(test, WARNING, "This is a warning\n");
-	LOG(test, ERROR, "This is an ERROOOR!\n");
+	LOG_TO_STDOUT(main, ALL);
 
 	// Leave early if there aren't enough arguments
 	Arguments args(argc, argv);
 	if (args.Count() < 2)
 	{
-		printf("Not enough arguments\n");
+		LOG(main, ERROR, "Not enough arguments\n");
 		return 1;
 	}
 
@@ -101,11 +94,9 @@ int main(int argc, const char* argv[])
 	const char* input_filename = argv[1];
 	if (!FileExists(input_filename))
 	{
-		printf("Couldn't find the input file %s\n", input_filename);
+		LOG(main, ERROR, "Couldn't find the input file %s\n", input_filename);
 		return 1;
 	}
-
-	printf("START!\n");
 
 	// Parse the AST
 	ClangHost clang_host;
@@ -114,13 +105,15 @@ int main(int argc, const char* argv[])
 
 	// Gather reflection specs for the translation unit
 	clang::ASTContext& ast_context = ast_parser.GetASTContext();
-	ReflectionSpecs reflection_specs(args.Have("-reflect_specs_all"));
+	std::string spec_log = args.GetProperty("-spec_log");
+	ReflectionSpecs reflection_specs(args.Have("-reflect_specs_all"), spec_log);
 	reflection_specs.Gather(ast_context.getTranslationUnitDecl());
 
 	// On the second pass, build the reflection database
 	crdb::Database db;
 	db.AddBaseTypePrimitives();
-	ASTConsumer ast_consumer(ast_context, db, reflection_specs);
+	std::string ast_log = args.GetProperty("-ast_log");
+	ASTConsumer ast_consumer(ast_context, db, reflection_specs, ast_log);
 	ast_consumer.WalkTranlationUnit(ast_context.getTranslationUnitDecl());
 
 	// Gather included header files if requested

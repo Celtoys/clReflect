@@ -102,6 +102,18 @@ namespace
 
 
 	//
+	// Container for a set of streams linked to a name
+	//
+	typedef FixedArray<Stream*, NB_TAG_BITS> StreamArray;
+	struct StreamSet
+	{
+		StreamSet() : indent_depth(0) { }
+		int indent_depth;
+		StreamArray streams;
+	};
+
+
+	//
 	// The stream  map allows each tag to have its own unique set of streams, per name.
 	//
 	// stream name -> [ 0 ] stream(0) -> stream(1) ...
@@ -111,8 +123,7 @@ namespace
 	//
 	// Each stream object is allocated independently of the others.
 	//
-	typedef FixedArray<Stream*, NB_TAG_BITS> StreamArray;
-	typedef std::map<const char*, StreamArray> StreamMap;
+	typedef std::map<const char*, StreamSet> StreamMap;
 	StreamMap g_StreamMap;
 
 
@@ -123,9 +134,9 @@ namespace
 			for (int j = 0; j < NB_TAG_BITS; j++)
 			{
 				// Delete everything in the linked list
-				while (Stream* stream = i->second[j])
+				while (Stream* stream = i->second.streams[j])
 				{
-					i->second[j] = stream->next;
+					i->second.streams[j] = stream->next;
 					delete stream;
 				}
 			}
@@ -146,7 +157,7 @@ namespace
 			if (tag & mask)
 			{
 				// Link the newly allocated copy into the forward linked list
-				StreamArray& streams = g_StreamMap[name];
+				StreamArray& streams = g_StreamMap[name].streams;
 				copy.next = streams[i];
 				streams[i] = new STREAM_TYPE(copy);
 			}
@@ -189,10 +200,9 @@ void logging::SetLogToFile(const char* name, Tag tag, const char* filename)
 }
 
 
-logging::StreamHandle logging::GetStreamHandle(const char* name, Tag tag)
+logging::StreamHandle logging::GetStreamHandle(const char* name)
 {
-	int index = Log2(tag);
-	return g_StreamMap[name][index];
+	return &g_StreamMap[name];
 }
 
 
@@ -205,18 +215,42 @@ void logging::Log(StreamHandle handle, Tag tag, const char* format, ...)
 	vsnprintf_s(buffer, sizeof(buffer), _TRUNCATE, format, args);
 	va_end(args);
 
+
+	// Kick the prefix off with indent characters
+	StreamSet* stream_set = (StreamSet*)handle;
+	char prefix[128];
+	for (int i = 0; i < stream_set->indent_depth; i++)
+	{
+		prefix[i] = '\t';
+	}
+	prefix[stream_set->indent_depth] = 0;
+
+	// Add any tag annotations
+	switch (tag)
+	{
+	case (TAG_WARNING): strcat(prefix, "WARNING: "); break;
+	case (TAG_ERROR): strcat(prefix, "ERROR: "); break;
+	}
+
 	// Iterate over every log output
-	Stream* stream = (Stream*)handle;
+	int index = Log2(tag);
+	Stream* stream = stream_set->streams[index];
 	while (stream)
 	{
-		// Output a custom prefix based on tag
-		switch (tag)
-		{
-		case (TAG_WARNING): stream->Log("WARNING: "); break;
-		case (TAG_ERROR): stream->Log("ERROR: "); break;
-		}
-
+		stream->Log(prefix);
 		stream->Log(buffer);
 		stream = stream->next;
 	}
+}
+
+
+void logging::PushIndent(StreamHandle handle)
+{
+	((StreamSet*)handle)->indent_depth++;
+}
+
+
+void logging::PopIndent(StreamHandle handle)
+{
+	((StreamSet*)handle)->indent_depth--;
 }
