@@ -4,7 +4,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="ClangReflectScan"
-	ProjectGUID="{E2A0789E-B2BF-11E0-B03D-F46D04D48D5F}"
+	ProjectGUID="{CE34691E-B2DE-11E0-887A-F46D04D48D5F}"
 	RootNamespace="ClangReflectScan"
 	Keyword="Win32Proj"
 	>

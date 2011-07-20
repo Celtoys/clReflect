@@ -1,20 +1,25 @@
 Microsoft Visual Studio Solution File, Format Version 9.00
 # Visual Studio 2005
-Project("{C4F8DC5E-B2C5-11E0-8D51-F46D04D48D5F}") = "ClangReflectCore", "src\ClangReflectCore\ClangReflectCore.vcproj", "{E29F4022-B2BF-11E0-BC5D-F46D04D48D5F}"
+Project("{CE352C72-B2DE-11E0-946F-F46D04D48D5F}") = "ClangReflectCore", "src\ClangReflectCore\ClangReflectCore.vcproj", "{CE33309E-B2DE-11E0-866B-F46D04D48D5F}"
 EndProject
-Project("{C4F90370-B2C5-11E0-A6E0-F46D04D48D5F}") = "ClangReflectScan", "src\ClangReflectScan\ClangReflectScan.vcproj", "{E2A0789E-B2BF-11E0-B03D-F46D04D48D5F}"
+Project("{CE355380-B2DE-11E0-B9E2-F46D04D48D5F}") = "ClangReflectScan", "src\ClangReflectScan\ClangReflectScan.vcproj", "{CE34691E-B2DE-11E0-887A-F46D04D48D5F}"
 	ProjectSection(ProjectDependencies) = postProject
-		{E29F4022-B2BF-11E0-BC5D-F46D04D48D5F} = {E29F4022-B2BF-11E0-BC5D-F46D04D48D5F}
+		{CE33309E-B2DE-11E0-866B-F46D04D48D5F} = {CE33309E-B2DE-11E0-866B-F46D04D48D5F}
 	EndProjectSection
 EndProject
-Project("{C4F90371-B2C5-11E0-8D6B-F46D04D48D5F}") = "ClangReflectMerge", "src\ClangReflectMerge\ClangReflectMerge.vcproj", "{B709A941-B2C5-11E0-9FB1-F46D04D48D5F}"
+Project("{CE355381-B2DE-11E0-B6FD-F46D04D48D5F}") = "ClangReflectMerge", "src\ClangReflectMerge\ClangReflectMerge.vcproj", "{CE34B740-B2DE-11E0-A111-F46D04D48D5F}"
 	ProjectSection(ProjectDependencies) = postProject
-		{E2A0789E-B2BF-11E0-B03D-F46D04D48D5F} = {E2A0789E-B2BF-11E0-B03D-F46D04D48D5F}
+		{CE34691E-B2DE-11E0-887A-F46D04D48D5F} = {CE34691E-B2DE-11E0-887A-F46D04D48D5F}
 	EndProjectSection
 EndProject
-Project("{C4F90372-B2C5-11E0-92B2-F46D04D48D5F}") = "ClangReflectTest", "src\ClangReflectTest\ClangReflectTest.vcproj", "{A5E0A651-5786-4AC9-B118-6B3B55D7656B}"
+Project("{CE355382-B2DE-11E0-86D5-F46D04D48D5F}") = "ClangReflectCpp", "src\ClangReflectCpp\ClangReflectCpp.vcproj", "{CE350562-B2DE-11E0-A110-F46D04D48D5F}"
 	ProjectSection(ProjectDependencies) = postProject
-		{B709A941-B2C5-11E0-9FB1-F46D04D48D5F} = {B709A941-B2C5-11E0-9FB1-F46D04D48D5F}
+		{CE34B740-B2DE-11E0-A111-F46D04D48D5F} = {CE34B740-B2DE-11E0-A111-F46D04D48D5F}
+	EndProjectSection
+EndProject
+Project("{CE355383-B2DE-11E0-B2EC-F46D04D48D5F}") = "ClangReflectTest", "src\ClangReflectTest\ClangReflectTest.vcproj", "{A5E0A651-5786-4AC9-B118-6B3B55D7656B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{CE350562-B2DE-11E0-A110-F46D04D48D5F} = {CE350562-B2DE-11E0-A110-F46D04D48D5F}
 	EndProjectSection
 EndProject
 Global
@@ -23,18 +28,22 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{E29F4022-B2BF-11E0-BC5D-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
-		{E29F4022-B2BF-11E0-BC5D-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
-		{E29F4022-B2BF-11E0-BC5D-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
-		{E29F4022-B2BF-11E0-BC5D-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
-		{E2A0789E-B2BF-11E0-B03D-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
-		{E2A0789E-B2BF-11E0-B03D-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
-		{E2A0789E-B2BF-11E0-B03D-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
-		{E2A0789E-B2BF-11E0-B03D-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
-		{B709A941-B2C5-11E0-9FB1-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
-		{B709A941-B2C5-11E0-9FB1-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
-		{B709A941-B2C5-11E0-9FB1-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
-		{B709A941-B2C5-11E0-9FB1-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
+		{CE33309E-B2DE-11E0-866B-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{CE33309E-B2DE-11E0-866B-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
+		{CE33309E-B2DE-11E0-866B-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
+		{CE33309E-B2DE-11E0-866B-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
+		{CE34691E-B2DE-11E0-887A-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{CE34691E-B2DE-11E0-887A-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
+		{CE34691E-B2DE-11E0-887A-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
+		{CE34691E-B2DE-11E0-887A-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
+		{CE34B740-B2DE-11E0-A111-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{CE34B740-B2DE-11E0-A111-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
+		{CE34B740-B2DE-11E0-A111-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
+		{CE34B740-B2DE-11E0-A111-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
+		{CE350562-B2DE-11E0-A110-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{CE350562-B2DE-11E0-A110-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
+		{CE350562-B2DE-11E0-A110-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
+		{CE350562-B2DE-11E0-A110-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
 		{A5E0A651-5786-4AC9-B118-6B3B55D7656B}.Debug|Win32.ActiveCfg = Debug|Win32
 		{A5E0A651-5786-4AC9-B118-6B3B55D7656B}.Debug|Win32.Build.0 = Debug|Win32
 		{A5E0A651-5786-4AC9-B118-6B3B55D7656B}.Release|Win32.ActiveCfg = Release|Win32
@@ -44,6 +53,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		PiBDigest = 28_XTh2iE6Xkj9_9IWLbmA==
+		PiBDigest = lBVpwnDwGwnDnmbf6gAoFg==
 	EndGlobalSection
 EndGlobal
