@@ -580,26 +580,18 @@ namespace
 }
 
 
-void crdb::ReadTextDatabase(const char* filename, Database& db)
+bool crdb::ReadTextDatabase(const char* filename, Database& db)
 {
+	if (!IsTextDatabase(filename))
+	{
+		return false;
+	}
+
 	FILE* fp = fopen(filename, "r");
 
 	// Parse the tables in whatever order they arrive
 	while (char* line = ReadLine(fp))
 	{
-		// Parse the header to see if the version is readable
-		if (startswith(line, "Format Version: "))
-		{
-			StringTokeniser tok(line, ":");
-			tok.Get();
-			const char* version = tok.Get();
-			if (atoi(version) != CURRENT_VERSION)
-			{
-				fclose(fp);
-				return;
-			}
-		}
-
 		ParseTable(fp, line, db, "Names", ParseName);
 		ParseTable(fp, line, db, "Namespaces", ParsePrimitive<crdb::Namespace>);
 		ParseTable(fp, line, db, "Types", ParsePrimitive<crdb::Type>);
@@ -612,4 +604,49 @@ void crdb::ReadTextDatabase(const char* filename, Database& db)
 	}
 
 	fclose(fp);
+	return true;
+}
+
+
+bool crdb::IsTextDatabase(const char* filename)
+{
+	// Not a database if it doesn't exist
+	FILE* fp = fopen(filename, "r");
+	if (fp == 0)
+	{
+		return false;
+	}
+
+	// Parse the first few lines looking for the header
+	int line_index = 0;
+	bool is_text_db = true;
+	while (char* line = ReadLine(fp))
+	{
+		if (startswith(line, "Clang Reflect Database"))
+		{
+			is_text_db = true;
+		}
+
+		// See if the version is readable
+		if (is_text_db && startswith(line, "Format Version: "))
+		{
+			StringTokeniser tok(line, ":");
+			tok.Get();
+			const char* version = tok.Get();
+			if (atoi(version) != CURRENT_VERSION)
+			{
+				is_text_db = false;
+			}
+
+			break;
+		}
+
+		if (line_index++ > 5)
+		{
+			break;
+		}
+	}
+
+	fclose(fp);
+	return is_text_db;
 }

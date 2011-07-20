@@ -299,18 +299,18 @@ namespace
 }
 
 
-void crdb::ReadBinaryDatabase(const char* filename, Database& db)
+bool crdb::ReadBinaryDatabase(const char* filename, Database& db)
 {
+	if (!IsBinaryDatabase(filename))
+	{
+		return false;
+	}
+
 	FILE* fp = fopen(filename, "rb");
 
-	// Read the header and check it
-	unsigned int header = Read<unsigned int>(fp);
-	unsigned int version = Read<unsigned int>(fp);
-	if (header != FILE_HEADER || version != FILE_VERSION)
-	{
-		fclose(fp);
-		return;
-	}
+	// Discard the header
+	Read<unsigned int>(fp);
+	Read<unsigned int>(fp);
 
 	// Read each table with explicit ordering
 	crdb::meta::DatabaseTypes dbtypes;
@@ -325,4 +325,25 @@ void crdb::ReadBinaryDatabase(const char* filename, Database& db)
 	ReadTable<crdb::Field>(fp, db, dbtypes);
 
 	fclose(fp);
+
+	return true;
+}
+
+
+bool crdb::IsBinaryDatabase(const char* filename)
+{
+	// Not a database if the file can't be found
+	FILE* fp = fopen(filename, "rb");
+	if (fp == 0)
+	{
+		fclose(fp);
+	}
+
+	// Read the header and check it
+	unsigned int header = Read<unsigned int>(fp);
+	unsigned int version = Read<unsigned int>(fp);
+	bool is_binary_db = header == FILE_HEADER && version == FILE_VERSION;
+
+	fclose(fp);
+	return is_binary_db;
 }

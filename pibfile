@@ -95,6 +95,14 @@ crscan_exe = env.Link("crscan.exe", crscan_obj_files, crscan_lib_files + [ crcor
 env.Build(crscan_exe, "crscan")
 
 
+# Build the merger
+crmerge_cpp_files = Glob("src/ClangReflectMerge", "*.cpp")
+crmerge_hpp_files = Glob("src/ClangReflectMerge", "*.h")
+crmerge_obj_files = [ env.CPPFile(file) for file in crmerge_cpp_files ]
+crmerge_exe = env.Link("crmerge.exe", crmerge_obj_files, [ crcore_lib ])
+env.Build(crmerge_exe, "crmerge")
+
+
 # Build the test code with the generated crscan
 # TODO: Probably going to have to flatten the graph before visiting
 # test_obj_files is traversed twice below!
@@ -107,7 +115,9 @@ env.Build(crtest_cvs_files, "crtest")
 # Generate MSVC project files
 VCGenerateProjectFile(env, "src/ClangReflectCore/ClangReflectCore", crcore_cpp_files + crcore_hpp_files, crcore_lib, "crcore")
 VCGenerateProjectFile(env, "src/ClangReflectScan/ClangReflectScan", crscan_cpp_files + crscan_hpp_files, crscan_exe, "crscan")
+VCGenerateProjectFile(env, "src/ClangReflectMerge/ClangReflectMerge", crmerge_cpp_files + crmerge_hpp_files, crmerge_exe, "crmerge")
 VCGenerateSolutionFile(env, "ClangReflect", [
     "src/ClangReflectCore/ClangReflectCore",
     "src/ClangReflectScan/ClangReflectScan",
+    "src/ClangReflectMerge/ClangReflectMerge",
     "src/ClangReflectTest/ClangReflectTest" ])
