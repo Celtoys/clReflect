@@ -48,9 +48,9 @@ namespace
 
 	void CopyNameToHash(const crdb::Database& db, char* dest, const char* source, int)
 	{
-		// Strip the has from the name
+		// Strip the hash from the name
 		crdb::Name& name = *(crdb::Name*)source;
-		*(crdb::u32*)dest = name == db.GetNoName() ? 0 : name->first;
+		*(crdb::u32*)dest = name.hash;
 	}
 
 
@@ -134,14 +134,7 @@ namespace
 	{
 		// Generate a memory-contiguous table
 		std::vector<TYPE> table;
-		if (named)
-		{
-			CopyPrimitiveStoreToTable(db.GetPrimitiveStore<TYPE>(), table);
-		}
-		else
-		{
-			CopyPrimitiveStoreToTable(db.GetUnnamedPrimitiveStore<TYPE>(), table);
-		}
+		CopyPrimitiveStoreToTable(db.GetPrimitiveStore<TYPE>(named), table);
 
 		// Record the table size
 		int table_size = table.size();
@@ -171,10 +164,10 @@ namespace
 		Write(fp, nb_names);
 
 		// Write each name
-		for (crdb::Name i = db.m_Names.begin(); i != db.m_Names.end(); ++i)
+		for (crdb::NameMap::const_iterator i = db.m_Names.begin(); i != db.m_Names.end(); ++i)
 		{
-			Write(fp, i->first);
-			Write(fp, i->second);
+			Write(fp, i->second.hash);
+			Write(fp, i->second.text);
 		}
 	}
 }
@@ -239,7 +232,7 @@ namespace
 		{
 			crdb::u32 hash = Read<crdb::u32>(fp);
 			std::string str = Read<std::string>(fp);
-			db.m_Names[hash] = str;
+			db.m_Names[hash] = crdb::Name(hash, str);
 		}
 	}
 

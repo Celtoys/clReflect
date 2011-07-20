@@ -28,10 +28,33 @@ namespace crdb
 
 
 	//
-	// A convenient way to quickly share and map names within the database
+	// A descriptive text name with a unique 32-bit hash value for mapping primitives.
 	//
-	typedef std::map<u32, std::string> NameMap;
-	typedef NameMap::const_iterator Name;
+	// Note this new representation requires string copying whenever the name is
+	// copied.
+	//
+	struct Name
+	{
+		// No-name default constructor
+		Name() : hash(0) { }
+
+		// Initialise with hash and string representation
+		Name(u32 h, const std::string& t) : hash(h), text(t) { }
+
+		// Fast name comparisons using the hash, assuming there are no collisions
+		bool operator == (const Name& rhs) const
+		{
+			return hash == rhs.hash;
+		}
+		bool operator != (const Name& rhs) const
+		{
+			return hash != rhs.hash;
+		}
+
+		u32 hash;
+		std::string text;
+	};
+	typedef std::map<u32, Name> NameMap;
 
 
 	//
@@ -115,14 +138,6 @@ namespace crdb
 		EnumConstant() : Primitive(Primitive::KIND_ENUM_CONSTANT) { }
 		EnumConstant(Name n, Name p, __int64 v) : Primitive(Primitive::KIND_ENUM_CONSTANT, n, p), value(v) { }
 
-		bool operator == (const EnumConstant& rhs) const
-		{
-			return
-				name == rhs.name &&
-				parent == rhs.parent &&
-				value == rhs.value;
-		}
-
 		// Enumeration constants can have values that are signed/unsigned and of arbitrary width.
 		// For now I'm just assuming they're 32-bit signed.
 		__int64 value;
@@ -137,14 +152,8 @@ namespace crdb
 		Function() : Primitive(Primitive::KIND_FUNCTION), unique_id(0) { }
 		Function(Name n, Name p, u32 uid) : Primitive(Primitive::KIND_FUNCTION, n, p), unique_id(uid) { }
 
-		bool operator == (const Function& rhs) const
-		{
-			return
-				name == rhs.name &&
-				parent == rhs.parent &&
-				unique_id == rhs.unique_id;
-		}
-
+		// An ID unique to this function among other functions that have the same name
+		// This allows the function to be referenced accurately by any children
 		u32 unique_id;
 	};
 
@@ -163,18 +172,6 @@ namespace crdb
 
 		Field() : Primitive(Primitive::KIND_FIELD), modifier(MODIFIER_VALUE), is_const(false), offset(-1), parent_unique_id(0) { }
 		Field(Name n, Name p, Name t, Modifier pass, bool c, int o, u32 uid = 0) : Primitive(Primitive::KIND_FIELD, n, p), type(t), modifier(pass), is_const(c), offset(o), parent_unique_id(uid) { }
-
-		bool operator == (const Field& rhs) const
-		{
-			return
-				name == rhs.name &&
-				parent == rhs.parent &&
-				type == rhs.type &&
-				modifier == rhs.modifier &&
-				is_const == rhs.is_const &&
-				offset == rhs.offset &&
-				parent_unique_id == rhs.parent_unique_id;
-		}
 
 		Name type;
 		Modifier modifier;
@@ -210,24 +207,21 @@ namespace crdb
 
 		void AddBaseTypePrimitives();
 
-		Name GetNoName() const;
-		Name GetName(const char* text);
-		Name GetName(u32 hash) const;
-
-		void Merge(const Database& db);
+		const Name& GetName(const char* text);
+		const Name& GetName(u32 hash) const;
 
 		template <typename TYPE> void AddPrimitive(const TYPE& prim)
 		{
-			if (prim.name == GetNoName())
+			if (prim.name == Name())
 			{
 				// Unnamed primitives are mapped by parent
-				PrimitiveStore<TYPE>& store = GetUnnamedPrimitiveStore<TYPE>();
-				store.insert(PrimitiveStore<TYPE>::value_type(prim.parent->first, prim));
+				PrimitiveStore<TYPE>& store = GetPrimitiveStore<TYPE>(false);
+				store.insert(PrimitiveStore<TYPE>::value_type(prim.parent.hash, prim));
 			}
 			else
 			{
 				PrimitiveStore<TYPE>& store = GetPrimitiveStore<TYPE>();
-				store.insert(PrimitiveStore<TYPE>::value_type(prim.name->first, prim));
+				store.insert(PrimitiveStore<TYPE>::value_type(prim.name.hash, prim));
 			}
 		}
 
@@ -248,33 +242,21 @@ namespace crdb
 		}
 
 		// A compile-time map to runtime data stores for each primitive type
-		template <typename TYPE> PrimitiveStore<TYPE>& GetPrimitiveStore() { }
-		template <> PrimitiveStore<Namespace>& GetPrimitiveStore() { return m_Namespaces; }
-		template <> PrimitiveStore<Type>& GetPrimitiveStore() { return m_Types; }
-		template <> PrimitiveStore<Class>& GetPrimitiveStore() { return m_Classes; }
-		template <> PrimitiveStore<Enum>& GetPrimitiveStore() { return m_Enums; }
-		template <> PrimitiveStore<EnumConstant>& GetPrimitiveStore() { return m_EnumConstants; }
-		template <> PrimitiveStore<Function>& GetPrimitiveStore() { return m_Functions; }
-		template <> PrimitiveStore<Field>& GetPrimitiveStore() { return m_Fields; }
-
-		// The same for unnamed primitives
-		template <typename TYPE> PrimitiveStore<TYPE>& GetUnnamedPrimitiveStore()
-		{
-			assert(false && "No unnamed primitive store for primitives of this type");
-			return *(PrimitiveStore<TYPE>*)0;
-		}
-		template <> PrimitiveStore<Field>& GetUnnamedPrimitiveStore() { return m_UnnamedFields; }
+		template <typename TYPE> PrimitiveStore<TYPE>& GetPrimitiveStore(bool named = true) { }
+		template <> PrimitiveStore<Namespace>& GetPrimitiveStore(bool named) { return m_Namespaces; }
+		template <> PrimitiveStore<Type>& GetPrimitiveStore(bool named) { return m_Types; }
+		template <> PrimitiveStore<Class>& GetPrimitiveStore(bool named) { return m_Classes; }
+		template <> PrimitiveStore<Enum>& GetPrimitiveStore(bool named) { return m_Enums; }
+		template <> PrimitiveStore<EnumConstant>& GetPrimitiveStore(bool named) { return m_EnumConstants; }
+		template <> PrimitiveStore<Function>& GetPrimitiveStore(bool named) { return m_Functions; }
+		template <> PrimitiveStore<Field>& GetPrimitiveStore(bool named) { return named ? m_Fields : m_UnnamedFields; }
 
 		// Single pass-through const retrieval of the primitive stores. This strips the const-ness
 		// of the 'this' pointer to remove the need to copy-paste the GetPrimitiveStore implementations
 		// with const added.
-		template <typename TYPE> const PrimitiveStore<TYPE>& GetPrimitiveStore() const
+		template <typename TYPE> const PrimitiveStore<TYPE>& GetPrimitiveStore(const bool named = true) const
 		{
-			return const_cast<Database*>(this)->GetPrimitiveStore<TYPE>();
-		}
-		template <typename TYPE> const PrimitiveStore<TYPE>& GetUnnamedPrimitiveStore() const
-		{
-			return const_cast<Database*>(this)->GetUnnamedPrimitiveStore<TYPE>();
+			return const_cast<Database*>(this)->GetPrimitiveStore<TYPE>(named);
 		}
 
 		// All unique, scope-qualified names

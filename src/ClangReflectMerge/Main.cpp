@@ -1,4 +1,6 @@
 
+#include "DatabaseMerge.h"
+
 #include "ClangReflectCore/Arguments.h"
 #include "ClangReflectCore/Logging.h"
 #include "ClangReflectCore/Database.h"
@@ -12,14 +14,14 @@ int main(int argc, const char* argv[])
 
 	// Leave early if there aren't enough arguments
 	Arguments args(argc, argv);
-	if (args.Count() < 2)
+	if (args.Count() < 3)
 	{
 		LOG(main, ERROR, "Not enough arguments\n");
 		return 1;
 	}
 
 	crdb::Database db;
-	for (size_t i = 1; i < args.Count(); i++)
+	for (size_t i = 2; i < args.Count(); i++)
 	{
 		const char* filename = args[i].c_str();
 
@@ -35,8 +37,12 @@ int main(int argc, const char* argv[])
 		}
 
 		// Merge into the main one
-		db.Merge(loaded_db);
+		MergeDatabases(db, loaded_db);
 	}
+
+	// Save the result
+	const char* output_filename = args[1].c_str();
+	crdb::WriteTextDatabase(output_filename, db);
 
 	return 0;
 }

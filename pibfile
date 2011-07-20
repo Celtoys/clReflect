@@ -108,8 +108,9 @@ env.Build(crmerge_exe, "crmerge")
 # test_obj_files is traversed twice below!
 crtest_cpp_files = Glob("src/ClangReflectTest", "*.cpp")
 crtest_obj_files = [ env.CPPFile(file) for file in crtest_cpp_files ]
-crtest_cvs_files = [ ClangReflect.CppScanNode(file) for file in crtest_obj_files ]
-env.Build(crtest_cvs_files, "crtest")
+crtest_cvs_files = [ ClangReflect.CppScan(file) for file in crtest_obj_files ]
+crtest_db_file = ClangReflect.Merge("ClangReflectTest.csv", crtest_cvs_files)
+env.Build(crtest_db_file, "crtest")
 
 
 # Generate MSVC project files

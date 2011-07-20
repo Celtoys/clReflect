@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="Windows-1252"?>
-<!-- PiBDigest: MmkwT9cyH8XUGxjIejTG5A== -->
+<!-- PiBDigest: z-YL4EymE4o4bFyEt1LTeQ== -->
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="ClangReflectMerge"
-	ProjectGUID="{B709A941-B2C5-11E0-9FB1-F46D04D48D5F}"
+	ProjectGUID="{8BB50441-B2D1-11E0-AA3B-F46D04D48D5F}"
 	RootNamespace="ClangReflectMerge"
 	Keyword="Win32Proj"
 	>
@@ -62,6 +62,14 @@
 	<References>
 	</References>
 	<Files>
+		<File
+			RelativePath="DatabaseMerge.cpp"
+			>
+		</File>
+		<File
+			RelativePath="DatabaseMerge.h"
+			>
+		</File>
 		<File
 			RelativePath="Main.cpp"
 			>

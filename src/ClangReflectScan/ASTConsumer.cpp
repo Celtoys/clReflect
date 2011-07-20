@@ -101,7 +101,7 @@ namespace
 		// Construct the fully-qualified type name and hash that
 		std::string name;
 		name += field.is_const ? "const " : "";
-		name += field.type->second;
+		name += field.type.text;
 		name += field.modifier == crdb::Field::MODIFIER_POINTER ? "*" : field.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "";
 		return crdb::HashNameString(name.c_str());
 	}
@@ -123,7 +123,7 @@ namespace
 		crdb::Field return_parameter;
 		if (!MakeField(db, function_decl->getResultType(), 0, function_name, -1, return_parameter))
 		{
-			LOG(ast, WARNING, "Unsupported return type for %s\n", function_name->second.c_str());
+			LOG(ast, WARNING, "Unsupported return type for %s\n", function_name.text.c_str());
 			return;
 		}
 
@@ -160,17 +160,17 @@ namespace
 		}
 
 		// Add the function
-		LOG(ast, INFO, "function %s\n", function_name->second.c_str());
+		LOG(ast, INFO, "function %s\n", function_name.text.c_str());
 		db.AddPrimitive(crdb::Function(function_name, parent_name, unique_id));
 
 		LOG_PUSH_INDENT(ast);
 
 		// Only add the return parameter if it's non-void
-		if (return_parameter.type->second != "void")
+		if (return_parameter.type.text != "void")
 		{
 			LOG(ast, INFO, "Returns: %s%s%s\n",
 				return_parameter.is_const ? "const " : "",
-				return_parameter.type->second.c_str(),
+				return_parameter.type.text.c_str(),
 				return_parameter.modifier == crdb::Field::MODIFIER_POINTER ? "*" : return_parameter.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "");
 			db.AddPrimitive(return_parameter);
 		}
@@ -184,9 +184,9 @@ namespace
 		{
 			LOG(ast, INFO, "%s%s%s %s\n",
 				i->is_const ? "const " : "",
-				i->type->second.c_str(),
+				i->type.text.c_str(),
 				i->modifier == crdb::Field::MODIFIER_POINTER ? "*" : i->modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "",
-				i->name == db.GetNoName() ? "" : i->name->second.c_str());
+				i->name.text.c_str());
 			db.AddPrimitive(*i);
 		}
 
@@ -213,7 +213,7 @@ ASTConsumer::ASTConsumer(clang::ASTContext& context, crdb::Database& db, const R
 void ASTConsumer::WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl)
 {
 	// Root namespace
-	crdb::Name parent_name = m_DB.GetNoName();
+	crdb::Name parent_name;
 
 	// Iterate over every named declaration
 	for (clang::DeclContext::decl_iterator i = tu_decl->decls_begin(); i != tu_decl->decls_end(); ++i)
@@ -272,13 +272,13 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name,
 void ASTConsumer::AddNamespaceDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
 {
 	// Only add the namespace if it doesn't exist yet
-	if (m_DB.GetFirstPrimitive<crdb::Namespace>(name->second.c_str()) == 0)
+	if (m_DB.GetFirstPrimitive<crdb::Namespace>(name.text.c_str()) == 0)
 	{
 		m_DB.AddPrimitive(crdb::Namespace(name, parent_name));
 	}
 
 	// Add everything within the namespace
-	LOG(ast, INFO, "namespace %s\n", name->second.c_str());
+	LOG(ast, INFO, "namespace %s\n", name.text.c_str());
 	AddContainedDecls(decl, name, 0);
 }
 
@@ -298,19 +298,19 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 	// Can only inherit from one base class for now - offsets change based on derived type
 	if (record_decl->getNumBases() > 1)
 	{
-		LOG(ast, WARNING, "Class '%s' has too many bases\n", name->second.c_str());
+		LOG(ast, WARNING, "Class '%s' has too many bases\n", name.text.c_str());
 		return;
 	}
 
 	// Parse any base classes
-	crdb::Name base_name = m_DB.GetNoName();
+	crdb::Name base_name;
 	if (record_decl->getNumBases() > 0)
 	{
 		// Can't support virtual base classes - offsets change at runtime
 		clang::CXXBaseSpecifier& base = *record_decl->bases_begin();
 		if (base.isVirtual())
 		{
-			LOG(ast, WARNING, "Class '%s' has an unsupported virtual base class\n", name->second.c_str());
+			LOG(ast, WARNING, "Class '%s' has an unsupported virtual base class\n", name.text.c_str());
 			return;
 		}
 
@@ -323,10 +323,10 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 	}
 
 	// Add to the database
-	LOG(ast, INFO, "class %s", name->second.c_str());
-	if (base_name != m_DB.GetNoName())
+	LOG(ast, INFO, "class %s", name.text.c_str());
+	if (base_name != crdb::Name())
 	{
-		LOG(ast, INFO, " : %s", base_name->second.c_str());
+		LOG(ast, INFO, " : %s", base_name.text.c_str());
 	}
 	LOG_NEWLINE(ast);
 	const clang::ASTRecordLayout& layout = m_ASTContext.getASTRecordLayout(record_decl);
@@ -346,7 +346,7 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const crdb::Name& name, co
 	assert(enum_decl != 0 && "Failed to cast to enum declaration");
 
 	// Add to the database
-	LOG(ast, INFO, "enum %s\n", name->second.c_str());
+	LOG(ast, INFO, "enum %s\n", name.text.c_str());
 	m_DB.AddPrimitive(crdb::Enum(name, parent_name));
 
 	LOG_PUSH_INDENT(ast);
@@ -364,9 +364,9 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const crdb::Name& name, co
 		// Clang doesn't construct the enum name as a C++ compiler would see it so do that first
 		// NOTE: May want to revisit this later
 		std::string constant_name = constant_decl->getNameAsString();
-		if (parent_name != m_DB.GetNoName())
+		if (parent_name != crdb::Name())
 		{
-			constant_name = parent_name->second + "::" + constant_name;
+			constant_name = parent_name.text + "::" + constant_name;
 		}
 
 		// Add to the database
@@ -399,7 +399,7 @@ void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const crdb::Name& name, 
 		crdb::Field this_param;
 		if (!MakeField(m_DB, method_decl->getThisType(m_ASTContext), "this", name, 0, this_param))
 		{
-			LOG(ast, WARNING, "Unsupported 'this' type for %s\n", name->second.c_str());
+			LOG(ast, WARNING, "Unsupported 'this' type for %s\n", name.text.c_str());
 			return;
 		}
 		parameters.push_back(this_param);
@@ -427,9 +427,9 @@ void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 
 	LOG(ast, INFO, "Field: %s%s%s %s\n",
 		field.is_const ? "const " : "",
-		field.type->second.c_str(),
+		field.type.text.c_str(),
 		field.modifier == crdb::Field::MODIFIER_POINTER ? "*" : field.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "",
-		field.name->second.c_str());
+		field.name.text.c_str());
 	m_DB.AddPrimitive(field);
 }
 

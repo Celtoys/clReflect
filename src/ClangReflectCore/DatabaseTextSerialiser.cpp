@@ -126,14 +126,7 @@ namespace
 
 	const char* HexStringFromName(crdb::Name name, const crdb::Database& db)
 	{
-		// Safely handle no-names
-		crdb::u32 hash = 0;
-		if (name != db.GetNoName())
-		{
-			hash = name->first;
-		}
-
-		return itohex(hash);
+		return itohex(name.hash);
 	}
 
 
@@ -183,11 +176,11 @@ namespace
 	}
 
 
-	void WriteName(FILE* fp, const crdb::NameMap::value_type& name, bool named, const crdb::Database& db)
+	void WriteName(FILE* fp, const crdb::Name& name, bool named, const crdb::Database& db)
 	{
-		fputs(itohex(name.first), fp);
+		fputs(itohex(name.hash), fp);
 		fputs("\t", fp);
-		fputs(name.second.c_str(), fp);
+		fputs(name.text.c_str(), fp);
 	}
 
 
@@ -267,16 +260,8 @@ namespace
 	template <typename TYPE, typename PRINT_FUNC>
 	void WritePrimitives(FILE* fp, const crdb::Database& db, PRINT_FUNC print_func, bool named, const char* title, const char* headers)
 	{
-		if (named)
-		{
-			const crdb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>();
-			WriteTable(fp, db, store, print_func, named, title, headers);
-		}
-		else
-		{
-			const crdb::PrimitiveStore<TYPE>& store = db.GetUnnamedPrimitiveStore<TYPE>();
-			WriteTable(fp, db, store, print_func, named, title, headers);
-		}
+		const crdb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>(named);
+		WriteTable(fp, db, store, print_func, named, title, headers);
 	}
 
 
@@ -285,7 +270,7 @@ namespace
 		WriteTableHeader(fp, "Names", true, "Hash\t\tName");
 		for (crdb::NameMap::const_iterator i = table.begin(); i != table.end(); ++i)
 		{
-			WriteName(fp, *i, true, db);
+			WriteName(fp, i->second, true, db);
 			fputs("\n", fp);
 		}
 		WriteTableFooter(fp);
@@ -407,7 +392,7 @@ namespace
 		const char* name = tok.Get();
 		if (hash != 0 && name != 0)
 		{
-			db.m_Names[hash] = name;
+			db.m_Names[hash] = crdb::Name(hash, name);
 		}
 	}
 
