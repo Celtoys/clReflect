@@ -278,6 +278,5 @@ void crdb::Database::Merge(const Database& db)
 	// Field names aren't scoped and hence overloadable. They are parented to unique functions so that will
 	// be the key deciding factor in whether fields should be merged or not.
 	MergeOverloads<Field>(*this, db.m_Fields, m_Fields);
-
-	// TODO: unnamed
+	MergeOverloads<Field>(*this, db.m_UnnamedFields, m_UnnamedFields);
 }
