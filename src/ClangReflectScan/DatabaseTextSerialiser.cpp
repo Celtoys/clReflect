@@ -252,25 +252,12 @@ namespace
 
 
 	template <typename TABLE_TYPE, typename PRINT_FUNC>
-	void WriteNamedTable(FILE* fp, const crdb::Database& db, const TABLE_TYPE& table, PRINT_FUNC print_func, const char* title, const char* headers)
+	void WriteTable(FILE* fp, const crdb::Database& db, const TABLE_TYPE& table, PRINT_FUNC print_func, bool named, const char* title, const char* headers)
 	{
-		WriteTableHeader(fp, title, true, headers);
+		WriteTableHeader(fp, title, named, headers);
 		for (typename TABLE_TYPE::const_iterator i = table.begin(); i != table.end(); ++i)
 		{
-			print_func(fp, i->second, true, db);
-			fputs("\n", fp);
-		}
-		WriteTableFooter(fp);
-	}
-
-
-	template <typename TABLE_TYPE, typename PRINT_FUNC>
-	void WriteUnnamedTable(FILE* fp, const crdb::Database& db, const TABLE_TYPE& table, PRINT_FUNC print_func, const char* title, const char* headers)
-	{
-		WriteTableHeader(fp, title, false, headers);
-		for (typename TABLE_TYPE::const_iterator i = table.begin(); i != table.end(); ++i)
-		{
-			print_func(fp, *i, false, db);
+			print_func(fp, i->second, named, db);
 			fputs("\n", fp);
 		}
 		WriteTableFooter(fp);
@@ -278,26 +265,35 @@ namespace
 
 
 	template <typename TYPE, typename PRINT_FUNC>
-	void WritePrimitives(FILE* fp, const crdb::Database& db, PRINT_FUNC print_func, const char* title, const char* headers)
+	void WritePrimitives(FILE* fp, const crdb::Database& db, PRINT_FUNC print_func, bool named, const char* title, const char* headers)
 	{
-		// Map from the type to the DB store
-		const crdb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>();
-
-		if (!store.named.empty())
+		if (named)
 		{
-			WriteNamedTable(fp, db, store.named, print_func, title, headers);
+			const crdb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>();
+			WriteTable(fp, db, store, print_func, named, title, headers);
 		}
-
-		if (!store.unnamed.empty())
+		else
 		{
-			WriteUnnamedTable(fp, db, store.unnamed, print_func, title, headers);
+			const crdb::PrimitiveStore<TYPE>& store = db.GetUnnamedPrimitiveStore<TYPE>();
+			WriteTable(fp, db, store, print_func, named, title, headers);
 		}
+	}
+
+
+	void WriteNameTable(FILE* fp, const crdb::Database& db, const crdb::NameMap& table)
+	{
+		WriteTableHeader(fp, "Names", true, "Hash\t\tName");
+		for (crdb::NameMap::const_iterator i = table.begin(); i != table.end(); ++i)
+		{
+			WriteName(fp, *i, true, db);
+			fputs("\n", fp);
+		}
+		WriteTableFooter(fp);
 	}
 }
 
 
-void crdb::WriteTextDatabase(const char* filename, const Database& db)
-{
+void crdb::WriteTextDatabase(const char* filename, const Database& db){
 	FILE* fp = fopen(filename, "w");
 
 	// Write the header
@@ -307,16 +303,17 @@ void crdb::WriteTextDatabase(const char* filename, const Database& db)
 	fputs("\n\n\n", fp);
 
 	// Write the name table
-	WriteUnnamedTable(fp, db, db.m_Names, WriteName, "Names", "Hash\t\tName");
+	WriteNameTable(fp, db, db.m_Names);
 
 	// Write all the primitive tables
-	WritePrimitives<Namespace>(fp, db, WritePrimitive, "Namespaces", "Name\t\tParent");
-	WritePrimitives<Type>(fp, db, WritePrimitive, "Types", "Name\t\tParent");
-	WritePrimitives<Class>(fp, db, WriteClass, "Classes", "Name\t\tParent\t\tBase\tSize");
-	WritePrimitives<Enum>(fp, db, WritePrimitive, "Enums", "Name\t\tParent");
-	WritePrimitives<EnumConstant>(fp, db, WriteEnumConstant, "Enum Constants", "Name\t\tParent\t\tValue");
-	WritePrimitives<Function>(fp, db, WriteFunction, "Functions", "Name\t\tParent\t\tUID");
-	WritePrimitives<Field>(fp, db, WriteField, "Fields", "Name\t\tParent\t\tType\t\tMod\tCst\tOffs\tUID");
+	WritePrimitives<Namespace>(fp, db, WritePrimitive, true, "Namespaces", "Name\t\tParent");
+	WritePrimitives<Type>(fp, db, WritePrimitive, true, "Types", "Name\t\tParent");
+	WritePrimitives<Class>(fp, db, WriteClass, true, "Classes", "Name\t\tParent\t\tBase\tSize");
+	WritePrimitives<Enum>(fp, db, WritePrimitive, true, "Enums", "Name\t\tParent");
+	WritePrimitives<EnumConstant>(fp, db, WriteEnumConstant, true, "Enum Constants", "Name\t\tParent\t\tValue");
+	WritePrimitives<Function>(fp, db, WriteFunction, true, "Functions", "Name\t\tParent\t\tUID");
+	WritePrimitives<Field>(fp, db, WriteField, true, "Fields", "Name\t\tParent\t\tType\t\tMod\tCst\tOffs\tUID");
+	WritePrimitives<Field>(fp, db, WriteField, false, "Fields", "Parent\t\tType\t\tMod\tCst\tOffs\tUID");
 
 	fclose(fp);
 }
@@ -610,6 +607,7 @@ void crdb::ReadTextDatabase(const char* filename, Database& db)
 		ParseTable(fp, line, db, "Enums", ParsePrimitive<crdb::Enum>);
 		ParseTable(fp, line, db, "Enum Constants", ParseEnumConstant);
 		ParseTable(fp, line, db, "Functions", ParseFunction);
+		ParseTable(fp, line, db, "Fields", ParseField);
 		ParseTable(fp, line, db, "Fields", ParseField);
 	}
 

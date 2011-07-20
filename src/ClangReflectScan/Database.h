@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <cassert>
 
 
 namespace crdb
@@ -191,25 +192,14 @@ namespace crdb
 
 
 	//
-	// Primitives can be named or unnamed, requiring different storage. Named types
-	// can be quickly looked up by name, whereas unnamed types need to be linearly
-	// traversed to match any required patterns.
-	// This object contains storage for both, only used internally by the Database.
+	// Primitive stores allow multiple primitives of the same type to be stored and
+	// quickly looked up, allowing symbol overloading.
 	//
 	template <typename TYPE>
-	struct PrimitiveStore
+	struct PrimitiveStore : public std::multimap<u32, TYPE>
 	{
-		typedef std::vector<TYPE> UnnamedStore;
-		typedef std::multimap<u32, TYPE> NamedStore;	// Allows overloaded functions/methods
-
-		// A few shortcut typedefs to make the source code a little easier to read
-		typedef typename NamedStore::iterator NamedIterator;
-		typedef typename NamedStore::const_iterator NamedConstIterator;
-		typedef std::pair<NamedIterator, NamedIterator> NamedRange;
-		typedef std::pair<NamedConstIterator, NamedConstIterator> NamedConstRange;
-
-		UnnamedStore unnamed;
-		NamedStore named;
+		typedef std::pair<iterator, iterator> range;
+		typedef std::pair<const_iterator, const_iterator> const_range;
 	};
 
 
@@ -228,17 +218,16 @@ namespace crdb
 
 		template <typename TYPE> void AddPrimitive(const TYPE& prim)
 		{
-			// Get the store associated with this type
-			PrimitiveStore<TYPE>& store = GetPrimitiveStore<TYPE>();
-
-			// Add to unnamed vector or named multimap
 			if (prim.name == GetNoName())
 			{
-				store.unnamed.push_back(prim);
+				// Unnamed primitives are mapped by parent
+				PrimitiveStore<TYPE>& store = GetUnnamedPrimitiveStore<TYPE>();
+				store.insert(PrimitiveStore<TYPE>::value_type(prim.parent->first, prim));
 			}
 			else
 			{
-				store.named.insert(PrimitiveStore<TYPE>::NamedStore::value_type(prim.name->first, prim));
+				PrimitiveStore<TYPE>& store = GetPrimitiveStore<TYPE>();
+				store.insert(PrimitiveStore<TYPE>::value_type(prim.name->first, prim));
 			}
 		}
 
@@ -249,8 +238,8 @@ namespace crdb
 
 			// Return the first instance of an object with this name
 			u32 name = HashNameString(name_string);
-			PrimitiveStore<TYPE>::NamedStore::const_iterator i = store.named.find(name);
-			if (i != store.named.end())
+			PrimitiveStore<TYPE>::const_iterator i = store.find(name);
+			if (i != store.end())
 			{
 				return &i->second;
 			}
@@ -268,12 +257,24 @@ namespace crdb
 		template <> PrimitiveStore<Function>& GetPrimitiveStore() { return m_Functions; }
 		template <> PrimitiveStore<Field>& GetPrimitiveStore() { return m_Fields; }
 
+		// The same for unnamed primitives
+		template <typename TYPE> PrimitiveStore<TYPE>& GetUnnamedPrimitiveStore()
+		{
+			assert(false && "No unnamed primitive store for primitives of this type");
+			return *(PrimitiveStore<TYPE>*)0;
+		}
+		template <> PrimitiveStore<Field>& GetUnnamedPrimitiveStore() { return m_UnnamedFields; }
+
 		// Single pass-through const retrieval of the primitive stores. This strips the const-ness
 		// of the 'this' pointer to remove the need to copy-paste the GetPrimitiveStore implementations
 		// with const added.
 		template <typename TYPE> const PrimitiveStore<TYPE>& GetPrimitiveStore() const
 		{
 			return const_cast<Database*>(this)->GetPrimitiveStore<TYPE>();
+		}
+		template <typename TYPE> const PrimitiveStore<TYPE>& GetUnnamedPrimitiveStore() const
+		{
+			return const_cast<Database*>(this)->GetUnnamedPrimitiveStore<TYPE>();
 		}
 
 		// All unique, scope-qualified names
@@ -287,5 +288,7 @@ namespace crdb
 		PrimitiveStore<EnumConstant> m_EnumConstants;
 		PrimitiveStore<Function> m_Functions;
 		PrimitiveStore<Field> m_Fields;
+
+		PrimitiveStore<Field> m_UnnamedFields;
 	};
 }

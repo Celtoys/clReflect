@@ -104,16 +104,16 @@ namespace
 	template <typename TYPE>
 	void MergeUniques(
 		crdb::Database& db,
-		const typename crdb::PrimitiveStore<TYPE>::NamedStore& src_store,
-		typename crdb::PrimitiveStore<TYPE>::NamedStore& dest_store,
+		const typename crdb::PrimitiveStore<TYPE>& src_store,
+		typename crdb::PrimitiveStore<TYPE>& dest_store,
 		void (*check_failure)(const TYPE&, const TYPE&) = 0)
 	{
 		// Add primitives that don't already exist for primitives where the symbol name can't be overloaded
-		for (crdb::PrimitiveStore<TYPE>::NamedConstIterator src = src_store.begin();
+		for (crdb::PrimitiveStore<TYPE>::const_iterator src = src_store.begin();
 			src != src_store.end();
 			++src)
 		{
-			crdb::PrimitiveStore<TYPE>::NamedConstIterator dest = dest_store.find(src->first);
+			crdb::PrimitiveStore<TYPE>::const_iterator dest = dest_store.find(src->first);
 			if (dest == dest_store.end())
 			{
 				db.AddPrimitive(src->second);
@@ -142,15 +142,15 @@ namespace
 	template <typename TYPE>
 	void MergeOverloads(
 		crdb::Database& db,
-		const typename crdb::PrimitiveStore<TYPE>::NamedStore& src_store,
-		typename crdb::PrimitiveStore<TYPE>::NamedStore& dest_store)
+		const typename crdb::PrimitiveStore<TYPE>& src_store,
+		typename crdb::PrimitiveStore<TYPE>& dest_store)
 	{
 		// Unconditionally add primitives that don't already exist
-		for (crdb::PrimitiveStore<TYPE>::NamedConstIterator src = src_store.begin();
+		for (crdb::PrimitiveStore<TYPE>::const_iterator src = src_store.begin();
 			 src != src_store.end();
 			 ++src)
 		{
-			crdb::PrimitiveStore<TYPE>::NamedConstIterator dest = dest_store.find(src->first);
+			crdb::PrimitiveStore<TYPE>::const_iterator dest = dest_store.find(src->first);
 			if (dest == dest_store.end())
 			{
 				db.AddPrimitive(src->second);
@@ -160,8 +160,8 @@ namespace
 			{
 				// A primitive of the same name exists so double-check all existing entries for a matching primitives before adding
 				bool add = true;
-				crdb::PrimitiveStore<TYPE>::NamedConstRange dest_range = dest_store.equal_range(src->first);
-				for (crdb::PrimitiveStore<TYPE>::NamedConstIterator i = dest_range.first; i != dest_range.second; ++i)
+				crdb::PrimitiveStore<TYPE>::const_range dest_range = dest_store.equal_range(src->first);
+				for (crdb::PrimitiveStore<TYPE>::const_iterator i = dest_range.first; i != dest_range.second; ++i)
 				{
 					if (i->second == src->second)
 					{
@@ -259,25 +259,25 @@ crdb::Name crdb::Database::GetName(u32 hash) const
 void crdb::Database::Merge(const Database& db)
 {
 	// The symbol names for these primitives can't be overloaded
-	MergeUniques<Namespace>(*this, db.m_Namespaces.named, m_Namespaces.named);
-	MergeUniques<Type>(*this, db.m_Types.named, m_Types.named);
-	MergeUniques<Enum>(*this, db.m_Enums.named, m_Enums.named);
+	MergeUniques<Namespace>(*this, db.m_Namespaces, m_Namespaces);
+	MergeUniques<Type>(*this, db.m_Types, m_Types);
+	MergeUniques<Enum>(*this, db.m_Enums, m_Enums);
 
 	// Class symbol names can't be overloaded but extra checks can be used to make sure
 	// the same class isn't violating the One Definition Rule
-	MergeUniques<Class>(*this, db.m_Classes.named, m_Classes.named, CheckClassMergeFailure);
+	MergeUniques<Class>(*this, db.m_Classes, m_Classes, CheckClassMergeFailure);
 
 	// Add enum constants as if they are overloadable
 	// NOTE: Technically don't need to do this enum constants are scoped. However, I might change
 	// that in future so this code will become useful.
-	MergeOverloads<EnumConstant>(*this, db.m_EnumConstants.named, m_EnumConstants.named);
+	MergeOverloads<EnumConstant>(*this, db.m_EnumConstants, m_EnumConstants);
 
 	// Functions can be overloaded so rely on their unique id to merge them
-	MergeOverloads<Function>(*this, db.m_Functions.named, m_Functions.named);
+	MergeOverloads<Function>(*this, db.m_Functions, m_Functions);
 
 	// Field names aren't scoped and hence overloadable. They are parented to unique functions so that will
 	// be the key deciding factor in whether fields should be merged or not.
-	MergeOverloads<Field>(*this, db.m_Fields.named, m_Fields.named);
+	MergeOverloads<Field>(*this, db.m_Fields, m_Fields);
 
 	// TODO: unnamed
 }

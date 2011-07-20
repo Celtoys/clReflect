@@ -116,26 +116,15 @@ namespace
 
 
 	template <typename TYPE>
-	void CopyPrimitiveStoreToTable(const crdb::PrimitiveStore<TYPE>& store, std::vector<TYPE>& table, bool named)
+	void CopyPrimitiveStoreToTable(const crdb::PrimitiveStore<TYPE>& store, std::vector<TYPE>& table)
 	{
 		int dest_index = 0;
 
 		// Make a local copy of all entries in the table
-		if (named)
+		table.resize(store.size());
+		for (crdb::PrimitiveStore<TYPE>::const_iterator i = store.begin(); i != store.end(); ++i)
 		{
-			table.resize(store.named.size());
-			for (crdb::PrimitiveStore<TYPE>::NamedStore::const_iterator i = store.named.begin(); i != store.named.end(); ++i)
-			{
-				table[dest_index++] = i->second;
-			}
-		}
-		else
-		{
-			table.resize(store.unnamed.size());
-			for (crdb::PrimitiveStore<TYPE>::UnnamedStore::const_iterator i = store.unnamed.begin(); i != store.unnamed.end(); ++i)
-			{
-				table[dest_index++] = *i;
-			}
+			table[dest_index++] = i->second;
 		}
 	}
 
@@ -145,7 +134,14 @@ namespace
 	{
 		// Generate a memory-contiguous table
 		std::vector<TYPE> table;
-		CopyPrimitiveStoreToTable(db.GetPrimitiveStore<TYPE>(), table, named);
+		if (named)
+		{
+			CopyPrimitiveStoreToTable(db.GetPrimitiveStore<TYPE>(), table);
+		}
+		else
+		{
+			CopyPrimitiveStoreToTable(db.GetUnnamedPrimitiveStore<TYPE>(), table);
+		}
 
 		// Record the table size
 		int table_size = table.size();
@@ -165,17 +161,6 @@ namespace
 			fwrite(data, packed_size, 1, fp);
 			delete [] data;
 		}
-	}
-
-
-	template <typename TYPE>
-	void WriteTable(FILE* fp, const crdb::Database& db, const crdb::meta::DatabaseTypes& dbtypes)
-	{
-		// Write both named and unnamed tables
-		// The unnamed tables contain the empty names, but this makes the code much simpler
-		// at the expense of file sizes that are little larger
-		WriteTable<TYPE>(fp, db, dbtypes, true);
-		WriteTable<TYPE>(fp, db, dbtypes, false);
 	}
 
 
@@ -206,13 +191,14 @@ void crdb::WriteBinaryDatabase(const char* filename, const Database& db)
 	// Write each table with explicit ordering
 	crdb::meta::DatabaseTypes dbtypes;
 	WriteNameTable(fp, db);
-	WriteTable<crdb::Namespace>(fp, db, dbtypes);
-	WriteTable<crdb::Type>(fp, db, dbtypes);
-	WriteTable<crdb::Class>(fp, db, dbtypes);
-	WriteTable<crdb::Enum>(fp, db, dbtypes);
-	WriteTable<crdb::EnumConstant>(fp, db, dbtypes);
-	WriteTable<crdb::Function>(fp, db, dbtypes);
-	WriteTable<crdb::Field>(fp, db, dbtypes);
+	WriteTable<crdb::Namespace>(fp, db, dbtypes, true);
+	WriteTable<crdb::Type>(fp, db, dbtypes, true);
+	WriteTable<crdb::Class>(fp, db, dbtypes, true);
+	WriteTable<crdb::Enum>(fp, db, dbtypes, true);
+	WriteTable<crdb::EnumConstant>(fp, db, dbtypes, true);
+	WriteTable<crdb::Function>(fp, db, dbtypes, true);
+	WriteTable<crdb::Field>(fp, db, dbtypes, true);
+	WriteTable<crdb::Field>(fp, db, dbtypes, false);
 
 	fclose(fp);
 }
@@ -310,16 +296,6 @@ namespace
 			}
 		}
 	}
-
-
-	template <typename TYPE>
-	void ReadTables(FILE* fp, crdb::Database& db, const crdb::meta::DatabaseTypes& dbtypes)
-	{
-		// Read both named and unnamed tables Database::AddPrimitive automatically figures
-		// out which primitive store to add to
-		ReadTable<TYPE>(fp, db, dbtypes);
-		ReadTable<TYPE>(fp, db, dbtypes);
-	}
 }
 
 
@@ -339,13 +315,14 @@ void crdb::ReadBinaryDatabase(const char* filename, Database& db)
 	// Read each table with explicit ordering
 	crdb::meta::DatabaseTypes dbtypes;
 	ReadNameTable(fp, db);
-	ReadTables<crdb::Namespace>(fp, db, dbtypes);
-	ReadTables<crdb::Type>(fp, db, dbtypes);
-	ReadTables<crdb::Class>(fp, db, dbtypes);
-	ReadTables<crdb::Enum>(fp, db, dbtypes);
-	ReadTables<crdb::EnumConstant>(fp, db, dbtypes);
-	ReadTables<crdb::Function>(fp, db, dbtypes);
-	ReadTables<crdb::Field>(fp, db, dbtypes);
+	ReadTable<crdb::Namespace>(fp, db, dbtypes);
+	ReadTable<crdb::Type>(fp, db, dbtypes);
+	ReadTable<crdb::Class>(fp, db, dbtypes);
+	ReadTable<crdb::Enum>(fp, db, dbtypes);
+	ReadTable<crdb::EnumConstant>(fp, db, dbtypes);
+	ReadTable<crdb::Function>(fp, db, dbtypes);
+	ReadTable<crdb::Field>(fp, db, dbtypes);
+	ReadTable<crdb::Field>(fp, db, dbtypes);
 
 	fclose(fp);
 }
