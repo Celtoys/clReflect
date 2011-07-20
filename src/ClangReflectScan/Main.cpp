@@ -1,15 +1,13 @@
 
-#include "..\ClangReflectTest\crcpp.h"
-
 #include "ClangFrontend.h"
 #include "ASTConsumer.h"
 #include "ReflectionSpecs.h"
-#include "Arguments.h"
-#include "Logging.h"
 
-#include "Database.h"
-#include "DatabaseTextSerialiser.h"
-#include "DatabaseBinarySerialiser.h"
+#include "ClangReflectCore/Arguments.h"
+#include "ClangReflectCore/Logging.h"
+#include "ClangReflectCore/Database.h"
+#include "ClangReflectCore/DatabaseTextSerialiser.h"
+#include "ClangReflectCore/DatabaseBinarySerialiser.h"
 
 
 namespace

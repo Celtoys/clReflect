@@ -26,8 +26,8 @@
 
 #include "ASTConsumer.h"
 #include "ReflectionSpecs.h"
-#include "Database.h"
-#include "Logging.h"
+
+#include "ClangReflectCore/Logging.h"
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCxx.h"

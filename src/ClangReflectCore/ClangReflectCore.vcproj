@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="Windows-1252"?>
-<!-- PiBDigest: y6lZO2wvMKhIlAQCY8fr9Q== -->
+<!-- PiBDigest: JJkQPtrvOTaM4_xxhDYuHQ== -->
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="ClangReflectScan"
-	ProjectGUID="{E2A0789E-B2BF-11E0-B03D-F46D04D48D5F}"
-	RootNamespace="ClangReflectScan"
+	Name="ClangReflectCore"
+	ProjectGUID="{E29F4022-B2BF-11E0-BC5D-F46D04D48D5F}"
+	RootNamespace="ClangReflectCore"
 	Keyword="Win32Proj"
 	>
 	<Platforms>
@@ -25,10 +25,10 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib debug -target crscan"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target crscan"
-				CleanCommandLine="cd ..\.. &amp; pib clean debug -target crscan"
-				Output="..\..\bin\Debug\crscan.exe"
+				BuildCommandLine="cd ..\.. &amp; pib debug -target crcore"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target crcore"
+				CleanCommandLine="cd ..\.. &amp; pib clean debug -target crcore"
+				Output="..\..\bin\Debug\crcore.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -46,10 +46,10 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib release -target crscan"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target crscan"
-				CleanCommandLine="cd ..\.. &amp; pib clean release -target crscan"
-				Output="..\..\bin\Release\crscan.exe"
+				BuildCommandLine="cd ..\.. &amp; pib release -target crcore"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target crcore"
+				CleanCommandLine="cd ..\.. &amp; pib clean release -target crcore"
+				Output="..\..\bin\Release\crcore.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -63,31 +63,47 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="ASTConsumer.cpp"
+			RelativePath="Arguments.h"
 			>
 		</File>
 		<File
-			RelativePath="ASTConsumer.h"
+			RelativePath="Database.cpp"
 			>
 		</File>
 		<File
-			RelativePath="ClangFrontend.cpp"
+			RelativePath="Database.h"
 			>
 		</File>
 		<File
-			RelativePath="ClangFrontend.h"
+			RelativePath="DatabaseBinarySerialiser.cpp"
 			>
 		</File>
 		<File
-			RelativePath="Main.cpp"
+			RelativePath="DatabaseBinarySerialiser.h"
 			>
 		</File>
 		<File
-			RelativePath="ReflectionSpecs.cpp"
+			RelativePath="DatabaseMetadata.cpp"
 			>
 		</File>
 		<File
-			RelativePath="ReflectionSpecs.h"
+			RelativePath="DatabaseMetadata.h"
+			>
+		</File>
+		<File
+			RelativePath="DatabaseTextSerialiser.cpp"
+			>
+		</File>
+		<File
+			RelativePath="DatabaseTextSerialiser.h"
+			>
+		</File>
+		<File
+			RelativePath="Logging.cpp"
+			>
+		</File>
+		<File
+			RelativePath="Logging.h"
 			>
 		</File>
 	</Files>

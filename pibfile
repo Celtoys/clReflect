@@ -1,15 +1,17 @@
 
 # TODO: Configs should be build-specific, not environment specific
 
-import os
 import ClangReflect
+
 
 include_paths = [
     "../../sdk/llvm/llvm/include",
     "../../sdk/llvm/build/include",
     "../../sdk/llvm/llvm/tools/clang/include",
-    "../../sdk/llvm/build/tools/clang/include"
+    "../../sdk/llvm/build/tools/clang/include",
+    "src"
 ]
+
 
 libs = [
     "clangParse.lib",
@@ -26,18 +28,22 @@ libs = [
     "shell32.lib"
 ]
 
+
 lib_paths_debug = [
     "../../sdk/llvm/build/lib/debug"
 ]
+
 
 lib_paths_release = [
     "../../sdk/llvm/build/lib/release"
 ]
 
+
 defines = [
     "_SCL_SECURE_NO_WARNINGS",
     "_CRT_SECURE_NO_WARNINGS"
 ]
+
 
 # These are to allow clang/llvm to compile without hogging the output window
 disabled_warnings = [
@@ -72,20 +78,36 @@ SetCPPOptions("release", MSVCPlatform.VCCRTType.MT_DLL)
 SetLinkOptions("release", lib_paths_release)
 
 
-cpp_files = Glob("src/ClangReflectScan", "*.cpp")
-hpp_files = Glob("src/ClangReflectScan", "*.h")
-lib_files = [ env.NewFile(file) for file in libs ]
-obj_files = [ env.CPPFile(file) for file in cpp_files ]
+# Build the core library
+crcore_cpp_files = Glob("src/ClangReflectCore", "*.cpp")
+crcore_hpp_files = Glob("src/ClangReflectCore", "*.h")
+crcore_obj_files = [ env.CPPFile(file) for file in crcore_cpp_files ]
+crcore_lib = env.Lib("crcore.lib", crcore_obj_files)
+env.Build(crcore_lib, "crcore")
 
-exe = env.Link("crscan.exe", obj_files, lib_files)
-env.Build(exe, "crscan")
 
+# Build the scanner
+crscan_cpp_files = Glob("src/ClangReflectScan", "*.cpp")
+crscan_hpp_files = Glob("src/ClangReflectScan", "*.h")
+crscan_lib_files = [ env.NewFile(file) for file in libs ]
+crscan_obj_files = [ env.CPPFile(file) for file in crscan_cpp_files ]
+crscan_exe = env.Link("crscan.exe", crscan_obj_files, crscan_lib_files + [ crcore_lib ])
+env.Build(crscan_exe, "crscan")
+
+
+# Build the test code with the generated crscan
 # TODO: Probably going to have to flatten the graph before visiting
 # test_obj_files is traversed twice below!
-test_cpp_files = Glob("src/ClangReflectTest", "*.cpp")
-test_obj_files = [ env.CPPFile(file) for file in test_cpp_files ]
-test_cvs_files = [ ClangReflect.CppScanNode(file) for file in test_obj_files ]
-env.Build(test_cvs_files, "crtest")
+crtest_cpp_files = Glob("src/ClangReflectTest", "*.cpp")
+crtest_obj_files = [ env.CPPFile(file) for file in crtest_cpp_files ]
+crtest_cvs_files = [ ClangReflect.CppScanNode(file) for file in crtest_obj_files ]
+env.Build(crtest_cvs_files, "crtest")
 
-VCGenerateProjectFile(env, "src/ClangReflectScan/ClangReflectScan", cpp_files + hpp_files, exe, "crscan")
-VCGenerateSolutionFile(env, "ClangReflect", [ "src/ClangReflectScan/ClangReflectScan", "src/ClangReflectTest/ClangReflectTest" ])
+
+# Generate MSVC project files
+VCGenerateProjectFile(env, "src/ClangReflectCore/ClangReflectCore", crcore_cpp_files + crcore_hpp_files, crcore_lib, "crcore")
+VCGenerateProjectFile(env, "src/ClangReflectScan/ClangReflectScan", crscan_cpp_files + crscan_hpp_files, crscan_exe, "crscan")
+VCGenerateSolutionFile(env, "ClangReflect", [
+    "src/ClangReflectCore/ClangReflectCore",
+    "src/ClangReflectScan/ClangReflectScan",
+    "src/ClangReflectTest/ClangReflectTest" ])
