@@ -9,7 +9,8 @@ include_paths = [
     "../../sdk/llvm/build/include",
     "../../sdk/llvm/llvm/tools/clang/include",
     "../../sdk/llvm/build/tools/clang/include",
-    "src"
+    "src",
+    "inc",
 ]
 
 
@@ -103,9 +104,13 @@ crmerge_exe = env.Link("crmerge.exe", crmerge_obj_files, [ crcore_lib ])
 env.Build(crmerge_exe, "crmerge")
 
 
+# Build the C++ API
 crcpp_cpp_files = Glob("src/ClangReflectCpp", "*.cpp")
 crcpp_hpp_files = Glob("src/ClangReflectCpp", "*.h")
 crcpp_api_files = Glob("inc", "*.h")
+crcpp_obj_files = [ env.CPPFile(file) for file in crcpp_cpp_files ]
+crcpp_lib = env.Lib("crcpp.lib", crcpp_obj_files)
+env.Build(crcpp_lib, "crcpp")
 
 
 # Build the test code with the generated crscan
@@ -122,7 +127,7 @@ env.Build(crtest_db_file, "crtest")
 VCGenerateProjectFile(env, "src/ClangReflectCore/ClangReflectCore", crcore_cpp_files + crcore_hpp_files, crcore_lib, "crcore")
 VCGenerateProjectFile(env, "src/ClangReflectScan/ClangReflectScan", crscan_cpp_files + crscan_hpp_files, crscan_exe, "crscan")
 VCGenerateProjectFile(env, "src/ClangReflectMerge/ClangReflectMerge", crmerge_cpp_files + crmerge_hpp_files, crmerge_exe, "crmerge")
-VCGenerateProjectFile(env, "src/ClangReflectCpp/ClangReflectCpp", crcpp_cpp_files + crcpp_hpp_files + crcpp_api_files, None, "crcpp", [ ("..\\..\\inc", "Public API") ])
+VCGenerateProjectFile(env, "src/ClangReflectCpp/ClangReflectCpp", crcpp_cpp_files + crcpp_hpp_files + crcpp_api_files, crcpp_lib, "crcpp", [ ("..\\..\\inc", "Public API") ])
 VCGenerateSolutionFile(env, "ClangReflect", [
     "src/ClangReflectCore/ClangReflectCore",
     "src/ClangReflectScan/ClangReflectScan",

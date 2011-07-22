@@ -8,9 +8,13 @@
 #include "ClangReflectCore/DatabaseBinarySerialiser.h"
 
 
+#include <crcpp/crcpp.h>
+
+
 int main(int argc, const char* argv[])
 {
 	LOG_TO_STDOUT(main, ALL);
+
 
 	// Leave early if there aren't enough arguments
 	Arguments args(argc, argv);

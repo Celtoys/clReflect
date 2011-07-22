@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="ClangReflectMerge"
-	ProjectGUID="{ECDD03F0-B383-11E0-AB06-F46D04D48D5F}"
-	RootNamespace="ClangReflectMerge"
+	Name="ClangReflectCpp"
+	ProjectGUID="{ECDD2B00-B383-11E0-9A32-F46D04D48D5F}"
+	RootNamespace="ClangReflectCpp"
 	Keyword="Win32Proj"
 	>
 	<Platforms>
@@ -24,10 +24,10 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib debug -target crmerge"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target crmerge"
-				CleanCommandLine="cd ..\.. &amp; pib clean debug -target crmerge"
-				Output="..\..\bin\Debug\crmerge.exe"
+				BuildCommandLine="cd ..\.. &amp; pib debug -target crcpp"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target crcpp"
+				CleanCommandLine="cd ..\.. &amp; pib clean debug -target crcpp"
+				Output="..\..\bin\Debug\crcpp.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -45,10 +45,10 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib release -target crmerge"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target crmerge"
-				CleanCommandLine="cd ..\.. &amp; pib clean release -target crmerge"
-				Output="..\..\bin\Release\crmerge.exe"
+				BuildCommandLine="cd ..\.. &amp; pib release -target crcpp"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target crcpp"
+				CleanCommandLine="cd ..\.. &amp; pib clean release -target crcpp"
+				Output="..\..\bin\Release\crcpp.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -61,23 +61,37 @@
 	<References>
 	</References>
 	<Files>
-		<File
-			RelativePath="DatabaseMerge.cpp"
+		<Filter
+			Name="Public API"
+			UniqueIdentifier="{17ce1c70-b389-11e0-af97-f46d04d48d5f}"
 			>
-		</File>
+			<Filter
+				Name="crcpp"
+				UniqueIdentifier="{17ce1c71-b389-11e0-9268-f46d04d48d5f}"
+				>
+				<File
+					RelativePath="..\..\inc\crcpp\Core.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\inc\crcpp\crcpp.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\inc\crcpp\Database.h"
+					>
+				</File>
+			</Filter>
+		</Filter>
 		<File
-			RelativePath="DatabaseMerge.h"
-			>
-		</File>
-		<File
-			RelativePath="Main.cpp"
+			RelativePath="Database.cpp"
 			>
 		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="z-YL4EymE4o4bFyEt1LTeQ=="
+			Value="jSkRRrOoTgcmBIyYiGh1_Q=="
 		/>
 	</Globals>
 </VisualStudioProject>

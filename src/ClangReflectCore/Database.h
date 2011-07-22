@@ -100,6 +100,8 @@ namespace crdb
 		Type(Name n, Name p) : Primitive(Primitive::KIND_TYPE, n, p) { }
 		Type(Kind k) : Primitive(k) { }
 		Type(Kind k, Name n, Name p) : Primitive(k, n, p) { }
+
+		// TODO: Gather size
 	};
 
 

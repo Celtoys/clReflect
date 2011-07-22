@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="Windows-1252"?>
-<!-- PiBDigest: JJkQPtrvOTaM4_xxhDYuHQ== -->
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="ClangReflectCore"
-	ProjectGUID="{CE33309E-B2DE-11E0-866B-F46D04D48D5F}"
+	ProjectGUID="{ECDB5640-B383-11E0-816D-F46D04D48D5F}"
 	RootNamespace="ClangReflectCore"
 	Keyword="Win32Proj"
 	>
@@ -108,5 +107,9 @@
 		</File>
 	</Files>
 	<Globals>
+		<Global
+			Name="PiBDigest"
+			Value="JJkQPtrvOTaM4_xxhDYuHQ=="
+		/>
 	</Globals>
 </VisualStudioProject>
