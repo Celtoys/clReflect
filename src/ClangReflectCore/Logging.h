@@ -33,7 +33,7 @@ namespace logging
 	//
 	// Format and log the specified text to the given streams
 	//
-	void Log(StreamHandle handle, Tag tag, const char* format, ...);
+	void Log(StreamHandle handle, Tag tag, bool do_prefix, const char* format, ...);
 
 
 	//
@@ -58,12 +58,25 @@ namespace logging
 //
 // Format and log, named and tagged text
 //
-#define LOG(name, tag, ...)					\
-{											\
-	LOG_GET_STREAM_HANDLE(name);			\
-	logging::Tag t = logging::TAG_##tag;	\
-	logging::Log(handle, t, __VA_ARGS__);	\
+#define LOG(name, tag, ...)						\
+{												\
+	LOG_GET_STREAM_HANDLE(name);				\
+	logging::Tag t = logging::TAG_##tag;		\
+	logging::Log(handle, t, true, __VA_ARGS__);	\
 }
+
+
+//
+// Similar to LOG() except that logging the prefix is skipped, allowing you to spread the
+// formatting of a single line over multiple log calls.
+//
+#define LOG_APPEND(name, tag, ...)				\
+{												\
+	LOG_GET_STREAM_HANDLE(name);				\
+	logging::Tag t = logging::TAG_##tag;		\
+	logging::Log(handle, t, false, __VA_ARGS__);\
+}
+
 
 
 #define LOG_PUSH_INDENT(name)		\

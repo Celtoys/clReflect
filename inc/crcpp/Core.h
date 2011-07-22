@@ -4,32 +4,33 @@
 
 namespace crcpp
 {
+	// Wrapper around a classic C-style array.
 	template <typename TYPE>
-	class ConstArray
+	class CArray
 	{
 	public:
 		// Initialise an empty array
-		ConstArray()
+		CArray()
 			: m_Size(0)
 			, m_Data(0)
 		{
 		}
 
 		// Initialise with array count
-		ConstArray(int size)
+		CArray(int size)
 			: m_Size(size)
 			, m_Data(new TYPE[size])
 		{
 		}
 
 		// Copy construct
-		ConstArray(const ConstArray& rhs)
+		CArray(const CArray& rhs)
 			: m_Size(rhs.size)
 			, m_Data(new TYPE[rhs.size])
 		{
 		}
 
-		~ConstArray()
+		~CArray()
 		{
 			delete [] m_Data;
 		}
@@ -39,17 +40,27 @@ namespace crcpp
 			return m_Size;
 		}
 
+		TYPE* data()
+		{
+			return m_Data;
+		}
 		const TYPE* data() const
 		{
 			return m_Data;
 		}
 
+		TYPE& operator [] (int index)
+		{
+			// TODO: assert
+			return m_Data[index];
+		}
 		const TYPE& operator [] (int index) const
 		{
+			// TODO: assert
 			return m_Data[index];
 		}
 
-		ConstArray& operator = (const ConstArray& rhs)
+		CArray& operator = (const CArray& rhs)
 		{
 			// Check for self-assignment
 			if (this == &rhs)

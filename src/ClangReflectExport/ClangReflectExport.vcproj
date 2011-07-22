@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="ClangReflectExport"
+	ProjectGUID="{4DCC1A81-B450-11E0-9D62-F46D04D48D5F}"
+	RootNamespace="ClangReflectExport"
+	Keyword="Win32Proj"
+	>
+	<Platforms>
+		<Platform
+			Name="Win32"
+		/>
+	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="..\..\bin\Debug"
+			IntermediateDirectory="..\..\obj\Debug"
+			ConfigurationType="0"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cd ..\.. &amp; pib debug -target crexport"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target crexport"
+				CleanCommandLine="cd ..\.. &amp; pib clean debug -target crexport"
+				Output="..\..\bin\Debug\crexport.exe"
+				PreprocessorDefinitions=""
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="..\..\bin\Release"
+			IntermediateDirectory="..\..\obj\Release"
+			ConfigurationType="0"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cd ..\.. &amp; pib release -target crexport"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target crexport"
+				CleanCommandLine="cd ..\.. &amp; pib clean release -target crexport"
+				Output="..\..\bin\Release\crexport.exe"
+				PreprocessorDefinitions=""
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
+		</Configuration>
+	</Configurations>
+	<References>
+	</References>
+	<Files>
+		<File
+			RelativePath="CppExport.cpp"
+			>
+		</File>
+		<File
+			RelativePath="CppExport.h"
+			>
+		</File>
+		<File
+			RelativePath="Main.cpp"
+			>
+		</File>
+	</Files>
+	<Globals>
+		<Global
+			Name="PiBDigest"
+			Value="OQA6dUQANPwZJJ0UnPcIIA=="
+		/>
+	</Globals>
+</VisualStudioProject>

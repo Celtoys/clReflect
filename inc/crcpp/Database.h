@@ -44,7 +44,7 @@ namespace crcpp
 	};
 
 
-	struct EnumConstant : public Type
+	struct EnumConstant : public Primitive
 	{
 		static const Kind KIND = KIND_ENUM_CONSTANT;
 
@@ -52,11 +52,11 @@ namespace crcpp
 	};
 
 
-	struct Enum : public Primitive
+	struct Enum : public Type
 	{
 		static const Kind KIND = KIND_ENUM;
 
-		ConstArray<EnumConstant> constants;
+		CArray<const EnumConstant*> constants;
 	};
 
 
@@ -82,10 +82,8 @@ namespace crcpp
 	{
 		static const Kind KIND = KIND_FUNCTION;
 
-		Field return_parameter;
-
-		// Parameters stored in the order which they must be passed
-		ConstArray<Field> parameters;
+		Field* return_parameter;
+		CArray<const Field*> parameters;
 	};
 
 
@@ -93,12 +91,12 @@ namespace crcpp
 	{
 		static const Kind KIND = KIND_CLASS;
 
-		const Type* base_class;
+		const Class* base_class;
 		unsigned int size;
-		ConstArray<const Enum*> enums;
-		ConstArray<const Class*> classes;
-		ConstArray<const Function*> methods;
-		ConstArray<const Field*> fields;
+		CArray<const Enum*> enums;
+		CArray<const Class*> classes;
+		CArray<const Function*> methods;
+		CArray<const Field*> fields;
 	};
 
 
@@ -106,11 +104,11 @@ namespace crcpp
 	{
 		static const Kind KIND = KIND_NAMESPACE;
 
-		ConstArray<const Namespace*> namespaces;
-		ConstArray<const Type*> types;
-		ConstArray<const Enum*> enums;
-		ConstArray<const Class*> classes;
-		ConstArray<const Function*> functions;
+		CArray<const Namespace*> namespaces;
+		CArray<const Type*> types;
+		CArray<const Enum*> enums;
+		CArray<const Class*> classes;
+		CArray<const Function*> functions;
 	};
 
 
@@ -118,7 +116,7 @@ namespace crcpp
 	// All primitive arrays are sorted in order of increasing name hash. This will perform an
 	// O(logN) binary search over the array looking for the name you specify.
 	//
-	const Primitive* FindPrimitive(const ConstArray<const Primitive*>& primitives, Name name);
+	const Primitive* FindPrimitive(const CArray<const Primitive*>& primitives, Name name);
 
 
 	//
@@ -126,16 +124,29 @@ namespace crcpp
 	// types can be cast to Primitive and aliases the arrays to cut down on generated code.
 	//
 	template <typename TYPE>
-	const TYPE* FindPrimitive(const ConstArray<const TYPE*>& primitives, Name name)
+	const TYPE* FindPrimitive(const CArray<const TYPE*>& primitives, Name name)
 	{
 		static_cast<const Primitive*>((const TYPE*)0);
-		return (TYPE*)FindPrimitive((const ConstArray<const Primitive*>&)primitives, name);
+		return (TYPE*)FindPrimitive((const CArray<const Primitive*>&)primitives, name);
 	}
 
 
 	class Database
 	{
 	public:
+		struct FileHeader
+		{
+			// Initialises the file header to the current supported version
+			FileHeader();
+
+			unsigned char signature[7];
+			unsigned int version;
+
+			int nb_primitives;
+			int nb_names;
+			int name_data_size;
+		};
+
 		Database();
 		~Database();
 
@@ -154,16 +165,18 @@ namespace crcpp
 		const char* m_NameTextData;
 
 		// Mapping from hash to text string
-		ConstArray<Name> m_Names;
+		CArray<Name> m_Names;
 
 		// Ownership storage of all referenced primitives
-		ConstArray<Type> m_Types;
-		ConstArray<Enum> m_Enums;
-		ConstArray<Function> m_Functions;
-		ConstArray<Class> m_Classes;
-		ConstArray<Namespace> m_Namespaces;
+		CArray<Type> m_Types;
+		CArray<EnumConstant> m_EnumConstants;
+		CArray<Enum> m_Enums;
+		CArray<Field> m_Fields;
+		CArray<Function> m_Functions;
+		CArray<Class> m_Classes;
+		CArray<Namespace> m_Namespaces;
 
 		// Global map to all primitives in the database
-		ConstArray<const Primitive*> m_Primitives;
+		CArray<const Primitive*> m_Primitives;
 	};
 }

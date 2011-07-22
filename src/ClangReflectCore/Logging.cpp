@@ -206,7 +206,7 @@ logging::StreamHandle logging::GetStreamHandle(const char* name)
 }
 
 
-void logging::Log(StreamHandle handle, Tag tag, const char* format, ...)
+void logging::Log(StreamHandle handle, Tag tag, bool do_prefix, const char* format, ...)
 {
 	// Format to a local buffer
 	char buffer[512];
@@ -215,21 +215,24 @@ void logging::Log(StreamHandle handle, Tag tag, const char* format, ...)
 	vsnprintf_s(buffer, sizeof(buffer), _TRUNCATE, format, args);
 	va_end(args);
 
-
-	// Kick the prefix off with indent characters
+	char prefix[128] = { 0 };
 	StreamSet* stream_set = (StreamSet*)handle;
-	char prefix[128];
-	for (int i = 0; i < stream_set->indent_depth; i++)
-	{
-		prefix[i] = '\t';
-	}
-	prefix[stream_set->indent_depth] = 0;
 
-	// Add any tag annotations
-	switch (tag)
+	if (do_prefix)
 	{
-	case (TAG_WARNING): strcat(prefix, "WARNING: "); break;
-	case (TAG_ERROR): strcat(prefix, "ERROR: "); break;
+		// Kick the prefix off with indent characters
+		for (int i = 0; i < stream_set->indent_depth; i++)
+		{
+			prefix[i] = '\t';
+		}
+		prefix[stream_set->indent_depth] = 0;
+
+		// Add any tag annotations
+		switch (tag)
+		{
+		case (TAG_WARNING): strcat(prefix, "WARNING: "); break;
+		case (TAG_ERROR): strcat(prefix, "ERROR: "); break;
+		}
 	}
 
 	// Iterate over every log output
@@ -237,7 +240,10 @@ void logging::Log(StreamHandle handle, Tag tag, const char* format, ...)
 	Stream* stream = stream_set->streams[index];
 	while (stream)
 	{
-		stream->Log(prefix);
+		if (do_prefix)
+		{
+			stream->Log(prefix);
+		}
 		stream->Log(buffer);
 		stream = stream->next;
 	}

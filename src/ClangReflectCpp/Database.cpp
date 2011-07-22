@@ -7,11 +7,6 @@
 
 namespace
 {
-	// Header information
-	const unsigned char DATABASE_SIGNATURE[] = "crcppdb";
-	const unsigned int DATABASE_VERSION = 1;
-
-
 	struct ReadContext
 	{
 		ReadContext()
@@ -58,12 +53,12 @@ namespace
 	}
 
 
-	template <typename TYPE> void ReadArray(const ReadContext& ctx, crcpp::ConstArray<TYPE>& dest, FILE* fp)
+	template <typename TYPE> void ReadArray(const ReadContext& ctx, crcpp::CArray<TYPE>& dest, FILE* fp)
 	{
 		// Reads primitives that are stored inline next to each other
 		// Has to cast away const-ness to write while maintaining a const public API
 		int size = Read<int>(ctx, fp);
-		dest = crcpp::ConstArray<TYPE>(size);
+		dest = crcpp::CArray<TYPE>(size);
 		for (int i = 0; i < size; i++)
 		{
 			TYPE& val = const_cast<TYPE&>(dest[i]);
@@ -82,12 +77,12 @@ namespace
 	}
 
 
-	template <typename TYPE> void ReadPrimitivePtrArray(const ReadContext& ctx, crcpp::ConstArray<const TYPE*>& dest, FILE* fp)
+	template <typename TYPE> void ReadPrimitivePtrArray(const ReadContext& ctx, crcpp::CArray<const TYPE*>& dest, FILE* fp)
 	{
 		// Reads an array of primitive pointers stored as hash values
 		// Has to cast away const-ness to write while maintaining a const public API
 		int size = Read<int>(ctx, fp);
-		dest = crcpp::ConstArray<const TYPE*>(size);
+		dest = crcpp::CArray<const TYPE*>(size);
 		for (int i = 0; i < size; i++)
 		{
 			const TYPE*& ptr = const_cast<const TYPE*&>(dest[i]);
@@ -179,7 +174,7 @@ namespace
 }
 
 
-const crcpp::Primitive* crcpp::FindPrimitive(const ConstArray<const Primitive*>& primitives, Name name)
+const crcpp::Primitive* crcpp::FindPrimitive(const CArray<const Primitive*>& primitives, Name name)
 {
 	int first = 0;
 	int last = primitives.size() - 1;
@@ -212,6 +207,16 @@ const crcpp::Primitive* crcpp::FindPrimitive(const ConstArray<const Primitive*>&
 }
 
 
+crcpp::Database::FileHeader::FileHeader()
+	: version(1)
+	, nb_primitives(0)
+	, nb_names(0)
+	, name_data_size(0)
+{
+	memcpy(signature, "crcppdb", sizeof(signature));
+}
+
+
 crcpp::Database::Database()
 	: m_NameTextData(0)
 {
@@ -235,38 +240,31 @@ bool crcpp::Database::Load(const char* filename)
 		return false;
 	}
 
-	// Do the signatures match?
-	char signature[sizeof(DATABASE_SIGNATURE)];
-	fread(signature, sizeof(signature), 1, fp);
-	if (memcmp(signature, DATABASE_SIGNATURE, sizeof(signature)))
+	// Check the signature and version numbers match
+	FileHeader file_header, cur_header;
+	Read(ctx, file_header, fp);
+	if (file_header.version != cur_header.version ||
+		memcmp(file_header.signature, cur_header.signature, sizeof(cur_header.signature)))
 	{
-		return false;
 		fclose(fp);
+		return false;
 	}
 
-	// Do the versions match?
-	unsigned int version = Read<unsigned int>(ctx, fp);
-	if (version != DATABASE_VERSION)
-	{
-		return false;
-		fclose(fp);
-	}
+	ctx.nb_primitives = file_header.nb_primitives;
+	ctx.name_data_size = file_header.name_data_size;
 
 	// Allocate an initially empty primitive array
-	ctx.nb_primitives = Read<int>(ctx, fp);
-	m_Primitives = ConstArray<const Primitive*>(ctx.nb_primitives);
+	m_Primitives = CArray<const Primitive*>(ctx.nb_primitives);
 	ctx.primitives = const_cast<const crcpp::Primitive**>(m_Primitives.data());
 
 	// Read in the name text data
-	ctx.name_data_size = Read<int>(ctx, fp);
 	m_NameTextData = new const char[ctx.name_data_size];
 	fread((void*)m_NameTextData, ctx.name_data_size, 1, fp);
 	ctx.name_data = m_NameTextData;
 
 	// Read the name table
-	int nb_names = Read<int>(ctx, fp);
-	m_Names = ConstArray<Name>(nb_names);
-	for (int i = 0; i < nb_names; i++)
+	m_Names = CArray<Name>(file_header.nb_names);
+	for (int i = 0; i < file_header.nb_names; i++)
 	{
 		Name& name = const_cast<Name&>(m_Names[i]);
 		Read(ctx, name, fp);
@@ -282,3 +280,5 @@ bool crcpp::Database::Load(const char* filename)
 	fclose(fp);
 	return true;
 }
+
+// TODO: Verify that the memory mapping constructions are not out-of-bounds
