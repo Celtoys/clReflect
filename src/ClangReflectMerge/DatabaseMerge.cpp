@@ -10,7 +10,8 @@ namespace
 	//
 	// Overloads for comparing primitive equality, used to determine whether primitives
 	// with the same name are different during a merge. These are stored here to keep
-	// the database interface as simple as possible.
+	// the database interface as simple as possible. Of course, that carries with it
+	// an increased chance of the two becoming out of sync...
 	//
 	bool PrimitivesEqual(const crdb::Primitive& a, const crdb::Primitive& b)
 	{
@@ -71,11 +72,10 @@ namespace
 	void MergeUniques(
 		crdb::Database& dest_db,
 		const crdb::Database& src_db,
-		bool named,
 		void (*check_failure)(const TYPE&, const TYPE&) = 0)
 	{
-		crdb::PrimitiveStore<TYPE>& dest_store = dest_db.GetPrimitiveStore<TYPE>(named);
-		const crdb::PrimitiveStore<TYPE>& src_store = src_db.GetPrimitiveStore<TYPE>(named);
+		crdb::PrimitiveStore<TYPE>& dest_store = dest_db.GetPrimitiveStore<TYPE>();
+		const crdb::PrimitiveStore<TYPE>& src_store = src_db.GetPrimitiveStore<TYPE>();
 
 		// Add primitives that don't already exist for primitives where the symbol name can't be overloaded
 		for (crdb::PrimitiveStore<TYPE>::const_iterator src = src_store.begin();
@@ -99,11 +99,10 @@ namespace
 	template <typename TYPE>
 	void MergeOverloads(
 		crdb::Database& dest_db,
-		const crdb::Database& src_db,
-		bool named)
+		const crdb::Database& src_db)
 	{
-		crdb::PrimitiveStore<TYPE>& dest_store = dest_db.GetPrimitiveStore<TYPE>(named);
-		const crdb::PrimitiveStore<TYPE>& src_store = src_db.GetPrimitiveStore<TYPE>(named);
+		crdb::PrimitiveStore<TYPE>& dest_store = dest_db.GetPrimitiveStore<TYPE>();
+		const crdb::PrimitiveStore<TYPE>& src_store = src_db.GetPrimitiveStore<TYPE>();
 
 		// Unconditionally add primitives that don't already exist
 		for (crdb::PrimitiveStore<TYPE>::const_iterator src = src_store.begin();
@@ -150,24 +149,23 @@ void MergeDatabases(crdb::Database& dest_db, const crdb::Database& src_db)
 	}
 
 	// The symbol names for these primitives can't be overloaded
-	MergeUniques<crdb::Namespace>(dest_db, src_db, true);
-	MergeUniques<crdb::Type>(dest_db, src_db, true);
-	MergeUniques<crdb::Enum>(dest_db, src_db, true);
+	MergeUniques<crdb::Namespace>(dest_db, src_db);
+	MergeUniques<crdb::Type>(dest_db, src_db);
+	MergeUniques<crdb::Enum>(dest_db, src_db);
 
 	// Class symbol names can't be overloaded but extra checks can be used to make sure
 	// the same class isn't violating the One Definition Rule
-	MergeUniques<crdb::Class>(dest_db, src_db, true, CheckClassMergeFailure);
+	MergeUniques<crdb::Class>(dest_db, src_db, CheckClassMergeFailure);
 
 	// Add enum constants as if they are overloadable
 	// NOTE: Technically don't need to do this enum constants are scoped. However, I might change
 	// that in future so this code will become useful.
-	MergeOverloads<crdb::EnumConstant>(dest_db, src_db, true);
+	MergeOverloads<crdb::EnumConstant>(dest_db, src_db);
 
 	// Functions can be overloaded so rely on their unique id to merge them
-	MergeOverloads<crdb::Function>(dest_db, src_db, true);
+	MergeOverloads<crdb::Function>(dest_db, src_db);
 
 	// Field names aren't scoped and hence overloadable. They are parented to unique functions so that will
 	// be the key deciding factor in whether fields should be merged or not.
-	MergeOverloads<crdb::Field>(dest_db, src_db, true);
-	MergeOverloads<crdb::Field>(dest_db, src_db, false);
+	MergeOverloads<crdb::Field>(dest_db, src_db);
 }

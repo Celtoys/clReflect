@@ -130,11 +130,11 @@ namespace
 
 
 	template <typename TYPE>
-	void WriteTable(FILE* fp, const crdb::Database& db, const crdb::meta::DatabaseTypes& dbtypes, bool named)
+	void WriteTable(FILE* fp, const crdb::Database& db, const crdb::meta::DatabaseTypes& dbtypes)
 	{
 		// Generate a memory-contiguous table
 		std::vector<TYPE> table;
-		CopyPrimitiveStoreToTable(db.GetPrimitiveStore<TYPE>(named), table);
+		CopyPrimitiveStoreToTable(db.GetPrimitiveStore<TYPE>(), table);
 
 		// Record the table size
 		int table_size = table.size();
@@ -184,14 +184,13 @@ void crdb::WriteBinaryDatabase(const char* filename, const Database& db)
 	// Write each table with explicit ordering
 	crdb::meta::DatabaseTypes dbtypes;
 	WriteNameTable(fp, db);
-	WriteTable<crdb::Namespace>(fp, db, dbtypes, true);
-	WriteTable<crdb::Type>(fp, db, dbtypes, true);
-	WriteTable<crdb::Class>(fp, db, dbtypes, true);
-	WriteTable<crdb::Enum>(fp, db, dbtypes, true);
-	WriteTable<crdb::EnumConstant>(fp, db, dbtypes, true);
-	WriteTable<crdb::Function>(fp, db, dbtypes, true);
-	WriteTable<crdb::Field>(fp, db, dbtypes, true);
-	WriteTable<crdb::Field>(fp, db, dbtypes, false);
+	WriteTable<crdb::Namespace>(fp, db, dbtypes);
+	WriteTable<crdb::Type>(fp, db, dbtypes);
+	WriteTable<crdb::Class>(fp, db, dbtypes);
+	WriteTable<crdb::Enum>(fp, db, dbtypes);
+	WriteTable<crdb::EnumConstant>(fp, db, dbtypes);
+	WriteTable<crdb::Function>(fp, db, dbtypes);
+	WriteTable<crdb::Field>(fp, db, dbtypes);
 
 	fclose(fp);
 }
@@ -314,7 +313,6 @@ bool crdb::ReadBinaryDatabase(const char* filename, Database& db)
 	ReadTable<crdb::Enum>(fp, db, dbtypes);
 	ReadTable<crdb::EnumConstant>(fp, db, dbtypes);
 	ReadTable<crdb::Function>(fp, db, dbtypes);
-	ReadTable<crdb::Field>(fp, db, dbtypes);
 	ReadTable<crdb::Field>(fp, db, dbtypes);
 
 	fclose(fp);

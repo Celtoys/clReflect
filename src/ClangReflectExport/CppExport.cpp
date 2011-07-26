@@ -1,4 +1,12 @@
 
+// TODO:
+//	* Function return value
+//	* Function parameters
+//	* Move stuff out of the global namespace (
+//	* Sort
+//	* Save to disk
+//	* Gather type size
+
 #include "CppExport.h"
 
 #include <ClangReflectCore\Database.h>
@@ -38,7 +46,7 @@ namespace
 
 
 	template <typename CRDB_TYPE, typename CRCPP_TYPE>
-	void BuildCArray(CppExport& cppexp, crcpp::CArray<CRCPP_TYPE>& dest, const crdb::Database& db, bool named = true)
+	void BuildCArray(CppExport& cppexp, crcpp::CArray<CRCPP_TYPE>& dest, const crdb::Database& db)
 	{
 		// Allocate enough entries for all primitives
 		const crdb::PrimitiveStore<CRDB_TYPE>& src = db.GetPrimitiveStore<CRDB_TYPE>();
@@ -174,7 +182,6 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	BuildCArray<crdb::EnumConstant>(cppexp, cppexp.enum_constants, db);
 	BuildCArray<crdb::Function>(cppexp, cppexp.functions, db);
 	BuildCArray<crdb::Field>(cppexp, cppexp.fields, db);
-	BuildCArray<crdb::Field>(cppexp, cppexp.unnamed_fields, db, false);
 	BuildCArray<crdb::Namespace>(cppexp, cppexp.namespaces, db);
 
 	Parent(cppexp.enums, &crcpp::Enum::constants, cppexp.enum_constants);

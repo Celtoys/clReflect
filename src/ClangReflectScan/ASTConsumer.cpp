@@ -119,11 +119,11 @@ namespace
 			return;
 		}
 
-		// Parse the return type
+		// Parse the return type - named as a reserved keyword so it won't clash with user symbols
 		crdb::Field return_parameter;
-		if (!MakeField(db, function_decl->getResultType(), 0, function_name, -1, return_parameter))
+		if (!MakeField(db, function_decl->getResultType(), "return", function_name, -1, return_parameter))
 		{
-			LOG(ast, WARNING, "Unsupported return type for %s\n", function_name.text.c_str());
+			LOG(ast, WARNING, "Unsupported return type for %s - skipping reflection\n", function_name.text.c_str());
 			return;
 		}
 
@@ -133,11 +133,18 @@ namespace
 		{
 			clang::ParmVarDecl* param_decl = *i;
 
+			// Check for unnamed parameters
+			if (param_decl->getNameAsString() == "")
+			{
+				LOG(ast, WARNING, "Unnamed function parameters not supported - skipping reflection of %s\n", function_name.text.c_str());
+				return;
+			}
+
 			// Collect a list of constructed parameters in case evaluating one of them fails
 			crdb::Field parameter;
-			if (!MakeField(db, param_decl->getType(),param_decl->getNameAsString().c_str(), function_name, index++, parameter))
+			if (!MakeField(db, param_decl->getType(), param_decl->getNameAsString().c_str(), function_name, index++, parameter))
 			{
-				LOG(ast, WARNING, "Unsupported parameter type for %s\n", param_decl->getNameAsString().c_str());
+				LOG(ast, WARNING, "Unsupported parameter type for %s - skipping reflection of %s\n", param_decl->getNameAsString().c_str(), function_name.text.c_str());
 				return;
 			}
 			parameters.push_back(parameter);

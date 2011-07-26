@@ -146,23 +146,9 @@ namespace
 	}
 
 
-	void WriteTableHeader(FILE* fp, const char* title, bool named, const char* headers)
+	void WriteTableHeader(FILE* fp, const char* title, const char* headers)
 	{
-		// Postfix the title with the named property
-		char full_title[256];
-		strcpy(full_title, title);
-		if (named)
-		{
-			strcat(full_title, " (named)");
-		}
-
-		// Skip over the "Name" header if this is an unnamed table
-		if (!named && startswith(headers, "Name\t\t"))
-		{
-			headers += strlen("Name\t\t");
-		}
-
-		WriteNamedRuler(fp, full_title);
+		WriteNamedRuler(fp, title);
 		fputs(headers, fp);
 		fputs("\n", fp);
 		WriteRuler(fp);
@@ -176,7 +162,7 @@ namespace
 	}
 
 
-	void WriteName(FILE* fp, const crdb::Name& name, bool named, const crdb::Database& db)
+	void WriteName(FILE* fp, const crdb::Name& name, const crdb::Database& db)
 	{
 		fputs(itohex(name.hash), fp);
 		fputs("\t", fp);
@@ -184,20 +170,17 @@ namespace
 	}
 
 
-	void WritePrimitive(FILE* fp, const crdb::Primitive& primitive, bool named, const crdb::Database& db)
+	void WritePrimitive(FILE* fp, const crdb::Primitive& primitive, const crdb::Database& db)
 	{
-		if (named)
-		{
-			fputs(HexStringFromName(primitive.name, db), fp);
-			fputs("\t", fp);
-		}
+		fputs(HexStringFromName(primitive.name, db), fp);
+		fputs("\t", fp);
 		fputs(HexStringFromName(primitive.parent, db), fp);
 	}
 
 
-	void WriteClass(FILE* fp, const crdb::Class& primitive, bool named, const crdb::Database& db)
+	void WriteClass(FILE* fp, const crdb::Class& primitive, const crdb::Database& db)
 	{
-		WritePrimitive(fp, primitive, named, db);
+		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
 		fputs(HexStringFromName(primitive.base_class, db), fp);
 		fputs("\t", fp);
@@ -205,25 +188,25 @@ namespace
 	}
 
 	
-	void WriteEnumConstant(FILE* fp, const crdb::EnumConstant& primitive, bool named, const crdb::Database& db)
+	void WriteEnumConstant(FILE* fp, const crdb::EnumConstant& primitive, const crdb::Database& db)
 	{
-		WritePrimitive(fp, primitive, named, db);
+		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
 		fputs(itoa(primitive.value), fp);
 	}
 
 
-	void WriteFunction(FILE* fp, const crdb::Function& primitive, bool named, const crdb::Database& db)
+	void WriteFunction(FILE* fp, const crdb::Function& primitive, const crdb::Database& db)
 	{
-		WritePrimitive(fp, primitive, named, db);
+		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
 		fputs(itohex(primitive.unique_id), fp);
 	}
 
 
-	void WriteField(FILE* fp, const crdb::Field& primitive, bool named, const crdb::Database& db)
+	void WriteField(FILE* fp, const crdb::Field& primitive, const crdb::Database& db)
 	{
-		WritePrimitive(fp, primitive, named, db);
+		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
 		fputs(HexStringFromName(primitive.type, db), fp);
 		fputs("\t", fp);
@@ -245,12 +228,12 @@ namespace
 
 
 	template <typename TABLE_TYPE, typename PRINT_FUNC>
-	void WriteTable(FILE* fp, const crdb::Database& db, const TABLE_TYPE& table, PRINT_FUNC print_func, bool named, const char* title, const char* headers)
+	void WriteTable(FILE* fp, const crdb::Database& db, const TABLE_TYPE& table, PRINT_FUNC print_func, const char* title, const char* headers)
 	{
-		WriteTableHeader(fp, title, named, headers);
+		WriteTableHeader(fp, title, headers);
 		for (typename TABLE_TYPE::const_iterator i = table.begin(); i != table.end(); ++i)
 		{
-			print_func(fp, i->second, named, db);
+			print_func(fp, i->second, db);
 			fputs("\n", fp);
 		}
 		WriteTableFooter(fp);
@@ -258,19 +241,19 @@ namespace
 
 
 	template <typename TYPE, typename PRINT_FUNC>
-	void WritePrimitives(FILE* fp, const crdb::Database& db, PRINT_FUNC print_func, bool named, const char* title, const char* headers)
+	void WritePrimitives(FILE* fp, const crdb::Database& db, PRINT_FUNC print_func, const char* title, const char* headers)
 	{
-		const crdb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>(named);
-		WriteTable(fp, db, store, print_func, named, title, headers);
+		const crdb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>();
+		WriteTable(fp, db, store, print_func, title, headers);
 	}
 
 
 	void WriteNameTable(FILE* fp, const crdb::Database& db, const crdb::NameMap& table)
 	{
-		WriteTableHeader(fp, "Names", true, "Hash\t\tName");
+		WriteTableHeader(fp, "Names", "Hash\t\tName");
 		for (crdb::NameMap::const_iterator i = table.begin(); i != table.end(); ++i)
 		{
-			WriteName(fp, i->second, true, db);
+			WriteName(fp, i->second, db);
 			fputs("\n", fp);
 		}
 		WriteTableFooter(fp);
@@ -278,7 +261,8 @@ namespace
 }
 
 
-void crdb::WriteTextDatabase(const char* filename, const Database& db){
+void crdb::WriteTextDatabase(const char* filename, const Database& db)
+{
 	FILE* fp = fopen(filename, "w");
 
 	// Write the header
@@ -291,14 +275,13 @@ void crdb::WriteTextDatabase(const char* filename, const Database& db){
 	WriteNameTable(fp, db, db.m_Names);
 
 	// Write all the primitive tables
-	WritePrimitives<Namespace>(fp, db, WritePrimitive, true, "Namespaces", "Name\t\tParent");
-	WritePrimitives<Type>(fp, db, WritePrimitive, true, "Types", "Name\t\tParent");
-	WritePrimitives<Class>(fp, db, WriteClass, true, "Classes", "Name\t\tParent\t\tBase\tSize");
-	WritePrimitives<Enum>(fp, db, WritePrimitive, true, "Enums", "Name\t\tParent");
-	WritePrimitives<EnumConstant>(fp, db, WriteEnumConstant, true, "Enum Constants", "Name\t\tParent\t\tValue");
-	WritePrimitives<Function>(fp, db, WriteFunction, true, "Functions", "Name\t\tParent\t\tUID");
-	WritePrimitives<Field>(fp, db, WriteField, true, "Fields", "Name\t\tParent\t\tType\t\tMod\tCst\tOffs\tUID");
-	WritePrimitives<Field>(fp, db, WriteField, false, "Fields", "Parent\t\tType\t\tMod\tCst\tOffs\tUID");
+	WritePrimitives<Namespace>(fp, db, WritePrimitive, "Namespaces", "Name\t\tParent");
+	WritePrimitives<Type>(fp, db, WritePrimitive, "Types", "Name\t\tParent");
+	WritePrimitives<Class>(fp, db, WriteClass, "Classes", "Name\t\tParent\t\tBase\tSize");
+	WritePrimitives<Enum>(fp, db, WritePrimitive, "Enums", "Name\t\tParent");
+	WritePrimitives<EnumConstant>(fp, db, WriteEnumConstant, "Enum Constants", "Name\t\tParent\t\tValue");
+	WritePrimitives<Function>(fp, db, WriteFunction, "Functions", "Name\t\tParent\t\tUID");
+	WritePrimitives<Field>(fp, db, WriteField, "Fields", "Name\t\tParent\t\tType\t\tMod\tCst\tOffs\tUID");
 
 	fclose(fp);
 }
@@ -338,13 +321,9 @@ namespace
 		}
 
 		// Automating the process of getting the common primitive data
-		void GetNameAndParent(bool named, crdb::u32& name, crdb::u32& parent)
+		void GetNameAndParent(crdb::u32& name, crdb::u32& parent)
 		{
-			name = 0;
-			if (named)
-			{
-				name = GetHexInt();
-			}
+			name = GetHexInt();
 			parent = GetHexInt();
 		}
 
@@ -385,7 +364,7 @@ namespace
 	}
 
 
-	void ParseName(char* line, crdb::Database& db, bool named)
+	void ParseName(char* line, crdb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 		crdb::u32 hash = tok.GetHexInt();
@@ -398,13 +377,13 @@ namespace
 
 
 	template <typename TYPE>
-	void ParsePrimitive(char* line, crdb::Database& db, bool named)
+	void ParsePrimitive(char* line, crdb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
 		crdb::u32 name, parent;
-		tok.GetNameAndParent(named, name, parent);
+		tok.GetNameAndParent(name, parent);
 		
 		// Add a new primitive to the database
 		TYPE primitive(
@@ -415,13 +394,13 @@ namespace
 	}
 
 
-	void ParseClass(char* line, crdb::Database& db, bool named)
+	void ParseClass(char* line, crdb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
 		crdb::u32 name, parent;
-		tok.GetNameAndParent(named, name, parent);
+		tok.GetNameAndParent(name, parent);
 
 		// Class parsing
 		crdb::u32 base = tok.GetHexInt();
@@ -438,13 +417,13 @@ namespace
 	}
 
 
-	void ParseEnumConstant(char* line, crdb::Database& db, bool named)
+	void ParseEnumConstant(char* line, crdb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
 		crdb::u32 name, parent;
-		tok.GetNameAndParent(named, name, parent);
+		tok.GetNameAndParent(name, parent);
 
 		// Enum constant parsing
 		__int64 value = atoi64(tok.Get());
@@ -459,13 +438,13 @@ namespace
 	}
 
 
-	void ParseFunction(char* line, crdb::Database& db, bool named)
+	void ParseFunction(char* line, crdb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
 		crdb::u32 name, parent;
-		tok.GetNameAndParent(named, name, parent);
+		tok.GetNameAndParent(name, parent);
 
 		// Function parsing
 		crdb::u32 unique_id = tok.GetHexInt();
@@ -480,13 +459,13 @@ namespace
 	}
 
 
-	void ParseField(char* line, crdb::Database& db, bool named)
+	void ParseField(char* line, crdb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
 		crdb::u32 name, parent;
-		tok.GetNameAndParent(named, name, parent);
+		tok.GetNameAndParent(name, parent);
 
 		// Field parsing
 
@@ -531,13 +510,6 @@ namespace
 		strcat(table_header, table_name);
 		strcat(table_header, " ");
 
-		// Is this a named table?
-		bool named = false;
-		if (strstr(line, " (named) "))
-		{
-			named = true;
-		}
-
 		// See if this is the required table and consumer the header
 		if (startswith(line, table_header))
 		{
@@ -558,7 +530,7 @@ namespace
 					break;
 				}
 
-				parse_func(subline, db, named);
+				parse_func(subline, db);
 			}
 		}
 	}
@@ -584,7 +556,6 @@ bool crdb::ReadTextDatabase(const char* filename, Database& db)
 		ParseTable(fp, line, db, "Enums", ParsePrimitive<crdb::Enum>);
 		ParseTable(fp, line, db, "Enum Constants", ParseEnumConstant);
 		ParseTable(fp, line, db, "Functions", ParseFunction);
-		ParseTable(fp, line, db, "Fields", ParseField);
 		ParseTable(fp, line, db, "Fields", ParseField);
 	}
 

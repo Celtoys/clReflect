@@ -214,17 +214,9 @@ namespace crdb
 
 		template <typename TYPE> void AddPrimitive(const TYPE& prim)
 		{
-			if (prim.name == Name())
-			{
-				// Unnamed primitives are mapped by parent
-				PrimitiveStore<TYPE>& store = GetPrimitiveStore<TYPE>(false);
-				store.insert(PrimitiveStore<TYPE>::value_type(prim.parent.hash, prim));
-			}
-			else
-			{
-				PrimitiveStore<TYPE>& store = GetPrimitiveStore<TYPE>();
-				store.insert(PrimitiveStore<TYPE>::value_type(prim.name.hash, prim));
-			}
+			assert(prim.name != Name() && "Unnamed primitives not supported");
+			PrimitiveStore<TYPE>& store = GetPrimitiveStore<TYPE>();
+			store.insert(PrimitiveStore<TYPE>::value_type(prim.name.hash, prim));
 		}
 
 		template <typename TYPE> const TYPE* GetFirstPrimitive(const char* name_string) const
@@ -244,21 +236,21 @@ namespace crdb
 		}
 
 		// A compile-time map to runtime data stores for each primitive type
-		template <typename TYPE> PrimitiveStore<TYPE>& GetPrimitiveStore(bool named = true) { }
-		template <> PrimitiveStore<Namespace>& GetPrimitiveStore(bool named) { return m_Namespaces; }
-		template <> PrimitiveStore<Type>& GetPrimitiveStore(bool named) { return m_Types; }
-		template <> PrimitiveStore<Class>& GetPrimitiveStore(bool named) { return m_Classes; }
-		template <> PrimitiveStore<Enum>& GetPrimitiveStore(bool named) { return m_Enums; }
-		template <> PrimitiveStore<EnumConstant>& GetPrimitiveStore(bool named) { return m_EnumConstants; }
-		template <> PrimitiveStore<Function>& GetPrimitiveStore(bool named) { return m_Functions; }
-		template <> PrimitiveStore<Field>& GetPrimitiveStore(bool named) { return named ? m_Fields : m_UnnamedFields; }
+		template <typename TYPE> PrimitiveStore<TYPE>& GetPrimitiveStore() { }
+		template <> PrimitiveStore<Namespace>& GetPrimitiveStore() { return m_Namespaces; }
+		template <> PrimitiveStore<Type>& GetPrimitiveStore() { return m_Types; }
+		template <> PrimitiveStore<Class>& GetPrimitiveStore() { return m_Classes; }
+		template <> PrimitiveStore<Enum>& GetPrimitiveStore() { return m_Enums; }
+		template <> PrimitiveStore<EnumConstant>& GetPrimitiveStore() { return m_EnumConstants; }
+		template <> PrimitiveStore<Function>& GetPrimitiveStore() { return m_Functions; }
+		template <> PrimitiveStore<Field>& GetPrimitiveStore() { return m_Fields; }
 
 		// Single pass-through const retrieval of the primitive stores. This strips the const-ness
 		// of the 'this' pointer to remove the need to copy-paste the GetPrimitiveStore implementations
 		// with const added.
-		template <typename TYPE> const PrimitiveStore<TYPE>& GetPrimitiveStore(const bool named = true) const
+		template <typename TYPE> const PrimitiveStore<TYPE>& GetPrimitiveStore() const
 		{
-			return const_cast<Database*>(this)->GetPrimitiveStore<TYPE>(named);
+			return const_cast<Database*>(this)->GetPrimitiveStore<TYPE>();
 		}
 
 		// All unique, scope-qualified names
@@ -272,7 +264,5 @@ namespace crdb
 		PrimitiveStore<EnumConstant> m_EnumConstants;
 		PrimitiveStore<Function> m_Functions;
 		PrimitiveStore<Field> m_Fields;
-
-		PrimitiveStore<Field> m_UnnamedFields;
 	};
 }

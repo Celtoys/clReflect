@@ -24,7 +24,6 @@ struct CppExport
 	crcpp::CArray<crcpp::EnumConstant> enum_constants;
 	crcpp::CArray<crcpp::Enum> enums;
 	crcpp::CArray<crcpp::Field> fields;
-	crcpp::CArray<crcpp::Field> unnamed_fields;
 	crcpp::CArray<crcpp::Function> functions;
 	crcpp::CArray<crcpp::Class> classes;
 	crcpp::CArray<crcpp::Namespace> namespaces;

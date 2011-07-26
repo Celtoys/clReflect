@@ -28,6 +28,7 @@
 //	multiple inheritance
 //	virtual inheritance
 //  unnamed enums
+//	unnamed parameters in functions
 
 
 
@@ -503,3 +504,9 @@ void FunctionEnums(
 				   OuterNamespace::InnerNamespace::OuterClass::InnerClass::InnerClassEnum n) { }
 
 
+// Unnamed parameter warnings
+crcpp_reflect(myfunc)
+int myfunc(int)
+{
+	return 0;
+}
