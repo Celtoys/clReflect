@@ -10,6 +10,7 @@
 //	* overloaded functions
 //	* unnamed function parameters
 //	* method constness
+//	* anonymous namespaces from different compilation units
 //  offsets match between clang and msvc
 //	defines introducing new stuff
 //	includes
@@ -18,7 +19,6 @@
 //	64-bit types
 //	wchar_t
 //	typedef
-//	anonymous namespaces from different compilation units
 //	enum forward declaration
 //
 // not supported:
@@ -29,6 +29,7 @@
 //	virtual inheritance
 //  unnamed enums
 //	unnamed parameters in functions
+//	anything in an anonymous namespace - the macros can't reference them
 
 
 
@@ -325,42 +326,6 @@ namespace FuncReturns
 	const double& FunctionRetDoubleConstRef() { return *(double*)0; }
 }
 
-// --------------------------------------------------------------------------------------------
-// Anonymous namespace
-// --------------------------------------------------------------------------------------------
-// TODO: Can't reflect because macro can't access!
-namespace
-{
-	enum AnonNSEnumA { A_VALUE_A, A_VALUE_B };
-
-	class AnonNSClassA
-	{
-		enum EnumWithinAnonClassA { VALUE_A, VALUE_B };
-
-		int FieldWithinAnonClassA;
-
-		void FunctionWithinAnonClassA() { }
-	};
-}
-
-
-// --------------------------------------------------------------------------------------------
-// Anonymous namespace redeclared within the same compilation unit
-// --------------------------------------------------------------------------------------------
-namespace
-{
-	enum AnonNSEnumB { B_VALUE_A, B_VALUE_B };
-
-	class AnonNSClassB
-	{
-		enum EnumWithinAnonClassB { VALUE_A, VALUE_B };
-
-		int FieldWithinAnonClassB;
-
-		void FunctionWithinAnonClassB() { }
-	};
-}
-
 
 // --------------------------------------------------------------------------------------------
 // Named namespace
@@ -477,36 +442,54 @@ void FunctionClasses(
 					 ClassGlobalA a,
 					 StructGlobalA b,
 					 FieldTypes c,
-					 AnonNSClassA d,
-					 AnonNSClassB e,
-					 NamespaceA::NamedNSClassA f,
-					 NamespaceB::SecondNamedNSClass g,
-					 NamespaceB::AnotherSecondNamedNSClass h,
-					 NamespaceA::NamedNSClassB i,
-					 OuterNamespace::InnerNamespace::OuterClass j,
-					 OuterNamespace::InnerNamespace::OuterClass::InnerClass k) { }
+					 NamespaceA::NamedNSClassA d,
+					 NamespaceB::SecondNamedNSClass e,
+					 NamespaceB::AnotherSecondNamedNSClass f,
+					 NamespaceA::NamedNSClassB g,
+					 OuterNamespace::InnerNamespace::OuterClass h,
+					 OuterNamespace::InnerNamespace::OuterClass::InnerClass i) { }
 
 crcpp_reflect(FunctionEnums)
 void FunctionEnums(
 				   NamedGlobalEnum a,
-				   AnonNSEnumA b,
-				   AnonNSEnumB c,
-				   NamespaceA::NamedNSEnumA d,
-				   NamespaceA::NamedNSClassA::EnumWithinNamedClassA  e,
-				   NamespaceB::SecondNamedNSEnum f,
-				   NamespaceB::AnotherSecondNamedEnum g,
-				   NamespaceB::SecondNamedNSClass::ContainedEnum h,
-				   NamespaceB::AnotherSecondNamedNSClass::AnotherContainedEnum i,
-				   NamespaceA::NamedNSEnumB j,
-				   NamespaceA::NamedNSClassB::EnumWithinNamedClassB k,
-				   OuterNamespace::InnerNamespace::InnerNSEnum l,
-				   OuterNamespace::InnerNamespace::OuterClass::OuterClassEnum m,
-				   OuterNamespace::InnerNamespace::OuterClass::InnerClass::InnerClassEnum n) { }
+				   NamespaceA::NamedNSEnumA b,
+				   NamespaceA::NamedNSClassA::EnumWithinNamedClassA  c,
+				   NamespaceB::SecondNamedNSEnum d,
+				   NamespaceB::AnotherSecondNamedEnum e,
+				   NamespaceB::SecondNamedNSClass::ContainedEnum f,
+				   NamespaceB::AnotherSecondNamedNSClass::AnotherContainedEnum g,
+				   NamespaceA::NamedNSEnumB h,
+				   NamespaceA::NamedNSClassB::EnumWithinNamedClassB i,
+				   OuterNamespace::InnerNamespace::InnerNSEnum j,
+				   OuterNamespace::InnerNamespace::OuterClass::OuterClassEnum k,
+				   OuterNamespace::InnerNamespace::OuterClass::InnerClass::InnerClassEnum l) { }
 
 
-// Unnamed parameter warnings
+// Trigger warnings for unnamed parameters
 crcpp_reflect(myfunc)
-int myfunc(int)
+int UnnamedParameterFunction(int)
 {
 	return 0;
+}
+
+
+// --------------------------------------------------------------------------------------------
+// Trigger warnings for unreflected field types
+// --------------------------------------------------------------------------------------------
+struct MissingType
+{
+};
+crcpp_reflect(TestMissingType)
+namespace TestMissingType
+{
+	struct Struct
+	{
+		MissingType ThisShouldNotReflect;
+		int y;
+	};
+	void Function(MissingType a);
+	MissingType FunctionReturn();
+	struct Inherit : public MissingType
+	{
+	};
 }

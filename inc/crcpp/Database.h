@@ -14,6 +14,7 @@ namespace crcpp
 {
 	struct Name
 	{
+		Name() : hash(0), text(0) { }
 		unsigned int hash;
 		const char* text;
 	};
@@ -23,6 +24,7 @@ namespace crcpp
 	{
 		enum Kind
 		{
+			KIND_NONE,
 			KIND_NAMESPACE,
 			KIND_TYPE,
 			KIND_CLASS,
@@ -31,6 +33,8 @@ namespace crcpp
 			KIND_FUNCTION,
 			KIND_FIELD
 		};
+
+		Primitive() : kind(KIND_NONE), parent(0) { }
 
 		Kind kind;
 		Name name;
@@ -47,6 +51,8 @@ namespace crcpp
 	struct EnumConstant : public Primitive
 	{
 		static const Kind KIND = KIND_ENUM_CONSTANT;
+
+		EnumConstant() : value(0) { }
 
 		int value;
 	};
@@ -66,15 +72,19 @@ namespace crcpp
 
 		enum Modifier
 		{
+			MODIFIER_NONE,
 			MODIFIER_VALUE,
 			MODIFIER_POINTER,
 			MODIFIER_REFERENCE
 		};
 
+		Field() : type(0), modifier(modifier), is_const(false), offset(0), parent_unique_id(0) { }
+
 		const Type* type;
 		Modifier modifier;
 		bool is_const;
 		int offset;
+		unsigned int parent_unique_id;
 	};
 
 
@@ -82,14 +92,19 @@ namespace crcpp
 	{
 		static const Kind KIND = KIND_FUNCTION;
 
-		Field* return_parameter;
+		Function() : return_parameter(0), unique_id(0) { }
+
+		const Field* return_parameter;
 		CArray<const Field*> parameters;
+		unsigned int unique_id;
 	};
 
 
 	struct Class : public Type
 	{
 		static const Kind KIND = KIND_CLASS;
+
+		Class() : base_class(0), size(0) { }
 
 		const Class* base_class;
 		unsigned int size;

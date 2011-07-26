@@ -220,12 +220,15 @@ void logging::Log(StreamHandle handle, Tag tag, bool do_prefix, const char* form
 
 	if (do_prefix)
 	{
-		// Kick the prefix off with indent characters
-		for (int i = 0; i < stream_set->indent_depth; i++)
+		if (tag == TAG_INFO)
 		{
-			prefix[i] = '\t';
+			// Kick the prefix off with indent characters
+			for (int i = 0; i < stream_set->indent_depth; i++)
+			{
+				prefix[i] = '\t';
+			}
+			prefix[stream_set->indent_depth] = 0;
 		}
-		prefix[stream_set->indent_depth] = 0;
 
 		// Add any tag annotations
 		switch (tag)

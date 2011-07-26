@@ -1,11 +1,10 @@
 
 // TODO:
-//	* Function return value
-//	* Function parameters
-//	* Move stuff out of the global namespace (
+//	* Move stuff out of the global namespace (just create a global namespace object)
 //	* Sort
 //	* Save to disk
 //	* Gather type size
+//	* Check that every pointer has been linked up
 
 #include "CppExport.h"
 
@@ -25,11 +24,16 @@ namespace
 	{
 		dest.value = src.value;
 	}
+	void CopyPrimitive(crcpp::Function& dest, const crdb::Function& src)
+	{
+		dest.unique_id = src.unique_id;
+	}
 	void CopyPrimitive(crcpp::Field& dest, const crdb::Field& src)
 	{
 		dest.type = (crcpp::Type*)src.type.hash;
 		dest.is_const = src.is_const;
 		dest.offset = src.offset;
+		dest.parent_unique_id = src.parent_unique_id;
 		switch (src.modifier)
 		{
 		case (crdb::Field::MODIFIER_VALUE): dest.modifier = crcpp::Field::MODIFIER_VALUE; break;
@@ -73,29 +77,46 @@ namespace
 	}
 
 
+	bool ParentAndChildMatch(const crcpp::Primitive&, const crcpp::Primitive&)
+	{
+		return true;
+	}
+	bool ParentAndChildMatch(const crcpp::Function& parent, const crcpp::Field& child)
+	{
+		return parent.unique_id == child.parent_unique_id;
+	}
+
+
 	template <typename PARENT_TYPE, typename CHILD_TYPE>
 	void Parent(crcpp::CArray<PARENT_TYPE>& parents, crcpp::CArray<const CHILD_TYPE*> (PARENT_TYPE::*carray), crcpp::CArray<CHILD_TYPE>& children)
 	{
 		// Create a lookup table from hash ID to parent and the number of references the parent has
 		typedef std::pair<PARENT_TYPE*, int> ParentAndRefCount;
-		typedef std::map<unsigned int, ParentAndRefCount> ParentMap;
+		typedef std::multimap<unsigned int, ParentAndRefCount> ParentMap;
+		typedef std::pair<ParentMap::iterator, ParentMap::iterator> ParentMapRange;
 		ParentMap parent_map;
 		for (int i = 0; i < parents.size(); i++)
 		{
 			PARENT_TYPE& parent = parents[i];
-			parent_map[parent.name.hash] = ParentAndRefCount(&parent, 0);
+			parent_map.insert(ParentMap::value_type(parent.name.hash, ParentAndRefCount(&parent, 0)));
 		}
 
 		// Assign parents and count the references
 		for (int i = 0; i < children.size(); i++)
 		{
 			CHILD_TYPE& child = children[i];
-			ParentMap::iterator j = parent_map.find((unsigned int)child.parent);
-			if (j != parent_map.end())
+
+			// Iterate over all matches
+			ParentMapRange range = parent_map.equal_range((unsigned int)child.parent);
+			for (ParentMap::iterator j = range.first; j != range.second; ++j)
 			{
 				ParentAndRefCount& parc = j->second;
-				child.parent = parc.first;
-				parc.second++;
+				if (ParentAndChildMatch(*parc.first, child))
+				{
+					child.parent = parc.first;
+					parc.second++;
+					break;
+				}
 			}
 		}
 
@@ -143,12 +164,13 @@ namespace
 	void Link(crcpp::CArray<PARENT_TYPE>& parents, const FIELD_TYPE* (PARENT_TYPE::*field), crcpp::CArray<CHILD_TYPE>& children)
 	{
 		// Create a lookup table from hash ID to child
-		typedef std::map<unsigned int, CHILD_TYPE*> ChildMap;
+		typedef std::multimap<unsigned int, CHILD_TYPE*> ChildMap;
+		typedef std::pair<ChildMap::iterator, ChildMap::iterator> ChildMapRange;
 		ChildMap child_map;
 		for (int i = 0; i < children.size(); i++)
 		{
 			CHILD_TYPE& child = children[i];
-			child_map[child.name.hash] = &child;
+			child_map.insert(ChildMap::value_type(child.name.hash, &child));
 		}
 
 		// Link up the pointers
@@ -161,6 +183,47 @@ namespace
 			{
 				(parent.*field) = j->second;
 			}
+		}
+	}
+
+
+	int ReturnParameterIndex(const crcpp::CArray<const crcpp::Field*>& parameters)
+	{
+		// Linear search for the named return value
+		static unsigned int return_hash = crdb::HashNameString("return");
+		for (int i = 0; i < parameters.size(); i++)
+		{
+			if (parameters[i]->name.hash == return_hash)
+			{
+				return i;
+			}
+		}
+		return -1;
+	}
+
+
+	void AssignReturnParameters(CppExport& cppexp)
+	{
+		// Iterate over every function that has the return parameter in its parameter list
+		for (int i = 0; i < cppexp.functions.size(); i++)
+		{
+			crcpp::Function& func = cppexp.functions[i];
+			int return_index = ReturnParameterIndex(func.parameters);
+			if (return_index == -1)
+			{
+				continue;
+			}
+
+			// Assign the return parameter and create a new parameter list without it
+			// [xyRxyxy](2) -> [xyxyxy]
+			// [R](0) -> []
+			func.return_parameter = func.parameters[return_index];
+			crcpp::CArray<const crcpp::Field*> new_parameters(func.parameters.size() - 1);
+			const crcpp::Field** src = func.parameters.data();
+			const crcpp::Field** dest = new_parameters.data();
+			std::copy(src, src + return_index, dest);
+			std::copy(src + return_index + 1, src + func.parameters.size(), dest + return_index);
+			func.parameters = new_parameters;
 		}
 	}
 }
@@ -185,8 +248,7 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	BuildCArray<crdb::Namespace>(cppexp, cppexp.namespaces, db);
 
 	Parent(cppexp.enums, &crcpp::Enum::constants, cppexp.enum_constants);
-	//Parent(functions, &crcpp::Function::parameters, fields);
-	//Parent(functions, &crcpp::Function::parameters, unnamed_fields);
+	Parent(cppexp.functions, &crcpp::Function::parameters, cppexp.fields);
 	Parent(cppexp.classes, &crcpp::Class::enums, cppexp.enums);
 	Parent(cppexp.classes, &crcpp::Class::classes, cppexp.classes);
 	Parent(cppexp.classes, &crcpp::Class::methods, cppexp.functions);
@@ -201,104 +263,146 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	Link(cppexp.fields, &crcpp::Field::type, cppexp.enums);
 	Link(cppexp.fields, &crcpp::Field::type, cppexp.classes);
 	Link(cppexp.classes, &crcpp::Class::base_class, cppexp.classes);
+
+	// Return parameters are parented to their functions as parameters. Move them from
+	// wherever they are in the list and into the return parameter data member.
+	AssignReturnParameters(cppexp);
 }
 
 
-template <typename TYPE>
-void LogPrimitives(const crcpp::CArray<const TYPE*>& primitives)
+namespace
 {
-	for (int i = 0; i < primitives.size(); i++)
+	template <typename TYPE>
+	void LogPrimitives(const crcpp::CArray<const TYPE*>& primitives)
 	{
-		LogPrimitive(*primitives[i]);
-	}
-}
-
-
-template <typename TYPE>
-void LogGlobalPrimitives(const crcpp::CArray<TYPE>& primitives)
-{
-	for (int i = 0; i < primitives.size(); i++)
-	{
-		if (primitives[i].parent == 0)
+		for (int i = 0; i < primitives.size(); i++)
 		{
-			LogPrimitive(primitives[i]);
+			LogPrimitive(*primitives[i]);
 			LOG_NEWLINE(cppexp);
 		}
 	}
-}
 
 
-void LogPrimitive(const crcpp::Function& function)
-{
-	LOG(cppexp, INFO, "%s\n", function.name.text);
-}
-
-
-void LogPrimitive(const crcpp::EnumConstant& constant)
-{
-	LOG(cppexp, INFO, "%s = %d,\n", constant.name.text, constant.value);
-}
-
-void LogPrimitive(const crcpp::Enum& e)
-{
-	LOG(cppexp, INFO, "enum %s\n", e.name.text);
-	LOG(cppexp, INFO, "{\n");
-	LOG_PUSH_INDENT(cppexp);
-
-	LogPrimitives(e.constants);
-
-	LOG_POP_INDENT(cppexp);
-	LOG(cppexp, INFO, "};\n");
-}
-
-
-void LogPrimitive(const crcpp::Field& field)
-{
-	LOG(cppexp, INFO, "%s", field.is_const ? "const " : "");
-	LOG_APPEND(cppexp, INFO, "%s", field.type->name.text);
-	LOG_APPEND(cppexp, INFO, "%s", field.modifier == crcpp::Field::MODIFIER_POINTER ? "*" :
-								   field.modifier == crcpp::Field::MODIFIER_REFERENCE ? "&" : "");
-	LOG_APPEND(cppexp, INFO, " %s\n", field.name.text);
-}
-
-
-void LogPrimitive(const crcpp::Class& cls)
-{
-	LOG(cppexp, INFO, "class %s", cls.name.text);
-	if (cls.base_class)
+	template <typename TYPE>
+	void LogGlobalPrimitives(const crcpp::CArray<TYPE>& primitives)
 	{
-		LOG_APPEND(cppexp, INFO, " : public %s\n", cls.base_class->name.text);
+		for (int i = 0; i < primitives.size(); i++)
+		{
+			if (primitives[i].parent == 0)
+			{
+				LogPrimitive(primitives[i]);
+				LOG_NEWLINE(cppexp);
+			}
+		}
 	}
-	else
+
+
+	void LogField(const crcpp::Field& field, bool name = true)
 	{
-		LOG_APPEND(cppexp, INFO, "\n");
+		LOG_APPEND(cppexp, INFO, "%s", field.is_const ? "const " : "");
+		LOG_APPEND(cppexp, INFO, "%s", field.type->name.text);
+		LOG_APPEND(cppexp, INFO, "%s", field.modifier == crcpp::Field::MODIFIER_POINTER ? "*" :
+			field.modifier == crcpp::Field::MODIFIER_REFERENCE ? "&" : "");
+
+		if (name)
+		{
+			LOG_APPEND(cppexp, INFO, " %s", field.name.text);
+		}
 	}
-	LOG(cppexp, INFO, "{\n");
-	LOG_PUSH_INDENT(cppexp);
-
-	LogPrimitives(cls.classes);
-	LogPrimitives(cls.fields);
-	LogPrimitives(cls.enums);
-	LogPrimitives(cls.methods);
-
-	LOG_POP_INDENT(cppexp);
-	LOG(cppexp, INFO, "};\n");
-}
 
 
-void LogPrimitive(const crcpp::Namespace& ns)
-{
-	LOG(cppexp, INFO, "namespace %s\n", ns.name.text);
-	LOG(cppexp, INFO, "{\n");
-	LOG_PUSH_INDENT(cppexp);
+	void LogPrimitive(const crcpp::Field& field)
+	{
+		LOG(cppexp, INFO, "");
+		LogField(field);
+		LOG_APPEND(cppexp, INFO, ";");
+	}
 
-	LogPrimitives(ns.namespaces);
-	LogPrimitives(ns.classes);
-	LogPrimitives(ns.enums);
-	LogPrimitives(ns.functions);
 
-	LOG_POP_INDENT(cppexp);
-	LOG(cppexp, INFO, "}\n");
+	void LogPrimitive(const crcpp::Function& func)
+	{
+		if (func.return_parameter)
+		{
+			LOG(cppexp, INFO, "");
+			LogField(*func.return_parameter, false);
+		}
+		else
+		{
+			LOG(cppexp, INFO, "void");
+		}
+
+		LOG_APPEND(cppexp, INFO, " %s(", func.name.text);
+
+		for (int i = 0; i < func.parameters.size(); i++)
+		{
+			LogField(*func.parameters[i]);
+			if (i != func.parameters.size() - 1)
+			{
+				LOG_APPEND(cppexp, INFO, ", ");
+			}
+		}
+
+		LOG_APPEND(cppexp, INFO, ");");
+	}
+
+
+	void LogPrimitive(const crcpp::EnumConstant& constant)
+	{
+		LOG(cppexp, INFO, "%s = %d,", constant.name.text, constant.value);
+	}
+
+
+	void LogPrimitive(const crcpp::Enum& e)
+	{
+		LOG(cppexp, INFO, "enum %s\n", e.name.text);
+		LOG(cppexp, INFO, "{\n");
+		LOG_PUSH_INDENT(cppexp);
+
+		LogPrimitives(e.constants);
+
+		LOG_POP_INDENT(cppexp);
+		LOG(cppexp, INFO, "};");
+	}
+
+
+	void LogPrimitive(const crcpp::Class& cls)
+	{
+		LOG(cppexp, INFO, "class %s", cls.name.text);
+		if (cls.base_class)
+		{
+			LOG_APPEND(cppexp, INFO, " : public %s\n", cls.base_class->name.text);
+		}
+		else
+		{
+			LOG_APPEND(cppexp, INFO, "\n");
+		}
+		LOG(cppexp, INFO, "{\n");
+		LOG_PUSH_INDENT(cppexp);
+
+		LogPrimitives(cls.classes);
+		LogPrimitives(cls.fields);
+		LogPrimitives(cls.enums);
+		LogPrimitives(cls.methods);
+
+		LOG_POP_INDENT(cppexp);
+		LOG(cppexp, INFO, "};");
+	}
+
+
+	void LogPrimitive(const crcpp::Namespace& ns)
+	{
+		LOG(cppexp, INFO, "namespace %s\n", ns.name.text);
+		LOG(cppexp, INFO, "{\n");
+		LOG_PUSH_INDENT(cppexp);
+
+		LogPrimitives(ns.namespaces);
+		LogPrimitives(ns.classes);
+		LogPrimitives(ns.enums);
+		LogPrimitives(ns.functions);
+
+		LOG_POP_INDENT(cppexp);
+		LOG(cppexp, INFO, "}");
+	}
 }
 
 

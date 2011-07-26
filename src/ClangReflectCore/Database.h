@@ -156,6 +156,7 @@ namespace crdb
 
 		// An ID unique to this function among other functions that have the same name
 		// This allows the function to be referenced accurately by any children
+		// All return values are named "return" so a parameter reference won't work here
 		u32 unique_id;
 	};
 
