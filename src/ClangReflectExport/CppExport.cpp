@@ -1,7 +1,5 @@
 
 // TODO:
-//	* Move stuff out of the global namespace (just create a global namespace object)
-//	* Sort
 //	* Save to disk
 //	* Gather type size
 //	* Check that every pointer has been linked up
@@ -12,6 +10,8 @@
 #include <ClangReflectCore\Logging.h>
 
 #include <crcpp\Database.h>
+
+#include <algorithm>
 
 
 namespace
@@ -271,6 +271,55 @@ namespace
 		GatherGlobalPrimitives(cppexp.global_namespace.classes, cppexp.classes);
 		GatherGlobalPrimitives(cppexp.global_namespace.functions, cppexp.functions);
 	}
+
+
+	// Sort an array of primitive pointers by name
+	bool SortPrimitiveByName(const crcpp::Primitive* a, const crcpp::Primitive* b)
+	{
+		return a->name.hash < b->name.hash;
+	}
+	template <typename TYPE>
+	void SortPrimitives(crcpp::CArray<const TYPE*>& primitives)
+	{
+		std::sort(primitives.data(), primitives.data() + primitives.size(), SortPrimitiveByName);
+	}
+
+
+	// Overloads for sorting primitive arrays within a primitive
+	void SortPrimitives(crcpp::Enum& primitive)
+	{
+		SortPrimitives(primitive.constants);
+	}
+	void SortPrimitives(crcpp::Function& primitive)
+	{
+		SortPrimitives(primitive.parameters);
+	}
+	void SortPrimitives(crcpp::Class& primitive)
+	{
+		SortPrimitives(primitive.enums);
+		SortPrimitives(primitive.classes);
+		SortPrimitives(primitive.methods);
+		SortPrimitives(primitive.fields);
+	}
+	void SortPrimitives(crcpp::Namespace& primitive)
+	{
+		SortPrimitives(primitive.namespaces);
+		SortPrimitives(primitive.types);
+		SortPrimitives(primitive.enums);
+		SortPrimitives(primitive.classes);
+		SortPrimitives(primitive.functions);
+	}
+
+
+	// Iterate over all provided primitives and sort their primitive arrays
+	template <typename TYPE>
+	void SortPrimitives(crcpp::CArray<TYPE>& primitives)
+	{
+		for (int i = 0; i < primitives.size(); i++)
+		{
+			SortPrimitives(primitives[i]);
+		}
+	}
 }
 
 
@@ -284,6 +333,9 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 		cppexp.name_data.push_back(0);
 	}
 
+	// Generate a raw crcpp equivalent of the crdb database. At this point no primitives
+	// will physically point to or contain each other, but they will reference each other
+	// using hash values aliased in their pointers.
 	BuildCArray<crdb::Type>(cppexp, cppexp.types, db);
 	BuildCArray<crdb::Class>(cppexp, cppexp.classes, db);
 	BuildCArray<crdb::Enum>(cppexp, cppexp.enums, db);
@@ -292,6 +344,8 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	BuildCArray<crdb::Field>(cppexp, cppexp.fields, db);
 	BuildCArray<crdb::Namespace>(cppexp, cppexp.namespaces, db);
 
+	// Construct the primitive scope hierarchy, pointing primitives at their parents
+	// and adding them to the arrays within their parents.
 	Parent(cppexp.enums, &crcpp::Enum::constants, cppexp.enum_constants);
 	Parent(cppexp.functions, &crcpp::Function::parameters, cppexp.fields);
 	Parent(cppexp.classes, &crcpp::Class::enums, cppexp.enums);
@@ -304,6 +358,7 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	Parent(cppexp.namespaces, &crcpp::Namespace::classes, cppexp.classes);
 	Parent(cppexp.namespaces, &crcpp::Namespace::functions, cppexp.functions);
 
+	// Link up any references between primitives
 	Link(cppexp.fields, &crcpp::Field::type, cppexp.types);
 	Link(cppexp.fields, &crcpp::Field::type, cppexp.enums);
 	Link(cppexp.fields, &crcpp::Field::type, cppexp.classes);
@@ -315,6 +370,14 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 
 	// Now gather any unparented primitives into the root namespace
 	BuildGlobalNamespace(cppexp);
+
+	// Sort any primitive pointer arrays in the database by name hash, ascending. This
+	// is to allow fast O(logN) searching of the primitive arrays at runtime with a
+	// binary search.
+	SortPrimitives(cppexp.enums);
+	SortPrimitives(cppexp.functions);
+	SortPrimitives(cppexp.classes);
+	SortPrimitives(cppexp.namespaces);
 }
 
 

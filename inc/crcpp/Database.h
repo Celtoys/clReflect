@@ -62,6 +62,7 @@ namespace crcpp
 	{
 		static const Kind KIND = KIND_ENUM;
 
+		// All sorted by name
 		CArray<const EnumConstant*> constants;
 	};
 
@@ -94,9 +95,11 @@ namespace crcpp
 
 		Function() : return_parameter(0), unique_id(0) { }
 
-		const Field* return_parameter;
-		CArray<const Field*> parameters;
 		unsigned int unique_id;
+		const Field* return_parameter;
+
+		// All sorted by name
+		CArray<const Field*> parameters;
 	};
 
 
@@ -108,6 +111,8 @@ namespace crcpp
 
 		const Class* base_class;
 		unsigned int size;
+
+		// All sorted by name
 		CArray<const Enum*> enums;
 		CArray<const Class*> classes;
 		CArray<const Function*> methods;
@@ -119,6 +124,7 @@ namespace crcpp
 	{
 		static const Kind KIND = KIND_NAMESPACE;
 
+		// All sorted by name
 		CArray<const Namespace*> namespaces;
 		CArray<const Type*> types;
 		CArray<const Enum*> enums;
