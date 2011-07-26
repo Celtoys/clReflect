@@ -20,10 +20,16 @@ namespace
 			a.name == b.name &&
 			a.parent == b.parent;
 	}
-	bool PrimitivesEqual(const crdb::Class& a, const crdb::Class& b)
+	bool PrimitivesEqual(const crdb::Type& a, const crdb::Type& b)
 	{
 		return
 			PrimitivesEqual((const crdb::Primitive&)a, (const crdb::Primitive&)b) &&
+			a.size == b.size;
+	}
+	bool PrimitivesEqual(const crdb::Class& a, const crdb::Class& b)
+	{
+		return
+			PrimitivesEqual((const crdb::Type&)a, (const crdb::Type&)b) &&
 			a.base_class == b.base_class &&
 			a.size == b.size;
 	}

@@ -96,12 +96,13 @@ namespace crdb
 	//
 	struct Type : public Primitive
 	{
-		Type() : Primitive(Primitive::KIND_TYPE) { }
-		Type(Name n, Name p) : Primitive(Primitive::KIND_TYPE, n, p) { }
-		Type(Kind k) : Primitive(k) { }
-		Type(Kind k, Name n, Name p) : Primitive(k, n, p) { }
+		Type() : Primitive(Primitive::KIND_TYPE), size(0) { }
+		Type(Name n, Name p, u32 s) : Primitive(Primitive::KIND_TYPE, n, p), size(s) { }
+		Type(Kind k) : Primitive(k), size(0) { }
+		Type(Kind k, Name n, Name p, u32 s) : Primitive(k, n, p), size(s) { }
 
-		// TODO: Gather size
+		// Total size of the type, including alignment
+		u32 size;
 	};
 
 
@@ -112,13 +113,10 @@ namespace crdb
 	struct Class : public Type
 	{
 		Class() : Type(Primitive::KIND_CLASS) { }
-		Class(Name n, Name p, Name b, u32 s) : Type(Primitive::KIND_CLASS, n, p), base_class(b), size(s) { }
+		Class(Name n, Name p, Name b, u32 s) : Type(Primitive::KIND_CLASS, n, p, s), base_class(b) { }
 
 		// Single base class
 		Name base_class;
-
-		// Total size of the class, including alignment
-		u32 size;
 	};
 
 
@@ -128,7 +126,7 @@ namespace crdb
 	struct Enum : public Type
 	{
 		Enum() : Type(Primitive::KIND_ENUM) { }
-		Enum(Name n, Name p) : Type(Primitive::KIND_ENUM, n, p) { }
+		Enum(Name n, Name p) : Type(Primitive::KIND_ENUM, n, p, sizeof(int)) { }
 	};
 
 
@@ -138,16 +136,17 @@ namespace crdb
 	struct EnumConstant : public Primitive
 	{
 		EnumConstant() : Primitive(Primitive::KIND_ENUM_CONSTANT) { }
-		EnumConstant(Name n, Name p, __int64 v) : Primitive(Primitive::KIND_ENUM_CONSTANT, n, p), value(v) { }
+		EnumConstant(Name n, Name p, int v) : Primitive(Primitive::KIND_ENUM_CONSTANT, n, p), value(v) { }
 
 		// Enumeration constants can have values that are signed/unsigned and of arbitrary width.
+		// The standard assures that they're of integral size and is quite vague.
 		// For now I'm just assuming they're 32-bit signed.
-		__int64 value;
+		int value;
 	};
 
 
 	//
-	// A function or class method with a list of parameters and a return value.
+	// A function or class method with a list of parameters and a return value
 	//
 	struct Function : public Primitive
 	{

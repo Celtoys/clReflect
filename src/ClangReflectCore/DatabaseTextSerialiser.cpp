@@ -1,4 +1,7 @@
 
+// TODO: This entire serialisation strategy is very brittle - it's very easy to change the layout of the database
+// while forgetting to update this correctly without making mistakes. Rewrite so that it uses the database metadata.
+
 #include "DatabaseTextSerialiser.h"
 #include "Database.h"
 
@@ -17,68 +20,12 @@ namespace
 	}
 
 
-	// Enough for 32-bit and 64-bit values
 	template <typename TYPE>
 	const char* itoa(TYPE value)
 	{
 		static const int MAX_SZ = 20;
 		static char text[MAX_SZ];
-
-		// Null terminate and start at the end
-		text[MAX_SZ - 1] = 0;
-		char* tptr = text + MAX_SZ - 1;
-
-		// Get the absolute and record if the value is negative
-		bool negative = false;
-		if (value < 0)
-		{
-			negative = true;
-			value = -value;
-		}
-
-		// Loop through the value with radix 10
-		do 
-		{
-			int v = value % 10;
-			*--tptr = '0' + v;
-			value /= 10;
-		} while (value);
-
-		if (negative)
-		{
-			*--tptr = '-';
-		}
-
-		return tptr;
-	}
-
-
-	__int64 atoi64(const char* text)
-	{
-		// Skip the negative notation
-		bool negative = false;
-		if (*text == '-')
-		{
-			negative = true;
-			text++;
-		}
-
-		// Sum each radix 10 element
-		__int64 val = 0;
-		for (const char* tptr = text, *end = text + strlen(text); tptr != end; ++tptr)
-		{
-			val *= 10;
-			int v = *tptr - '0';
-			val += v;
-		}
-
-		// Negate if necessary
-		if (negative)
-		{
-			val = -val;
-		}
-
-		return val;
+		return _itoa(value, text, 10);
 	}
 
 
@@ -178,13 +125,19 @@ namespace
 	}
 
 
-	void WriteClass(FILE* fp, const crdb::Class& primitive, const crdb::Database& db)
+	void WriteType(FILE* fp, const crdb::Type& primitive, const crdb::Database& db)
 	{
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
-		fputs(HexStringFromName(primitive.base_class, db), fp);
-		fputs("\t", fp);
 		fputs(itohex(primitive.size), fp);
+	}
+
+
+	void WriteClass(FILE* fp, const crdb::Class& primitive, const crdb::Database& db)
+	{
+		WriteType(fp, primitive, db);
+		fputs("\t", fp);
+		fputs(HexStringFromName(primitive.base_class, db), fp);
 	}
 
 	
@@ -276,9 +229,9 @@ void crdb::WriteTextDatabase(const char* filename, const Database& db)
 
 	// Write all the primitive tables
 	WritePrimitives<Namespace>(fp, db, WritePrimitive, "Namespaces", "Name\t\tParent");
-	WritePrimitives<Type>(fp, db, WritePrimitive, "Types", "Name\t\tParent");
-	WritePrimitives<Class>(fp, db, WriteClass, "Classes", "Name\t\tParent\t\tBase\tSize");
-	WritePrimitives<Enum>(fp, db, WritePrimitive, "Enums", "Name\t\tParent");
+	WritePrimitives<Type>(fp, db, WriteType, "Types", "Name\t\tParent\t\tSize");
+	WritePrimitives<Class>(fp, db, WriteClass, "Classes", "Name\t\tParent\t\tSize\t\tBase");
+	WritePrimitives<Enum>(fp, db, WriteType, "Enums", "Name\t\tParent\t\tSize");
 	WritePrimitives<EnumConstant>(fp, db, WriteEnumConstant, "Enum Constants", "Name\t\tParent\t\tValue");
 	WritePrimitives<Function>(fp, db, WriteFunction, "Functions", "Name\t\tParent\t\tUID");
 	WritePrimitives<Field>(fp, db, WriteField, "Fields", "Name\t\tParent\t\tType\t\tMod\tCst\tOffs\tUID");
@@ -394,6 +347,27 @@ namespace
 	}
 
 
+	void ParseType(char* line, crdb::Database& db)
+	{
+		StringTokeniser tok(line, "\t");
+
+		// Primitive parsing
+		crdb::u32 name, parent;
+		tok.GetNameAndParent(name, parent);
+
+		// Type parsing
+		crdb::u32 size = tok.GetHexInt();
+
+		// Add a new primitive to the database
+		crdb::Type primitive(
+			db.GetName(name),
+			db.GetName(parent),
+			size);
+
+		db.AddPrimitive(primitive);
+	}
+
+
 	void ParseClass(char* line, crdb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
@@ -402,9 +376,11 @@ namespace
 		crdb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
+		// Type parsing
+		crdb::u32 size = tok.GetHexInt();
+
 		// Class parsing
 		crdb::u32 base = tok.GetHexInt();
-		crdb::u32 size = tok.GetHexInt();
 
 		// Add a new class to the database
 		crdb::Class primitive(
@@ -412,6 +388,26 @@ namespace
 			db.GetName(parent),
 			db.GetName(base),
 			size);
+
+		db.AddPrimitive(primitive);
+	}
+
+
+	void ParseEnum(char* line, crdb::Database& db)
+	{
+		StringTokeniser tok(line, "\t");
+
+		// Primitive parsing
+		crdb::u32 name, parent;
+		tok.GetNameAndParent(name, parent);
+
+		// Type parsing - discard the size
+		tok.GetHexInt();
+
+		// Add a new class to the database
+		crdb::Enum primitive(
+			db.GetName(name),
+			db.GetName(parent));
 
 		db.AddPrimitive(primitive);
 	}
@@ -426,7 +422,7 @@ namespace
 		tok.GetNameAndParent(name, parent);
 
 		// Enum constant parsing
-		__int64 value = atoi64(tok.Get());
+		int value = atoi(tok.Get());
 
 		// Add a new enum constant to the database
 		crdb::EnumConstant primitive(
@@ -551,9 +547,9 @@ bool crdb::ReadTextDatabase(const char* filename, Database& db)
 	{
 		ParseTable(fp, line, db, "Names", ParseName);
 		ParseTable(fp, line, db, "Namespaces", ParsePrimitive<crdb::Namespace>);
-		ParseTable(fp, line, db, "Types", ParsePrimitive<crdb::Type>);
+		ParseTable(fp, line, db, "Types", ParseType);
 		ParseTable(fp, line, db, "Classes", ParseClass);
-		ParseTable(fp, line, db, "Enums", ParsePrimitive<crdb::Enum>);
+		ParseTable(fp, line, db, "Enums", ParseEnum);
 		ParseTable(fp, line, db, "Enum Constants", ParseEnumConstant);
 		ParseTable(fp, line, db, "Functions", ParseFunction);
 		ParseTable(fp, line, db, "Fields", ParseField);

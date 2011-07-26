@@ -88,19 +88,20 @@ crdb::Database::Database()
 void crdb::Database::AddBaseTypePrimitives()
 {
 	// Create a selection of basic C++ types
+	// TODO: Figure the size of these out based on platform
 	Name parent;
-	AddPrimitive(Type(GetName("void"), parent));
-	AddPrimitive(Type(GetName("bool"), parent));
-	AddPrimitive(Type(GetName("char"), parent));
-	AddPrimitive(Type(GetName("unsigned char"), parent));
-	AddPrimitive(Type(GetName("short"), parent));
-	AddPrimitive(Type(GetName("unsigned short"), parent));
-	AddPrimitive(Type(GetName("int"), parent));
-	AddPrimitive(Type(GetName("unsigned int"), parent));
-	AddPrimitive(Type(GetName("long"), parent));
-	AddPrimitive(Type(GetName("unsigned long"), parent));
-	AddPrimitive(Type(GetName("float"), parent));
-	AddPrimitive(Type(GetName("double"), parent));
+	AddPrimitive(Type(GetName("void"), parent, 0));
+	AddPrimitive(Type(GetName("bool"), parent, sizeof(bool)));
+	AddPrimitive(Type(GetName("char"), parent, sizeof(char)));
+	AddPrimitive(Type(GetName("unsigned char"), parent, sizeof(unsigned char)));
+	AddPrimitive(Type(GetName("short"), parent, sizeof(short)));
+	AddPrimitive(Type(GetName("unsigned short"), parent, sizeof(unsigned short)));
+	AddPrimitive(Type(GetName("int"), parent, sizeof(int)));
+	AddPrimitive(Type(GetName("unsigned int"), parent, sizeof(unsigned int)));
+	AddPrimitive(Type(GetName("long"), parent, sizeof(long)));
+	AddPrimitive(Type(GetName("unsigned long"), parent, sizeof(unsigned long)));
+	AddPrimitive(Type(GetName("float"), parent, sizeof(float)));
+	AddPrimitive(Type(GetName("double"), parent, sizeof(double)));
 }
 
 

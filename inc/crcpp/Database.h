@@ -45,6 +45,10 @@ namespace crcpp
 	struct Type : public Primitive
 	{
 		static const Kind KIND = KIND_TYPE;
+
+		Type() : size(0) { }
+
+		unsigned int size;
 	};
 
 
@@ -107,10 +111,9 @@ namespace crcpp
 	{
 		static const Kind KIND = KIND_CLASS;
 
-		Class() : base_class(0), size(0) { }
+		Class() : base_class(0) { }
 
 		const Class* base_class;
-		unsigned int size;
 
 		// All sorted by name
 		CArray<const Enum*> enums;

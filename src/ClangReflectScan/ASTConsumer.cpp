@@ -379,7 +379,7 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const crdb::Name& name, co
 		// Strip out the raw 64-bit value - the compiler will automatically modify any values
 		// greater than 64-bits without having to worry about that here
 		llvm::APSInt value = constant_decl->getInitVal();
-		__int64 value_int = value.getRawData()[0];
+		int value_int = (int)value.getRawData()[0];
 
 		// Clang doesn't construct the enum name as a C++ compiler would see it so do that first
 		// NOTE: May want to revisit this later

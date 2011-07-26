@@ -17,6 +17,7 @@
 namespace
 {
 	// Overloads for copying between databases
+	// TODO: Rewrite with database metadata?
 	void CopyPrimitive(crcpp::Primitive& dest, const crdb::Primitive& src)
 	{
 	}
@@ -42,10 +43,14 @@ namespace
 		default: assert(false && "Case not handled");
 		}
 	}
+	void CopyPrimitive(crcpp::Type& dest, const crdb::Type& src)
+	{
+		dest.size = src.size;
+	}
 	void CopyPrimitive(crcpp::Class& dest, const crdb::Class& src)
 	{
-		dest.base_class = (crcpp::Class*)src.base_class.hash;
 		dest.size = src.size;
+		dest.base_class = (crcpp::Class*)src.base_class.hash;
 	}
 
 

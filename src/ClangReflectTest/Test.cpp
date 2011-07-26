@@ -46,23 +46,10 @@ enum NamedGlobalEnum
 
 	VALUE_64_BITS_UNSIGNED_MAX = (1LL << 64) - 1,
 	VALUE_32_BITS_SIGNED_MAX = (1LL << 31) - 1,
+	VALUE_32_BITS_SIGNED_MAX_PLUS_ONE = (1LL << 31),
 	VALUE_32_BITS_UNSIGNED_MAX = (1LL << 32) - 1,
 	VALUE_32_BITS_UNSIGNED_MAX_PLUS_ONE = (1LL << 32),
 	VALUE_32_BITS_SIGNED_MIN = -(1LL << 31),
-};
-
-
-// --------------------------------------------------------------------------------------------
-// Unnamed global enumeration
-// --------------------------------------------------------------------------------------------
-enum
-{
-	UNNAMED_VALUE_UNASSIGNED,
-	UNNAMED_VALUE_UNASSIGNED_PLUS_ONE,
-	UNNAMED_VALUE_ONE = 1,
-	UNNAMED_VALUE_THREE = 3,
-	UNNAMED_VALUE_32BITS = 1 << 30,
-	UNNAMED_VALUE_32BITS_TRAILING
 };
 
 

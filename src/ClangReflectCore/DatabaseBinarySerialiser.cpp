@@ -83,7 +83,6 @@ namespace
 		case (1): CopyStridedData< CopyInteger<bool, 1> >(db, dest, source, nb_entries, dest_stride, source_stride, field_size); break;
 		case (2): CopyStridedData< CopyInteger<short, 2> >(db, dest, source, nb_entries, dest_stride, source_stride, field_size); break;
 		case (4): CopyStridedData< CopyInteger<int, 4> >(db, dest, source, nb_entries, dest_stride, source_stride, field_size); break;
-		case (8): CopyStridedData< CopyInteger<__int64, 8> >(db, dest, source, nb_entries, dest_stride, source_stride, field_size); break;
 		default: CopyStridedData< CopyMemory >(db, dest, source, nb_entries, dest_stride, source_stride, field_size); break;
 		}
 	}
