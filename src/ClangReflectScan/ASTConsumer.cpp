@@ -46,7 +46,7 @@ namespace
 	}
 
 
-	bool MakeField(crdb::Database& db, const ReflectionSpecs& specs, clang::QualType qual_type, const char* param_name, crdb::Name parent_name, int index, crdb::Field& field)
+	bool MakeField(crdb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, const char* param_name, crdb::Name parent_name, int index, crdb::Field& field)
 	{
 		// Get type info for the field
 		clang::SplitQualType sqt = qual_type.split();
@@ -74,7 +74,7 @@ namespace
 		// Record the qualifiers before stripping them and generating the type name
 		clang::Qualifiers qualifiers = clang::Qualifiers::fromFastMask(sqt.second);
 		qual_type.removeLocalFastQualifiers();
-		std::string type_name_str = qual_type.getAsString();
+		std::string type_name_str = qual_type.getAsString(ctx.getLangOptions());
 
 		// Is this a field that can be safely recorded?
 		type = sqt.first;
@@ -113,7 +113,7 @@ namespace
 	}
 
 
-	void MakeFunction(crdb::Database& db, const ReflectionSpecs& specs, clang::NamedDecl* decl, crdb::Name function_name, crdb::Name parent_name, std::vector<crdb::Field>& parameters)
+	void MakeFunction(crdb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::NamedDecl* decl, crdb::Name function_name, crdb::Name parent_name, std::vector<crdb::Field>& parameters)
 	{
 		// Cast to a function
 		clang::FunctionDecl* function_decl = dyn_cast<clang::FunctionDecl>(decl);
@@ -127,7 +127,7 @@ namespace
 
 		// Parse the return type - named as a reserved keyword so it won't clash with user symbols
 		crdb::Field return_parameter;
-		if (!MakeField(db, specs, function_decl->getResultType(), "return", function_name, -1, return_parameter))
+		if (!MakeField(db, specs, ctx, function_decl->getResultType(), "return", function_name, -1, return_parameter))
 		{
 			LOG(ast, WARNING, "Unsupported/unreflected return type for '%s' - skipping reflection\n", function_name.text.c_str());
 			return;
@@ -148,7 +148,7 @@ namespace
 
 			// Collect a list of constructed parameters in case evaluating one of them fails
 			crdb::Field parameter;
-			if (!MakeField(db, specs, param_decl->getType(), param_decl->getNameAsString().c_str(), function_name, index++, parameter))
+			if (!MakeField(db, specs, ctx, param_decl->getType(), param_decl->getNameAsString().c_str(), function_name, index++, parameter))
 			{
 				LOG(ast, WARNING, "Unsupported/unreflected parameter type for '%s' - skipping reflection of '%s'\n", param_decl->getNameAsString().c_str(), function_name.text.c_str());
 				return;
@@ -329,7 +329,7 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 
 		// Parse the type name
 		clang::QualType base_type = base.getType();
-		std::string type_name_str = base_type.getAsString();
+		std::string type_name_str = base_type.getAsString(m_ASTContext.getLangOptions());
 		Remove(type_name_str, "struct ");
 		Remove(type_name_str, "class ");
 
@@ -402,7 +402,7 @@ void ASTConsumer::AddFunctionDecl(clang::NamedDecl* decl, const crdb::Name& name
 {
 	// Parse and add the function
 	std::vector<crdb::Field> parameters;
-	MakeFunction(m_DB, m_ReflectionSpecs, decl, name, parent_name, parameters);
+	MakeFunction(m_DB, m_ReflectionSpecs, m_ASTContext, decl, name, parent_name, parameters);
 }
 
 
@@ -417,7 +417,7 @@ void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const crdb::Name& name, 
 	{
 		// Parse the 'this' type, treating it as the first parameter to the method
 		crdb::Field this_param;
-		if (!MakeField(m_DB, m_ReflectionSpecs, method_decl->getThisType(m_ASTContext), "this", name, 0, this_param))
+		if (!MakeField(m_DB, m_ReflectionSpecs, m_ASTContext, method_decl->getThisType(m_ASTContext), "this", name, 0, this_param))
 		{
 			LOG(ast, WARNING, "Unsupported/unreflected 'this' type for '%s'\n", name.text.c_str());
 			return;
@@ -426,7 +426,7 @@ void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const crdb::Name& name, 
 	}
 
 	// Parse and add the method
-	MakeFunction(m_DB, m_ReflectionSpecs, decl, name, parent_name, parameters);
+	MakeFunction(m_DB, m_ReflectionSpecs, m_ASTContext, decl, name, parent_name, parameters);
 }
 
 
@@ -439,7 +439,7 @@ void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 	// Parse and add the field
 	crdb::Field field;
 	crdb::u32 offset = layout->getFieldOffset(field_decl->getFieldIndex()) / 8;
-	if (!MakeField(m_DB, m_ReflectionSpecs, field_decl->getType(), field_decl->getNameAsString().c_str(), parent_name, offset, field))
+	if (!MakeField(m_DB, m_ReflectionSpecs, m_ASTContext, field_decl->getType(), field_decl->getNameAsString().c_str(), parent_name, offset, field))
 	{
 		LOG(ast, WARNING, "Unsupported/unreflected type for field '%s' in '%s'\n", field_decl->getNameAsString().c_str(), parent_name.text.c_str());
 		return;

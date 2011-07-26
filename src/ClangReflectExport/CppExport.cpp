@@ -383,6 +383,16 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 
 namespace
 {
+	bool SortFieldByOffset(const crcpp::Field* a, const crcpp::Field* b)
+	{
+		return a->offset < b->offset;
+	}
+	bool SortEnumConstantByValue(const crcpp::EnumConstant* a, const crcpp::EnumConstant* b)
+	{
+		return a->value < b->value;
+	}
+
+
 	template <typename TYPE>
 	void LogPrimitives(const crcpp::CArray<const TYPE*>& primitives)
 	{
@@ -430,10 +440,14 @@ namespace
 
 		LOG_APPEND(cppexp, INFO, " %s(", func.name.text);
 
-		for (int i = 0; i < func.parameters.size(); i++)
+		// Sort parameters by index for viewing
+		crcpp::CArray<const crcpp::Field*> sorted_parameters = func.parameters;
+		std::sort(sorted_parameters.data(), sorted_parameters.data() + sorted_parameters.size(), SortFieldByOffset);
+
+		for (int i = 0; i < sorted_parameters.size(); i++)
 		{
-			LogField(*func.parameters[i]);
-			if (i != func.parameters.size() - 1)
+			LogField(*sorted_parameters[i]);
+			if (i != sorted_parameters.size() - 1)
 			{
 				LOG_APPEND(cppexp, INFO, ", ");
 			}
@@ -455,13 +469,17 @@ namespace
 		LOG(cppexp, INFO, "{\n");
 		LOG_PUSH_INDENT(cppexp);
 
-		LogPrimitives(e.constants);
+		// Sort constants by value for viewing
+		crcpp::CArray<const crcpp::EnumConstant*> sorted_constants = e.constants;
+		std::sort(sorted_constants.data(), sorted_constants.data() + sorted_constants.size(), SortEnumConstantByValue);
+
+		LogPrimitives(sorted_constants);
 
 		LOG_POP_INDENT(cppexp);
 		LOG(cppexp, INFO, "};");
 	}
 
-
+	
 	void LogPrimitive(const crcpp::Class& cls)
 	{
 		LOG(cppexp, INFO, "class %s", cls.name.text);
@@ -476,8 +494,12 @@ namespace
 		LOG(cppexp, INFO, "{\n");
 		LOG_PUSH_INDENT(cppexp);
 
+		// Sort fields by offset for viewing
+		crcpp::CArray<const crcpp::Field*> sorted_fields = cls.fields;
+		std::sort(sorted_fields.data(), sorted_fields.data() + sorted_fields.size(), SortFieldByOffset);
+
 		LogPrimitives(cls.classes);
-		LogPrimitives(cls.fields);
+		LogPrimitives(sorted_fields);
 		LogPrimitives(cls.enums);
 		LogPrimitives(cls.methods);
 

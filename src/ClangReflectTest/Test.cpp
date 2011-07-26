@@ -193,6 +193,7 @@ class FieldTypes
 	// Just to keep the compiler happy about the reference types stored below
 	FieldTypes();
 
+	bool Bool;
 	char Char;
 	short Short;
 	int Int;
@@ -204,6 +205,7 @@ class FieldTypes
 	float Float;
 	double Double;
 	// --- Pointers
+	bool* BoolPtr;
 	char* CharPtr;
 	short* ShortPtr;
 	int* IntPtr;
@@ -215,6 +217,7 @@ class FieldTypes
 	float* FloatPtr;
 	double* DoublePtr;
 
+	const bool* ConstBoolPtr;
 	const char* ConstCharPtr;
 	const short* ConstShortPtr;
 	const int* ConstIntPtr;
@@ -226,6 +229,7 @@ class FieldTypes
 	const float* ConstFloatPtr;
 	const double* ConstDoublePtr;
 	// --- References
+	bool& BoolRef;
 	char& CharRef;
 	short& ShortRef;
 	int& IntRef;
@@ -237,6 +241,7 @@ class FieldTypes
 	float& FloatRef;
 	double& DoubleRef;
 
+	const bool& ConstBoolRef;
 	const char& ConstCharRef;
 	const short& ConstShortRef;
 	const int& ConstIntRef;

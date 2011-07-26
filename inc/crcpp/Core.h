@@ -25,9 +25,14 @@ namespace crcpp
 
 		// Copy construct
 		CArray(const CArray& rhs)
-			: m_Size(rhs.size)
-			, m_Data(new TYPE[rhs.size])
+			: m_Size(rhs.size())
+			, m_Data(new TYPE[rhs.size()])
 		{
+			// Copy each entry
+			for (int i = 0; i < m_Size; i++)
+			{
+				m_Data[i] = rhs.m_Data[i];
+			}
 		}
 
 		~CArray()
