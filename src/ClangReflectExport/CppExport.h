@@ -27,6 +27,8 @@ struct CppExport
 	crcpp::CArray<crcpp::Function> functions;
 	crcpp::CArray<crcpp::Class> classes;
 	crcpp::CArray<crcpp::Namespace> namespaces;
+
+	crcpp::Namespace global_namespace;
 };
 
 

@@ -226,6 +226,51 @@ namespace
 			func.parameters = new_parameters;
 		}
 	}
+
+
+	template <typename TYPE>
+	int CountGlobalPrimitives(const crcpp::CArray<TYPE>& primitives)
+	{
+		// Finding all unparented primitives
+		int nb_global_primitives = 0;
+		for (int i = 0; i < primitives.size(); i++)
+		{
+			if (primitives[i].parent == 0)
+			{
+				nb_global_primitives++;
+			}
+		}
+		return nb_global_primitives;
+	}
+
+
+	template <typename TYPE>
+	void GatherGlobalPrimitives(crcpp::CArray<const TYPE*>& dest, const crcpp::CArray<TYPE>& src)
+	{
+		// Allocate enough space for the primitives
+		int nb_global_primitives = CountGlobalPrimitives(src);
+		dest = crcpp::CArray<const TYPE*>(nb_global_primitives);
+
+		// Gather all unparented primitives
+		int index = 0;
+		for (int i = 0; i < src.size(); i++)
+		{
+			if (src[i].parent == 0)
+			{
+				dest[index++] = &src[i];
+			}
+		}
+	}
+
+
+	void BuildGlobalNamespace(CppExport& cppexp)
+	{
+		GatherGlobalPrimitives(cppexp.global_namespace.namespaces, cppexp.namespaces);
+		GatherGlobalPrimitives(cppexp.global_namespace.types, cppexp.types);
+		GatherGlobalPrimitives(cppexp.global_namespace.enums, cppexp.enums);
+		GatherGlobalPrimitives(cppexp.global_namespace.classes, cppexp.classes);
+		GatherGlobalPrimitives(cppexp.global_namespace.functions, cppexp.functions);
+	}
 }
 
 
@@ -267,6 +312,9 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	// Return parameters are parented to their functions as parameters. Move them from
 	// wherever they are in the list and into the return parameter data member.
 	AssignReturnParameters(cppexp);
+
+	// Now gather any unparented primitives into the root namespace
+	BuildGlobalNamespace(cppexp);
 }
 
 
@@ -279,20 +327,6 @@ namespace
 		{
 			LogPrimitive(*primitives[i]);
 			LOG_NEWLINE(cppexp);
-		}
-	}
-
-
-	template <typename TYPE>
-	void LogGlobalPrimitives(const crcpp::CArray<TYPE>& primitives)
-	{
-		for (int i = 0; i < primitives.size(); i++)
-		{
-			if (primitives[i].parent == 0)
-			{
-				LogPrimitive(primitives[i]);
-				LOG_NEWLINE(cppexp);
-			}
 		}
 	}
 
@@ -391,17 +425,23 @@ namespace
 
 	void LogPrimitive(const crcpp::Namespace& ns)
 	{
-		LOG(cppexp, INFO, "namespace %s\n", ns.name.text);
-		LOG(cppexp, INFO, "{\n");
-		LOG_PUSH_INDENT(cppexp);
+		if (ns.name.text)
+		{
+			LOG(cppexp, INFO, "namespace %s\n", ns.name.text);
+			LOG(cppexp, INFO, "{\n");
+			LOG_PUSH_INDENT(cppexp);
+		}
 
 		LogPrimitives(ns.namespaces);
 		LogPrimitives(ns.classes);
 		LogPrimitives(ns.enums);
 		LogPrimitives(ns.functions);
 
-		LOG_POP_INDENT(cppexp);
-		LOG(cppexp, INFO, "}");
+		if (ns.name.text)
+		{
+			LOG_POP_INDENT(cppexp);
+			LOG(cppexp, INFO, "}");
+		}
 	}
 }
 
@@ -409,9 +449,5 @@ namespace
 void WriteCppExportAsText(const CppExport& cppexp, const char* filename)
 {
 	LOG_TO_FILE(cppexp, ALL, filename);
-
-	LogGlobalPrimitives(cppexp.namespaces);
-	LogGlobalPrimitives(cppexp.classes);
-	LogGlobalPrimitives(cppexp.enums);
-	LogGlobalPrimitives(cppexp.functions);
+	LogPrimitive(cppexp.global_namespace);
 }
