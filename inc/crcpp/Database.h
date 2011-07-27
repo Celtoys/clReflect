@@ -174,7 +174,7 @@ namespace crcpp
 
 		// A list of references to all types, enums and classes for potentially quicker
 		// searches during serialisation
-		CArray<Type*> type_primitives;
+		CArray<const Type*> type_primitives;
 
 		// The root namespace that allows you to reach every referenced primitive
 		Namespace global_namespace;

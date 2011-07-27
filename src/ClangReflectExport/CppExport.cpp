@@ -15,6 +15,41 @@
 
 namespace
 {
+	void BuildNames(const crdb::Database& db, CppExport& cppexp)
+	{
+		// Allocate the name data
+		unsigned int name_data_size = 0;
+		for (crdb::NameMap::const_iterator i = db.m_Names.begin(); i != db.m_Names.end(); ++i)
+		{
+			name_data_size += i->second.text.length() + 1;
+		}
+		cppexp.db->name_text_data = cppexp.allocator.Alloc<char>(name_data_size);
+
+		// Populate the name data and build the sorted name map
+		name_data_size = 0;
+		for (crdb::NameMap::const_iterator i = db.m_Names.begin(); i != db.m_Names.end(); ++i)
+		{
+			char* text_ptr = (char*)(cppexp.db->name_text_data + name_data_size);
+			cppexp.name_map[i->first] = text_ptr;
+			const crdb::Name& name = i->second;
+			strcpy(text_ptr, name.text.c_str());
+			name_data_size += name.text.length() + 1;
+		}
+
+		// Build the in-memory name array
+		unsigned int nb_names = cppexp.name_map.size();
+		cppexp.db->names = crcpp::CArray<crcpp::Name>(cppexp.allocator.Alloc<crcpp::Name>(nb_names), nb_names);
+		unsigned int index = 0;
+		for (CppExport::NameMap::const_iterator i = cppexp.name_map.begin(); i != cppexp.name_map.end(); ++i)
+		{
+			crcpp::Name name;
+			name.hash = i->first;
+			name.text = i->second;
+			cppexp.db->names[index++] = name;
+		}
+	}
+
+
 	// Overloads for copying between databases
 	// TODO: Rewrite with database metadata?
 	void CopyPrimitive(crcpp::Primitive& dest, const crdb::Primitive& src)
@@ -269,6 +304,29 @@ namespace
 	}
 
 
+	void GatherTypePrimitives(CppExport& cppexp)
+	{
+		// Allocate the array
+		int nb_type_primitives = cppexp.db->types.size() + cppexp.db->classes.size() + cppexp.db->enums.size();
+		cppexp.db->type_primitives = crcpp::CArray<const crcpp::Type*>(cppexp.allocator.Alloc<const crcpp::Type*>(nb_type_primitives), nb_type_primitives);
+
+		// Generate references to anything that is a type
+		int index = 0;
+		for (int i = 0; i < cppexp.db->types.size(); i++)
+		{
+			cppexp.db->type_primitives[index++] = &cppexp.db->types[i];
+		}
+		for (int i = 0; i < cppexp.db->classes.size(); i++)
+		{
+			cppexp.db->type_primitives[index++] = &cppexp.db->classes[i];
+		}
+		for (int i = 0; i < cppexp.db->enums.size(); i++)
+		{
+			cppexp.db->type_primitives[index++] = &cppexp.db->enums[i];
+		}
+	}
+
+
 	// Sort an array of primitive pointers by name
 	bool SortPrimitiveByName(const crcpp::Primitive* a, const crcpp::Primitive* b)
 	{
@@ -314,41 +372,6 @@ namespace
 		for (int i = 0; i < primitives.size(); i++)
 		{
 			SortPrimitives(primitives[i]);
-		}
-	}
-
-
-	void BuildNames(const crdb::Database& db, CppExport& cppexp)
-	{
-		// Allocate the name data
-		unsigned int name_data_size = 0;
-		for (crdb::NameMap::const_iterator i = db.m_Names.begin(); i != db.m_Names.end(); ++i)
-		{
-			name_data_size += i->second.text.length() + 1;
-		}
-		cppexp.db->name_text_data = cppexp.allocator.Alloc<char>(name_data_size);
-
-		// Populate the name data and build the sorted name map
-		name_data_size = 0;
-		for (crdb::NameMap::const_iterator i = db.m_Names.begin(); i != db.m_Names.end(); ++i)
-		{
-			char* text_ptr = (char*)(cppexp.db->name_text_data + name_data_size);
-			cppexp.name_map[i->first] = text_ptr;
-			const crdb::Name& name = i->second;
-			strcpy(text_ptr, name.text.c_str());
-			name_data_size += name.text.length() + 1;
-		}
-
-		// Build the in-memory name array
-		unsigned int nb_names = cppexp.name_map.size();
-		cppexp.db->names = crcpp::CArray<crcpp::Name>(cppexp.allocator.Alloc<crcpp::Name>(nb_names), nb_names);
-		unsigned int index = 0;
-		for (CppExport::NameMap::const_iterator i = cppexp.name_map.begin(); i != cppexp.name_map.end(); ++i)
-		{
-			crcpp::Name name;
-			name.hash = i->first;
-			name.text = i->second;
-			cppexp.db->names[index++] = name;
 		}
 	}
 }
@@ -397,8 +420,12 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	// wherever they are in the list and into the return parameter data member.
 	AssignReturnParameters(cppexp);
 
-	// Now gather any unparented primitives into the root namespace
+	// Gather any unparented primitives into the root namespace
 	BuildGlobalNamespace(cppexp);
+
+	// Generate a list of references to all type primitives so that runtime serialisation code
+	// can quickly look them up.
+	GatherTypePrimitives(cppexp);
 
 	// Sort any primitive pointer arrays in the database by name hash, ascending. This
 	// is to allow fast O(logN) searching of the primitive arrays at runtime with a
@@ -407,6 +434,7 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	SortPrimitives(cppexp.db->functions);
 	SortPrimitives(cppexp.db->classes);
 	SortPrimitives(cppexp.db->namespaces);
+	SortPrimitives(cppexp.db->type_primitives);
 }
 
 
