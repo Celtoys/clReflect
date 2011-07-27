@@ -4,7 +4,9 @@
 
 namespace crcpp
 {
+	//
 	// Wrapper around a classic C-style array.
+	//
 	template <typename TYPE>
 	class CArray
 	{
@@ -13,13 +15,23 @@ namespace crcpp
 		CArray()
 			: m_Size(0)
 			, m_Data(0)
+			, m_Owner(1)
 		{
 		}
 
 		// Initialise with array count
-		CArray(int size)
+		CArray(unsigned int size)
 			: m_Size(size)
 			, m_Data(new TYPE[size])
+			, m_Owner(1)
+		{
+		}
+
+		// Initialise with pre-allocated data
+		CArray(void* data, unsigned int size)
+			: m_Size(size)
+			, m_Data((TYPE*)data)
+			, m_Owner(0)
 		{
 		}
 
@@ -27,9 +39,10 @@ namespace crcpp
 		CArray(const CArray& rhs)
 			: m_Size(rhs.size())
 			, m_Data(new TYPE[rhs.size()])
+			, m_Owner(1)
 		{
 			// Copy each entry
-			for (int i = 0; i < m_Size; i++)
+			for (unsigned int i = 0; i < m_Size; i++)
 			{
 				m_Data[i] = rhs.m_Data[i];
 			}
@@ -37,7 +50,19 @@ namespace crcpp
 
 		~CArray()
 		{
-			delete [] m_Data;
+			if (m_Owner)
+			{
+				delete [] m_Data;
+			}
+		}
+
+		// Removes an element from the list without reallocating any memory
+		// Causes the order of the entries in the list to change
+		void unstable_remove(int index)
+		{
+			// TODO: assert index
+			m_Data[index] = m_Data[m_Size - 1];
+			m_Size--;
 		}
 
 		int size() const
@@ -79,7 +104,7 @@ namespace crcpp
 			m_Data = new TYPE[m_Size];
 
 			// Assign each entry
-			for (int i = 0; i < m_Size; i++)
+			for (unsigned int i = 0; i < m_Size; i++)
 			{
 				m_Data[i] = rhs.m_Data[i];
 			}
@@ -88,7 +113,8 @@ namespace crcpp
 		}
 
 	private:
-		int m_Size;
+		unsigned int m_Size : 31;
+		unsigned int m_Owner : 1;
 		TYPE* m_Data;
 	};
 }

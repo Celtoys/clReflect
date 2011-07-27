@@ -155,6 +155,32 @@ namespace crcpp
 	}
 
 
+	struct DatabaseMem
+	{
+		// Raw allocation of all null-terminated name strings
+		const char* name_text_data;
+
+		// Mapping from hash to text string
+		CArray<Name> names;
+
+		// Ownership storage of all referenced primitives
+		CArray<Type> types;
+		CArray<EnumConstant> enum_constants;
+		CArray<Enum> enums;
+		CArray<Field> fields;
+		CArray<Function> functions;
+		CArray<Class> classes;
+		CArray<Namespace> namespaces;
+
+		// A list of references to all types, enums and classes for potentially quicker
+		// searches during serialisation
+		CArray<Type*> type_primitives;
+
+		// The root namespace that allows you to reach every referenced primitive
+		Namespace global_namespace;
+	};
+
+
 	class Database
 	{
 	public:

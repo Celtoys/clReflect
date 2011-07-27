@@ -2,6 +2,7 @@
 #pragma once
 
 
+#include "StackAllocator.h"
 #include <map>
 #include <vector>
 #include <crcpp/crcpp.h>
@@ -15,20 +16,19 @@ namespace crdb
 
 struct CppExport
 {
-	// A single collection of all names for easy read/write
-	std::map<unsigned int, int> name_hash_map;
-	std::vector<char> name_data;
+	CppExport()
+		: allocator(5 * 1024 * 1024)	// 5MB should do for now
+		, db(0)
+	{
+	}
 
-	// Sorted lists of all primitives
-	crcpp::CArray<crcpp::Type> types;
-	crcpp::CArray<crcpp::EnumConstant> enum_constants;
-	crcpp::CArray<crcpp::Enum> enums;
-	crcpp::CArray<crcpp::Field> fields;
-	crcpp::CArray<crcpp::Function> functions;
-	crcpp::CArray<crcpp::Class> classes;
-	crcpp::CArray<crcpp::Namespace> namespaces;
+	StackAllocator allocator;
 
-	crcpp::Namespace global_namespace;
+	crcpp::DatabaseMem* db;
+
+	// Hash of names for easier debugging
+	typedef std::map<unsigned int, const char*> NameMap;
+	NameMap name_map;
 };
 
 

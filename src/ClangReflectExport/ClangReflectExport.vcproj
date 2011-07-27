@@ -73,11 +73,15 @@
 			RelativePath="Main.cpp"
 			>
 		</File>
+		<File
+			RelativePath="StackAllocator.h"
+			>
+		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="OQA6dUQANPwZJJ0UnPcIIA=="
+			Value="yVHNdcYQzvfRR0i2O426Sg=="
 		/>
 	</Globals>
 </VisualStudioProject>
