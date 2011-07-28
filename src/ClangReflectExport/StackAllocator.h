@@ -61,6 +61,10 @@ public:
 		return data;
 	}
 
+	const void* GetData() const { return m_Data; }
+	unsigned int GetSize() const { return m_Size; }
+	unsigned int GetAllocatedSize() const { return m_Offset; }
+
 private:
 	char* m_Data;
 	unsigned int m_Size;

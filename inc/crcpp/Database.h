@@ -184,19 +184,6 @@ namespace crcpp
 	class Database
 	{
 	public:
-		struct FileHeader
-		{
-			// Initialises the file header to the current supported version
-			FileHeader();
-
-			unsigned char signature[7];
-			unsigned int version;
-
-			int nb_primitives;
-			int nb_names;
-			int name_data_size;
-		};
-
 		Database();
 		~Database();
 

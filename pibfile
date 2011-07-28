@@ -104,14 +104,6 @@ crmerge_exe = env.Link("crmerge.exe", crmerge_obj_files, [ crcore_lib ])
 env.Build(crmerge_exe, "crmerge")
 
 
-# Build the exporter
-crexport_cpp_files = Glob("src/ClangReflectExport", "*.cpp")
-crexport_hpp_files = Glob("src/ClangReflectExport", "*.h")
-crexport_obj_files = [ env.CPPFile(file) for file in crexport_cpp_files ]
-crexport_exe = env.Link("crexport.exe", crexport_obj_files, [ crcore_lib ])
-env.Build(crexport_exe, "crexport")
-
-
 # Build the C++ API
 crcpp_cpp_files = Glob("src/ClangReflectCpp", "*.cpp")
 crcpp_hpp_files = Glob("src/ClangReflectCpp", "*.h")
@@ -119,6 +111,14 @@ crcpp_api_files = Glob("inc", "*.h")
 crcpp_obj_files = [ env.CPPFile(file) for file in crcpp_cpp_files ]
 crcpp_lib = env.Lib("crcpp.lib", crcpp_obj_files)
 env.Build(crcpp_lib, "crcpp")
+
+
+# Build the exporter
+crexport_cpp_files = Glob("src/ClangReflectExport", "*.cpp")
+crexport_hpp_files = Glob("src/ClangReflectExport", "*.h")
+crexport_obj_files = [ env.CPPFile(file) for file in crexport_cpp_files ]
+crexport_exe = env.Link("crexport.exe", crexport_obj_files, [ crcore_lib, crcpp_lib ])
+env.Build(crexport_exe, "crexport")
 
 
 # Build the test code with the generated crscan

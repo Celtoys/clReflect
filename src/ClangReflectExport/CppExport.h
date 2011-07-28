@@ -33,4 +33,5 @@ struct CppExport
 
 
 void BuildCppExport(const crdb::Database& db, CppExport& cppexp);
+void SaveCppExport(CppExport& cppexport, const char* filename);
 void WriteCppExportAsText(const CppExport& cppexp, const char* filename);

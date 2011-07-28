@@ -56,6 +56,14 @@ namespace crcpp
 			}
 		}
 
+		// A shallow copy of each member in the array
+		void copy(const CArray<TYPE>& rhs)
+		{
+			m_Size = rhs.m_Size;
+			m_Data = rhs.m_Data;
+			m_Owner = rhs.m_Owner;
+		}
+
 		// Removes an element from the list without reallocating any memory
 		// Causes the order of the entries in the list to change
 		void unstable_remove(int index)
@@ -110,6 +118,11 @@ namespace crcpp
 			}
 
 			return *this;
+		}
+
+		static unsigned int data_offset()
+		{
+			return (unsigned int)&(((CArray<TYPE>*)0)->m_Data);
 		}
 
 	private:

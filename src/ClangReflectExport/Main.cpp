@@ -38,6 +38,7 @@ int main(int argc, const char* argv[])
 		CppExport cppexp;
 		BuildCppExport(db, cppexp);
 		WriteCppExportAsText(cppexp, "out.txt");
+		SaveCppExport(cppexp, cpp_export.c_str());
 	}
 
 	return 0;

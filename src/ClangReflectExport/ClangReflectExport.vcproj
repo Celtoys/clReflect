@@ -74,6 +74,14 @@
 			>
 		</File>
 		<File
+			RelativePath="PtrRelocator.cpp"
+			>
+		</File>
+		<File
+			RelativePath="PtrRelocator.h"
+			>
+		</File>
+		<File
 			RelativePath="StackAllocator.h"
 			>
 		</File>
@@ -81,7 +89,7 @@
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="yVHNdcYQzvfRR0i2O426Sg=="
+			Value="NmmTRMAfg7miwNxSug4hGg=="
 		/>
 	</Globals>
 </VisualStudioProject>

@@ -4,9 +4,11 @@
 //	* Check that every pointer has been linked up
 
 #include "CppExport.h"
+#include "PtrRelocator.h"
 
 #include <ClangReflectCore\Database.h>
 #include <ClangReflectCore\Logging.h>
+#include <ClangReflectCpp\DatabaseLoader.h>
 
 #include <crcpp\Database.h>
 
@@ -38,7 +40,7 @@ namespace
 
 		// Build the in-memory name array
 		unsigned int nb_names = cppexp.name_map.size();
-		cppexp.db->names = crcpp::CArray<crcpp::Name>(cppexp.allocator.Alloc<crcpp::Name>(nb_names), nb_names);
+		cppexp.db->names.copy(crcpp::CArray<crcpp::Name>(cppexp.allocator.Alloc<crcpp::Name>(nb_names), nb_names));
 		unsigned int index = 0;
 		for (CppExport::NameMap::const_iterator i = cppexp.name_map.begin(); i != cppexp.name_map.end(); ++i)
 		{
@@ -93,7 +95,7 @@ namespace
 	{
 		// Allocate enough entries for all primitives
 		const crdb::PrimitiveStore<CRDB_TYPE>& src = db.GetPrimitiveStore<CRDB_TYPE>();
-		dest = crcpp::CArray<CRCPP_TYPE>(cppexp.allocator.Alloc<CRCPP_TYPE>(src.size()), src.size());
+		dest.copy(crcpp::CArray<CRCPP_TYPE>(cppexp.allocator.Alloc<CRCPP_TYPE>(src.size()), src.size()));
 
 		// Copy individually
 		int index = 0;
@@ -164,7 +166,7 @@ namespace
 			if (int nb_refs = i->second.second)
 			{
 				PARENT_TYPE& parent = *i->second.first;
-				(parent.*carray) = crcpp::CArray<const CHILD_TYPE*>(allocator.Alloc<const CHILD_TYPE*>(nb_refs), nb_refs);
+				(parent.*carray).copy(crcpp::CArray<const CHILD_TYPE*>(allocator.Alloc<const CHILD_TYPE*>(nb_refs), nb_refs));
 
 				// To save having to do any further lookups, store the count inside the array
 				// at the end
@@ -280,7 +282,7 @@ namespace
 	{
 		// Allocate enough space for the primitives
 		int nb_global_primitives = CountGlobalPrimitives(src);
-		dest = crcpp::CArray<const TYPE*>(allocator.Alloc<const TYPE*>(nb_global_primitives), nb_global_primitives);
+		dest.copy(crcpp::CArray<const TYPE*>(allocator.Alloc<const TYPE*>(nb_global_primitives), nb_global_primitives));
 
 		// Gather all unparented primitives
 		int index = 0;
@@ -308,7 +310,7 @@ namespace
 	{
 		// Allocate the array
 		int nb_type_primitives = cppexp.db->types.size() + cppexp.db->classes.size() + cppexp.db->enums.size();
-		cppexp.db->type_primitives = crcpp::CArray<const crcpp::Type*>(cppexp.allocator.Alloc<const crcpp::Type*>(nb_type_primitives), nb_type_primitives);
+		cppexp.db->type_primitives.copy(crcpp::CArray<const crcpp::Type*>(cppexp.allocator.Alloc<const crcpp::Type*>(nb_type_primitives), nb_type_primitives));
 
 		// Generate references to anything that is a type
 		int index = 0;
@@ -435,6 +437,147 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	SortPrimitives(cppexp.db->classes);
 	SortPrimitives(cppexp.db->namespaces);
 	SortPrimitives(cppexp.db->type_primitives);
+}
+
+
+void SaveCppExport(CppExport& cppexp, const char* filename)
+{
+	PtrRelocator relocator(cppexp.allocator.GetData());
+
+	// The position of the data member within a CArray is fixed, independent of type
+	size_t array_data_offset = crcpp::CArray<int>::data_offset();
+
+	// Construct schemas for all memory-mapped crcpp types
+
+	PtrSchema& schema_database = relocator.AddSchema<crcpp::DatabaseMem>()
+		(&crcpp::DatabaseMem::name_text_data)
+		(&crcpp::DatabaseMem::names, array_data_offset)
+		(&crcpp::DatabaseMem::types, array_data_offset)
+		(&crcpp::DatabaseMem::enum_constants, array_data_offset)
+		(&crcpp::DatabaseMem::enums, array_data_offset)
+		(&crcpp::DatabaseMem::fields, array_data_offset)
+		(&crcpp::DatabaseMem::functions, array_data_offset)
+		(&crcpp::DatabaseMem::classes, array_data_offset)
+		(&crcpp::DatabaseMem::namespaces, array_data_offset)
+		(&crcpp::DatabaseMem::type_primitives, array_data_offset)
+		(&crcpp::Namespace::namespaces, array_data_offset + offsetof(crcpp::DatabaseMem, global_namespace))
+		(&crcpp::Namespace::types, array_data_offset + offsetof(crcpp::DatabaseMem, global_namespace))
+		(&crcpp::Namespace::enums, array_data_offset + offsetof(crcpp::DatabaseMem, global_namespace))
+		(&crcpp::Namespace::classes, array_data_offset + offsetof(crcpp::DatabaseMem, global_namespace))
+		(&crcpp::Namespace::functions, array_data_offset + offsetof(crcpp::DatabaseMem, global_namespace));
+
+	PtrSchema& schema_name = relocator.AddSchema<crcpp::Name>()
+		(&crcpp::Name::text);
+
+	PtrSchema& schema_primitive = relocator.AddSchema<crcpp::Primitive>()
+		(&crcpp::Primitive::parent);
+
+	PtrSchema& schema_type = relocator.AddSchema<crcpp::Type>(&schema_primitive);
+	PtrSchema& schema_enum_constant = relocator.AddSchema<crcpp::EnumConstant>(&schema_primitive);
+
+	PtrSchema& schema_enum = relocator.AddSchema<crcpp::Enum>(&schema_type)
+		(&crcpp::Enum::constants, array_data_offset);
+
+	PtrSchema& schema_field = relocator.AddSchema<crcpp::Field>(&schema_primitive)
+		(&crcpp::Field::type);
+
+	PtrSchema& schema_function = relocator.AddSchema<crcpp::Function>(&schema_primitive)
+		(&crcpp::Function::return_parameter)
+		(&crcpp::Function::parameters, array_data_offset);
+
+	PtrSchema& schema_class = relocator.AddSchema<crcpp::Class>(&schema_type)
+		(&crcpp::Class::base_class)
+		(&crcpp::Class::enums, array_data_offset)
+		(&crcpp::Class::classes, array_data_offset)
+		(&crcpp::Class::methods, array_data_offset)
+		(&crcpp::Class::fields, array_data_offset);
+
+	PtrSchema& schema_namespace = relocator.AddSchema<crcpp::Namespace>(&schema_primitive)
+		(&crcpp::Namespace::namespaces, array_data_offset)
+		(&crcpp::Namespace::types, array_data_offset)
+		(&crcpp::Namespace::enums, array_data_offset)
+		(&crcpp::Namespace::classes, array_data_offset)
+		(&crcpp::Namespace::functions, array_data_offset);
+
+	PtrSchema& schema_ptr = relocator.AddSchema<void*>()(0);
+
+	// Add pointers from the base database object
+	relocator.AddPointers(schema_database, cppexp.db);
+	relocator.AddPointers(schema_name, cppexp.db->names);
+	relocator.AddPointers(schema_type, cppexp.db->types);
+	relocator.AddPointers(schema_enum_constant, cppexp.db->enum_constants);
+	relocator.AddPointers(schema_enum, cppexp.db->enums);
+	relocator.AddPointers(schema_field, cppexp.db->fields);
+	relocator.AddPointers(schema_function, cppexp.db->functions);
+	relocator.AddPointers(schema_class, cppexp.db->classes);
+	relocator.AddPointers(schema_namespace, cppexp.db->namespaces);
+	relocator.AddPointers(schema_ptr, cppexp.db->type_primitives);
+
+	// Add pointers for the array objects within each primitive
+	// Note that currently these are expressed as general pointer relocation instructions
+	// with a specific "pointer" schema. This is 12 bytes per AddPointers call (which gets
+	// into the hundreds/thousands) that could be trimmed a little if a specific pointer
+	// relocation instruction was introduced that would cost 8 bytes.
+	for (int i = 0; i < cppexp.db->enums.size(); i++)
+	{
+		relocator.AddPointers(schema_ptr, cppexp.db->enums[i].constants);
+	}
+	for (int i = 0; i < cppexp.db->functions.size(); i++)
+	{
+		relocator.AddPointers(schema_ptr, cppexp.db->functions[i].parameters);
+	}
+	for (int i = 0; i < cppexp.db->classes.size(); i++)
+	{
+		relocator.AddPointers(schema_ptr, cppexp.db->classes[i].enums);
+		relocator.AddPointers(schema_ptr, cppexp.db->classes[i].classes);
+		relocator.AddPointers(schema_ptr, cppexp.db->classes[i].methods);
+		relocator.AddPointers(schema_ptr, cppexp.db->classes[i].fields);
+	}
+	for (int i = 0; i < cppexp.db->namespaces.size(); i++)
+	{
+		relocator.AddPointers(schema_ptr, cppexp.db->namespaces[i].namespaces);
+		relocator.AddPointers(schema_ptr, cppexp.db->namespaces[i].types);
+		relocator.AddPointers(schema_ptr, cppexp.db->namespaces[i].enums);
+		relocator.AddPointers(schema_ptr, cppexp.db->namespaces[i].classes);
+		relocator.AddPointers(schema_ptr, cppexp.db->namespaces[i].functions);
+	}
+
+	// Make all pointers relative to the start address
+	relocator.MakeRelative();
+
+	// Open the output file
+	FILE* fp = fopen(filename, "wb");
+	if (fp == 0)
+	{
+		return;
+	}
+
+	// Write the header
+	crcpp::DatabaseFileHeader header;
+	const std::vector<PtrSchema*>& schemas = relocator.GetSchemas();
+	header.nb_ptr_schemas = schemas.size();
+	const std::vector<PtrRelocation>& relocations = relocator.GetRelocations();
+	header.nb_ptr_relocations = relocations.size();
+	header.data_size = cppexp.allocator.GetAllocatedSize();
+	fwrite(&header, sizeof(header), 1, fp);
+
+	// Write the schemas
+	for (size_t i = 0; i < schemas.size(); i++)
+	{
+		const PtrSchema& s = *schemas[i];
+		fwrite(&s.stride, sizeof(size_t), 1, fp);
+		size_t nb_ptrs = s.ptr_offsets.size();
+		fwrite(&nb_ptrs, sizeof(size_t), 1, fp);
+		fwrite(&s.ptr_offsets.front(), sizeof(size_t), nb_ptrs, fp);
+	}
+
+	// Write the relocations
+	fwrite(&relocations.front(), sizeof(PtrRelocation), relocations.size(), fp);
+
+	// Write the complete memory map
+	fwrite(cppexp.allocator.GetData(), cppexp.allocator.GetAllocatedSize(), 1, fp);
+
+	fclose(fp);
 }
 
 
