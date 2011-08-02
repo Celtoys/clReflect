@@ -97,7 +97,7 @@ int main(int argc, const char* argv[])
 	}
 
 	// Parse the AST
-	ClangHost clang_host;
+	ClangHost clang_host(args);
 	ClangASTParser ast_parser(clang_host);
 	ast_parser.ParseAST(input_filename);
 

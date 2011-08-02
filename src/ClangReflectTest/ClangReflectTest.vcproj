@@ -5,6 +5,7 @@
 	Name="ClangReflectTest"
 	ProjectGUID="{A5E0A651-5786-4AC9-B118-6B3B55D7656B}"
 	RootNamespace="ClangReflectTest"
+	Keyword="Win32Proj"
 	>
 	<Platforms>
 		<Platform
@@ -16,43 +17,44 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="10"
-			CharacterSet="2"
+			OutputDirectory="..\..\bin\Debug"
+			IntermediateDirectory="..\..\obj\Debug"
+			ConfigurationType="0"
+			CharacterSet="1"
 			>
 			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
+				Name="VCNMakeTool"
+				BuildCommandLine="cd ..\.. &amp; pib debug -target crtest"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target crtest"
+				CleanCommandLine="cd ..\.. &amp; pib clean debug -target crtest"
+				Output="..\..\bin\Debug\crtest.exe"
+				PreprocessorDefinitions=""
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
 			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="10"
-			CharacterSet="2"
-			WholeProgramOptimization="1"
+			OutputDirectory="..\..\bin\Release"
+			IntermediateDirectory="..\..\obj\Release"
+			ConfigurationType="0"
+			CharacterSet="1"
 			>
 			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
+				Name="VCNMakeTool"
+				BuildCommandLine="cd ..\.. &amp; pib release -target crtest"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target crtest"
+				CleanCommandLine="cd ..\.. &amp; pib clean release -target crtest"
+				Output="..\..\bin\Release\crtest.exe"
+				PreprocessorDefinitions=""
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
 			/>
 		</Configuration>
 	</Configurations>
@@ -60,18 +62,22 @@
 	</References>
 	<Files>
 		<File
-			RelativePath=".\crcpp.h"
+			RelativePath="Main.cpp"
 			>
 		</File>
 		<File
-			RelativePath=".\Test.cpp"
+			RelativePath="Test.cpp"
 			>
 		</File>
 		<File
-			RelativePath=".\TestReflectionSpecs.cpp"
+			RelativePath="TestReflectionSpecs.cpp"
 			>
 		</File>
 	</Files>
 	<Globals>
+		<Global
+			Name="PiBDigest"
+			Value="X6rfBJw5_lBRXjsAEaJmDw=="
+		/>
 	</Globals>
 </VisualStudioProject>

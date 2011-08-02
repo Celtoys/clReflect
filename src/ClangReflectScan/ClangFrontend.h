@@ -28,12 +28,15 @@ namespace clang
 }
 
 
+struct Arguments;
+
+
 //
 // Shared clang objects used during the parsing ASTs
 //
 struct ClangHost
 {
-	ClangHost();
+	ClangHost(Arguments& args);
 
 	llvm::raw_fd_ostream output_stream;
 

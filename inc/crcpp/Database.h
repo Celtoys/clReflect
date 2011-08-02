@@ -34,7 +34,11 @@ namespace crcpp
 			KIND_FIELD
 		};
 
-		Primitive() : kind(KIND_NONE), parent(0) { }
+		Primitive()
+			: kind(KIND_NONE)
+			, parent(0)
+		{
+		}
 
 		Kind kind;
 		Name name;
@@ -46,7 +50,10 @@ namespace crcpp
 	{
 		static const Kind KIND = KIND_TYPE;
 
-		Type() : size(0) { }
+		Type()
+			: size(0)
+		{
+		}
 
 		unsigned int size;
 	};
@@ -56,7 +63,10 @@ namespace crcpp
 	{
 		static const Kind KIND = KIND_ENUM_CONSTANT;
 
-		EnumConstant() : value(0) { }
+		EnumConstant()
+			: value(0)
+		{
+		}
 
 		int value;
 	};
@@ -83,7 +93,14 @@ namespace crcpp
 			MODIFIER_REFERENCE
 		};
 
-		Field() : type(0), modifier(modifier), is_const(false), offset(0), parent_unique_id(0) { }
+		Field()
+			: type(0)
+			, modifier(MODIFIER_NONE)
+			, is_const(false)
+			, offset(0)
+			, parent_unique_id(0)
+		{
+		}
 
 		const Type* type;
 		Modifier modifier;
@@ -97,7 +114,11 @@ namespace crcpp
 	{
 		static const Kind KIND = KIND_FUNCTION;
 
-		Function() : return_parameter(0), unique_id(0) { }
+		Function()
+			: return_parameter(0)
+			, unique_id(0)
+		{
+		}
 
 		unsigned int unique_id;
 		const Field* return_parameter;
@@ -111,7 +132,10 @@ namespace crcpp
 	{
 		static const Kind KIND = KIND_CLASS;
 
-		Class() : base_class(0) { }
+		Class()
+			: base_class(0)
+		{
+		}
 
 		const Class* base_class;
 
@@ -150,13 +174,17 @@ namespace crcpp
 	template <typename TYPE>
 	const TYPE* FindPrimitive(const CArray<const TYPE*>& primitives, Name name)
 	{
-		static_cast<const Primitive*>((const TYPE*)0);
 		return (TYPE*)FindPrimitive((const CArray<const Primitive*>&)primitives, name);
 	}
 
 
 	struct DatabaseMem
 	{
+		DatabaseMem()
+			: name_text_data(0)
+		{
+		}
+
 		// Raw allocation of all null-terminated name strings
 		const char* name_text_data;
 
@@ -198,22 +226,6 @@ namespace crcpp
 		Database(const Database&);
 		Database& operator = (const Database&);
 
-		// Raw allocation of all null-terminated name strings
-		const char* m_NameTextData;
-
-		// Mapping from hash to text string
-		CArray<Name> m_Names;
-
-		// Ownership storage of all referenced primitives
-		CArray<Type> m_Types;
-		CArray<EnumConstant> m_EnumConstants;
-		CArray<Enum> m_Enums;
-		CArray<Field> m_Fields;
-		CArray<Function> m_Functions;
-		CArray<Class> m_Classes;
-		CArray<Namespace> m_Namespaces;
-
-		// Global map to all primitives in the database
-		CArray<const Primitive*> m_Primitives;
+		DatabaseMem* m_DatabaseMem;
 	};
 }

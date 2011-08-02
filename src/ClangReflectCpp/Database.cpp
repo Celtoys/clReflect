@@ -1,5 +1,6 @@
 
 #include <crcpp\Database.h>
+#include "DatabaseLoader.h"
 
 #include <cstdio>
 #include <cstring>
@@ -41,20 +42,21 @@ const crcpp::Primitive* crcpp::FindPrimitive(const CArray<const Primitive*>& pri
 
 
 crcpp::Database::Database()
-	: m_NameTextData(0)
+	: m_DatabaseMem(0)
 {
 }
 
 
 crcpp::Database::~Database()
 {
-	delete [] m_NameTextData;
+	delete (char*)m_DatabaseMem;
 }
 
 
 bool crcpp::Database::Load(const char* filename)
 {
-	return false;
+	m_DatabaseMem = LoadMemoryMappedDatabase(filename);
+	return m_DatabaseMem != 0;
 }
 
 

@@ -26,14 +26,18 @@ struct Arguments
 		return args.size();
 	}
 
-	size_t GetIndexOf(const std::string& arg) const
+	size_t GetIndexOf(const std::string& arg, int occurrence = 0) const
 	{
 		// Linear search for a matching argument
+		int found = 0;
 		for (size_t i = 0; i < args.size(); i++)
 		{
 			if (args[i] == arg)
 			{
-				return i;
+				if (found++ == occurrence)
+				{
+					return i;
+				}
 			}
 		}
 
@@ -46,10 +50,10 @@ struct Arguments
 		return GetIndexOf(arg) != -1;
 	}
 
-	std::string GetProperty(const std::string& arg) const
+	std::string GetProperty(const std::string& arg, int occurrence = 0) const
 	{
 		// Does the arg exist and does it have a value
-		size_t index = GetIndexOf(arg);
+		size_t index = GetIndexOf(arg, occurrence);
 		if (index == -1 || index + 1 >= args.size())
 		{
 			return "";

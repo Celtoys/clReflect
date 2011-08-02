@@ -1,6 +1,5 @@
 
 // TODO:
-//	* Save to disk
 //	* Check that every pointer has been linked up
 
 #include "CppExport.h"
@@ -552,30 +551,47 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		return;
 	}
 
+	// Count the total number of pointer offsets
+	size_t nb_ptr_offsets = 0;
+	const std::vector<PtrSchema*>& schemas = relocator.GetSchemas();
+	for (size_t i = 0; i < schemas.size(); i++)
+	{
+		nb_ptr_offsets += schemas[i]->ptr_offsets.size();
+	}
+
 	// Write the header
 	crcpp::DatabaseFileHeader header;
-	const std::vector<PtrSchema*>& schemas = relocator.GetSchemas();
 	header.nb_ptr_schemas = schemas.size();
+	header.nb_ptr_offsets = nb_ptr_offsets;
 	const std::vector<PtrRelocation>& relocations = relocator.GetRelocations();
 	header.nb_ptr_relocations = relocations.size();
 	header.data_size = cppexp.allocator.GetAllocatedSize();
 	fwrite(&header, sizeof(header), 1, fp);
 
-	// Write the schemas
+	// Write the complete memory map
+	fwrite(cppexp.allocator.GetData(), cppexp.allocator.GetAllocatedSize(), 1, fp);
+
+	// Write the stride of each schema and the location of their pointers
+	size_t ptrs_offset = 0;
 	for (size_t i = 0; i < schemas.size(); i++)
 	{
 		const PtrSchema& s = *schemas[i];
-		fwrite(&s.stride, sizeof(size_t), 1, fp);
 		size_t nb_ptrs = s.ptr_offsets.size();
-		fwrite(&nb_ptrs, sizeof(size_t), 1, fp);
-		fwrite(&s.ptr_offsets.front(), sizeof(size_t), nb_ptrs, fp);
+		fwrite(&s.stride, sizeof(s.stride), 1, fp);
+		fwrite(&ptrs_offset, sizeof(ptrs_offset), 1, fp);
+		fwrite(&nb_ptrs, sizeof(nb_ptrs), 1, fp);
+		ptrs_offset += nb_ptrs;
+	}
+
+	// Write the schema pointer offsets
+	for (size_t i = 0; i < schemas.size(); i++)
+	{
+		const PtrSchema& s = *schemas[i];
+		fwrite(&s.ptr_offsets.front(), sizeof(size_t), s.ptr_offsets.size(), fp);
 	}
 
 	// Write the relocations
 	fwrite(&relocations.front(), sizeof(PtrRelocation), relocations.size(), fp);
-
-	// Write the complete memory map
-	fwrite(cppexp.allocator.GetData(), cppexp.allocator.GetAllocatedSize(), 1, fp);
 
 	fclose(fp);
 }

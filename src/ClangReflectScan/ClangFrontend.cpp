@@ -1,6 +1,8 @@
 
 #include "ClangFrontend.h"
 
+#include <ClangReflectCore/Arguments.h>
+
 #include "llvm/Support/Host.h"
 
 #include "clang/AST/ASTConsumer.h"
@@ -25,7 +27,7 @@ namespace
 }
 
 
-ClangHost::ClangHost()
+ClangHost::ClangHost(Arguments& args)
 	// VC2005: If shouldClose is set to true, this forces an assert in the CRT on program
 	// shutdown as stdout hasn't been opened by the app in the first place.
 	: output_stream(1, false)
@@ -47,13 +49,17 @@ ClangHost::ClangHost()
 	clang::FileSystemOptions fs_options;
 	file_manager.reset(new clang::FileManager(fs_options));
 
-	// Setup C++ header searching
+	// Gather C++ header searches from the command-line
 	header_search.reset(new clang::HeaderSearch(*file_manager));
-	//headerSearchOptions.AddPath("/usr/include/linux",
-	//		clang::frontend::Angled,
-	//		false,
-	//		false,
-	//		false);
+	for (int i = 0; ; i++)
+	{
+		std::string include = args.GetProperty("-i", i);
+		if (include == "")
+		{
+			break;
+		}
+		header_search_options.AddPath(include.c_str(), clang::frontend::Angled, false, false, false);
+	}
 
 	// Setup target options - ensure record layout calculations use the MSVC C++ ABI
 	clang::TargetOptions target_options;
