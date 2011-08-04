@@ -469,6 +469,7 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		(&crcpp::Name::text);
 
 	PtrSchema& schema_primitive = relocator.AddSchema<crcpp::Primitive>()
+		(&crcpp::Name::text, offsetof(crcpp::Primitive, name))
 		(&crcpp::Primitive::parent);
 
 	PtrSchema& schema_type = relocator.AddSchema<crcpp::Type>(&schema_primitive);
