@@ -2,9 +2,6 @@
 #include "DatabaseLoader.h"
 #include <crcpp/Core.h>
 
-#include <cstdio>
-#include <cstring>
-
 
 namespace
 {
@@ -22,68 +19,66 @@ namespace
 		int offset;
 		int nb_objects;
 	};
-
-
-	template <typename TYPE> void Read(TYPE& dest, FILE* fp)
-	{
-		// Anything with no overload of Read is a straight POD read
-		fread(&dest, sizeof(dest), 1, fp);
-	}
-	template <typename TYPE> TYPE Read(FILE* fp)
-	{
-		TYPE temp;
-		Read(temp, fp);
-		return temp;
-	}
 }
 
 
 crcpp::DatabaseFileHeader::DatabaseFileHeader()
-	: version(1)
+	: signature0('pcrc')
+	, signature1('bdp')
+	, version(1)
+	, nb_ptr_schemas(0)
+	, nb_ptr_offsets(0)
+	, nb_ptr_relocations(0)
+	, data_size(0)
 {
-	memcpy(signature, "crcppdb", sizeof(signature));
 }
 
 
-crcpp::DatabaseMem* crcpp::LoadMemoryMappedDatabase(const char* filename)
+crcpp::DatabaseMem* crcpp::LoadMemoryMappedDatabase(IFile* file)
 {
-	// Can the file be opened?
-	FILE* fp = fopen(filename, "rb");
-	if (fp == 0)
-	{
-		return 0;
-	}
-
 	// Read the header and verify the version and signature
 	DatabaseFileHeader file_header, cmp_header;
-	Read(file_header, fp);
-	if (file_header.version != cmp_header.version)
+	if (!file->Read(file_header))
 	{
-		fclose(fp);
 		return 0;
 	}
-	if (memcmp(file_header.signature, cmp_header.signature, sizeof(cmp_header.signature)))
+	if (file_header.version != cmp_header.version)
 	{
-		fclose(fp);
+		return 0;
+	}
+	if (file_header.signature0 != cmp_header.signature0 || file_header.signature1 != cmp_header.signature1)
+	{
 		return 0;
 	}
 
 	// Read the memory mapped data
 	char* base_data = new char[file_header.data_size];
 	DatabaseMem* database_mem = (DatabaseMem*)base_data;
-	fread(base_data, file_header.data_size, 1, fp);
+	if (!file->Read(base_data, file_header.data_size))
+	{
+		return 0;
+	}
 
 	// Read the schema descriptions
 	CArray<PtrSchema> schemas(file_header.nb_ptr_schemas);
-	fread(schemas.data(), sizeof(PtrSchema), file_header.nb_ptr_schemas, fp);
+	if (!file->Read(schemas))
+	{
+		return 0;
+	}
 
 	// Read the pointer offsets for all the schemas
 	CArray<int> ptr_offsets(file_header.nb_ptr_offsets);
-	fread(ptr_offsets.data(), sizeof(int), file_header.nb_ptr_offsets, fp);
+	if (!file->Read(ptr_offsets))
+	{
+		return 0;
+	}
 
 	// Read the pointer relocation instructions
 	CArray<PtrRelocation> relocations(file_header.nb_ptr_relocations);
-	fread(relocations.data(), sizeof(PtrRelocation), file_header.nb_ptr_relocations, fp);
+	if (!file->Read(relocations))
+	{
+		return 0;
+	}
 
 	// Iterate over every relocation instruction
 	for (int i = 0; i < file_header.nb_ptr_relocations; i++)
@@ -105,17 +100,17 @@ crcpp::DatabaseMem* crcpp::LoadMemoryMappedDatabase(const char* filename)
 				unsigned int ptr_offset = object_offset + schema_ptr_offsets[k];
 				unsigned int& ptr = (unsigned int&)*(base_data + ptr_offset);
 
+				// Ensure the pointer relocation is within range of the memory map
+				Assert(ptr < file_header.data_size);
+
 				// Patch only if non-null
 				if (ptr != 0)
 				{
 					ptr += (unsigned int)base_data;
-					// TODO: verify pointer is within range of the memory map
 				}
 			}
 		}
 	}
-
-	fclose(fp);
 
 	return database_mem;
 }

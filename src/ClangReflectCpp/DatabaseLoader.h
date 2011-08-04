@@ -4,6 +4,7 @@
 
 namespace crcpp
 {
+	struct IFile;
 	struct DatabaseMem;
 
 
@@ -12,7 +13,9 @@ namespace crcpp
 		// Initialises the file header to the current supported version
 		DatabaseFileHeader();
 
-		unsigned char signature[7];
+		// Signature and version numbers for verifying header integrity
+		unsigned int signature0;
+		unsigned int signature1;
 		unsigned int version;
 
 		int nb_ptr_schemas;
@@ -20,8 +23,10 @@ namespace crcpp
 		int nb_ptr_relocations;
 
 		unsigned int data_size;
+
+		// TODO: CRC verify?
 	};
 
 
-	DatabaseMem* LoadMemoryMappedDatabase(const char* filename);
+	DatabaseMem* LoadMemoryMappedDatabase(IFile* file);
 }

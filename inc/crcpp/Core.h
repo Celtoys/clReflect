@@ -5,6 +5,21 @@
 namespace crcpp
 {
 	//
+	// Trivial assert for PC only, currently
+	//
+	inline void Assert(bool expression)
+	{
+		if (expression == false)
+		{
+			__asm
+			{
+				int 3h
+			}
+		}
+	}
+
+
+	//
 	// Wrapper around a classic C-style array.
 	//
 	template <typename TYPE>
@@ -129,5 +144,29 @@ namespace crcpp
 		unsigned int m_Size : 31;
 		unsigned int m_Owner : 1;
 		TYPE* m_Data;
+	};
+
+
+	//
+	// A simple file interface that the database loader will use. Clients must
+	// implement this before they can load a reflection database.
+	//
+	struct IFile
+	{
+		// Type and size implied from destination type
+		template <typename TYPE> bool Read(TYPE& dest)
+		{
+			return Read(&dest, sizeof(TYPE));
+		}
+
+		// Reads data into an array that has been already allocated
+		template <typename TYPE> bool Read(CArray<TYPE>& dest)
+		{
+			return Read(dest.data(), dest.size() * sizeof(TYPE));
+		}
+
+		// Derived classes must implement just the read function, returning
+		// true on success, false otherwise.
+		virtual bool Read(void* dest, int size) = 0;
 	};
 }

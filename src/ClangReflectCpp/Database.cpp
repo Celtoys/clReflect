@@ -2,12 +2,11 @@
 #include <crcpp\Database.h>
 #include "DatabaseLoader.h"
 
-#include <cstdio>
-#include <cstring>
-
 
 const crcpp::Primitive* crcpp::FindPrimitive(const CArray<const Primitive*>& primitives, Name name)
 {
+	// TODO: Return multiple entries
+
 	int first = 0;
 	int last = primitives.size() - 1;
 
@@ -39,8 +38,6 @@ const crcpp::Primitive* crcpp::FindPrimitive(const CArray<const Primitive*>& pri
 }
 
 
-
-
 crcpp::Database::Database()
 	: m_DatabaseMem(0)
 {
@@ -53,11 +50,8 @@ crcpp::Database::~Database()
 }
 
 
-bool crcpp::Database::Load(const char* filename)
+bool crcpp::Database::Load(IFile* file)
 {
-	m_DatabaseMem = LoadMemoryMappedDatabase(filename);
+	m_DatabaseMem = LoadMemoryMappedDatabase(file);
 	return m_DatabaseMem != 0;
 }
-
-
-// TODO: Verify that the memory mapping constructions are not out-of-bounds

@@ -174,6 +174,8 @@ namespace crcpp
 	template <typename TYPE>
 	const TYPE* FindPrimitive(const CArray<const TYPE*>& primitives, Name name)
 	{
+		// This is both a compile-time and runtime assert
+		Assert(TYPE::KIND != Primitive::KIND_NONE);
 		return (TYPE*)FindPrimitive((const CArray<const Primitive*>&)primitives, name);
 	}
 
@@ -215,11 +217,9 @@ namespace crcpp
 		Database();
 		~Database();
 
-		bool Load(const char* filename);
+		bool Load(IFile* file);
 
 		Name GetName(unsigned int hash) const;
-
-		const Primitive* GetPrimitive(Name name, int& nb_primitives) const;
 
 	private:
 		// Disable copying
