@@ -72,7 +72,7 @@ struct PtrRelocation
 class PtrRelocator
 {
 public:
-	PtrRelocator(const void* start);
+	PtrRelocator(const void* start, size_t data_size);
 
 	// Add a new schema which doesn't have any pointer offsets beyond those it inherits
 	PtrSchema& AddSchema(size_t stride, PtrSchema* base_schema);
@@ -104,6 +104,7 @@ public:
 private:
 	// This is the front of the allocated memory where all pointers will be made relative to
 	char* m_Start;
+	size_t m_DataSize;
 
 	// Stored as a list so that I can return pointers after each addition
 	std::list<PtrSchema> m_Schemas;

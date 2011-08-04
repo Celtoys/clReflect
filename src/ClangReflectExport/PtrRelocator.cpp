@@ -1,5 +1,6 @@
 
 #include "PtrRelocator.h"
+#include <cassert>
 
 
 namespace
@@ -12,8 +13,9 @@ namespace
 }
 
 
-PtrRelocator::PtrRelocator(const void* start)
+PtrRelocator::PtrRelocator(const void* start, size_t data_size)
 	: m_Start((char*)start)
+	, m_DataSize(data_size)
 {
 }
 
@@ -31,10 +33,9 @@ PtrSchema& PtrRelocator::AddSchema(size_t stride, PtrSchema* base_schema)
 	m_SchemaLookup.push_back(&schema);
 
 	// Copy base schema pointer offsets if a base is specified
-	while (base_schema)
+	if (base_schema)
 	{
 		schema.ptr_offsets.insert(schema.ptr_offsets.end(), base_schema->ptr_offsets.begin(), base_schema->ptr_offsets.end());
-		base_schema = base_schema->base_schema;
 	}
 
 	return schema;
@@ -43,6 +44,12 @@ PtrSchema& PtrRelocator::AddSchema(size_t stride, PtrSchema* base_schema)
 
 void PtrRelocator::AddPointers(const PtrSchema& schema, const void* data, int nb_objects)
 {
+	// No need to add null pointers for patching
+	if (data == 0)
+	{
+		return;
+	}
+
 	PtrRelocation relocation;
 	relocation.schema_handle = schema.handle;
 	relocation.offset = distance(m_Start, data);
@@ -73,7 +80,9 @@ void PtrRelocator::MakeRelative()
 				// Only relocate if it's non-null
 				if (ptr != 0)
 				{
-					ptr = (char*)distance(m_Start, ptr);
+					size_t d = distance(m_Start, ptr);
+					assert(d < m_DataSize);
+					ptr = (char*)d;
 				}
 			}
 		}

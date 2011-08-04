@@ -441,7 +441,7 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 
 void SaveCppExport(CppExport& cppexp, const char* filename)
 {
-	PtrRelocator relocator(cppexp.allocator.GetData());
+	PtrRelocator relocator(cppexp.allocator.GetData(), cppexp.allocator.GetAllocatedSize());
 
 	// The position of the data member within a CArray is fixed, independent of type
 	size_t array_data_offset = crcpp::CArray<int>::data_offset();

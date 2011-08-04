@@ -103,7 +103,8 @@ crcpp::DatabaseMem* crcpp::LoadMemoryMappedDatabase(IFile* file)
 				// Ensure the pointer relocation is within range of the memory map
 				Assert(ptr < file_header.data_size);
 
-				// Patch only if non-null
+				// Patch only if non-null - these shouldn't exist in the patch list but there's
+				// no harm in putting an extra check here.
 				if (ptr != 0)
 				{
 					ptr += (unsigned int)base_data;
