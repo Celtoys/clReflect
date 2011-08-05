@@ -1,4 +1,13 @@
 
+#pragma once
+
+
+// Include all dependencies
+// These can be included independently if you want quicker compiles
+#include "Core.h"
+#include "Database.h"
+
+
 //
 // Force an extra level of indirection for the preprocessor when expanding macros
 //
@@ -57,6 +66,9 @@
 	#define crcpp_pop_attr(...) struct crcpp_unique(pop_attr) { } __attribute__((annotate(#__VA_ARGS__)));
 
 
+	#define crcpp_get_type(db, type) ((const crcpp::Type*)0)
+
+
 #else
 
 
@@ -67,8 +79,50 @@
 	#define crcpp_reflect_part(name)
 
 
+	// TODO: Urgh... can we remove this dependency? Need it for typeid calls...
+	#include <typeinfo>
+
+
+	namespace crcpp
+	{
+		template <typename TYPE> const Type* GetType(Database& db)
+		{
+			// These are independent of the input database so can be cached
+			// NOTE: Not thread-safe!
+			static const char* name = 0;
+			static unsigned int hash = 0;
+
+			if (name == 0)
+			{
+				// Strip Microsoft-specific type name prefixes
+				name = typeid(TYPE).name();
+				if (name[0] == 's' && name[6] == ' ')
+				{
+					name += sizeof("struct");
+				}
+				else if (name[0] == 'c' && name[5] == ' ')
+				{
+					name += sizeof("class");
+				}
+				else if (name[0] == 'e' && name[4] == ' ')
+				{
+					name += sizeof("enum");
+				}
+
+				// Hash the name directly as we don't need to lookup the equivalent
+				// in the names database
+				hash = HashNameString(name);
+				if (hash == 0)
+				{
+					return 0;
+				}
+			}
+
+			return db.GetType(hash);
+		}
+	}
+
+
+	#define crcpp_get_type(db, type) crcpp::GetType<type>(db)
+
 #endif
-
-
-#include "Core.h"
-#include "Database.h"

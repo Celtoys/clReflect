@@ -1,30 +1,30 @@
 Microsoft Visual Studio Solution File, Format Version 9.00
 # Visual Studio 2005
-Project("{4DCC68A2-B450-11E0-B935-F46D04D48D5F}") = "ClangReflectCore", "src\ClangReflectCore\ClangReflectCore.vcproj", "{ECDB5640-B383-11E0-816D-F46D04D48D5F}"
+Project("{16D98910-BF57-11E0-8705-F46D04D48D5F}") = "ClangReflectCpp", "src\ClangReflectCpp\ClangReflectCpp.vcproj", "{ECDD2B00-B383-11E0-9A32-F46D04D48D5F}"
 EndProject
-Project("{4DCC8FB0-B450-11E0-8044-F46D04D48D5F}") = "ClangReflectScan", "src\ClangReflectScan\ClangReflectScan.vcproj", "{ECDC8EC0-B383-11E0-8C36-F46D04D48D5F}"
+Project("{16D98911-BF57-11E0-AB03-F46D04D48D5F}") = "ClangReflectCore", "src\ClangReflectCore\ClangReflectCore.vcproj", "{ECDB5640-B383-11E0-816D-F46D04D48D5F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{ECDD2B00-B383-11E0-9A32-F46D04D48D5F} = {ECDD2B00-B383-11E0-9A32-F46D04D48D5F}
+	EndProjectSection
+EndProject
+Project("{16D98912-BF57-11E0-8731-F46D04D48D5F}") = "ClangReflectScan", "src\ClangReflectScan\ClangReflectScan.vcproj", "{ECDC8EC0-B383-11E0-8C36-F46D04D48D5F}"
 	ProjectSection(ProjectDependencies) = postProject
 		{ECDB5640-B383-11E0-816D-F46D04D48D5F} = {ECDB5640-B383-11E0-816D-F46D04D48D5F}
 	EndProjectSection
 EndProject
-Project("{4DCC8FB1-B450-11E0-A0AA-F46D04D48D5F}") = "ClangReflectMerge", "src\ClangReflectMerge\ClangReflectMerge.vcproj", "{ECDD03F0-B383-11E0-AB06-F46D04D48D5F}"
+Project("{16D98913-BF57-11E0-83E8-F46D04D48D5F}") = "ClangReflectMerge", "src\ClangReflectMerge\ClangReflectMerge.vcproj", "{ECDD03F0-B383-11E0-AB06-F46D04D48D5F}"
 	ProjectSection(ProjectDependencies) = postProject
 		{ECDC8EC0-B383-11E0-8C36-F46D04D48D5F} = {ECDC8EC0-B383-11E0-8C36-F46D04D48D5F}
 	EndProjectSection
 EndProject
-Project("{4DCC8FB2-B450-11E0-85BC-F46D04D48D5F}") = "ClangReflectExport", "src\ClangReflectExport\ClangReflectExport.vcproj", "{4DCC1A81-B450-11E0-9D62-F46D04D48D5F}"
+Project("{16D98914-BF57-11E0-A8D5-F46D04D48D5F}") = "ClangReflectExport", "src\ClangReflectExport\ClangReflectExport.vcproj", "{4DCC1A81-B450-11E0-9D62-F46D04D48D5F}"
 	ProjectSection(ProjectDependencies) = postProject
 		{ECDD03F0-B383-11E0-AB06-F46D04D48D5F} = {ECDD03F0-B383-11E0-AB06-F46D04D48D5F}
 	EndProjectSection
 EndProject
-Project("{4DCC8FB3-B450-11E0-8802-F46D04D48D5F}") = "ClangReflectCpp", "src\ClangReflectCpp\ClangReflectCpp.vcproj", "{ECDD2B00-B383-11E0-9A32-F46D04D48D5F}"
+Project("{16D9B01E-BF57-11E0-A0FA-F46D04D48D5F}") = "ClangReflectTest", "src\ClangReflectTest\ClangReflectTest.vcproj", "{A5E0A651-5786-4AC9-B118-6B3B55D7656B}"
 	ProjectSection(ProjectDependencies) = postProject
 		{4DCC1A81-B450-11E0-9D62-F46D04D48D5F} = {4DCC1A81-B450-11E0-9D62-F46D04D48D5F}
-	EndProjectSection
-EndProject
-Project("{4DCCB6C0-B450-11E0-9C14-F46D04D48D5F}") = "ClangReflectTest", "src\ClangReflectTest\ClangReflectTest.vcproj", "{A5E0A651-5786-4AC9-B118-6B3B55D7656B}"
-	ProjectSection(ProjectDependencies) = postProject
-		{ECDD2B00-B383-11E0-9A32-F46D04D48D5F} = {ECDD2B00-B383-11E0-9A32-F46D04D48D5F}
 	EndProjectSection
 EndProject
 Global
@@ -33,6 +33,10 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ECDD2B00-B383-11E0-9A32-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{ECDD2B00-B383-11E0-9A32-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
+		{ECDD2B00-B383-11E0-9A32-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
+		{ECDD2B00-B383-11E0-9A32-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
 		{ECDB5640-B383-11E0-816D-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
 		{ECDB5640-B383-11E0-816D-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
 		{ECDB5640-B383-11E0-816D-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
@@ -49,10 +53,6 @@ Global
 		{4DCC1A81-B450-11E0-9D62-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
 		{4DCC1A81-B450-11E0-9D62-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
 		{4DCC1A81-B450-11E0-9D62-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
-		{ECDD2B00-B383-11E0-9A32-F46D04D48D5F}.Debug|Win32.ActiveCfg = Debug|Win32
-		{ECDD2B00-B383-11E0-9A32-F46D04D48D5F}.Debug|Win32.Build.0 = Debug|Win32
-		{ECDD2B00-B383-11E0-9A32-F46D04D48D5F}.Release|Win32.ActiveCfg = Release|Win32
-		{ECDD2B00-B383-11E0-9A32-F46D04D48D5F}.Release|Win32.Build.0 = Release|Win32
 		{A5E0A651-5786-4AC9-B118-6B3B55D7656B}.Debug|Win32.ActiveCfg = Debug|Win32
 		{A5E0A651-5786-4AC9-B118-6B3B55D7656B}.Debug|Win32.Build.0 = Debug|Win32
 		{A5E0A651-5786-4AC9-B118-6B3B55D7656B}.Release|Win32.ActiveCfg = Release|Win32
@@ -62,6 +62,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		PiBDigest = ufTvmySxCdtHxhBYG5mfAA==
+		PiBDigest = 11R4Ud1FIXCXyqaN3SQeoQ==
 	EndGlobalSection
 EndGlobal

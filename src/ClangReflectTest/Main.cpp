@@ -39,6 +39,9 @@ private:
 };
 
 
+extern void TestGetType(crcpp::Database& db);
+
+
 int main()
 {
 	StdFile file("../../bin/Debug/ClangReflectTest.cppbin");
@@ -49,6 +52,7 @@ int main()
 
 	crcpp::Database db;
 	db.Load(&file);
+	TestGetType(db);
 
 	return 0;
 }

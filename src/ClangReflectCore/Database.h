@@ -19,15 +19,6 @@ namespace crdb
 
 
 	//
-	// Hashes the full string int a 32-bit value
-	//
-	u32 HashNameString(const char* name_string);
-
-
-	u32 MixHashes(u32 a, u32 b);
-
-
-	//
 	// A descriptive text name with a unique 32-bit hash value for mapping primitives.
 	//
 	// Note this new representation requires string copying whenever the name is
@@ -225,7 +216,7 @@ namespace crdb
 			const PrimitiveStore<TYPE>& store = GetPrimitiveStore<TYPE>();
 
 			// Return the first instance of an object with this name
-			u32 name = HashNameString(name_string);
+			u32 name = crcpp::HashNameString(name_string);
 			PrimitiveStore<TYPE>::const_iterator i = store.find(name);
 			if (i != store.end())
 			{

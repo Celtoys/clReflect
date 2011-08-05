@@ -63,11 +63,11 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{13b27640-b906-11e0-bbd0-f46d04d48d5f}"
+			UniqueIdentifier="{28b04180-bf55-11e0-8eb9-f46d04d48d5f}"
 			>
 			<Filter
 				Name="crcpp"
-				UniqueIdentifier="{13b27641-b906-11e0-b175-f46d04d48d5f}"
+				UniqueIdentifier="{28b04181-bf55-11e0-9e5c-f46d04d48d5f}"
 				>
 				<File
 					RelativePath="..\..\inc\crcpp\Core.h"
@@ -84,6 +84,10 @@
 			</Filter>
 		</Filter>
 		<File
+			RelativePath="Core.cpp"
+			>
+		</File>
+		<File
 			RelativePath="Database.cpp"
 			>
 		</File>
@@ -99,7 +103,7 @@
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="05LQWHItra9z7oKvtrAbRA=="
+			Value="NQLH3wNLHSFZ-2tgH83Rfw=="
 		/>
 	</Globals>
 </VisualStudioProject>

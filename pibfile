@@ -107,18 +107,18 @@ class CppBuildExe:
             env.Build(self.output, target[:-4])
 
 
+# Build the C++ API
+crcpp = CppBuildExe(env, [ "src/ClangReflectCpp" ], "crcpp.lib")
+crcpp.api_files = Glob("inc", "*.h")
+
 # Build the core library
 crcore = CppBuildExe(env, [ "src/ClangReflectCore" ], "crcore.lib")
 
 # Build the scanner
-crscan = CppBuildExe(env, [ "src/ClangReflectScan" ], "crscan.exe", libs, [ crcore.lib ])
+crscan = CppBuildExe(env, [ "src/ClangReflectScan" ], "crscan.exe", libs, [ crcore.lib, crcpp.lib ])
 
 # Build the merger
-crmerge = CppBuildExe(env, [ "src/ClangReflectMerge" ], "crmerge.exe", [], [ crcore.lib ])
-
-# Build the C++ API
-crcpp = CppBuildExe(env, [ "src/ClangReflectCpp" ], "crcpp.lib")
-crcpp.api_files = Glob("inc", "*.h")
+crmerge = CppBuildExe(env, [ "src/ClangReflectMerge" ], "crmerge.exe", [], [ crcore.lib, crcpp.lib ])
 
 # Build the exporter
 crexport = CppBuildExe(env, [ "src/ClangReflectExport" ], "crexport.exe", [], [ crcore.lib, crcpp.lib ])
@@ -136,16 +136,16 @@ env.Build([ crtest.exe, crtest.cppbin_file ], "crtest")
 
 
 # Generate MSVC project files
+VCGenerateProjectFile(env, "src/ClangReflectCpp/ClangReflectCpp", crcpp.cpp_files + crcpp.hpp_files + crcpp.api_files, crcpp.lib, "crcpp", [ ("..\\..\\inc", "Public API") ])
 VCGenerateProjectFile(env, "src/ClangReflectCore/ClangReflectCore", crcore.cpp_files + crcore.hpp_files, crcore.lib, "crcore")
 VCGenerateProjectFile(env, "src/ClangReflectScan/ClangReflectScan", crscan.cpp_files + crscan.hpp_files, crscan.exe, "crscan")
 VCGenerateProjectFile(env, "src/ClangReflectMerge/ClangReflectMerge", crmerge.cpp_files + crmerge.hpp_files, crmerge.exe, "crmerge")
 VCGenerateProjectFile(env, "src/ClangReflectExport/ClangReflectExport", crexport.cpp_files + crexport.hpp_files, crexport.exe, "crexport")
-VCGenerateProjectFile(env, "src/ClangReflectCpp/ClangReflectCpp", crcpp.cpp_files + crcpp.hpp_files + crcpp.api_files, crcpp.lib, "crcpp", [ ("..\\..\\inc", "Public API") ])
 VCGenerateProjectFile(env, "src/ClangReflectTest/ClangReflectTest", crtest.cpp_files, crtest.exe, "crtest")
 VCGenerateSolutionFile(env, "ClangReflect", [
+    "src/ClangReflectCpp/ClangReflectCpp",
     "src/ClangReflectCore/ClangReflectCore",
     "src/ClangReflectScan/ClangReflectScan",
     "src/ClangReflectMerge/ClangReflectMerge",
     "src/ClangReflectExport/ClangReflectExport",
-    "src/ClangReflectCpp/ClangReflectCpp",
     "src/ClangReflectTest/ClangReflectTest" ])

@@ -12,6 +12,10 @@
 
 namespace crcpp
 {
+	struct Enum;
+	struct Class;
+
+
 	struct Name
 	{
 		Name() : hash(0), text(0) { }
@@ -34,8 +38,8 @@ namespace crcpp
 			KIND_FIELD
 		};
 
-		Primitive()
-			: kind(KIND_NONE)
+		Primitive(Kind k)
+			: kind(k)
 			, parent(0)
 		{
 		}
@@ -51,9 +55,20 @@ namespace crcpp
 		static const Kind KIND = KIND_TYPE;
 
 		Type()
-			: size(0)
+			: Primitive(KIND)
+			, size(0)
 		{
 		}
+
+		Type(Kind k)
+			: Primitive(k)
+			, size(0)
+		{
+		}
+
+		// Safe utility functions for casting to derived types
+		inline const Enum* AsEnum() const;
+		inline const Class* AsClass() const;
 
 		unsigned int size;
 	};
@@ -64,7 +79,8 @@ namespace crcpp
 		static const Kind KIND = KIND_ENUM_CONSTANT;
 
 		EnumConstant()
-			: value(0)
+			: Primitive(KIND)
+			, value(0)
 		{
 		}
 
@@ -75,6 +91,11 @@ namespace crcpp
 	struct Enum : public Type
 	{
 		static const Kind KIND = KIND_ENUM;
+
+		Enum()
+			: Type(KIND)
+		{
+		}
 
 		// All sorted by name
 		CArray<const EnumConstant*> constants;
@@ -94,7 +115,8 @@ namespace crcpp
 		};
 
 		Field()
-			: type(0)
+			: Primitive(KIND)
+			, type(0)
 			, modifier(MODIFIER_NONE)
 			, is_const(false)
 			, offset(0)
@@ -115,7 +137,8 @@ namespace crcpp
 		static const Kind KIND = KIND_FUNCTION;
 
 		Function()
-			: return_parameter(0)
+			: Primitive(KIND)
+			, return_parameter(0)
 			, unique_id(0)
 		{
 		}
@@ -133,7 +156,8 @@ namespace crcpp
 		static const Kind KIND = KIND_CLASS;
 
 		Class()
-			: base_class(0)
+			: Type(KIND)
+			, base_class(0)
 		{
 		}
 
@@ -151,6 +175,11 @@ namespace crcpp
 	{
 		static const Kind KIND = KIND_NAMESPACE;
 
+		Namespace()
+			: Primitive(KIND)
+		{
+		}
+
 		// All sorted by name
 		CArray<const Namespace*> namespaces;
 		CArray<const Type*> types;
@@ -161,10 +190,25 @@ namespace crcpp
 
 
 	//
+	// Safe utility functions for casting from const Type* to derived types
+	//
+	inline const Enum* Type::AsEnum() const
+	{
+		Assert(kind == Enum::KIND);
+		return (const Enum*)this;
+	}
+	inline const Class* Type::AsClass() const
+	{
+		Assert(kind == Class::KIND);
+		return (const Class*)this;
+	}
+
+
+	//
 	// All primitive arrays are sorted in order of increasing name hash. This will perform an
 	// O(logN) binary search over the array looking for the name you specify.
 	//
-	const Primitive* FindPrimitive(const CArray<const Primitive*>& primitives, Name name);
+	const Primitive* FindPrimitiveImpl(const CArray<const Primitive*>& primitives, unsigned int hash);
 
 
 	//
@@ -172,14 +216,17 @@ namespace crcpp
 	// types can be cast to Primitive and aliases the arrays to cut down on generated code.
 	//
 	template <typename TYPE>
-	const TYPE* FindPrimitive(const CArray<const TYPE*>& primitives, Name name)
+	const TYPE* FindPrimitive(const CArray<const TYPE*>& primitives, unsigned int hash)
 	{
 		// This is both a compile-time and runtime assert
 		Assert(TYPE::KIND != Primitive::KIND_NONE);
-		return (TYPE*)FindPrimitive((const CArray<const Primitive*>&)primitives, name);
+		return (TYPE*)FindPrimitiveImpl((const CArray<const Primitive*>&)primitives, hash);
 	}
 
 
+	//
+	// Memory-mapped representation of the entire reflection database
+	//
 	struct DatabaseMem
 	{
 		DatabaseMem()
@@ -219,7 +266,11 @@ namespace crcpp
 
 		bool Load(IFile* file);
 
-		Name GetName(unsigned int hash) const;
+		// This returns the name as it exists in the name database, with the text pointer
+		// pointing to within the database's allocated name data
+		Name GetName(const char* text) const;
+
+		const Type* GetType(unsigned int hash) const;
 
 	private:
 		// Disable copying

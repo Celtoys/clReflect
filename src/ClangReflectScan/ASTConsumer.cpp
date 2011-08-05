@@ -27,12 +27,14 @@
 #include "ASTConsumer.h"
 #include "ReflectionSpecs.h"
 
-#include "ClangReflectCore/Logging.h"
+#include <crcpp/Core.h>
 
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclCxx.h"
-#include "clang/AST/DeclGroup.h"
-#include "clang/AST/RecordLayout.h"
+#include <ClangReflectCore/Logging.h>
+
+#include <clang/AST/Decl.h>
+#include <clang/AST/DeclCxx.h>
+#include <clang/AST/DeclGroup.h>
+#include <clang/AST/RecordLayout.h>
 
 
 namespace
@@ -109,7 +111,7 @@ namespace
 		name += field.is_const ? "const " : "";
 		name += field.type.text;
 		name += field.modifier == crdb::Field::MODIFIER_POINTER ? "*" : field.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "";
-		return crdb::HashNameString(name.c_str());
+		return crcpp::HashNameString(name.c_str());
 	}
 
 
@@ -162,7 +164,7 @@ namespace
 		for (size_t i = 0; i < parameters.size(); i++)
 		{
 			crdb::u32 field_hash = CalcFieldHash(parameters[i]);
-			unique_id = crdb::MixHashes(unique_id, field_hash);
+			unique_id = crcpp::MixHashes(unique_id, field_hash);
 		}
 
 		// Parent each parameter to the function

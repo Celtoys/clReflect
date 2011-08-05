@@ -1,6 +1,6 @@
 
 
-#include "crcpp.h"
+#include <crcpp/crcpp.h>
 
 
 // test:
@@ -86,6 +86,7 @@ crcpp_reflect(ClassGlobalA)
 class ClassGlobalA;
 class ClassGlobalA
 {
+public:
 	enum Enum { VALUE_A, VALUE_B };
 
 	// Basic field types
@@ -338,7 +339,7 @@ namespace NamespaceA
 
 		int FieldWithinNamedClassA;
 
-		void FunctionWithinNamedClassA() { }
+		void FunctionWithinNamedClassA(int a) { }
 	};
 }
 
@@ -485,3 +486,17 @@ namespace TestMissingType
 	{
 	};
 }
+
+
+void TestGetType(crcpp::Database& db)
+{
+	crcpp::Name na = db.GetName("ClassGlobalA");
+	crcpp::Name nb = db.GetName("Inheritance::DerivedClass");
+	crcpp::Name nc = db.GetName("NamespaceA::NamedNSClassA::EnumWithinNamedClassA");
+
+	const crcpp::Type* e0 = crcpp_get_type(db, ClassGlobalA);
+	const crcpp::Class* e1 = crcpp_get_type(db, Inheritance::DerivedClass)->AsClass();
+	const crcpp::Enum* e2 = crcpp_get_type(db, NamespaceA::NamedNSClassA::EnumWithinNamedClassA)->AsEnum();
+	int x;
+}
+

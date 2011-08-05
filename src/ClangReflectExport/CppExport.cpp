@@ -229,7 +229,7 @@ namespace
 	int ReturnParameterIndex(const crcpp::CArray<const crcpp::Field*>& parameters)
 	{
 		// Linear search for the named return value
-		static unsigned int return_hash = crdb::HashNameString("return");
+		static unsigned int return_hash = crcpp::HashNameString("return");
 		for (int i = 0; i < parameters.size(); i++)
 		{
 			if (parameters[i]->name.hash == return_hash)

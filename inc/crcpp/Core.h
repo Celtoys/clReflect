@@ -20,6 +20,18 @@ namespace crcpp
 
 
 	//
+	// Hashes the full string int a 32-bit value
+	//
+	unsigned int HashNameString(const char* name_string);
+
+
+	//
+	// Combines two hashes by using the first one as a seed and hashing the second one
+	//
+	unsigned int MixHashes(unsigned int a, unsigned int b);
+
+
+	//
 	// Wrapper around a classic C-style array.
 	//
 	template <typename TYPE>
@@ -81,9 +93,9 @@ namespace crcpp
 
 		// Removes an element from the list without reallocating any memory
 		// Causes the order of the entries in the list to change
-		void unstable_remove(int index)
+		void unstable_remove(unsigned int index)
 		{
-			// TODO: assert index
+			Assert(index < m_Size);
 			m_Data[index] = m_Data[m_Size - 1];
 			m_Size--;
 		}
@@ -102,14 +114,14 @@ namespace crcpp
 			return m_Data;
 		}
 
-		TYPE& operator [] (int index)
+		TYPE& operator [] (unsigned int index)
 		{
-			// TODO: assert
+			Assert(index < m_Size);
 			return m_Data[index];
 		}
-		const TYPE& operator [] (int index) const
+		const TYPE& operator [] (unsigned int index) const
 		{
-			// TODO: assert
+			Assert(index < m_Size);
 			return m_Data[index];
 		}
 
