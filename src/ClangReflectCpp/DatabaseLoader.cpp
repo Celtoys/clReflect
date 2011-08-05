@@ -22,7 +22,7 @@ namespace
 }
 
 
-crcpp::DatabaseFileHeader::DatabaseFileHeader()
+crcpp::internal::DatabaseFileHeader::DatabaseFileHeader()
 	: signature0('pcrc')
 	, signature1('bdp')
 	, version(1)
@@ -34,7 +34,7 @@ crcpp::DatabaseFileHeader::DatabaseFileHeader()
 }
 
 
-crcpp::DatabaseMem* crcpp::LoadMemoryMappedDatabase(IFile* file)
+crcpp::internal::DatabaseMem* crcpp::internal::LoadMemoryMappedDatabase(IFile* file)
 {
 	// Read the header and verify the version and signature
 	DatabaseFileHeader file_header, cmp_header;
@@ -101,7 +101,7 @@ crcpp::DatabaseMem* crcpp::LoadMemoryMappedDatabase(IFile* file)
 				unsigned int& ptr = (unsigned int&)*(base_data + ptr_offset);
 
 				// Ensure the pointer relocation is within range of the memory map
-				Assert(ptr < file_header.data_size);
+				internal::Assert(ptr < file_header.data_size);
 
 				// Patch only if non-null - these shouldn't exist in the patch list but there's
 				// no harm in putting an extra check here.

@@ -24,7 +24,7 @@ struct CppExport
 
 	StackAllocator allocator;
 
-	crcpp::DatabaseMem* db;
+	crcpp::internal::DatabaseMem* db;
 
 	// Hash of names for easier debugging
 	typedef std::map<unsigned int, const char*> NameMap;

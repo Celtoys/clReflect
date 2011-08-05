@@ -98,6 +98,14 @@
 			>
 		</File>
 		<File
+			RelativePath="FileUtils.cpp"
+			>
+		</File>
+		<File
+			RelativePath="FileUtils.h"
+			>
+		</File>
+		<File
 			RelativePath="Logging.cpp"
 			>
 		</File>
@@ -109,7 +117,7 @@
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="JJkQPtrvOTaM4_xxhDYuHQ=="
+			Value="-cIYBEeKC2Rx29k2xX87Dw=="
 		/>
 	</Globals>
 </VisualStudioProject>

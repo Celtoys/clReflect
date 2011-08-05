@@ -229,7 +229,7 @@ namespace
 	int ReturnParameterIndex(const crcpp::CArray<const crcpp::Field*>& parameters)
 	{
 		// Linear search for the named return value
-		static unsigned int return_hash = crcpp::HashNameString("return");
+		static unsigned int return_hash = crcpp::internal::HashNameString("return");
 		for (int i = 0; i < parameters.size(); i++)
 		{
 			if (parameters[i]->name.hash == return_hash)
@@ -381,7 +381,7 @@ namespace
 void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 {
 	// Allocate the in-memory database
-	cppexp.db = cppexp.allocator.Alloc<crcpp::DatabaseMem>(1);
+	cppexp.db = cppexp.allocator.Alloc<crcpp::internal::DatabaseMem>(1);
 
 	// Build all the name data ready for the client to use and the exporter to debug with
 	BuildNames(db, cppexp);
@@ -448,22 +448,22 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 
 	// Construct schemas for all memory-mapped crcpp types
 
-	PtrSchema& schema_database = relocator.AddSchema<crcpp::DatabaseMem>()
-		(&crcpp::DatabaseMem::name_text_data)
-		(&crcpp::DatabaseMem::names, array_data_offset)
-		(&crcpp::DatabaseMem::types, array_data_offset)
-		(&crcpp::DatabaseMem::enum_constants, array_data_offset)
-		(&crcpp::DatabaseMem::enums, array_data_offset)
-		(&crcpp::DatabaseMem::fields, array_data_offset)
-		(&crcpp::DatabaseMem::functions, array_data_offset)
-		(&crcpp::DatabaseMem::classes, array_data_offset)
-		(&crcpp::DatabaseMem::namespaces, array_data_offset)
-		(&crcpp::DatabaseMem::type_primitives, array_data_offset)
-		(&crcpp::Namespace::namespaces, array_data_offset + offsetof(crcpp::DatabaseMem, global_namespace))
-		(&crcpp::Namespace::types, array_data_offset + offsetof(crcpp::DatabaseMem, global_namespace))
-		(&crcpp::Namespace::enums, array_data_offset + offsetof(crcpp::DatabaseMem, global_namespace))
-		(&crcpp::Namespace::classes, array_data_offset + offsetof(crcpp::DatabaseMem, global_namespace))
-		(&crcpp::Namespace::functions, array_data_offset + offsetof(crcpp::DatabaseMem, global_namespace));
+	PtrSchema& schema_database = relocator.AddSchema<crcpp::internal::DatabaseMem>()
+		(&crcpp::internal::DatabaseMem::name_text_data)
+		(&crcpp::internal::DatabaseMem::names, array_data_offset)
+		(&crcpp::internal::DatabaseMem::types, array_data_offset)
+		(&crcpp::internal::DatabaseMem::enum_constants, array_data_offset)
+		(&crcpp::internal::DatabaseMem::enums, array_data_offset)
+		(&crcpp::internal::DatabaseMem::fields, array_data_offset)
+		(&crcpp::internal::DatabaseMem::functions, array_data_offset)
+		(&crcpp::internal::DatabaseMem::classes, array_data_offset)
+		(&crcpp::internal::DatabaseMem::namespaces, array_data_offset)
+		(&crcpp::internal::DatabaseMem::type_primitives, array_data_offset)
+		(&crcpp::Namespace::namespaces, array_data_offset + offsetof(crcpp::internal::DatabaseMem, global_namespace))
+		(&crcpp::Namespace::types, array_data_offset + offsetof(crcpp::internal::DatabaseMem, global_namespace))
+		(&crcpp::Namespace::enums, array_data_offset + offsetof(crcpp::internal::DatabaseMem, global_namespace))
+		(&crcpp::Namespace::classes, array_data_offset + offsetof(crcpp::internal::DatabaseMem, global_namespace))
+		(&crcpp::Namespace::functions, array_data_offset + offsetof(crcpp::internal::DatabaseMem, global_namespace));
 
 	PtrSchema& schema_name = relocator.AddSchema<crcpp::Name>()
 		(&crcpp::Name::text);
@@ -561,7 +561,7 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 	}
 
 	// Write the header
-	crcpp::DatabaseFileHeader header;
+	crcpp::internal::DatabaseFileHeader header;
 	header.nb_ptr_schemas = schemas.size();
 	header.nb_ptr_offsets = nb_ptr_offsets;
 	const std::vector<PtrRelocation>& relocations = relocator.GetRelocations();

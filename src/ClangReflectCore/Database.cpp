@@ -40,7 +40,7 @@ const crdb::Name& crdb::Database::GetName(const char* text)
 	{
 		return noname;
 	}
-	u32 hash = crcpp::HashNameString(text);
+	u32 hash = crcpp::internal::HashNameString(text);
 	if (hash == 0)
 	{
 		return noname;

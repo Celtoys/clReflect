@@ -69,6 +69,7 @@ def SetLinkOptions(name, lib_paths):
     opts = env.Configs[name].LinkOptions
     opts.LibPaths = lib_paths
     opts.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
+    opts.MapFile = "out.map"
     opts.UpdateCommandLine()
 
 
@@ -121,7 +122,7 @@ crscan = CppBuildExe(env, [ "src/ClangReflectScan" ], "crscan.exe", libs, [ crco
 crmerge = CppBuildExe(env, [ "src/ClangReflectMerge" ], "crmerge.exe", [], [ crcore.lib, crcpp.lib ])
 
 # Build the exporter
-crexport = CppBuildExe(env, [ "src/ClangReflectExport" ], "crexport.exe", [], [ crcore.lib, crcpp.lib ])
+crexport = CppBuildExe(env, [ "src/ClangReflectExport" ], "crexport.exe", [ "dbghelp.lib" ], [ crcore.lib, crcpp.lib ])
 
 # Build the test code
 crtest = CppBuildExe(env, [ "src/ClangReflectTest" ], "crtest.exe", [], [ crcpp.lib ], False)

@@ -216,7 +216,7 @@ namespace crdb
 			const PrimitiveStore<TYPE>& store = GetPrimitiveStore<TYPE>();
 
 			// Return the first instance of an object with this name
-			u32 name = crcpp::HashNameString(name_string);
+			u32 name = crcpp::internal::HashNameString(name_string);
 			PrimitiveStore<TYPE>::const_iterator i = store.find(name);
 			if (i != store.end())
 			{

@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="ClangReflectExport"
-	ProjectGUID="{4DCC1A81-B450-11E0-9D62-F46D04D48D5F}"
+	ProjectGUID="{C9AA4EB0-BF77-11E0-AFE0-F46D04D48D5F}"
 	RootNamespace="ClangReflectExport"
 	Keyword="Win32Proj"
 	>
@@ -74,6 +74,14 @@
 			>
 		</File>
 		<File
+			RelativePath="MapFileParser.cpp"
+			>
+		</File>
+		<File
+			RelativePath="MapFileParser.h"
+			>
+		</File>
+		<File
 			RelativePath="PtrRelocator.cpp"
 			>
 		</File>
@@ -89,7 +97,7 @@
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="NmmTRMAfg7miwNxSug4hGg=="
+			Value="L9IV9B5vrMN1xiFDb5VeQA=="
 		/>
 	</Globals>
 </VisualStudioProject>

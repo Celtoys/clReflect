@@ -1,5 +1,6 @@
 
 #include "CppExport.h"
+#include "MapFileParser.h"
 
 #include <ClangReflectCore\Arguments.h>
 #include <ClangReflectCore\Logging.h>
@@ -40,6 +41,8 @@ int main(int argc, const char* argv[])
 		WriteCppExportAsText(cppexp, "out.txt");
 		SaveCppExport(cppexp, cpp_export.c_str());
 	}
+
+	MapFileParser parser("../../out2.map");
 
 	return 0;
 }

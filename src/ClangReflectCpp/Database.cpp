@@ -57,7 +57,7 @@ namespace
 }
 
 
-const crcpp::Primitive* crcpp::FindPrimitiveImpl(const CArray<const Primitive*>& primitives, unsigned int hash)
+const crcpp::Primitive* crcpp::internal::FindPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash)
 {
 	int index = BinarySearch<const Primitive*, unsigned int, ComparePrimitives>(primitives, hash);
 	if (index == -1)
@@ -89,7 +89,7 @@ crcpp::Name crcpp::Database::GetName(const char* text) const
 	}
 
 	// Hash and exit on no value
-	unsigned int hash = HashNameString(text);
+	unsigned int hash = internal::HashNameString(text);
 	if (hash == 0)
 	{
 		return crcpp::Name();
@@ -114,6 +114,6 @@ const crcpp::Type* crcpp::Database::GetType(unsigned int hash) const
 
 bool crcpp::Database::Load(IFile* file)
 {
-	m_DatabaseMem = LoadMemoryMappedDatabase(file);
+	m_DatabaseMem = internal::LoadMemoryMappedDatabase(file);
 	return m_DatabaseMem != 0;
 }

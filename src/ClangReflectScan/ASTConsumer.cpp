@@ -111,7 +111,7 @@ namespace
 		name += field.is_const ? "const " : "";
 		name += field.type.text;
 		name += field.modifier == crdb::Field::MODIFIER_POINTER ? "*" : field.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "";
-		return crcpp::HashNameString(name.c_str());
+		return crcpp::internal::HashNameString(name.c_str());
 	}
 
 
@@ -164,7 +164,7 @@ namespace
 		for (size_t i = 0; i < parameters.size(); i++)
 		{
 			crdb::u32 field_hash = CalcFieldHash(parameters[i]);
-			unique_id = crcpp::MixHashes(unique_id, field_hash);
+			unique_id = crcpp::internal::MixHashes(unique_id, field_hash);
 		}
 
 		// Parent each parameter to the function

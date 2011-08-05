@@ -12,8 +12,25 @@
 
 namespace crcpp
 {
+	struct Primitive;
 	struct Enum;
 	struct Class;
+
+
+	namespace internal
+	{
+		struct DatabaseMem;
+
+		//
+		// All primitive arrays are sorted in order of increasing name hash. This will perform an
+		// O(logN) binary search over the array looking for the name you specify.
+		//
+		const Primitive* FindPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash);
+
+
+		typedef void (*ConstructObjectFunc)(void* object);
+		typedef void (*DestructObjectFunc)(void* object);
+	}
 
 
 	struct Name
@@ -57,12 +74,16 @@ namespace crcpp
 		Type()
 			: Primitive(KIND)
 			, size(0)
+			, constructor(0)
+			, destructor(0)
 		{
 		}
 
 		Type(Kind k)
 			: Primitive(k)
 			, size(0)
+			, constructor(0)
+			, destructor(0)
 		{
 		}
 
@@ -71,6 +92,9 @@ namespace crcpp
 		inline const Class* AsClass() const;
 
 		unsigned int size;
+
+		internal::ConstructObjectFunc constructor;
+		internal::DestructObjectFunc destructor;
 	};
 
 
@@ -194,21 +218,14 @@ namespace crcpp
 	//
 	inline const Enum* Type::AsEnum() const
 	{
-		Assert(kind == Enum::KIND);
+		internal::Assert(kind == Enum::KIND);
 		return (const Enum*)this;
 	}
 	inline const Class* Type::AsClass() const
 	{
-		Assert(kind == Class::KIND);
+		internal::Assert(kind == Class::KIND);
 		return (const Class*)this;
 	}
-
-
-	//
-	// All primitive arrays are sorted in order of increasing name hash. This will perform an
-	// O(logN) binary search over the array looking for the name you specify.
-	//
-	const Primitive* FindPrimitiveImpl(const CArray<const Primitive*>& primitives, unsigned int hash);
 
 
 	//
@@ -219,43 +236,9 @@ namespace crcpp
 	const TYPE* FindPrimitive(const CArray<const TYPE*>& primitives, unsigned int hash)
 	{
 		// This is both a compile-time and runtime assert
-		Assert(TYPE::KIND != Primitive::KIND_NONE);
-		return (TYPE*)FindPrimitiveImpl((const CArray<const Primitive*>&)primitives, hash);
+		internal::Assert(TYPE::KIND != Primitive::KIND_NONE);
+		return (TYPE*)internal::FindPrimitive((const CArray<const Primitive*>&)primitives, hash);
 	}
-
-
-	//
-	// Memory-mapped representation of the entire reflection database
-	//
-	struct DatabaseMem
-	{
-		DatabaseMem()
-			: name_text_data(0)
-		{
-		}
-
-		// Raw allocation of all null-terminated name strings
-		const char* name_text_data;
-
-		// Mapping from hash to text string
-		CArray<Name> names;
-
-		// Ownership storage of all referenced primitives
-		CArray<Type> types;
-		CArray<EnumConstant> enum_constants;
-		CArray<Enum> enums;
-		CArray<Field> fields;
-		CArray<Function> functions;
-		CArray<Class> classes;
-		CArray<Namespace> namespaces;
-
-		// A list of references to all types, enums and classes for potentially quicker
-		// searches during serialisation
-		CArray<const Type*> type_primitives;
-
-		// The root namespace that allows you to reach every referenced primitive
-		Namespace global_namespace;
-	};
 
 
 	class Database
@@ -277,6 +260,43 @@ namespace crcpp
 		Database(const Database&);
 		Database& operator = (const Database&);
 
-		DatabaseMem* m_DatabaseMem;
+		internal::DatabaseMem* m_DatabaseMem;
 	};
+
+
+	namespace internal
+	{
+		//
+		// Memory-mapped representation of the entire reflection database
+		//
+		struct DatabaseMem
+		{
+			DatabaseMem()
+				: name_text_data(0)
+			{
+			}
+
+			// Raw allocation of all null-terminated name strings
+			const char* name_text_data;
+
+			// Mapping from hash to text string
+			CArray<Name> names;
+
+			// Ownership storage of all referenced primitives
+			CArray<Type> types;
+			CArray<EnumConstant> enum_constants;
+			CArray<Enum> enums;
+			CArray<Field> fields;
+			CArray<Function> functions;
+			CArray<Class> classes;
+			CArray<Namespace> namespaces;
+
+			// A list of references to all types, enums and classes for potentially quicker
+			// searches during serialisation
+			CArray<const Type*> type_primitives;
+
+			// The root namespace that allows you to reach every referenced primitive
+			Namespace global_namespace;
+		};
+	}
 }

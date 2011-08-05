@@ -2,6 +2,12 @@
 #pragma once
 
 
+// Placement new
+#include <new>
+// typeid calls for name()
+#include <typeinfo>
+
+
 // Include all dependencies
 // These can be included independently if you want quicker compiles
 #include "Core.h"
@@ -25,6 +31,13 @@
 // Generate a unique symbol with the given prefix
 //
 #define crcpp_unique(x) crcpp_join(x, __COUNTER__)
+
+
+
+//
+// Export function signature
+//
+#define crcpp_export __declspec(dllexport)
 
 
 #ifdef __clang__
@@ -66,7 +79,11 @@
 	#define crcpp_pop_attr(...) struct crcpp_unique(pop_attr) { } __attribute__((annotate(#__VA_ARGS__)));
 
 
+	//
+	// Clang does not need to see these
+	//
 	#define crcpp_get_type(db, type) ((const crcpp::Type*)0)
+	#define crcpp_class_newdelete(type)
 
 
 #else
@@ -79,50 +96,69 @@
 	#define crcpp_reflect_part(name)
 
 
-	// TODO: Urgh... can we remove this dependency? Need it for typeid calls...
-	#include <typeinfo>
-
-
 	namespace crcpp
 	{
-		template <typename TYPE> const Type* GetType(Database& db)
+		namespace internal
 		{
-			// These are independent of the input database so can be cached
-			// NOTE: Not thread-safe!
-			static const char* name = 0;
-			static unsigned int hash = 0;
-
-			if (name == 0)
+			template <typename TYPE> const Type* GetType(Database& db)
 			{
-				// Strip Microsoft-specific type name prefixes
-				name = typeid(TYPE).name();
-				if (name[0] == 's' && name[6] == ' ')
+				// These are independent of the input database so can be cached
+				// NOTE: Not thread-safe!
+				static const char* name = 0;
+				static unsigned int hash = 0;
+
+				if (name == 0)
 				{
-					name += sizeof("struct");
-				}
-				else if (name[0] == 'c' && name[5] == ' ')
-				{
-					name += sizeof("class");
-				}
-				else if (name[0] == 'e' && name[4] == ' ')
-				{
-					name += sizeof("enum");
+					// Strip Microsoft-specific type name prefixes
+					name = typeid(TYPE).name();
+					if (name[0] == 's' && name[6] == ' ')
+					{
+						name += sizeof("struct");
+					}
+					else if (name[0] == 'c' && name[5] == ' ')
+					{
+						name += sizeof("class");
+					}
+					else if (name[0] == 'e' && name[4] == ' ')
+					{
+						name += sizeof("enum");
+					}
+
+					// Hash the name directly as we don't need to lookup the equivalent
+					// in the names database
+					hash = HashNameString(name);
+					if (hash == 0)
+					{
+						return 0;
+					}
 				}
 
-				// Hash the name directly as we don't need to lookup the equivalent
-				// in the names database
-				hash = HashNameString(name);
-				if (hash == 0)
-				{
-					return 0;
-				}
+				return db.GetType(hash);
 			}
-
-			return db.GetType(hash);
 		}
 	}
 
 
-	#define crcpp_get_type(db, type) crcpp::GetType<type>(db)
+	#define crcpp_get_type(db, type) crcpp::internal::GetType<type>(db)
+
+
+	// TODO: Make this part of crcpp_reflect_class ?
+	// That would force its inclusion
+	#define crcpp_class_newdelete(type)										\
+																			\
+		namespace crcpp														\
+		{																	\
+			namespace internal												\
+			{																\
+				crcpp_export void ConstructObject(type* object)				\
+				{															\
+					new (object) type;										\
+				}															\
+				crcpp_export void DestructObject(type* object)				\
+				{															\
+					((type*)object)->type::~type();							\
+				}															\
+			}																\
+		}
 
 #endif

@@ -118,6 +118,11 @@ crcpp_reflect(StructGlobalA)
 struct StructGlobalA;
 struct StructGlobalA
 {
+	StructGlobalA()
+		: a(2)
+	{
+	}
+
 	enum Enum { VALUE_A, VALUE_B };
 
 	// Basic field types
@@ -145,6 +150,8 @@ struct StructGlobalA
 	static void StaticParamFunction(int a) { }
 	static int StaticRetParamFunction(int a) { return a; }
 };
+
+crcpp_class_newdelete(StructGlobalA);
 
 
 // --------------------------------------------------------------------------------------------

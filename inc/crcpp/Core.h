@@ -4,31 +4,34 @@
 
 namespace crcpp
 {
-	//
-	// Trivial assert for PC only, currently
-	//
-	inline void Assert(bool expression)
+	namespace internal
 	{
-		if (expression == false)
+		//
+		// Trivial assert for PC only, currently
+		//
+		inline void Assert(bool expression)
 		{
-			__asm
+			if (expression == false)
 			{
-				int 3h
+				__asm
+				{
+					int 3h
+				}
 			}
 		}
+
+
+		//
+		// Hashes the full string int a 32-bit value
+		//
+		unsigned int HashNameString(const char* name_string);
+
+
+		//
+		// Combines two hashes by using the first one as a seed and hashing the second one
+		//
+		unsigned int MixHashes(unsigned int a, unsigned int b);
 	}
-
-
-	//
-	// Hashes the full string int a 32-bit value
-	//
-	unsigned int HashNameString(const char* name_string);
-
-
-	//
-	// Combines two hashes by using the first one as a seed and hashing the second one
-	//
-	unsigned int MixHashes(unsigned int a, unsigned int b);
 
 
 	//
@@ -95,7 +98,7 @@ namespace crcpp
 		// Causes the order of the entries in the list to change
 		void unstable_remove(unsigned int index)
 		{
-			Assert(index < m_Size);
+			internal::Assert(index < m_Size);
 			m_Data[index] = m_Data[m_Size - 1];
 			m_Size--;
 		}
@@ -116,12 +119,12 @@ namespace crcpp
 
 		TYPE& operator [] (unsigned int index)
 		{
-			Assert(index < m_Size);
+			internal::Assert(index < m_Size);
 			return m_Data[index];
 		}
 		const TYPE& operator [] (unsigned int index) const
 		{
-			Assert(index < m_Size);
+			internal::Assert(index < m_Size);
 			return m_Data[index];
 		}
 
