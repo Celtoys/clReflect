@@ -62,6 +62,7 @@ namespace
 	}
 	void CopyPrimitive(crcpp::Function& dest, const crdb::Function& src)
 	{
+		dest.address = src.address;
 		dest.unique_id = src.unique_id;
 	}
 	void CopyPrimitive(crcpp::Field& dest, const crdb::Field& src)
@@ -375,6 +376,27 @@ namespace
 			SortPrimitives(primitives[i]);
 		}
 	}
+
+
+	void FindClassConstructors(CppExport& cppexp)
+	{
+		// Search each class method list for constructors and destructors
+		crcpp::CArray<crcpp::Class>& classes = cppexp.db->classes;
+		for (int i = 0; i < classes.size(); i++)
+		{
+			crcpp::Class& cls = classes[i];
+
+			// Methods in a class have fully-scoped names so these need to be constructed first
+			// TODO: This isn't ideal for the client :/
+			std::string construct_name = std::string(cls.name.text) + "::ConstructObject";
+			std::string destruct_name = std::string(cls.name.text) + "::DestructObject";
+			unsigned int construct_hash = crcpp::internal::HashNameString(construct_name.c_str());
+			unsigned int destruct_hash = crcpp::internal::HashNameString(destruct_name.c_str());
+
+			cls.constructor = crcpp::FindPrimitive(cls.methods, construct_hash);
+			cls.destructor = crcpp::FindPrimitive(cls.methods, destruct_hash);
+		}
+	}
 }
 
 
@@ -436,6 +458,11 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	SortPrimitives(cppexp.db->classes);
 	SortPrimitives(cppexp.db->namespaces);
 	SortPrimitives(cppexp.db->type_primitives);
+
+	// Each class may have constructor/destructor methods in their method list. Run through
+	// each class and make pointers to these in the class. This is done after sorting so that
+	// local searches can take advantage of crcpp::FindPrimitive.
+	FindClassConstructors(cppexp);
 }
 
 
@@ -487,6 +514,8 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 
 	PtrSchema& schema_class = relocator.AddSchema<crcpp::Class>(&schema_type)
 		(&crcpp::Class::base_class)
+		(&crcpp::Class::constructor)
+		(&crcpp::Class::destructor)
 		(&crcpp::Class::enums, array_data_offset)
 		(&crcpp::Class::classes, array_data_offset)
 		(&crcpp::Class::methods, array_data_offset)

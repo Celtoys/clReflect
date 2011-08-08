@@ -45,9 +45,7 @@
 
 	//
 	// Injects a unique structure within the crcpp_internal namespace that only the Clang frontend
-	// can see. This struct is annotated with the name of the primitive, which be passed to the
-	// macro in comma-separated form. For example, to reflect a symbol of the name A::B::C, this
-	// must be passed as crcpp_reflect(A, B, C).
+	// can see so that it can register the specified symbol for reflection.
 	// Can only be called from the global namespace and results in the primitive and any children
 	// being fully reflected.
 	//
@@ -83,7 +81,7 @@
 	// Clang does not need to see these
 	//
 	#define crcpp_get_type(db, type) ((const crcpp::Type*)0)
-	#define crcpp_class_newdelete(type)
+	#define crcpp_impl_class(scoped_type, type)
 
 
 #else
@@ -100,7 +98,8 @@
 	{
 		namespace internal
 		{
-			template <typename TYPE> const Type* GetType(Database& db)
+			template <typename TYPE>
+			const Type* GetType(Database& db)
 			{
 				// These are independent of the input database so can be cached
 				// NOTE: Not thread-safe!
@@ -144,21 +143,22 @@
 
 	// TODO: Make this part of crcpp_reflect_class ?
 	// That would force its inclusion
-	#define crcpp_class_newdelete(type)										\
-																			\
-		namespace crcpp														\
-		{																	\
-			namespace internal												\
-			{																\
-				crcpp_export void ConstructObject(type* object)				\
-				{															\
-					new (object) type;										\
-				}															\
-				crcpp_export void DestructObject(type* object)				\
-				{															\
-					((type*)object)->type::~type();							\
-				}															\
-			}																\
+	// This can only be used from global namespace
+	#define crcpp_impl_class(scoped_type, type)							\
+																		\
+		namespace crcpp													\
+		{																\
+			namespace internal											\
+			{															\
+				crcpp_export void ConstructObject(scoped_type* object)	\
+				{														\
+					new (object) scoped_type;							\
+				}														\
+				crcpp_export void DestructObject(scoped_type* object)	\
+				{														\
+					((scoped_type*)object)->type::~type();				\
+				}														\
+			}															\
 		}
 
 #endif

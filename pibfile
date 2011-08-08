@@ -69,7 +69,7 @@ def SetLinkOptions(name, lib_paths):
     opts = env.Configs[name].LinkOptions
     opts.LibPaths = lib_paths
     opts.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
-    opts.MapFile = "out.map"
+    opts.MapFile = True
     opts.UpdateCommandLine()
 
 
@@ -132,7 +132,7 @@ crtest = CppBuildExe(env, [ "src/ClangReflectTest" ], "crtest.exe", [], [ crcpp.
 # test_obj_files is traversed twice below!
 crtest.csv_files = [ ClangReflect.CppScan(include_paths, file) for file in crtest.obj_files ]
 crtest.db_file = ClangReflect.Merge("ClangReflectTest.csv", crtest.csv_files)
-crtest.cppbin_file = ClangReflect.CppExport("ClangReflectTest.cppbin", crtest.db_file)
+crtest.cppbin_file = ClangReflect.CppExport("ClangReflectTest.cppbin", crtest.db_file, crtest.output.GetOutputFiles(env)[1])
 env.Build([ crtest.exe, crtest.cppbin_file ], "crtest")
 
 

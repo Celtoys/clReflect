@@ -151,8 +151,6 @@ struct StructGlobalA
 	static int StaticRetParamFunction(int a) { return a; }
 };
 
-crcpp_class_newdelete(StructGlobalA);
-
 
 // --------------------------------------------------------------------------------------------
 // Inheritance relationships

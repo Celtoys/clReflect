@@ -26,10 +26,6 @@ namespace crcpp
 		// O(logN) binary search over the array looking for the name you specify.
 		//
 		const Primitive* FindPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash);
-
-
-		typedef void (*ConstructObjectFunc)(void* object);
-		typedef void (*DestructObjectFunc)(void* object);
 	}
 
 
@@ -74,16 +70,12 @@ namespace crcpp
 		Type()
 			: Primitive(KIND)
 			, size(0)
-			, constructor(0)
-			, destructor(0)
 		{
 		}
 
 		Type(Kind k)
 			: Primitive(k)
 			, size(0)
-			, constructor(0)
-			, destructor(0)
 		{
 		}
 
@@ -92,9 +84,6 @@ namespace crcpp
 		inline const Class* AsClass() const;
 
 		unsigned int size;
-
-		internal::ConstructObjectFunc constructor;
-		internal::DestructObjectFunc destructor;
 	};
 
 
@@ -167,6 +156,9 @@ namespace crcpp
 		{
 		}
 
+		// Callable address
+		unsigned int address;
+
 		unsigned int unique_id;
 		const Field* return_parameter;
 
@@ -182,10 +174,15 @@ namespace crcpp
 		Class()
 			: Type(KIND)
 			, base_class(0)
+			, constructor(0)
+			, destructor(0)
 		{
 		}
 
 		const Class* base_class;
+
+		const Function* constructor;
+		const Function* destructor;
 
 		// All sorted by name
 		CArray<const Enum*> enums;

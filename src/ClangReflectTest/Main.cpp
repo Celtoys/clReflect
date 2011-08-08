@@ -40,6 +40,7 @@ private:
 
 
 extern void TestGetType(crcpp::Database& db);
+extern void TestConstructorDestructor(crcpp::Database& db);
 
 
 int main()
@@ -53,6 +54,7 @@ int main()
 	crcpp::Database db;
 	db.Load(&file);
 	TestGetType(db);
+	TestConstructorDestructor(db);
 
 	return 0;
 }

@@ -70,6 +70,10 @@
 			>
 		</File>
 		<File
+			RelativePath="TestClassImpl.cpp"
+			>
+		</File>
+		<File
 			RelativePath="TestReflectionSpecs.cpp"
 			>
 		</File>
@@ -77,7 +81,7 @@
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="X6rfBJw5_lBRXjsAEaJmDw=="
+			Value="AWhGBFCCLLw_d5OYJZLY2A=="
 		/>
 	</Globals>
 </VisualStudioProject>

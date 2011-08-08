@@ -103,3 +103,17 @@ const char* ConsumeToken(const char* text, char delimiter, char* dest, int dest_
 	*dest = 0;
 	return text;
 }
+
+
+std::string StringReplace(const std::string& str, const std::string& find, const std::string& replace)
+{
+	std::string res = str;
+	for (size_t i = res.find(find); i != res.npos; i = res.find(find, i))
+	{
+		res.replace(i, find.length(), replace);
+		i += replace.length();
+	}
+	return res;
+}
+
+

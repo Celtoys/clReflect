@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <cassert>
+#include <crcpp/Core.h>
 
 
 namespace crdb
@@ -16,6 +17,13 @@ namespace crdb
 	typedef unsigned char		u8;
 	typedef unsigned short		u16;
 	typedef unsigned int		u32;
+
+
+	//
+	// Calculate the unique ID for binding a function to its parameters
+	//
+	struct Field;
+	u32 CalculateFunctionUniqueID(const Field* return_parameter, const std::vector<Field>& parameters);
 
 
 	//
@@ -64,8 +72,17 @@ namespace crdb
 			KIND_FIELD
 		};
 
-		Primitive(Kind k) : kind(k) { }
-		Primitive(Kind k, Name n, Name p) : kind(k), name(n), parent(p) { }
+		// Constructors for default construction and complete construction
+		Primitive(Kind k)
+			: kind(k)
+		{
+		}
+		Primitive(Kind k, Name n, Name p)
+			: kind(k)
+			, name(n)
+			, parent(p)
+		{
+		}
 
 		Kind kind;
 		Name name;
@@ -77,8 +94,15 @@ namespace crdb
 	
 	struct Namespace : public Primitive
 	{
-		Namespace() : Primitive(Primitive::KIND_NAMESPACE) { }
-		Namespace(Name n, Name p) : Primitive(Primitive::KIND_NAMESPACE, n, p) { }
+		// Constructors for default construction and complete construction
+		Namespace()
+			: Primitive(Primitive::KIND_NAMESPACE)
+		{
+		}
+		Namespace(Name n, Name p)
+			: Primitive(Primitive::KIND_NAMESPACE, n, p)
+		{
+		}
 	};
 
 
@@ -87,9 +111,22 @@ namespace crdb
 	//
 	struct Type : public Primitive
 	{
-		Type() : Primitive(Primitive::KIND_TYPE), size(0) { }
-		Type(Name n, Name p, u32 s) : Primitive(Primitive::KIND_TYPE, n, p), size(s) { }
-		Type(Kind k) : Primitive(k), size(0) { }
+		// Constructors for default construction and complete construction, with variants for derived types to call
+		Type()
+			: Primitive(Primitive::KIND_TYPE)
+			, size(0)
+		{
+		}
+		Type(Name n, Name p, u32 s)
+			: Primitive(Primitive::KIND_TYPE, n, p)
+			, size(s)
+		{
+		}
+		Type(Kind k)
+			: Primitive(k)
+			, size(0)
+		{
+		}
 		Type(Kind k, Name n, Name p, u32 s) : Primitive(k, n, p), size(s) { }
 
 		// Total size of the type, including alignment
@@ -103,8 +140,16 @@ namespace crdb
 	//
 	struct Class : public Type
 	{
-		Class() : Type(Primitive::KIND_CLASS) { }
-		Class(Name n, Name p, Name b, u32 s) : Type(Primitive::KIND_CLASS, n, p, s), base_class(b) { }
+		// Constructors for default construction and complete construction
+		Class()
+			: Type(Primitive::KIND_CLASS)
+		{
+		}
+		Class(Name n, Name p, Name b, u32 s)
+			: Type(Primitive::KIND_CLASS, n, p, s)
+			, base_class(b)
+		{
+		}
 
 		// Single base class
 		Name base_class;
@@ -116,8 +161,15 @@ namespace crdb
 	//
 	struct Enum : public Type
 	{
-		Enum() : Type(Primitive::KIND_ENUM) { }
-		Enum(Name n, Name p) : Type(Primitive::KIND_ENUM, n, p, sizeof(int)) { }
+		// Constructors for default construction and complete construction
+		Enum()
+			: Type(Primitive::KIND_ENUM)
+		{
+		}
+		Enum(Name n, Name p)
+			: Type(Primitive::KIND_ENUM, n, p, sizeof(int))
+		{
+		}
 	};
 
 
@@ -126,10 +178,18 @@ namespace crdb
 	//
 	struct EnumConstant : public Primitive
 	{
-		EnumConstant() : Primitive(Primitive::KIND_ENUM_CONSTANT) { }
-		EnumConstant(Name n, Name p, int v) : Primitive(Primitive::KIND_ENUM_CONSTANT, n, p), value(v) { }
+		// Constructors for default construction and complete construction
+		EnumConstant()
+			: Primitive(Primitive::KIND_ENUM_CONSTANT)
+		{
+		}
+		EnumConstant(Name n, Name p, int v)
+			: Primitive(Primitive::KIND_ENUM_CONSTANT, n, p)
+			, value(v)
+		{
+		}
 
-		// Enumeration constants can have values that are signed/unsigned and of arbitrary width.
+		// Enumeration constants can have values that are signed/unsigned and of arbitrary width in clang.
 		// The standard assures that they're of integral size and is quite vague.
 		// For now I'm just assuming they're 32-bit signed.
 		int value;
@@ -141,13 +201,29 @@ namespace crdb
 	//
 	struct Function : public Primitive
 	{
-		Function() : Primitive(Primitive::KIND_FUNCTION), unique_id(0) { }
-		Function(Name n, Name p, u32 uid) : Primitive(Primitive::KIND_FUNCTION, n, p), unique_id(uid) { }
+		// Constructors for default construction and complete construction
+		Function()
+			: Primitive(Primitive::KIND_FUNCTION)
+			, unique_id(0)
+			, address(0)
+		{
+		}
+		Function(Name n, Name p, u32 uid)
+			: Primitive(Primitive::KIND_FUNCTION, n, p)
+			, unique_id(uid)
+			, address(0)
+		{
+		}
 
 		// An ID unique to this function among other functions that have the same name
 		// This allows the function to be referenced accurately by any children
 		// All return values are named "return" so a parameter reference won't work here
 		u32 unique_id;
+
+		// The address of the function is only used during C++ export at the moment and
+		// is not serialised to disk or involved in merging. If at a later date this becomes
+		// more tightly integrated to clang/llvm then this will need to be serialised.
+		u32 address;
 	};
 
 
@@ -163,8 +239,24 @@ namespace crdb
 			MODIFIER_REFERENCE
 		};
 
-		Field() : Primitive(Primitive::KIND_FIELD), modifier(MODIFIER_VALUE), is_const(false), offset(-1), parent_unique_id(0) { }
-		Field(Name n, Name p, Name t, Modifier pass, bool c, int o, u32 uid = 0) : Primitive(Primitive::KIND_FIELD, n, p), type(t), modifier(pass), is_const(c), offset(o), parent_unique_id(uid) { }
+		// Constructors for default construction and complete construction
+		Field()
+			: Primitive(Primitive::KIND_FIELD)
+			, modifier(MODIFIER_VALUE)
+			, is_const(false)
+			, offset(-1)
+			, parent_unique_id(0)
+		{
+		}
+		Field(Name n, Name p, Name t, Modifier pass, bool c, int o, u32 uid = 0)
+			: Primitive(Primitive::KIND_FIELD, n, p)
+			, type(t)
+			, modifier(pass)
+			, is_const(c)
+			, offset(o)
+			, parent_unique_id(uid)
+		{
+		}
 
 		Name type;
 		Modifier modifier;

@@ -59,18 +59,6 @@ namespace
 	}
 
 
-	std::string StringReplace(const std::string& str, const std::string& find, const std::string& replace)
-	{
-		std::string res = str;
-		for (size_t i = res.find(find); i != res.npos; i = res.find(find, i))
-		{
-			res.replace(i, find.length(), replace);
-			i += replace.length();
-		}
-		return res;
-	}
-
-
 	void AddUnmarkedSpecs(std::map<std::string, bool>& specs)
 	{
 		// Loop up through the parent scopes looking for unmarked names

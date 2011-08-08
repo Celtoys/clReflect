@@ -7,6 +7,40 @@
 #include <assert.h>
 
 
+namespace
+{
+	crdb::u32 CalcFieldHash(const crdb::Field& field)
+	{
+		// Construct the fully-qualified type name and hash that
+		std::string name;
+		name += field.is_const ? "const " : "";
+		name += field.type.text;
+		name += field.modifier == crdb::Field::MODIFIER_POINTER ? "*" : field.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "";
+		return crcpp::internal::HashNameString(name.c_str());
+	}
+}
+
+
+crdb::u32 crdb::CalculateFunctionUniqueID(const Field* return_parameter, const std::vector<Field>& parameters)
+{
+	// The return parameter is optional as it may be void
+	crdb::u32 unique_id = 0;
+	if (return_parameter != 0)
+	{
+		unique_id = CalcFieldHash(*return_parameter);
+	}
+
+	// Mix with all parameter field hashes
+	for (size_t i = 0; i < parameters.size(); i++)
+	{
+		crdb::u32 field_hash = CalcFieldHash(parameters[i]);
+		unique_id = crcpp::internal::MixHashes(unique_id, field_hash);
+	}
+
+	return unique_id;
+}
+
+
 crdb::Database::Database()
 {
 }

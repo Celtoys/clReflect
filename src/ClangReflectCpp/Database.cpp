@@ -26,20 +26,17 @@ namespace
 		int last = entries.size() - 1;
 
 		// Binary search
-		while (first < last)
+		while (first <= last)
 		{
 			// Identify the mid point
 			int mid = (first + last) / 2;
 
 			int cmp = COMPARE_FUNC(entries[mid], compare_value);
-
-			// hash - primitive_hash > 0
 			if (cmp > 0)
 			{
 				// Shift search to local upper half
 				first = mid + 1;
 			}
-			// hash - primitive_hash < 0
 			else if (cmp < 0)
 			{
 				// Shift search to local lower half

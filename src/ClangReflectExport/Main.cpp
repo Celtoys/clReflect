@@ -33,6 +33,14 @@ int main(int argc, const char* argv[])
 		}
 	}
 
+	// Add function address information from any specified map files
+	std::string map_file = args.GetProperty("-map");
+	if (map_file != "")
+	{
+		LOG(main, INFO, "Parsing map file: %s", map_file.c_str());
+		MapFileParser parser(db, map_file.c_str());
+	}
+
 	std::string cpp_export = args.GetProperty("-cpp");
 	if (cpp_export != "")
 	{
@@ -41,8 +49,6 @@ int main(int argc, const char* argv[])
 		WriteCppExportAsText(cppexp, "out.txt");
 		SaveCppExport(cppexp, cpp_export.c_str());
 	}
-
-	MapFileParser parser("../../out2.map");
 
 	return 0;
 }

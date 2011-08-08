@@ -104,17 +104,6 @@ namespace
 	}
 
 
-	crdb::u32 CalcFieldHash(const crdb::Field& field)
-	{
-		// Construct the fully-qualified type name and hash that
-		std::string name;
-		name += field.is_const ? "const " : "";
-		name += field.type.text;
-		name += field.modifier == crdb::Field::MODIFIER_POINTER ? "*" : field.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "";
-		return crcpp::internal::HashNameString(name.c_str());
-	}
-
-
 	void MakeFunction(crdb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::NamedDecl* decl, crdb::Name function_name, crdb::Name parent_name, std::vector<crdb::Field>& parameters)
 	{
 		// Cast to a function
@@ -160,12 +149,7 @@ namespace
 
 		// Generate a hash unique to this function among other functions of the same name
 		// This is so that its parameters/return code can re-parent themselves correctly
-		crdb::u32 unique_id = CalcFieldHash(return_parameter);
-		for (size_t i = 0; i < parameters.size(); i++)
-		{
-			crdb::u32 field_hash = CalcFieldHash(parameters[i]);
-			unique_id = crcpp::internal::MixHashes(unique_id, field_hash);
-		}
+		crdb::u32 unique_id = crdb::CalculateFunctionUniqueID(&return_parameter, parameters);
 
 		// Parent each parameter to the function
 		return_parameter.parent_unique_id = unique_id;
