@@ -77,11 +77,144 @@ namespace
 	}
 
 
+	const char* ConsumeParameterToken(const char* text, char* dest, int dest_size)
+	{
+		char* end = dest + dest_size;
+		while (*text
+			&& *text != ' '
+			&& *text != ','
+			&& *text != ')'
+			&& dest != end)
+		{
+			*dest++ = *text++;
+		}
+		*dest = 0;
+		return text;
+	}
+
+
+	crdb::Field MatchParameter(crdb::Database& db, const char*& ptr, const char* end)
+	{
+		crdb::Field parameter;
+
+		char type_name[1024] = { 0 };
+		char token[1024] = { 0 };
+
+		// Loop reading tokens irrespective of order. Note that this parsing strategy won't distinguish between
+		// the type of const-qualifier. However, only one mode of qualification is currently supported so this
+		// will suffice for now.
+		bool parse = true;
+		while (parse && ptr < end)
+		{
+			ptr = ConsumeParameterToken(ptr, token, sizeof(token));
+			ptr = SkipWhitespace(ptr);
+
+			// Check for modifiers
+			if (token[0] == '&')
+			{
+				parameter.modifier = crdb::Field::MODIFIER_REFERENCE;
+			}
+			else if (token[0] == '*')
+			{
+				parameter.modifier = crdb::Field::MODIFIER_POINTER;
+			}
+
+			// Check for const qualification
+			else if (!strcmp(token, "const"))
+			{
+				parameter.is_const = true;
+			}
+
+			// Check for any type prefixes
+			else if (!strcmp(token, "unsigned") || !strcmp(token, "signed"))
+			{
+				strcpy(type_name, token);
+				strcat(type_name, " ");
+			}
+
+			// What's remaining must be the type name
+			else
+			{
+				strcat(type_name, token);
+			}
+
+			if (*ptr == ',' || *ptr == ')')
+			{
+				ptr++;
+				break;
+			}
+		}
+
+		parameter.type = db.GetName(type_name);
+		return parameter;
+	}
+
+
 	void AddFunctionAddress(crdb::Database& db, const std::string& function_name, const std::string& function_signature, unsigned int function_address)
 	{
 		if (function_address == 0)
 		{
 			return;
+		}
+
+		// Find where the return type ends
+		size_t func_pos = function_signature.find(function_name);
+		if (func_pos == std::string::npos)
+		{
+			LOG(main, ERROR, "Couldn't locate function name in signature for '%s'", function_name.c_str());
+			return;
+		}
+
+		// Parse the return parameter and only remember it if it's non-void
+		const char* ptr = function_signature.c_str();
+		crdb::Field return_parameter = MatchParameter(db, ptr, ptr + func_pos);
+		crdb::Field* return_parameter_ptr = 0;
+		if (return_parameter.type.text != "void")
+		{
+			return_parameter_ptr = &return_parameter;
+		}
+
+		// Isolate the parameters in the signature
+		size_t l_pos = function_signature.find('(', func_pos);
+		if (l_pos == std::string::npos)
+		{
+			LOG(main, ERROR, "Couldn't locate left bracket in signature for '%s'", function_name.c_str());
+			return;
+		}
+		size_t r_pos = function_signature.find(')', l_pos);
+		if (r_pos == std::string::npos)
+		{
+			LOG(main, ERROR, "Couldn't locate right bracket in signature for '%s'", function_name.c_str());
+			return;
+		}
+
+		// Parse the parameters
+		std::vector<crdb::Field> parameters;
+		ptr = function_signature.c_str() + l_pos + 1;
+		const char* end = function_signature.c_str() + r_pos;
+		while (ptr < end)
+		{
+			crdb::Field parameter = MatchParameter(db, ptr, end);
+			if (parameter.type.text != "void")
+			{
+				parameters.push_back(parameter);
+			}
+		}
+
+		// Calculate the ID of the matching function
+		crdb::u32 unique_id = crdb::CalculateFunctionUniqueID(return_parameter_ptr, parameters);
+
+		// Search through all functions of the same name
+		crdb::u32 function_hash = crcpp::internal::HashNameString(function_name.c_str());
+		crdb::PrimitiveStore<crdb::Function>::range functions = db.m_Functions.equal_range(function_hash);
+		for (crdb::PrimitiveStore<crdb::Function>::iterator i = functions.first; i != functions.second; ++i)
+		{
+			// Assign the function address when the unique IDs match
+			if (i->second.unique_id == unique_id)
+			{
+				i->second.address = function_address;
+				break;
+			}
 		}
 	}
 
