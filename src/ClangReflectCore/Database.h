@@ -199,6 +199,11 @@ namespace crdb
 		}
 		Type(Kind k, Name n, Name p, u32 s) : Primitive(k, n, p), size(s) { }
 
+		bool Equals(const Type& rhs) const
+		{
+			return Primitive::Equals(rhs) && size == rhs.size;
+		}
+
 		// Total size of the type, including alignment
 		u32 size;
 	};
@@ -218,6 +223,11 @@ namespace crdb
 			: Primitive(Primitive::KIND_ENUM_CONSTANT, n, p)
 			, value(v)
 		{
+		}
+
+		bool Equals(const EnumConstant& rhs) const
+		{
+			return Primitive::Equals(rhs) && value == rhs.value;
 		}
 
 		// Enumeration constants can have values that are signed/unsigned and of arbitrary width in clang.
@@ -275,6 +285,17 @@ namespace crdb
 		{
 		}
 
+		bool Equals(const Field& rhs) const
+		{
+			return
+				Primitive::Equals(rhs) &&
+				type == rhs.type &&
+				modifier == rhs.modifier &&
+				is_const == rhs.is_const &&
+				offset == rhs.offset &&
+				parent_unique_id == rhs.parent_unique_id;
+		}
+
 		Name type;
 		Modifier modifier;
 		bool is_const;
@@ -311,6 +332,11 @@ namespace crdb
 		{
 		}
 
+		bool Equals(const Function& rhs) const
+		{
+			return Primitive::Equals(rhs) && unique_id == rhs.unique_id;
+		}
+
 		// An ID unique to this function among other functions that have the same name
 		// This allows the function to be referenced accurately by any children
 		// All return values are named "return" so a parameter reference won't work here
@@ -338,6 +364,11 @@ namespace crdb
 			: Type(Primitive::KIND_CLASS, n, p, s)
 			, base_class(b)
 		{
+		}
+
+		bool Equals(const Class& rhs) const
+		{
+			return Type::Equals(rhs) && base_class == rhs.base_class;
 		}
 
 		// Single base class

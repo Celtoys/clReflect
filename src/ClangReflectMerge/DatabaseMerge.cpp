@@ -7,56 +7,6 @@
 
 namespace
 {
-	//
-	// Overloads for comparing primitive equality, used to determine whether primitives
-	// with the same name are different during a merge. These are stored here to keep
-	// the database interface as simple as possible. Of course, that carries with it
-	// an increased chance of the two becoming out of sync...
-	//
-	bool PrimitivesEqual(const crdb::Primitive& a, const crdb::Primitive& b)
-	{
-		return
-			a.kind == b.kind &&
-			a.name == b.name &&
-			a.parent == b.parent;
-	}
-	bool PrimitivesEqual(const crdb::Type& a, const crdb::Type& b)
-	{
-		return
-			PrimitivesEqual((const crdb::Primitive&)a, (const crdb::Primitive&)b) &&
-			a.size == b.size;
-	}
-	bool PrimitivesEqual(const crdb::Class& a, const crdb::Class& b)
-	{
-		return
-			PrimitivesEqual((const crdb::Type&)a, (const crdb::Type&)b) &&
-			a.base_class == b.base_class &&
-			a.size == b.size;
-	}
-	bool PrimitivesEqual(const crdb::EnumConstant& a, const crdb::EnumConstant& b)
-	{
-		return
-			PrimitivesEqual((const crdb::Primitive&)a, (const crdb::Primitive&)b) &&
-			a.value == b.value;
-	}
-	bool PrimitivesEqual(const crdb::Function& a, const crdb::Function& b)
-	{
-		return
-			PrimitivesEqual((const crdb::Primitive&)a, (const crdb::Primitive&)b) &&
-			a.unique_id == b.unique_id;
-	}
-	bool PrimitivesEqual(const crdb::Field& a, const crdb::Field& b)
-	{
-		return
-			PrimitivesEqual((const crdb::Primitive&)a, (const crdb::Primitive&)b) &&
-			a.type == b.type &&
-			a.modifier == b.modifier &&
-			a.is_const == b.is_const &&
-			a.offset == b.offset &&
-			a.parent_unique_id == b.parent_unique_id;
-	}
-
-
 	void CheckClassMergeFailure(const crdb::Class& class_a, const crdb::Class& class_b)
 	{
 		const char* class_name = class_a.name.text.c_str();
@@ -128,7 +78,7 @@ namespace
 				crdb::PrimitiveStore<TYPE>::const_range dest_range = dest_store.equal_range(src->first);
 				for (crdb::PrimitiveStore<TYPE>::const_iterator i = dest_range.first; i != dest_range.second; ++i)
 				{
-					if (PrimitivesEqual(i->second, src->second))
+					if (i->second.Equals(src->second))
 					{
 						add = false;
 						break;
@@ -174,4 +124,11 @@ void MergeDatabases(crdb::Database& dest_db, const crdb::Database& src_db)
 	// Field names aren't scoped and hence overloadable. They are parented to unique functions so that will
 	// be the key deciding factor in whether fields should be merged or not.
 	MergeOverloads<crdb::Field>(dest_db, src_db);
+
+	// Attributes are not scoped and are shared to save runtime memory so all of these are overloadable
+	MergeOverloads<crdb::FlagAttribute>(dest_db, src_db);
+	MergeOverloads<crdb::IntAttribute>(dest_db, src_db);
+	MergeOverloads<crdb::FloatAttribute>(dest_db, src_db);
+	MergeOverloads<crdb::NameAttribute>(dest_db, src_db);
+	MergeOverloads<crdb::TextAttribute>(dest_db, src_db);
 }
