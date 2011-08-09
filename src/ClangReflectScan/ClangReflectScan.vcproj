@@ -70,6 +70,14 @@
 			>
 		</File>
 		<File
+			RelativePath="AttributeParser.cpp"
+			>
+		</File>
+		<File
+			RelativePath="AttributeParser.h"
+			>
+		</File>
+		<File
 			RelativePath="ClangFrontend.cpp"
 			>
 		</File>
@@ -93,7 +101,7 @@
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="y6lZO2wvMKhIlAQCY8fr9Q=="
+			Value="MXjeD8TfWb51TZ39l1wMJA=="
 		/>
 	</Globals>
 </VisualStudioProject>

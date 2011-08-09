@@ -48,13 +48,13 @@ namespace crcpp
 		enum Kind
 		{
 			KIND_NONE,
-			KIND_NAMESPACE,
 			KIND_TYPE,
-			KIND_CLASS,
-			KIND_ENUM,
 			KIND_ENUM_CONSTANT,
+			KIND_ENUM,
+			KIND_FIELD,
 			KIND_FUNCTION,
-			KIND_FIELD
+			KIND_CLASS,
+			KIND_NAMESPACE,
 		};
 
 		Primitive(Kind k)

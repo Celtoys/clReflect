@@ -26,6 +26,7 @@
 
 #include "ASTConsumer.h"
 #include "ReflectionSpecs.h"
+#include "AttributeParser.h"
 
 #include <crcpp/Core.h>
 
@@ -196,6 +197,62 @@ namespace
 
 		LOG_POP_INDENT(ast);
 	}
+
+
+	template <typename TYPE>
+	void AddAttribute(crdb::Database& db, TYPE* attribute)
+	{
+		// Adds and then deletes after use as the specified type
+		db.AddPrimitive(*attribute);
+		delete attribute;
+	}
+
+
+	void ParseAttributes(crdb::Database& db, clang::NamedDecl* decl, crdb::Name parent)
+	{
+		// Reflection attributes are stored as clang annotation attributes
+		clang::specific_attr_iterator<clang::AnnotateAttr> i = decl->specific_attr_begin<clang::AnnotateAttr>();
+		if (i == decl->specific_attr_end<clang::AnnotateAttr>())
+		{
+			return;
+		}
+
+		// Get the annotation text
+		clang::AnnotateAttr* attribute = *i;
+		llvm::StringRef attribute_text = attribute->getAnnotation();
+
+		// Figure out what operations to apply to the attributes
+		if (attribute_text.startswith("attr:"))
+		{
+			attribute_text = attribute_text.substr(sizeof("attr"));
+		}
+
+		// Parse and iterate over all attributes in the text
+		std::vector<crdb::Attribute*> attributes = ::ParseAttributes(db, attribute_text.str().c_str());
+		for (size_t i = 0; i < attributes.size(); i++)
+		{
+			// Add the attributes to the database, parented to the calling declaration
+			crdb::Attribute* attribute = attributes[i];
+			switch (attribute->kind)
+			{
+			case (crdb::Primitive::KIND_ATTRIBUTE_FLAG):
+				AddAttribute(db, (crdb::AttributeFlag*)attribute);
+				break;
+			case (crdb::Primitive::KIND_ATTRIBUTE_INT):
+				AddAttribute(db, (crdb::AttributeInt*)attribute);
+				break;
+			case (crdb::Primitive::KIND_ATTRIBUTE_FLOAT):
+				AddAttribute(db, (crdb::AttributeFloat*)attribute);
+				break;
+			case (crdb::Primitive::KIND_ATTRIBUTE_NAME):
+				AddAttribute(db, (crdb::AttributeName*)attribute);
+				break;
+			case (crdb::Primitive::KIND_ATTRIBUTE_TEXT):
+				AddAttribute(db, (crdb::AttributeText*)attribute);
+				break;
+			}
+		}
+	}
 }
 
 
@@ -259,6 +316,9 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name,
 	// Generate a name for the decl
 	//crdb::Name name = m_DB.GetName(decl->getDeclName().getAsString().c_str());
 	crdb::Name name = m_DB.GetName(decl->getQualifiedNameAsString().c_str());
+
+	// Gather all attributes associated with this primitive
+	ParseAttributes(m_DB, decl, name);
 
 	clang::Decl::Kind kind = decl->getKind();
 	switch (kind)

@@ -93,6 +93,9 @@
 	//
 	#define crcpp_reflect(name)
 	#define crcpp_reflect_part(name)
+	#define crcpp_attr(...)
+	#define crcpp_push_attr(...)
+	#define crcpp_pop_attr(...)
 
 
 	namespace crcpp

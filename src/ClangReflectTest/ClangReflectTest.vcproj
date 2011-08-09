@@ -70,6 +70,10 @@
 			>
 		</File>
 		<File
+			RelativePath="TestAttributes.cpp"
+			>
+		</File>
+		<File
 			RelativePath="TestClassImpl.cpp"
 			>
 		</File>
@@ -81,7 +85,7 @@
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="AWhGBFCCLLw_d5OYJZLY2A=="
+			Value="SDHmtZ9zg5yp62ftaGm7hw=="
 		/>
 	</Globals>
 </VisualStudioProject>

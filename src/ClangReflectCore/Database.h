@@ -63,13 +63,18 @@ namespace crdb
 	{
 		enum Kind
 		{
-			KIND_NAMESPACE,
+			KIND_ATTRIBUTE_FLAG,
+			KIND_ATTRIBUTE_INT,
+			KIND_ATTRIBUTE_FLOAT,
+			KIND_ATTRIBUTE_NAME,
+			KIND_ATTRIBUTE_TEXT,
 			KIND_TYPE,
-			KIND_CLASS,
-			KIND_ENUM,
 			KIND_ENUM_CONSTANT,
+			KIND_ENUM,
+			KIND_FIELD,
 			KIND_FUNCTION,
-			KIND_FIELD
+			KIND_CLASS,
+			KIND_NAMESPACE,
 		};
 
 		// Constructors for default construction and complete construction
@@ -91,7 +96,61 @@ namespace crdb
 		Name parent;
 	};
 
-	
+
+	//
+	// Base attribute type for collectioned different attribute types together
+	//
+	struct Attribute : public Primitive
+	{
+		// Constructors for for derived types to call
+		Attribute(Kind k)
+			: Primitive(k)
+		{
+		}
+		Attribute(Kind k, Name n, Name p)
+			: Primitive(k, n, p)
+		{
+		}
+	};
+
+
+	//
+	// Representations of the different types of attribute available. Each attribute has a single
+	// value with constructors for default construction and complete construction. Some have
+	// non-trivial destructors so all need to be deleted as their own type and not the based type
+	// due to the absence of a virtual destructor.
+	//
+	struct AttributeFlag : public Attribute
+	{
+		AttributeFlag() : Attribute(Primitive::KIND_ATTRIBUTE_FLAG) { }
+		AttributeFlag(Name n, Name p) : Attribute(Primitive::KIND_ATTRIBUTE_FLAG, n, p) { }
+	};
+	struct AttributeInt : public Attribute
+	{
+		AttributeInt() : Attribute(Primitive::KIND_ATTRIBUTE_INT) { }
+		AttributeInt(Name n, Name p, int v) : Attribute(Primitive::KIND_ATTRIBUTE_INT, n, p), value(v) { }
+		int value;
+	};
+	struct AttributeFloat : public Attribute
+	{
+		AttributeFloat() : Attribute(Primitive::KIND_ATTRIBUTE_FLOAT) { }
+		AttributeFloat(Name n, Name p, float v) : Attribute(Primitive::KIND_ATTRIBUTE_FLOAT, n, p), value(v) { }
+		float value;
+	};
+	struct AttributeName : public Attribute
+	{
+		AttributeName() : Attribute(Primitive::KIND_ATTRIBUTE_NAME) { }
+		AttributeName(Name n, Name p, Name v) : Attribute(Primitive::KIND_ATTRIBUTE_NAME, n, p), value(v) { }
+		Name value;
+	};
+	struct AttributeText : public Attribute
+	{
+		AttributeText() : Attribute(Primitive::KIND_ATTRIBUTE_TEXT) { }
+		AttributeText(Name n, Name p, const char* v) : Attribute(Primitive::KIND_ATTRIBUTE_TEXT, n, p), value(v) { }
+		std::string value;
+	};
+
+
 	//
 	// A basic built-in type that classes/structs can also inherit from
 	//
@@ -332,6 +391,13 @@ namespace crdb
 		template <> PrimitiveStore<EnumConstant>& GetPrimitiveStore() { return m_EnumConstants; }
 		template <> PrimitiveStore<Function>& GetPrimitiveStore() { return m_Functions; }
 		template <> PrimitiveStore<Field>& GetPrimitiveStore() { return m_Fields; }
+		
+		// Attribute maps
+		template <> PrimitiveStore<AttributeFlag>& GetPrimitiveStore() { return m_FlagAttributes; }
+		template <> PrimitiveStore<AttributeInt>& GetPrimitiveStore() { return m_IntAttributes; }
+		template <> PrimitiveStore<AttributeFloat>& GetPrimitiveStore() { return m_FloatAttributes; }
+		template <> PrimitiveStore<AttributeName>& GetPrimitiveStore() { return m_NameAttributes; }
+		template <> PrimitiveStore<AttributeText>& GetPrimitiveStore() { return m_TextAttributes; }
 
 		// Single pass-through const retrieval of the primitive stores. This strips the const-ness
 		// of the 'this' pointer to remove the need to copy-paste the GetPrimitiveStore implementations
@@ -352,5 +418,12 @@ namespace crdb
 		PrimitiveStore<EnumConstant> m_EnumConstants;
 		PrimitiveStore<Function> m_Functions;
 		PrimitiveStore<Field> m_Fields;
+
+		// Storage for all attributes of different types
+		PrimitiveStore<AttributeFlag> m_FlagAttributes;
+		PrimitiveStore<AttributeInt> m_IntAttributes;
+		PrimitiveStore<AttributeFloat> m_FloatAttributes;
+		PrimitiveStore<AttributeName> m_NameAttributes;
+		PrimitiveStore<AttributeText> m_TextAttributes;
 	};
 }
