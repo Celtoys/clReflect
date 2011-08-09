@@ -89,6 +89,15 @@ namespace crdb
 		{
 		}
 
+		// Implemented with no operator overloading because chaining them is a pain
+		bool Equals(const Primitive& rhs) const
+		{
+			return
+				kind == rhs.kind &&
+				name == rhs.name &&
+				parent == rhs.parent;
+		}
+
 		Kind kind;
 		Name name;
 
@@ -120,33 +129,49 @@ namespace crdb
 	// non-trivial destructors so all need to be deleted as their own type and not the based type
 	// due to the absence of a virtual destructor.
 	//
-	struct AttributeFlag : public Attribute
+	struct FlagAttribute : public Attribute
 	{
-		AttributeFlag() : Attribute(Primitive::KIND_ATTRIBUTE_FLAG) { }
-		AttributeFlag(Name n, Name p) : Attribute(Primitive::KIND_ATTRIBUTE_FLAG, n, p) { }
+		FlagAttribute() : Attribute(Primitive::KIND_ATTRIBUTE_FLAG) { }
+		FlagAttribute(Name n, Name p) : Attribute(Primitive::KIND_ATTRIBUTE_FLAG, n, p) { }
 	};
-	struct AttributeInt : public Attribute
+	struct IntAttribute : public Attribute
 	{
-		AttributeInt() : Attribute(Primitive::KIND_ATTRIBUTE_INT) { }
-		AttributeInt(Name n, Name p, int v) : Attribute(Primitive::KIND_ATTRIBUTE_INT, n, p), value(v) { }
+		IntAttribute() : Attribute(Primitive::KIND_ATTRIBUTE_INT) { }
+		IntAttribute(Name n, Name p, int v) : Attribute(Primitive::KIND_ATTRIBUTE_INT, n, p), value(v) { }
+		bool Equals(const IntAttribute& rhs) const
+		{
+			return Primitive::Equals(rhs) && value == rhs.value;
+		}
 		int value;
 	};
-	struct AttributeFloat : public Attribute
+	struct FloatAttribute : public Attribute
 	{
-		AttributeFloat() : Attribute(Primitive::KIND_ATTRIBUTE_FLOAT) { }
-		AttributeFloat(Name n, Name p, float v) : Attribute(Primitive::KIND_ATTRIBUTE_FLOAT, n, p), value(v) { }
+		FloatAttribute() : Attribute(Primitive::KIND_ATTRIBUTE_FLOAT) { }
+		FloatAttribute(Name n, Name p, float v) : Attribute(Primitive::KIND_ATTRIBUTE_FLOAT, n, p), value(v) { }
+		bool Equals(const FloatAttribute& rhs) const
+		{
+			return Primitive::Equals(rhs) && value == rhs.value;
+		}
 		float value;
 	};
-	struct AttributeName : public Attribute
+	struct NameAttribute : public Attribute
 	{
-		AttributeName() : Attribute(Primitive::KIND_ATTRIBUTE_NAME) { }
-		AttributeName(Name n, Name p, Name v) : Attribute(Primitive::KIND_ATTRIBUTE_NAME, n, p), value(v) { }
+		NameAttribute() : Attribute(Primitive::KIND_ATTRIBUTE_NAME) { }
+		NameAttribute(Name n, Name p, Name v) : Attribute(Primitive::KIND_ATTRIBUTE_NAME, n, p), value(v) { }
+		bool Equals(const NameAttribute& rhs) const
+		{
+			return Primitive::Equals(rhs) && value == rhs.value;
+		}
 		Name value;
 	};
-	struct AttributeText : public Attribute
+	struct TextAttribute : public Attribute
 	{
-		AttributeText() : Attribute(Primitive::KIND_ATTRIBUTE_TEXT) { }
-		AttributeText(Name n, Name p, const char* v) : Attribute(Primitive::KIND_ATTRIBUTE_TEXT, n, p), value(v) { }
+		TextAttribute() : Attribute(Primitive::KIND_ATTRIBUTE_TEXT) { }
+		TextAttribute(Name n, Name p, const char* v) : Attribute(Primitive::KIND_ATTRIBUTE_TEXT, n, p), value(v) { }
+		bool Equals(const TextAttribute& rhs) const
+		{
+			return Primitive::Equals(rhs) && value == rhs.value;
+		}
 		std::string value;
 	};
 
@@ -393,11 +418,11 @@ namespace crdb
 		template <> PrimitiveStore<Field>& GetPrimitiveStore() { return m_Fields; }
 		
 		// Attribute maps
-		template <> PrimitiveStore<AttributeFlag>& GetPrimitiveStore() { return m_FlagAttributes; }
-		template <> PrimitiveStore<AttributeInt>& GetPrimitiveStore() { return m_IntAttributes; }
-		template <> PrimitiveStore<AttributeFloat>& GetPrimitiveStore() { return m_FloatAttributes; }
-		template <> PrimitiveStore<AttributeName>& GetPrimitiveStore() { return m_NameAttributes; }
-		template <> PrimitiveStore<AttributeText>& GetPrimitiveStore() { return m_TextAttributes; }
+		template <> PrimitiveStore<FlagAttribute>& GetPrimitiveStore() { return m_FlagAttributes; }
+		template <> PrimitiveStore<IntAttribute>& GetPrimitiveStore() { return m_IntAttributes; }
+		template <> PrimitiveStore<FloatAttribute>& GetPrimitiveStore() { return m_FloatAttributes; }
+		template <> PrimitiveStore<NameAttribute>& GetPrimitiveStore() { return m_NameAttributes; }
+		template <> PrimitiveStore<TextAttribute>& GetPrimitiveStore() { return m_TextAttributes; }
 
 		// Single pass-through const retrieval of the primitive stores. This strips the const-ness
 		// of the 'this' pointer to remove the need to copy-paste the GetPrimitiveStore implementations
@@ -420,10 +445,10 @@ namespace crdb
 		PrimitiveStore<Field> m_Fields;
 
 		// Storage for all attributes of different types
-		PrimitiveStore<AttributeFlag> m_FlagAttributes;
-		PrimitiveStore<AttributeInt> m_IntAttributes;
-		PrimitiveStore<AttributeFloat> m_FloatAttributes;
-		PrimitiveStore<AttributeName> m_NameAttributes;
-		PrimitiveStore<AttributeText> m_TextAttributes;
+		PrimitiveStore<FlagAttribute> m_FlagAttributes;
+		PrimitiveStore<IntAttribute> m_IntAttributes;
+		PrimitiveStore<FloatAttribute> m_FloatAttributes;
+		PrimitiveStore<NameAttribute> m_NameAttributes;
+		PrimitiveStore<TextAttribute> m_TextAttributes;
 	};
 }

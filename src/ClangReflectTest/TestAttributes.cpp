@@ -42,7 +42,8 @@ namespace TestAttributes
 
 	// --------------------------------------------------------------------------------------------
 	// Function attributes can be on the implementation or declaration
-	// If they're on both, they're merged
+	// With function attributes, the declaration takes priority over the definition and the definition
+	// attributes are discarded
 	crcpp_attr(function_attr_decl)
 	void FunctionAttr();
 	crcpp_attr(function_attr_def)

@@ -203,8 +203,15 @@ namespace
 	template <typename TYPE>
 	void AddAttribute(crdb::Database& db, TYPE* attribute)
 	{
-		// Adds and then deletes after use as the specified type
-		db.AddPrimitive(*attribute);
+		// Only add the attribute if its unique
+		const crdb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>();
+		crdb::PrimitiveStore<TYPE>::const_iterator i = store.find(attribute->name.hash);
+		if (i == store.end() || !i->second.Equals(*attribute))
+		{
+			db.AddPrimitive(*attribute);
+		}
+
+		// Delete as the specified type to catch the correct destructor
 		delete attribute;
 	}
 
@@ -240,22 +247,23 @@ namespace
 		{
 			// Add the attributes to the database, parented to the calling declaration
 			crdb::Attribute* attribute = attributes[i];
+			attribute->parent = parent;
 			switch (attribute->kind)
 			{
 			case (crdb::Primitive::KIND_ATTRIBUTE_FLAG):
-				AddAttribute(db, (crdb::AttributeFlag*)attribute);
+				AddAttribute(db, (crdb::FlagAttribute*)attribute);
 				break;
 			case (crdb::Primitive::KIND_ATTRIBUTE_INT):
-				AddAttribute(db, (crdb::AttributeInt*)attribute);
+				AddAttribute(db, (crdb::IntAttribute*)attribute);
 				break;
 			case (crdb::Primitive::KIND_ATTRIBUTE_FLOAT):
-				AddAttribute(db, (crdb::AttributeFloat*)attribute);
+				AddAttribute(db, (crdb::FloatAttribute*)attribute);
 				break;
 			case (crdb::Primitive::KIND_ATTRIBUTE_NAME):
-				AddAttribute(db, (crdb::AttributeName*)attribute);
+				AddAttribute(db, (crdb::NameAttribute*)attribute);
 				break;
 			case (crdb::Primitive::KIND_ATTRIBUTE_TEXT):
-				AddAttribute(db, (crdb::AttributeText*)attribute);
+				AddAttribute(db, (crdb::TextAttribute*)attribute);
 				break;
 			}
 		}

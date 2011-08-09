@@ -130,6 +130,38 @@ namespace
 	}
 
 
+	void WriteIntAttribute(FILE* fp, const crdb::IntAttribute& primitive, const crdb::Database& db)
+	{
+		WritePrimitive(fp, primitive, db);
+		fputs("\t", fp);
+		fputs(itoa(primitive.value), fp);
+	}
+
+
+	void WriteFloatAttribute(FILE* fp, const crdb::FloatAttribute& primitive, const crdb::Database& db)
+	{
+		WritePrimitive(fp, primitive, db);
+		fputs("\t", fp);
+		fprintf(fp, "%f", primitive.value);
+	}
+
+
+	void WriteNameAttribute(FILE* fp, const crdb::NameAttribute& primitive, const crdb::Database& db)
+	{
+		WritePrimitive(fp, primitive, db);
+		fputs("\t", fp);
+		fputs(itohex(primitive.value.hash), fp);
+	}
+
+
+	void WriteTextAttribute(FILE* fp, const crdb::TextAttribute& primitive, const crdb::Database& db)
+	{
+		WritePrimitive(fp, primitive, db);
+		fputs("\t", fp);
+		fputs(primitive.value.c_str(), fp);
+	}
+
+
 	template <typename TABLE_TYPE, typename PRINT_FUNC>
 	void WriteTable(FILE* fp, const crdb::Database& db, const TABLE_TYPE& table, PRINT_FUNC print_func, const char* title, const char* headers)
 	{
@@ -185,6 +217,13 @@ void crdb::WriteTextDatabase(const char* filename, const Database& db)
 	WritePrimitives<EnumConstant>(fp, db, WriteEnumConstant, "Enum Constants", "Name\t\tParent\t\tValue");
 	WritePrimitives<Function>(fp, db, WriteFunction, "Functions", "Name\t\tParent\t\tUID");
 	WritePrimitives<Field>(fp, db, WriteField, "Fields", "Name\t\tParent\t\tType\t\tMod\tCst\tOffs\tUID");
+
+	// Write the attribute tables
+	WritePrimitives<FlagAttribute>(fp, db, WritePrimitive, "Flag Attributes", "Name\t\tParent");
+	WritePrimitives<IntAttribute>(fp, db, WriteIntAttribute, "Int Attributes", "Name\t\tParent\t\tValue");
+	WritePrimitives<FloatAttribute>(fp, db, WriteFloatAttribute, "Float Attributes", "Name\t\tParent\t\tValue");
+	WritePrimitives<NameAttribute>(fp, db, WriteNameAttribute, "Name Attributes", "Name\t\tParent\t\tValue");
+	WritePrimitives<TextAttribute>(fp, db, WriteTextAttribute, "Text Attributes", "Name\t\tParent\t\tValue");
 
 	fclose(fp);
 }
@@ -417,6 +456,91 @@ namespace
 	}
 
 
+	void ParseIntAttribute(char* line, crdb::Database& db)
+	{
+		StringTokeniser tok(line, "\t");
+
+		// Primitive parsing
+		crdb::u32 name, parent;
+		tok.GetNameAndParent(name, parent);
+
+		// Int attribute parsing
+		int value = atoi(tok.Get());
+
+		// Add a new attribute to the database
+		crdb::IntAttribute primitive(
+			db.GetName(name),
+			db.GetName(parent),
+			value);
+
+		db.AddPrimitive(primitive);
+	}
+
+
+	void ParseFloatAttribute(char* line, crdb::Database& db)
+	{
+		StringTokeniser tok(line, "\t");
+
+		// Primitive parsing
+		crdb::u32 name, parent;
+		tok.GetNameAndParent(name, parent);
+
+		// Attribute parsing
+		float value = 0;
+		sscanf(tok.Get(), "%f", &value);
+
+		// Add a new attribute to the database
+		crdb::FloatAttribute primitive(
+			db.GetName(name),
+			db.GetName(parent),
+			value);
+
+		db.AddPrimitive(primitive);
+	}
+
+
+	void ParseNameAttribute(char* line, crdb::Database& db)
+	{
+		StringTokeniser tok(line, "\t");
+
+		// Primitive parsing
+		crdb::u32 name, parent;
+		tok.GetNameAndParent(name, parent);
+
+		// Attribute parsing
+		crdb::u32 value = tok.GetHexInt();
+
+		// Add a new attribute to the database
+		crdb::NameAttribute primitive(
+			db.GetName(name),
+			db.GetName(parent),
+			db.GetName(value));
+
+		db.AddPrimitive(primitive);
+	}
+
+
+	void ParseTextAttribute(char* line, crdb::Database& db)
+	{
+		StringTokeniser tok(line, "\t");
+
+		// Primitive parsing
+		crdb::u32 name, parent;
+		tok.GetNameAndParent(name, parent);
+
+		// Attribute parsing
+		const char* value = tok.Get();
+
+		// Add a new attribute to the database
+		crdb::TextAttribute primitive(
+			db.GetName(name),
+			db.GetName(parent),
+			value);
+
+		db.AddPrimitive(primitive);
+	}
+
+
 	template <typename PARSE_FUNC>
 	void ParseTable(FILE* fp, char* line, crdb::Database& db, const char* table_name, PARSE_FUNC parse_func)
 	{
@@ -472,6 +596,11 @@ bool crdb::ReadTextDatabase(const char* filename, Database& db)
 		ParseTable(fp, line, db, "Enum Constants", ParseEnumConstant);
 		ParseTable(fp, line, db, "Functions", ParseFunction);
 		ParseTable(fp, line, db, "Fields", ParseField);
+		ParseTable(fp, line, db, "Flag Attributes", ParsePrimitive<crdb::FlagAttribute>);
+		ParseTable(fp, line, db, "Int Attributes", ParseIntAttribute);
+		ParseTable(fp, line, db, "Float Attributes", ParseFloatAttribute);
+		ParseTable(fp, line, db, "Name Attributes", ParseNameAttribute);
+		ParseTable(fp, line, db, "Text Attributes", ParseTextAttribute);
 	}
 
 	fclose(fp);

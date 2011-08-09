@@ -224,30 +224,30 @@ namespace
 	void AddFlagAttribute(crdb::Database& db, std::vector<crdb::Attribute*>& attributes, const Token* attribute_name)
 	{
 		crdb::Name name = db.GetName(attribute_name->GetText());
-		attributes.push_back(new crdb::AttributeFlag(name, crdb::Name()));
+		attributes.push_back(new crdb::FlagAttribute(name, crdb::Name()));
 	}
 	void AddIntAttribute(crdb::Database& db, std::vector<crdb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
 	{
 		crdb::Name name = db.GetName(attribute_name->GetText());
 		int value = atoi(val.GetText());
-		attributes.push_back(new crdb::AttributeInt(name, crdb::Name(), value));
+		attributes.push_back(new crdb::IntAttribute(name, crdb::Name(), value));
 	}
 	void AddFloatAttribute(crdb::Database& db, std::vector<crdb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
 	{
 		crdb::Name name = db.GetName(attribute_name->GetText());
 		float value;
 		sscanf(val.GetText(), "%f", &value);
-		attributes.push_back(new crdb::AttributeFloat(name, crdb::Name(), value));
+		attributes.push_back(new crdb::FloatAttribute(name, crdb::Name(), value));
 	}
 	void AddNameAttribute(crdb::Database& db, std::vector<crdb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
 	{
 		crdb::Name name = db.GetName(attribute_name->GetText());
-		attributes.push_back(new crdb::AttributeName(name, crdb::Name(), db.GetName(val.GetText())));
+		attributes.push_back(new crdb::NameAttribute(name, crdb::Name(), db.GetName(val.GetText())));
 	}
 	void AddTextAttribute(crdb::Database& db, std::vector<crdb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
 	{
 		crdb::Name name = db.GetName(attribute_name->GetText());
-		attributes.push_back(new crdb::AttributeText(name, crdb::Name(), val.GetText()));
+		attributes.push_back(new crdb::TextAttribute(name, crdb::Name(), val.GetText()));
 	}
 
 
