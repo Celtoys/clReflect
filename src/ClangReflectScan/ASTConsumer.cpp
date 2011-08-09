@@ -149,7 +149,12 @@ namespace
 
 		// Generate a hash unique to this function among other functions of the same name
 		// This is so that its parameters/return code can re-parent themselves correctly
-		crdb::u32 unique_id = crdb::CalculateFunctionUniqueID(&return_parameter, parameters);
+		crdb::Field* return_parameter_ptr = 0;
+		if (return_parameter.type.text != "void")
+		{
+			return_parameter_ptr = &return_parameter;
+		}
+		crdb::u32 unique_id = crdb::CalculateFunctionUniqueID(return_parameter_ptr, parameters);
 
 		// Parent each parameter to the function
 		return_parameter.parent_unique_id = unique_id;

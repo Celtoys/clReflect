@@ -48,11 +48,11 @@ namespace
 		UnDecorateSymbolName(token, function_signature, sizeof(function_signature),
 			UNDNAME_COMPLETE |
 			UNDNAME_NO_ACCESS_SPECIFIERS |
-			UNDNAME_NO_ALLOCATION_LANGUAGE |
 			UNDNAME_NO_ALLOCATION_MODEL |
 			UNDNAME_NO_MEMBER_TYPE |
 			UNDNAME_NO_SPECIAL_SYMS |
-			UNDNAME_NO_THROW_SIGNATURES);
+			UNDNAME_NO_THROW_SIGNATURES
+			);
 		return function_signature;
 	}
 
@@ -93,12 +93,25 @@ namespace
 	}
 
 
-	crdb::Field MatchParameter(crdb::Database& db, const char*& ptr, const char* end)
+	crdb::Field MatchParameter(crdb::Database& db, const char*& ptr, const char* end, bool& is_this_call)
 	{
 		crdb::Field parameter;
 
+		const char* skip_tokens[] =
+		{
+			// Argument passing specifications
+			"__cdecl",
+			"__stdcall",
+			"__fastcall",
+			// Type modifiers
+			"struct",
+			"class",
+			"enum"
+		};
+
 		char type_name[1024] = { 0 };
 		char token[1024] = { 0 };
+		is_this_call = false;
 
 		// Loop reading tokens irrespective of order. Note that this parsing strategy won't distinguish between
 		// the type of const-qualifier. However, only one mode of qualification is currently supported so this
@@ -125,6 +138,12 @@ namespace
 				parameter.is_const = true;
 			}
 
+			// Mark this calls so that we can add the this parameter first
+			else if (!strcmp(token, "__thiscall"))
+			{
+				is_this_call = true;
+			}
+
 			// Check for any type prefixes
 			else if (!strcmp(token, "unsigned") || !strcmp(token, "signed"))
 			{
@@ -132,10 +151,23 @@ namespace
 				strcat(type_name, " ");
 			}
 
-			// What's remaining must be the type name
 			else
 			{
-				strcat(type_name, token);
+				// First check to see if this token is to be ignored
+				bool skip = false;
+				for (int i = 0; i < sizeof(skip_tokens) / sizeof(skip_tokens[0]); i++)
+				{
+					if (!strcmp(token, skip_tokens[i]))
+					{
+						skip = true;
+					}
+				}
+
+				if (skip == false)
+				{
+					// What's remaining must be the type name
+					strcat(type_name, token);
+				}
 			}
 
 			if (*ptr == ',' || *ptr == ')')
@@ -166,8 +198,9 @@ namespace
 		}
 
 		// Parse the return parameter and only remember it if it's non-void
+		bool is_this_call = false;
 		const char* ptr = function_signature.c_str();
-		crdb::Field return_parameter = MatchParameter(db, ptr, ptr + func_pos);
+		crdb::Field return_parameter = MatchParameter(db, ptr, ptr + func_pos, is_this_call);
 		crdb::Field* return_parameter_ptr = 0;
 		if (return_parameter.type.text != "void")
 		{
@@ -188,13 +221,35 @@ namespace
 			return;
 		}
 
-		// Parse the parameters
 		std::vector<crdb::Field> parameters;
+		if (is_this_call)
+		{
+			// Find the end of the type name
+			size_t rsep = function_name.rfind("::");
+			if (rsep == std::string::npos)
+			{
+				LOG(main, ERROR, "Function declaration says it's __thiscall but no type found in the name of '%s'", function_name.c_str());
+				return;
+			}
+
+			// Construct the type name
+			char type_name[1024];
+			strncpy(type_name, function_name.c_str(), rsep);
+			type_name[rsep] = 0;
+
+			// Add the this parameter at the beginning
+			crdb::Field this_parameter;
+			this_parameter.type = db.GetName(type_name);
+			this_parameter.modifier = crdb::Field::MODIFIER_POINTER;
+			parameters.push_back(this_parameter);
+		}
+
+		// Parse the parameters
 		ptr = function_signature.c_str() + l_pos + 1;
 		const char* end = function_signature.c_str() + r_pos;
 		while (ptr < end)
 		{
-			crdb::Field parameter = MatchParameter(db, ptr, end);
+			crdb::Field parameter = MatchParameter(db, ptr, end, is_this_call);
 			if (parameter.type.text != "void")
 			{
 				parameters.push_back(parameter);
@@ -210,9 +265,10 @@ namespace
 		for (crdb::PrimitiveStore<crdb::Function>::iterator i = functions.first; i != functions.second; ++i)
 		{
 			// Assign the function address when the unique IDs match
-			if (i->second.unique_id == unique_id)
+			crdb::Function& function = i->second;
+			if (function.unique_id == unique_id)
 			{
-				i->second.address = function_address;
+				function.address = function_address;
 				break;
 			}
 		}
