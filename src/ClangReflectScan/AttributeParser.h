@@ -12,4 +12,4 @@ namespace crdb
 }
 
 
-std::vector<crdb::Attribute*> ParseAttributes(crdb::Database& db, const char* text);
+std::vector<crdb::Attribute*> ParseAttributes(crdb::Database& db, const char* text, const char* filename, int line);

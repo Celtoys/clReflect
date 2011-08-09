@@ -2,13 +2,18 @@
 #include "AttributeParser.h"
 
 #include <ClangReflectCore/Database.h>
-#include <ClangReflectCore/Database.h>
+#include <ClangReflectCore/Logging.h>
 
 #include <ctype.h>
 
 
 namespace
 {
+	// Error reporting feedback
+	const char* g_Filename = 0;
+	int g_Line = 0;
+
+
 	enum TokenType
 	{
 		TOKEN_NONE,
@@ -69,8 +74,8 @@ namespace
 			return text + 1;
 		}
 
-		// LEX ERROR - string not terminated correctly
-		return start;
+		LOG(attr, INFO, "%s(%d) : WARNING - String not terminated correctly\n", g_Filename, g_Line);
+		return 0;
 	}
 
 
@@ -101,8 +106,8 @@ namespace
 				// Only one decimal place is allowed
 				if (is_float)
 				{
-					// LEX ERROR - already a float
-					return start;
+					LOG(attr, INFO, "%s(%d) : WARNING - Floating point number has more than one decimal point\n", g_Filename, g_Line);
+					return 0;
 				}
 
 				is_float = true;
@@ -168,9 +173,16 @@ namespace
 
 				else
 				{
-					// LEX ERROR - invalid character
-					return tokens;
+					LOG(attr, INFO, "%s(%d) : WARNING - Invalid character in attribute\n", g_Filename, g_Line);
+					text = 0;
 				}
+			}
+
+			// An error has been signalled above so abort lexing and clear the tokens so no parsing occurs
+			if (text == 0)
+			{
+				tokens.clear();
+				break;
 			}
 		}
 
@@ -184,9 +196,7 @@ namespace
 		{
 			return &tokens[pos++];
 		}
-
-		// PARSE ERROR - unexpected token
-		return false;
+		return 0;
 	}
 
 
@@ -247,7 +257,7 @@ namespace
 		const Token* attribute_name = ExpectNext(tokens, pos, TOKEN_SYMBOL);
 		if (attribute_name == 0)
 		{
-			// ERROR - expecting symbol name
+			LOG(attr, INFO, "%s(%d) : WARNING - Symbol expected in attribute\n", g_Filename, g_Line);
 			return false;
 		}
 
@@ -256,7 +266,7 @@ namespace
 		{
 			if (pos >= tokens.size())
 			{
-				// ERROR - reached end of stream, expecting attribute value
+				LOG(attr, INFO, "%s(%d) : WARNING - Value expected at the end of the attribute\n", g_Filename, g_Line);
 				return false;
 			}
 
@@ -277,7 +287,7 @@ namespace
 				AddTextAttribute(db, attributes, attribute_name, val);
 				break;
 			default:
-				// ERROR - expecting attribute value
+				LOG(attr, INFO, "%s(%d) : WARNING - Value expected for attribute assignment\n", g_Filename, g_Line);
 				return false;
 			}
 		}
@@ -293,9 +303,15 @@ namespace
 
 	std::vector<crdb::Attribute*> Parser(crdb::Database& db, const std::vector<Token>& tokens)
 	{
+		// Don't parse if there are no tokens (this could be a lexer error or an explicit line code)
+		std::vector<crdb::Attribute*> attributes;
+		if (tokens.empty())
+		{
+			return attributes;
+		}
+
 		// Parse the first attribute
 		size_t pos = 0;
-		std::vector<crdb::Attribute*> attributes;
 		if (!AttributeDef(db, attributes, tokens, pos))
 		{
 			return attributes;
@@ -316,8 +332,11 @@ namespace
 }
 
 
-std::vector<crdb::Attribute*> ParseAttributes(crdb::Database& db, const char* text)
+std::vector<crdb::Attribute*> ParseAttributes(crdb::Database& db, const char* text, const char* filename, int line)
 {
+	g_Filename = filename;
+	g_Line = line;
+
 	// Make things a little simpler by lexing all tokens at once before parsing
 	std::vector<Token> tokens = Lexer(text);
 	return Parser(db, tokens);

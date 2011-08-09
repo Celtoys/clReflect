@@ -36,6 +36,7 @@
 #include <clang/AST/DeclCxx.h>
 #include <clang/AST/DeclGroup.h>
 #include <clang/AST/RecordLayout.h>
+#include <clang/Basic/SourceManager.h>
 
 
 namespace
@@ -208,7 +209,7 @@ namespace
 	}
 
 
-	void ParseAttributes(crdb::Database& db, clang::NamedDecl* decl, crdb::Name parent)
+	void ParseAttributes(crdb::Database& db, clang::SourceManager& srcmgr, clang::NamedDecl* decl, crdb::Name parent)
 	{
 		// Reflection attributes are stored as clang annotation attributes
 		clang::specific_attr_iterator<clang::AnnotateAttr> i = decl->specific_attr_begin<clang::AnnotateAttr>();
@@ -227,8 +228,14 @@ namespace
 			attribute_text = attribute_text.substr(sizeof("attr"));
 		}
 
+		// Decipher the source location of the attribute for error reporting
+		clang::SourceLocation location = attribute->getLocation();
+		clang::PresumedLoc presumed_loc = srcmgr.getPresumedLoc(location);
+		const char* filename = presumed_loc.getFilename();
+		int line = presumed_loc.getLine();
+
 		// Parse and iterate over all attributes in the text
-		std::vector<crdb::Attribute*> attributes = ::ParseAttributes(db, attribute_text.str().c_str());
+		std::vector<crdb::Attribute*> attributes = ::ParseAttributes(db, attribute_text.str().c_str(), filename, line);
 		for (size_t i = 0; i < attributes.size(); i++)
 		{
 			// Add the attributes to the database, parented to the calling declaration
@@ -318,7 +325,7 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name,
 	crdb::Name name = m_DB.GetName(decl->getQualifiedNameAsString().c_str());
 
 	// Gather all attributes associated with this primitive
-	ParseAttributes(m_DB, decl, name);
+	ParseAttributes(m_DB, m_ASTContext.getSourceManager(), decl, name);
 
 	clang::Decl::Kind kind = decl->getKind();
 	switch (kind)
