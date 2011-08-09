@@ -250,19 +250,19 @@ namespace
 			attribute->parent = parent;
 			switch (attribute->kind)
 			{
-			case (crdb::Primitive::KIND_ATTRIBUTE_FLAG):
+			case (crdb::Primitive::KIND_FLAG_ATTRIBUTE):
 				AddAttribute(db, (crdb::FlagAttribute*)attribute);
 				break;
-			case (crdb::Primitive::KIND_ATTRIBUTE_INT):
+			case (crdb::Primitive::KIND_INT_ATTRIBUTE):
 				AddAttribute(db, (crdb::IntAttribute*)attribute);
 				break;
-			case (crdb::Primitive::KIND_ATTRIBUTE_FLOAT):
+			case (crdb::Primitive::KIND_FLOAT_ATTRIBUTE):
 				AddAttribute(db, (crdb::FloatAttribute*)attribute);
 				break;
-			case (crdb::Primitive::KIND_ATTRIBUTE_NAME):
+			case (crdb::Primitive::KIND_NAME_ATTRIBUTE):
 				AddAttribute(db, (crdb::NameAttribute*)attribute);
 				break;
-			case (crdb::Primitive::KIND_ATTRIBUTE_TEXT):
+			case (crdb::Primitive::KIND_TEXT_ATTRIBUTE):
 				AddAttribute(db, (crdb::TextAttribute*)attribute);
 				break;
 			}

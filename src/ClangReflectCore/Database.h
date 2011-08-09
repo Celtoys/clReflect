@@ -63,11 +63,11 @@ namespace crdb
 	{
 		enum Kind
 		{
-			KIND_ATTRIBUTE_FLAG,
-			KIND_ATTRIBUTE_INT,
-			KIND_ATTRIBUTE_FLOAT,
-			KIND_ATTRIBUTE_NAME,
-			KIND_ATTRIBUTE_TEXT,
+			KIND_FLAG_ATTRIBUTE,
+			KIND_INT_ATTRIBUTE,
+			KIND_FLOAT_ATTRIBUTE,
+			KIND_NAME_ATTRIBUTE,
+			KIND_TEXT_ATTRIBUTE,
 			KIND_TYPE,
 			KIND_ENUM_CONSTANT,
 			KIND_ENUM,
@@ -131,13 +131,13 @@ namespace crdb
 	//
 	struct FlagAttribute : public Attribute
 	{
-		FlagAttribute() : Attribute(Primitive::KIND_ATTRIBUTE_FLAG) { }
-		FlagAttribute(Name n, Name p) : Attribute(Primitive::KIND_ATTRIBUTE_FLAG, n, p) { }
+		FlagAttribute() : Attribute(Primitive::KIND_FLAG_ATTRIBUTE) { }
+		FlagAttribute(Name n, Name p) : Attribute(Primitive::KIND_FLAG_ATTRIBUTE, n, p) { }
 	};
 	struct IntAttribute : public Attribute
 	{
-		IntAttribute() : Attribute(Primitive::KIND_ATTRIBUTE_INT) { }
-		IntAttribute(Name n, Name p, int v) : Attribute(Primitive::KIND_ATTRIBUTE_INT, n, p), value(v) { }
+		IntAttribute() : Attribute(Primitive::KIND_INT_ATTRIBUTE) { }
+		IntAttribute(Name n, Name p, int v) : Attribute(Primitive::KIND_INT_ATTRIBUTE, n, p), value(v) { }
 		bool Equals(const IntAttribute& rhs) const
 		{
 			return Primitive::Equals(rhs) && value == rhs.value;
@@ -146,8 +146,8 @@ namespace crdb
 	};
 	struct FloatAttribute : public Attribute
 	{
-		FloatAttribute() : Attribute(Primitive::KIND_ATTRIBUTE_FLOAT) { }
-		FloatAttribute(Name n, Name p, float v) : Attribute(Primitive::KIND_ATTRIBUTE_FLOAT, n, p), value(v) { }
+		FloatAttribute() : Attribute(Primitive::KIND_FLOAT_ATTRIBUTE) { }
+		FloatAttribute(Name n, Name p, float v) : Attribute(Primitive::KIND_FLOAT_ATTRIBUTE, n, p), value(v) { }
 		bool Equals(const FloatAttribute& rhs) const
 		{
 			return Primitive::Equals(rhs) && value == rhs.value;
@@ -156,8 +156,8 @@ namespace crdb
 	};
 	struct NameAttribute : public Attribute
 	{
-		NameAttribute() : Attribute(Primitive::KIND_ATTRIBUTE_NAME) { }
-		NameAttribute(Name n, Name p, Name v) : Attribute(Primitive::KIND_ATTRIBUTE_NAME, n, p), value(v) { }
+		NameAttribute() : Attribute(Primitive::KIND_NAME_ATTRIBUTE) { }
+		NameAttribute(Name n, Name p, Name v) : Attribute(Primitive::KIND_NAME_ATTRIBUTE, n, p), value(v) { }
 		bool Equals(const NameAttribute& rhs) const
 		{
 			return Primitive::Equals(rhs) && value == rhs.value;
@@ -166,8 +166,8 @@ namespace crdb
 	};
 	struct TextAttribute : public Attribute
 	{
-		TextAttribute() : Attribute(Primitive::KIND_ATTRIBUTE_TEXT) { }
-		TextAttribute(Name n, Name p, const char* v) : Attribute(Primitive::KIND_ATTRIBUTE_TEXT, n, p), value(v) { }
+		TextAttribute() : Attribute(Primitive::KIND_TEXT_ATTRIBUTE) { }
+		TextAttribute(Name n, Name p, const char* v) : Attribute(Primitive::KIND_TEXT_ATTRIBUTE, n, p), value(v) { }
 		bool Equals(const TextAttribute& rhs) const
 		{
 			return Primitive::Equals(rhs) && value == rhs.value;
