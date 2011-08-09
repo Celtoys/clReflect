@@ -92,20 +92,6 @@ namespace crdb
 	};
 
 	
-	struct Namespace : public Primitive
-	{
-		// Constructors for default construction and complete construction
-		Namespace()
-			: Primitive(Primitive::KIND_NAMESPACE)
-		{
-		}
-		Namespace(Name n, Name p)
-			: Primitive(Primitive::KIND_NAMESPACE, n, p)
-		{
-		}
-	};
-
-
 	//
 	// A basic built-in type that classes/structs can also inherit from
 	//
@@ -135,45 +121,6 @@ namespace crdb
 
 
 	//
-	// Description of a C++ struct or class with containing fields, functions, classes, etc.
-	// Only one base class is supported until it becomes necessary to do otherwise.
-	//
-	struct Class : public Type
-	{
-		// Constructors for default construction and complete construction
-		Class()
-			: Type(Primitive::KIND_CLASS)
-		{
-		}
-		Class(Name n, Name p, Name b, u32 s)
-			: Type(Primitive::KIND_CLASS, n, p, s)
-			, base_class(b)
-		{
-		}
-
-		// Single base class
-		Name base_class;
-	};
-
-
-	//
-	// An enumeration of name/value constant pairs
-	//
-	struct Enum : public Type
-	{
-		// Constructors for default construction and complete construction
-		Enum()
-			: Type(Primitive::KIND_ENUM)
-		{
-		}
-		Enum(Name n, Name p)
-			: Type(Primitive::KIND_ENUM, n, p, sizeof(int))
-		{
-		}
-	};
-
-
-	//
 	// A name/value pair for enumeration constants
 	//
 	struct EnumConstant : public Primitive
@@ -197,33 +144,19 @@ namespace crdb
 
 
 	//
-	// A function or class method with a list of parameters and a return value
+	// A typed enumeration of name/value constant pairs
 	//
-	struct Function : public Primitive
+	struct Enum : public Type
 	{
 		// Constructors for default construction and complete construction
-		Function()
-			: Primitive(Primitive::KIND_FUNCTION)
-			, unique_id(0)
-			, address(0)
+		Enum()
+			: Type(Primitive::KIND_ENUM)
 		{
 		}
-		Function(Name n, Name p, u32 uid)
-			: Primitive(Primitive::KIND_FUNCTION, n, p)
-			, unique_id(uid)
-			, address(0)
+		Enum(Name n, Name p)
+			: Type(Primitive::KIND_ENUM, n, p, sizeof(int))
 		{
 		}
-
-		// An ID unique to this function among other functions that have the same name
-		// This allows the function to be referenced accurately by any children
-		// All return values are named "return" so a parameter reference won't work here
-		u32 unique_id;
-
-		// The address of the function is only used during C++ export at the moment and
-		// is not serialised to disk or involved in merging. If at a later date this becomes
-		// more tightly integrated to clang/llvm then this will need to be serialised.
-		u32 address;
 	};
 
 
@@ -270,6 +203,78 @@ namespace crdb
 
 		// TODO: arrays
 		// TODO: bit fields
+	};
+
+
+	//
+	// A function or class method with a list of parameters and a return value. When this is a method
+	// within a class with calling convention __thiscall, the this parameter is explicitly specified
+	// as the first parameter.
+	//
+	struct Function : public Primitive
+	{
+		// Constructors for default construction and complete construction
+		Function()
+			: Primitive(Primitive::KIND_FUNCTION)
+			, unique_id(0)
+			, address(0)
+		{
+		}
+		Function(Name n, Name p, u32 uid)
+			: Primitive(Primitive::KIND_FUNCTION, n, p)
+			, unique_id(uid)
+			, address(0)
+		{
+		}
+
+		// An ID unique to this function among other functions that have the same name
+		// This allows the function to be referenced accurately by any children
+		// All return values are named "return" so a parameter reference won't work here
+		u32 unique_id;
+
+		// The address of the function is only used during C++ export at the moment and
+		// is not serialised to disk or involved in merging. If at a later date this becomes
+		// more tightly integrated to clang/llvm then this will need to be serialised.
+		u32 address;
+	};
+
+
+	//
+	// Description of a C++ struct or class with containing fields, functions, classes, etc.
+	// Only one base class is supported until it becomes necessary to do otherwise.
+	//
+	struct Class : public Type
+	{
+		// Constructors for default construction and complete construction
+		Class()
+			: Type(Primitive::KIND_CLASS)
+		{
+		}
+		Class(Name n, Name p, Name b, u32 s)
+			: Type(Primitive::KIND_CLASS, n, p, s)
+			, base_class(b)
+		{
+		}
+
+		// Single base class
+		Name base_class;
+	};
+
+
+	//
+	// A C++ namespace containing collections of various other reflected C++ primitives
+	//
+	struct Namespace : public Primitive
+	{
+		// Constructors for default construction and complete construction
+		Namespace()
+			: Primitive(Primitive::KIND_NAMESPACE)
+		{
+		}
+		Namespace(Name n, Name p)
+			: Primitive(Primitive::KIND_NAMESPACE, n, p)
+		{
+		}
 	};
 
 

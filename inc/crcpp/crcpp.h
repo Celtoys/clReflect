@@ -12,6 +12,7 @@
 // These can be included independently if you want quicker compiles
 #include "Core.h"
 #include "Database.h"
+#include "FunctionCall.h"
 
 
 //
@@ -141,9 +142,13 @@
 	#define crcpp_get_type(db, type) crcpp::internal::GetType<type>(db)
 
 
-	// TODO: Make this part of crcpp_reflect_class ?
-	// That would force its inclusion
-	// This can only be used from global namespace
+	//
+	// Introduces overloaded construction and destruction functions into the crcpp::internal
+	// namespace for the type you specify. These functions end up in the list of method
+	// in the specified type for easy access.
+	// This can only be used from global namespace and you need to specify the type twice,
+	// with and without scope.
+	//
 	#define crcpp_impl_class(scoped_type, type)							\
 																		\
 		namespace crcpp													\

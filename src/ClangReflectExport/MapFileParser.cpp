@@ -95,6 +95,9 @@ namespace
 
 	crdb::Field MatchParameter(crdb::Database& db, const char*& ptr, const char* end, bool& is_this_call)
 	{
+		// TODO: Not exactly proud of this parsing code - started thinking it would be a simple problem
+		// but the unseen complexity forced it to grow oddly. It works, though. Needs a rewrite.
+
 		crdb::Field parameter;
 
 		const char* skip_tokens[] =

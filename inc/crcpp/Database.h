@@ -29,6 +29,9 @@ namespace crcpp
 	}
 
 
+	//
+	// A descriptive text name with a unique 32-bit hash value for mapping primitives.
+	//
 	struct Name
 	{
 		Name() : hash(0), text(0) { }
@@ -37,6 +40,9 @@ namespace crcpp
 	};
 
 
+	//
+	// Base class for all types of C++ primitives that are reflected
+	//
 	struct Primitive
 	{
 		enum Kind
@@ -63,6 +69,9 @@ namespace crcpp
 	};
 
 
+	//
+	// A basic built-in type that classes/structs can also inherit from
+	//
 	struct Type : public Primitive
 	{
 		static const Kind KIND = KIND_TYPE;
@@ -87,6 +96,9 @@ namespace crcpp
 	};
 
 
+	//
+	// A name/value pair for enumeration constants
+	//
 	struct EnumConstant : public Primitive
 	{
 		static const Kind KIND = KIND_ENUM_CONSTANT;
@@ -101,6 +113,9 @@ namespace crcpp
 	};
 
 
+	//
+	// A typed enumeration of name/value constant pairs
+	//
 	struct Enum : public Type
 	{
 		static const Kind KIND = KIND_ENUM;
@@ -115,6 +130,9 @@ namespace crcpp
 	};
 
 
+	//
+	// Can be either a class/struct field or a function parameter
+	//
 	struct Field : public Primitive
 	{
 		static const Kind KIND = KIND_FIELD;
@@ -145,6 +163,11 @@ namespace crcpp
 	};
 
 
+	//
+	// A function or class method with a list of parameters and a return value. When this is a method
+	// within a class with calling convention __thiscall, the this parameter is explicitly specified
+	// as the first parameter.
+	//
 	struct Function : public Primitive
 	{
 		static const Kind KIND = KIND_FUNCTION;
@@ -167,6 +190,10 @@ namespace crcpp
 	};
 
 
+	//
+	// Description of a C++ struct or class with containing fields, functions, classes, etc.
+	// Only one base class is supported until it becomes necessary to do otherwise.
+	//
 	struct Class : public Type
 	{
 		static const Kind KIND = KIND_CLASS;
@@ -192,6 +219,9 @@ namespace crcpp
 	};
 
 
+	//
+	// A C++ namespace containing collections of various other reflected C++ primitives
+	//
 	struct Namespace : public Primitive
 	{
 		static const Kind KIND = KIND_NAMESPACE;

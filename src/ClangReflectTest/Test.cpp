@@ -11,9 +11,9 @@
 //	* unnamed function parameters
 //	* method constness
 //	* anonymous namespaces from different compilation units
+//	* includes
 //  offsets match between clang and msvc
 //	defines introducing new stuff
-//	includes
 //	bitfields
 //	arrays
 //	64-bit types
