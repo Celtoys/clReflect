@@ -17,8 +17,14 @@ namespace
 	}
 
 
-	template <typename TYPE, typename COMPARE_TYPE, int (COMPARE_FUNC)(TYPE, COMPARE_TYPE)>
-	int BinarySearch(const crcpp::CArray<TYPE>& entries, COMPARE_TYPE compare_value)
+	int ComparePrimitives(const crcpp::Primitive& primitive, unsigned int hash)
+	{
+		return hash - primitive.name.hash;
+	}
+
+
+	template <typename ARRAY_TYPE, typename COMPARE_L_TYPE, typename COMPARE_R_TYPE, int (COMPARE_FUNC)(COMPARE_L_TYPE, COMPARE_R_TYPE)>
+	int BinarySearch(const crcpp::CArray<ARRAY_TYPE>& entries, COMPARE_R_TYPE compare_value)
 	{
 		// TODO: Return multiple entries
 
@@ -56,7 +62,7 @@ namespace
 
 const crcpp::Primitive* crcpp::internal::FindPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash)
 {
-	int index = BinarySearch<const Primitive*, unsigned int, ComparePrimitives>(primitives, hash);
+	int index = BinarySearch<const Primitive*, const Primitive*, unsigned int, ComparePrimitives>(primitives, hash);
 	if (index == -1)
 	{
 		return 0;
@@ -93,7 +99,7 @@ crcpp::Name crcpp::Database::GetName(const char* text) const
 	}
 
 	// Lookup the name by hash and see
-	int index = BinarySearch<Name, unsigned int, CompareNames>(m_DatabaseMem->names, hash);
+	int index = BinarySearch<Name, Name, unsigned int, CompareNames>(m_DatabaseMem->names, hash);
 	if (index == -1)
 	{
 		return crcpp::Name();
@@ -106,6 +112,28 @@ crcpp::Name crcpp::Database::GetName(const char* text) const
 const crcpp::Type* crcpp::Database::GetType(unsigned int hash) const
 {
 	return FindPrimitive(m_DatabaseMem->type_primitives, hash);
+}
+
+
+const crcpp::Namespace* crcpp::Database::GetNamespace(unsigned int hash) const
+{
+	int index = BinarySearch<Namespace, const Primitive&, unsigned int, ComparePrimitives>(m_DatabaseMem->namespaces, hash);
+	if (index == -1)
+	{
+		return 0;
+	}
+	return &m_DatabaseMem->namespaces[index];
+}
+
+
+const crcpp::Function* crcpp::Database::GetFunction(unsigned int hash) const
+{
+	int index = BinarySearch<Function, const Primitive&, unsigned int, ComparePrimitives>(m_DatabaseMem->functions, hash);
+	if (index == -1)
+	{
+		return 0;
+	}
+	return &m_DatabaseMem->functions[index];
 }
 
 

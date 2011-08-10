@@ -15,6 +15,10 @@ namespace crcpp
 	struct Primitive;
 	struct Enum;
 	struct Class;
+	struct IntAttribute;
+	struct FloatAttribute;
+	struct NameAttribute;
+	struct TextAttribute;
 
 
 	namespace internal
@@ -48,6 +52,11 @@ namespace crcpp
 		enum Kind
 		{
 			KIND_NONE,
+			KIND_FLAG_ATTRIBUTE,
+			KIND_INT_ATTRIBUTE,
+			KIND_FLOAT_ATTRIBUTE,
+			KIND_NAME_ATTRIBUTE,
+			KIND_TEXT_ATTRIBUTE,
 			KIND_TYPE,
 			KIND_ENUM_CONSTANT,
 			KIND_ENUM,
@@ -66,6 +75,65 @@ namespace crcpp
 		Kind kind;
 		Name name;
 		const Primitive* parent;
+	};
+
+
+	//
+	// Base attribute type for collecting different attribute types together
+	//
+	struct Attribute : public Primitive
+	{
+		static const Kind KIND = KIND_NONE;
+
+		Attribute()
+			: Primitive(KIND)
+		{
+		}
+
+		Attribute(Kind k)
+			: Primitive(k)
+		{
+		}
+
+		// Safe utility functions for casting to derived types
+		inline const IntAttribute* AsIntAttribute() const;
+		inline const FloatAttribute* AsFloatAttribute() const;
+		inline const NameAttribute* AsNameAttribute() const;
+		inline const TextAttribute* AsTextAttribute() const;
+	};
+
+
+	//
+	// Representations of the different types of attribute available
+	//
+	struct FlagAttribute : public Attribute
+	{
+		static const Kind KIND = KIND_FLAG_ATTRIBUTE;
+		FlagAttribute() : Attribute(KIND) { }
+	};
+	struct IntAttribute : public Attribute
+	{
+		static const Kind KIND = KIND_INT_ATTRIBUTE;
+		IntAttribute() : Attribute(KIND), value(0) { }
+		int value;
+	};
+	struct FloatAttribute : public Attribute
+	{
+		static const Kind KIND = KIND_FLOAT_ATTRIBUTE;
+		FloatAttribute() : Attribute(KIND), value(0) { }
+		float value;
+	};
+	struct NameAttribute : public Attribute
+	{
+		static const Kind KIND = KIND_NAME_ATTRIBUTE;
+		NameAttribute() : Attribute(KIND) { }
+		Name value;
+	};
+	struct TextAttribute : public Attribute
+	{
+		static const Kind KIND = KIND_TEXT_ATTRIBUTE;
+		TextAttribute() : Attribute(KIND), value(0) { }
+		const char* value;
 	};
 
 
@@ -127,6 +195,7 @@ namespace crcpp
 
 		// All sorted by name
 		CArray<const EnumConstant*> constants;
+		CArray<const Attribute*> attributes;
 	};
 
 
@@ -160,6 +229,9 @@ namespace crcpp
 		bool is_const;
 		int offset;
 		unsigned int parent_unique_id;
+
+		// All sorted by name
+		CArray<const Attribute*> attributes;
 	};
 
 
@@ -187,6 +259,7 @@ namespace crcpp
 
 		// All sorted by name
 		CArray<const Field*> parameters;
+		CArray<const Attribute*> attributes;
 	};
 
 
@@ -216,6 +289,7 @@ namespace crcpp
 		CArray<const Class*> classes;
 		CArray<const Function*> methods;
 		CArray<const Field*> fields;
+		CArray<const Attribute*> attributes;
 	};
 
 
@@ -256,11 +330,36 @@ namespace crcpp
 
 
 	//
+	// Safe utility functions for casting from const Attribute* to derived types
+	//
+	inline const IntAttribute* Attribute::AsIntAttribute() const
+	{
+		internal::Assert(kind == IntAttribute::KIND_INT_ATTRIBUTE);
+		return (const IntAttribute*)this;
+	}
+	inline const FloatAttribute* Attribute::AsFloatAttribute() const
+	{
+		internal::Assert(kind == FloatAttribute::KIND_FLOAT_ATTRIBUTE);
+		return (const FloatAttribute*)this;
+	}
+	inline const NameAttribute* Attribute::AsNameAttribute() const
+	{
+		internal::Assert(kind == NameAttribute::KIND_NAME_ATTRIBUTE);
+		return (const NameAttribute*)this;
+	}
+	inline const TextAttribute* Attribute::AsTextAttribute() const
+	{
+		internal::Assert(kind == TextAttribute::KIND_TEXT_ATTRIBUTE);
+		return (const TextAttribute*)this;
+	}
+
+
+	//
 	// Typed wrapper for calling FindPrimitive on arbitrary arrays of primitives. Ensures the
 	// types can be cast to Primitive and aliases the arrays to cut down on generated code.
 	//
 	template <typename TYPE>
-	const TYPE* FindPrimitive(const CArray<const TYPE*>& primitives, unsigned int hash)
+	inline const TYPE* FindPrimitive(const CArray<const TYPE*>& primitives, unsigned int hash)
 	{
 		// This is both a compile-time and runtime assert
 		internal::Assert(TYPE::KIND != Primitive::KIND_NONE);
@@ -280,7 +379,11 @@ namespace crcpp
 		// pointing to within the database's allocated name data
 		Name GetName(const char* text) const;
 
+		// Return either a type, enum or class by hash
 		const Type* GetType(unsigned int hash) const;
+
+		const Namespace* GetNamespace(unsigned int hash) const;
+		const Function* GetFunction(unsigned int hash) const;
 
 	private:
 		// Disable copying
@@ -317,6 +420,16 @@ namespace crcpp
 			CArray<Function> functions;
 			CArray<Class> classes;
 			CArray<Namespace> namespaces;
+
+			// Raw allocation of all null-terminated text attribute strings
+			const char* text_attribute_data;
+
+			// Ownership storage of all attributes
+			CArray<FlagAttribute> flag_attributes;
+			CArray<IntAttribute> int_attributes;
+			CArray<FloatAttribute> float_attributes;
+			CArray<NameAttribute> name_attributes;
+			CArray<TextAttribute> text_attributes;
 
 			// A list of references to all types, enums and classes for potentially quicker
 			// searches during serialisation

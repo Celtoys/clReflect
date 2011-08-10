@@ -505,9 +505,10 @@ void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 	// Parse and add the field
 	crdb::Field field;
 	crdb::u32 offset = layout->getFieldOffset(field_decl->getFieldIndex()) / 8;
-	if (!MakeField(m_DB, m_ReflectionSpecs, m_ASTContext, field_decl->getType(), field_decl->getNameAsString().c_str(), parent_name, offset, field))
+	std::string field_name = field_decl->getQualifiedNameAsString();
+	if (!MakeField(m_DB, m_ReflectionSpecs, m_ASTContext, field_decl->getType(), field_name.c_str(), parent_name, offset, field))
 	{
-		LOG(ast, WARNING, "Unsupported/unreflected type for field '%s' in '%s'\n", field_decl->getNameAsString().c_str(), parent_name.text.c_str());
+		LOG(ast, WARNING, "Unsupported/unreflected type for field '%s' in '%s'\n", field_name.c_str(), parent_name.text.c_str());
 		return;
 	}
 

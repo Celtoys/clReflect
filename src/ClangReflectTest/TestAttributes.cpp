@@ -7,16 +7,15 @@ namespace TestAttributes
 {
 	// --------------------------------------------------------------------------------------------
 	// Enum attributes
-	crcpp_attr(enum_attr)
-	enum GlobalEnumAttr { };
+	// NOTE the syntax difference that is specific to enums!
+	enum crcpp_attr(enum_attr) GlobalEnumAttr { };
 
 	// --------------------------------------------------------------------------------------------
 	// Class attributes and those within its declaration
 	crcpp_attr(class_attr)
 	class ClassAttr
 	{
-		crcpp_attr(enum_attr)
-		enum ClassEnumAttr { };
+		enum crcpp_attr(enum_attr) ClassEnumAttr { };
 
 		crcpp_attr(field_attr)
 		int FieldAttr;
@@ -30,8 +29,7 @@ namespace TestAttributes
 	crcpp_attr(struct_attr)
 	struct StructAttr
 	{
-		crcpp_attr(enum_attr)
-		enum ClassEnumAttr { };
+		enum crcpp_attr(enum_attr) ClassEnumAttr { };
 
 		crcpp_attr(field_attr)
 		int FieldAttr;
@@ -66,4 +64,21 @@ namespace TestAttributes
 	void EndOfAttrNoValueParseError() { }
 	crcpp_attr(error=,valid)
 	void MissingValueParserError() { }
+}
+
+void TestAttributesFunc(crcpp::Database& db)
+{
+	const crcpp::Enum* a = crcpp_get_type(db, TestAttributes::GlobalEnumAttr)->AsEnum();
+	const crcpp::Class* b = crcpp_get_type(db, TestAttributes::ClassAttr)->AsClass();
+	const crcpp::Enum* c = b->enums[0];
+	const crcpp::Field* d = b->fields[0];
+	const crcpp::Function* e = b->methods[0];
+	const crcpp::Class* f = crcpp_get_type(db, TestAttributes::StructAttr)->AsClass();
+	const crcpp::Enum* g = f->enums[0];
+	const crcpp::Field* h = f->fields[0];
+	const crcpp::Function* i = f->methods[0];
+
+	const crcpp::Namespace* j = db.GetNamespace(db.GetName("TestAttributes").hash);
+	const crcpp::Function* k = FindPrimitive(j->functions, db.GetName("TestAttributes::FunctionAttr").hash);
+	const crcpp::Function* l = FindPrimitive(j->functions, db.GetName("TestAttributes::AttrTypes").hash);
 }

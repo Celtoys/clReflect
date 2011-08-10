@@ -107,7 +107,7 @@ namespace crdb
 
 
 	//
-	// Base attribute type for collectioned different attribute types together
+	// Base attribute type for collecting different attribute types together
 	//
 	struct Attribute : public Primitive
 	{
