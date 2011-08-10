@@ -323,14 +323,14 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name,
 	}
 
 	// Has this decl been marked for reflection?
-	if (!m_ReflectionSpecs.IsReflected(decl->getQualifiedNameAsString().c_str()))
+	std::string name_str = decl->getQualifiedNameAsString();
+	if (!m_ReflectionSpecs.IsReflected(name_str.c_str()))
 	{
 		return;
 	}
 
 	// Generate a name for the decl
-	//crdb::Name name = m_DB.GetName(decl->getDeclName().getAsString().c_str());
-	crdb::Name name = m_DB.GetName(decl->getQualifiedNameAsString().c_str());
+	crdb::Name name = m_DB.GetName(name_str.c_str());
 
 	// Gather all attributes associated with this primitive
 	ParseAttributes(m_DB, m_ASTContext.getSourceManager(), decl, name);

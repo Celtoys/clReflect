@@ -45,6 +45,22 @@ ClangHost::ClangHost(Arguments& args)
 	lang_options.Bool = 1;
 	lang_options.Microsoft = 1;
 
+	//
+	// This is MSVC specific to get STL compiling with clang. MSVC doesn't do semantic analysis
+	// of templates until instantiation, whereas clang will try to resolve non type-based function
+	// calls. In MSVC STL land, this causes hundreds of errors referencing '_invalid_parameter_noinfo'.
+	//
+	// The problem in a nutshell:
+	//
+	//    template <typename TYPE> void A()
+	//    {
+	//       // Causes an error in clang because B() is not defined yet, MSVC is fine
+	//       B();
+	//    }
+	//    void B() { }
+	//
+	lang_options.DelayedTemplateParsing = 1;
+
 	// Setup access to the filesystem
 	clang::FileSystemOptions fs_options;
 	file_manager.reset(new clang::FileManager(fs_options));
