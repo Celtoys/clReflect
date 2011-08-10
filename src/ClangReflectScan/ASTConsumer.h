@@ -29,6 +29,7 @@ private:
 	void AddFunctionDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name);
 	void AddMethodDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name);
 	void AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name, const clang::ASTRecordLayout* layout);
+	void AddClassTemplateDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name);
 	void AddContainedDecls(clang::NamedDecl* decl, const crdb::Name& parent_name, const clang::ASTRecordLayout* layout);
 
 	crdb::Database& m_DB;

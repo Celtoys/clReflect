@@ -69,6 +69,8 @@ namespace crdb
 			KIND_NAME_ATTRIBUTE,
 			KIND_TEXT_ATTRIBUTE,
 			KIND_TYPE,
+			KIND_TEMPLATE,
+			KIND_TEMPLATE_TYPE,
 			KIND_ENUM_CONSTANT,
 			KIND_ENUM,
 			KIND_FIELD,
@@ -206,6 +208,43 @@ namespace crdb
 
 		// Total size of the type, including alignment
 		u32 size;
+	};
+
+
+	//
+	// A template is not a type but a record of a template declaration without specified types
+	// that instantiations can reference.
+	//
+	struct Template : public Primitive
+	{
+		Template()
+			: Primitive(Primitive::KIND_TEMPLATE)
+		{
+		}
+		Template(Name n, Name p)
+			: Primitive(Primitive::KIND_TEMPLATE, n, p)
+		{
+		}
+	};
+
+
+	//
+	// Template types are instantiations of templates with fully specified parameters.
+	// They don't specify the primitives contained within as these can vary between instantiation,
+	// leading to prohibitive memory requirements.
+	//
+	struct TemplateType : public Type
+	{
+		TemplateType()
+			: Type(KIND_TEMPLATE_TYPE)
+		{
+		}
+		TemplateType(Name n, Name p, u32 s)
+			: Type(KIND_TEMPLATE_TYPE, n, p, s)
+		{
+		}
+
+		Name parameter_types[2];
 	};
 
 
@@ -442,6 +481,8 @@ namespace crdb
 		template <typename TYPE> PrimitiveStore<TYPE>& GetPrimitiveStore() { }
 		template <> PrimitiveStore<Namespace>& GetPrimitiveStore() { return m_Namespaces; }
 		template <> PrimitiveStore<Type>& GetPrimitiveStore() { return m_Types; }
+		template <> PrimitiveStore<Template>& GetPrimitiveStore() { return m_Templates; }
+		template <> PrimitiveStore<TemplateType>& GetPrimitiveStore() { return m_TemplateTypes; }
 		template <> PrimitiveStore<Class>& GetPrimitiveStore() { return m_Classes; }
 		template <> PrimitiveStore<Enum>& GetPrimitiveStore() { return m_Enums; }
 		template <> PrimitiveStore<EnumConstant>& GetPrimitiveStore() { return m_EnumConstants; }
@@ -469,6 +510,8 @@ namespace crdb
 		// Primitives are owned by the following maps depending upon their type
 		PrimitiveStore<Namespace> m_Namespaces;
 		PrimitiveStore<Type> m_Types;
+		PrimitiveStore<Template> m_Templates;
+		PrimitiveStore<TemplateType> m_TemplateTypes;
 		PrimitiveStore<Class> m_Classes;
 		PrimitiveStore<Enum> m_Enums;
 		PrimitiveStore<EnumConstant> m_EnumConstants;

@@ -35,6 +35,7 @@
 #include <clang/AST/Decl.h>
 #include <clang/AST/DeclCxx.h>
 #include <clang/AST/DeclGroup.h>
+#include <clang/AST/DeclTemplate.h>
 #include <clang/AST/RecordLayout.h>
 #include <clang/Basic/SourceManager.h>
 
@@ -344,6 +345,7 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name,
 	case (clang::Decl::Function): AddFunctionDecl(decl, name, parent_name); break;
 	case (clang::Decl::CXXMethod): AddMethodDecl(decl, name, parent_name); break;
 	case (clang::Decl::Field): AddFieldDecl(decl, name, parent_name, layout); break;
+	case (clang::Decl::ClassTemplate): AddClassTemplateDecl(decl, name, parent_name); break;
 	}
 }
 
@@ -354,10 +356,10 @@ void ASTConsumer::AddNamespaceDecl(clang::NamedDecl* decl, const crdb::Name& nam
 	if (m_DB.GetFirstPrimitive<crdb::Namespace>(name.text.c_str()) == 0)
 	{
 		m_DB.AddPrimitive(crdb::Namespace(name, parent_name));
+		LOG(ast, INFO, "namespace %s\n", name.text.c_str());
 	}
 
 	// Add everything within the namespace
-	LOG(ast, INFO, "namespace %s\n", name.text.c_str());
 	AddContainedDecls(decl, name, 0);
 }
 
@@ -518,6 +520,21 @@ void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 		field.modifier == crdb::Field::MODIFIER_POINTER ? "*" : field.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "",
 		field.name.text.c_str());
 	m_DB.AddPrimitive(field);
+}
+
+
+void ASTConsumer::AddClassTemplateDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
+{
+	// Cast to class template decl
+	clang::ClassTemplateDecl* template_decl = dyn_cast<clang::ClassTemplateDecl>(decl);
+	assert(template_decl != 0 && "Failed to cast template declaration");
+
+	// Only add the template if it doesn't exist yet
+	if (m_DB.GetFirstPrimitive<crdb::Template>(name.text.c_str()) == 0)
+	{
+		m_DB.AddPrimitive(crdb::Template(name, parent_name));
+		LOG(ast, INFO, "template %s\n", name.text.c_str());
+	}
 }
 
 
