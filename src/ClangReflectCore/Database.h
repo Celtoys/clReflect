@@ -235,16 +235,27 @@ namespace crdb
 	//
 	struct TemplateType : public Type
 	{
+		// Enough for std::map
+		static const int MAX_NB_ARGS = 4;
+
 		TemplateType()
 			: Type(KIND_TEMPLATE_TYPE)
 		{
+			for (int i = 0; i < MAX_NB_ARGS; i++)
+				parameter_ptrs[i] = false;
 		}
-		TemplateType(Name n, Name p, u32 s)
-			: Type(KIND_TEMPLATE_TYPE, n, p, s)
+		TemplateType(Name n, Name p)
+			: Type(KIND_TEMPLATE_TYPE, n, p, 0)
 		{
+			for (int i = 0; i < MAX_NB_ARGS; i++)
+				parameter_ptrs[i] = false;
 		}
 
-		Name parameter_types[2];
+		// Currently only support parameter types that are values or pointers. Template arguments
+		// can be anything from integers to function pointers and I really haven't got the time to
+		// implement any of this because it will see very limited -- if any -- use from me.
+		Name parameter_types[MAX_NB_ARGS];
+		bool parameter_ptrs[MAX_NB_ARGS];
 	};
 
 

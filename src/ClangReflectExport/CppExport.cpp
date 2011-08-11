@@ -537,6 +537,7 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	// Construct the primitive scope hierarchy, pointing primitives at their parents
 	// and adding them to the arrays within their parents.
 	// TODO: Pull multimap construction out of the functions so that they're not repeatedly generated
+	// TODO: Use GatherTypePrimitives to prevent multiple passes for enum, type, class
 	Parent(cppexp.db->enums, &crcpp::Enum::constants, cppexp.db->enum_constants, cppexp.allocator);
 	Parent(cppexp.db->functions, &crcpp::Function::parameters, cppexp.db->fields, cppexp.allocator);
 	Parent(cppexp.db->classes, &crcpp::Class::enums, cppexp.db->enums, cppexp.allocator);

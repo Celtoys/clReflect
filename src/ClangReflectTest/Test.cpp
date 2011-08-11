@@ -30,6 +30,7 @@
 //  unnamed enums
 //	unnamed parameters in functions
 //	anything in an anonymous namespace - the macros can't reference them
+//  only one level of pointer/reference indirection (* supported, ** not)
 
 
 

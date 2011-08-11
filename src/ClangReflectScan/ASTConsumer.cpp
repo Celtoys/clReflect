@@ -32,11 +32,15 @@
 
 #include <ClangReflectCore/Logging.h>
 
+// clang\ast\decltemplate.h(1484) : warning C4345: behavior change: an object of POD type constructed with an initializer of the form () will be default-initialized
+#pragma warning(disable:4345)
+
 #include <clang/AST/Decl.h>
 #include <clang/AST/DeclCxx.h>
 #include <clang/AST/DeclGroup.h>
 #include <clang/AST/DeclTemplate.h>
 #include <clang/AST/RecordLayout.h>
+#include <clang/AST/TemplateName.h>
 #include <clang/Basic/SourceManager.h>
 
 
@@ -51,19 +55,32 @@ namespace
 	}
 
 
-	bool MakeField(crdb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, const char* param_name, crdb::Name parent_name, int index, crdb::Field& field)
+	struct ParameterInfo
 	{
-		// Get type info for the field
+		ParameterInfo()
+			: modifier(crdb::Field::MODIFIER_VALUE)
+			, is_const(false)
+		{
+		}
+
+		std::string type_name;
+		crdb::Field::Modifier modifier;
+		bool is_const;
+	};
+
+
+	bool GetParameterInfo(crdb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, crdb::Name parent_name, ParameterInfo& info)
+	{
+		// Get type info for the parameter
 		clang::SplitQualType sqt = qual_type.split();
 		const clang::Type* type = sqt.first;
 
 		// Only handle one level of recursion for pointers and references
-		crdb::Field::Modifier pass = crdb::Field::MODIFIER_VALUE;
 
 		// Get pointee type info if this is a pointer
 		if (const clang::PointerType* ptr_type = dyn_cast<clang::PointerType>(type))
 		{
-			pass = crdb::Field::MODIFIER_POINTER;
+			info.modifier = crdb::Field::MODIFIER_POINTER;
 			qual_type = ptr_type->getPointeeType();
 			sqt = qual_type.split();
 		}
@@ -71,7 +88,7 @@ namespace
 		// Get pointee type info if this is a reference
 		else if (const clang::LValueReferenceType* ref_type = dyn_cast<clang::LValueReferenceType>(type))
 		{
-			pass = crdb::Field::MODIFIER_REFERENCE;
+			info.modifier = crdb::Field::MODIFIER_REFERENCE;
 			qual_type = ref_type->getPointeeType();
 			sqt = qual_type.split();
 		}
@@ -79,30 +96,133 @@ namespace
 		// Record the qualifiers before stripping them and generating the type name
 		clang::Qualifiers qualifiers = clang::Qualifiers::fromFastMask(sqt.second);
 		qual_type.removeLocalFastQualifiers();
-		std::string type_name_str = qual_type.getAsString(ctx.getLangOptions());
+		info.type_name = qual_type.getAsString(ctx.getLangOptions());
+		info.is_const = qualifiers.hasConst();
 
 		// Is this a field that can be safely recorded?
 		type = sqt.first;
 		clang::Type::TypeClass tc = type->getTypeClass();
-		if (tc != clang::Type::Builtin && tc != clang::Type::Enum && tc != clang::Type::Elaborated && tc != clang::Type::Record)
+		switch (tc)
+		{
+		case (clang::Type::Builtin):
+		case (clang::Type::Enum):
+		case (clang::Type::Elaborated):
+		case (clang::Type::Record):
+		case (clang::Type::TemplateSpecialization):
+			break;
+		default:
+			return false;
+		}
+
+		if (tc == clang::Type::TemplateSpecialization)
+		{
+			// Get the template being specialised as a template decl
+			const clang::TemplateSpecializationType* template_type = dyn_cast<clang::TemplateSpecializationType>(type);
+			clang::TemplateName template_name = template_type->getTemplateName();
+			clang::TemplateDecl* template_decl = template_name.getAsTemplateDecl();
+			if (template_decl == 0)
+			{
+				return false;
+			}
+
+			// Check to see if the template is marked for reflection
+			info.type_name = template_decl->getQualifiedNameAsString();
+			if (!specs.IsReflected(info.type_name))
+			{
+				return false;
+			}
+
+			// Prepare for adding template arguments to the type name
+			info.type_name += "<";
+
+			// Iterate over template argument
+			int arg_pos = 0;
+			ParameterInfo template_args[crdb::TemplateType::MAX_NB_ARGS];
+			for (clang::TemplateSpecializationType::iterator i = template_type->begin(); i != template_type->end(); ++i)
+			{
+				// Check for template argument overflow
+				if (arg_pos == crdb::TemplateType::MAX_NB_ARGS)
+				{
+					return false;
+				}
+
+				// Only support type arguments
+				const clang::TemplateArgument& arg = *i;
+				if (arg.getKind() != clang::TemplateArgument::Type)
+				{
+					return false;
+				}
+
+				// Recursively parser the template argument to get some parameter info
+				if (!GetParameterInfo(db, specs, ctx, arg.getAsType(), parent_name, template_args[arg_pos]))
+				{
+					return false;
+				}
+
+				// References currently not supported
+				if (template_args[arg_pos].modifier == crdb::Field::MODIFIER_REFERENCE)
+				{
+					return false;
+				}
+
+				// Concatenate the arguments in the type name
+				if (arg_pos)
+				{
+					info.type_name += ",";
+				}
+				info.type_name += template_args[arg_pos].type_name;
+				if (template_args[arg_pos].modifier == crdb::Field::MODIFIER_POINTER)
+				{
+					info.type_name += "*";
+				}
+				arg_pos++;
+			}
+
+			info.type_name += ">";
+
+			// Create the referenced template type on demand if it doesn't exist
+			if (db.GetFirstPrimitive<crdb::TemplateType>(info.type_name.c_str()) == 0)
+			{
+				crdb::Name type_name = db.GetName(info.type_name.c_str());
+				crdb::TemplateType type(type_name, parent_name);
+
+				// Populate the template argument list
+				for (int i = 0; i < arg_pos; i++)
+				{
+					type.parameter_types[i] = db.GetName(template_args[i].type_name.c_str());
+					type.parameter_ptrs[i] = template_args[i].modifier == crdb::Field::MODIFIER_POINTER;
+				}
+
+				db.AddPrimitive(type);
+			}
+		}
+
+		// Pull the class descriptions from the type name
+		Remove(info.type_name, "enum ");
+		Remove(info.type_name, "struct ");
+		Remove(info.type_name, "class ");
+
+		// Has the type itself been marked for reflection?
+		if (tc != clang::Type::Builtin && !specs.IsReflected(info.type_name))
 		{
 			return false;
 		}
 
-		// Pull the class descriptions from the type name
-		Remove(type_name_str, "enum ");
-		Remove(type_name_str, "struct ");
-		Remove(type_name_str, "class ");
+		return true;
+	}
 
-		// Has the type itself been marked for reflection?
-		if (tc != clang::Type::Builtin && !specs.IsReflected(type_name_str))
+
+	bool MakeField(crdb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, const char* param_name, crdb::Name parent_name, int index, crdb::Field& field)
+	{
+		ParameterInfo info;
+		if (!GetParameterInfo(db, specs, ctx, qual_type, parent_name, info))
 		{
 			return false;
 		}
 
 		// Construct the field
-		crdb::Name type_name = db.GetName(type_name_str.c_str());
-		field = crdb::Field(db.GetName(param_name), parent_name, type_name, pass, qualifiers.hasConst(), index);
+		crdb::Name type_name = db.GetName(info.type_name.c_str());
+		field = crdb::Field(db.GetName(param_name), parent_name, type_name, info.modifier, info.is_const, index);
 		return true;
 	}
 
@@ -532,6 +652,24 @@ void ASTConsumer::AddClassTemplateDecl(clang::NamedDecl* decl, const crdb::Name&
 	// Only add the template if it doesn't exist yet
 	if (m_DB.GetFirstPrimitive<crdb::Template>(name.text.c_str()) == 0)
 	{
+		// First check that the argument count is valid
+		const clang::TemplateParameterList* parameters = template_decl->getTemplateParameters();
+		if (parameters->size() > crdb::TemplateType::MAX_NB_ARGS)
+		{
+			LOG(ast, WARNING, "Too many template arguments for '%s'\n", name.text.c_str());
+			return;
+		}
+
+		// Then verify that each argument is of the correct type
+		for (clang::TemplateParameterList::const_iterator i = parameters->begin(); i != parameters->end(); ++i)
+		{
+			if (dyn_cast<clang::TemplateTypeParmDecl>(*i) == 0)
+			{
+				LOG(ast, WARNING, "Unsupported template argument type for '%s'\n", name.text.c_str());
+				return;
+			}
+		}
+
 		m_DB.AddPrimitive(crdb::Template(name, parent_name));
 		LOG(ast, INFO, "template %s\n", name.text.c_str());
 	}
