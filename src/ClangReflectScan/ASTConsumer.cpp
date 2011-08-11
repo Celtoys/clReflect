@@ -69,7 +69,7 @@ namespace
 	};
 
 
-	bool GetParameterInfo(crdb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, crdb::Name parent_name, ParameterInfo& info)
+	bool GetParameterInfo(crdb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, ParameterInfo& info)
 	{
 		// Get type info for the parameter
 		clang::SplitQualType sqt = qual_type.split();
@@ -132,6 +132,9 @@ namespace
 				return false;
 			}
 
+			// Parent the instance to its declaring template
+			crdb::Name parent_name = db.GetName(info.type_name.c_str());
+
 			// Prepare for adding template arguments to the type name
 			info.type_name += "<";
 
@@ -154,7 +157,7 @@ namespace
 				}
 
 				// Recursively parser the template argument to get some parameter info
-				if (!GetParameterInfo(db, specs, ctx, arg.getAsType(), parent_name, template_args[arg_pos]))
+				if (!GetParameterInfo(db, specs, ctx, arg.getAsType(), template_args[arg_pos]))
 				{
 					return false;
 				}
@@ -215,7 +218,7 @@ namespace
 	bool MakeField(crdb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, const char* param_name, crdb::Name parent_name, int index, crdb::Field& field)
 	{
 		ParameterInfo info;
-		if (!GetParameterInfo(db, specs, ctx, qual_type, parent_name, info))
+		if (!GetParameterInfo(db, specs, ctx, qual_type, info))
 		{
 			return false;
 		}

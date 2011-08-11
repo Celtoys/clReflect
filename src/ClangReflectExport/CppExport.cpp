@@ -83,6 +83,14 @@ namespace
 	{
 		dest.size = src.size;
 	}
+	void CopyPrimitive(crcpp::TemplateType& dest, const crdb::TemplateType& src)
+	{
+		for (int i = 0; i < crdb::TemplateType::MAX_NB_ARGS; i++)
+		{
+			dest.parameter_types[i] = (crcpp::Type*)src.parameter_types[i].hash;
+			dest.parameter_ptrs[i] = src.parameter_ptrs[i];
+		}
+	}
 	void CopyPrimitive(crcpp::Class& dest, const crdb::Class& src)
 	{
 		dest.size = src.size;
@@ -149,7 +157,6 @@ namespace
 	void Parent(crcpp::CArray<PARENT_TYPE>& parents, crcpp::CArray<const CHILD_TYPE*> (PARENT_TYPE::*carray), crcpp::CArray<CHILD_TYPE*>& children, StackAllocator& allocator)
 	{
 		// Create a lookup table from hash ID to parent and the number of references the parent has
-		// NOTE: Relies upon hash not being overloadable!
 		typedef std::pair<PARENT_TYPE*, int> ParentAndRefCount;
 		typedef std::multimap<unsigned int, ParentAndRefCount> ParentMap;
 		typedef std::pair<ParentMap::iterator, ParentMap::iterator> ParentMapRange;
@@ -300,17 +307,16 @@ namespace
 
 
 	template <typename PARENT_TYPE, typename FIELD_TYPE, typename CHILD_TYPE>
-	void Link(crcpp::CArray<PARENT_TYPE>& parents, const FIELD_TYPE* (PARENT_TYPE::*field), crcpp::CArray<CHILD_TYPE>& children)
+	void Link(crcpp::CArray<PARENT_TYPE>& parents, const FIELD_TYPE* (PARENT_TYPE::*field), crcpp::CArray<const CHILD_TYPE*>& children)
 	{
 		// Create a lookup table from hash ID to child
-		// NOTE: Relies upon hash not being overloadable!
-		typedef std::multimap<unsigned int, CHILD_TYPE*> ChildMap;
+		typedef std::multimap<unsigned int, const CHILD_TYPE*> ChildMap;
 		typedef std::pair<ChildMap::iterator, ChildMap::iterator> ChildMapRange;
 		ChildMap child_map;
 		for (int i = 0; i < children.size(); i++)
 		{
-			CHILD_TYPE& child = children[i];
-			child_map.insert(ChildMap::value_type(child.name.hash, &child));
+			const CHILD_TYPE* child = children[i];
+			child_map.insert(ChildMap::value_type(child->name.hash, child));
 		}
 
 		// Link up the pointers
@@ -321,7 +327,38 @@ namespace
 			ChildMap::iterator j = child_map.find(hash_id);
 			if (j != child_map.end())
 			{
-				(parent.*field) = j->second;
+				(parent.*field) = (FIELD_TYPE*)j->second;
+			}
+		}
+	}
+
+
+	// Link for array sources
+	template <typename PARENT_TYPE, typename FIELD_TYPE, typename CHILD_TYPE, int N>
+	void Link(crcpp::CArray<PARENT_TYPE>& parents, const FIELD_TYPE* (PARENT_TYPE::*field)[N], crcpp::CArray<const CHILD_TYPE*>& children)
+	{
+		// Create a lookup table from hash ID to child
+		typedef std::multimap<unsigned int, const CHILD_TYPE*> ChildMap;
+		typedef std::pair<ChildMap::iterator, ChildMap::iterator> ChildMapRange;
+		ChildMap child_map;
+		for (int i = 0; i < children.size(); i++)
+		{
+			const CHILD_TYPE* child = children[i];
+			child_map.insert(ChildMap::value_type(child->name.hash, child));
+		}
+
+		// Link up the pointers
+		for (int i = 0; i < parents.size(); i++)
+		{
+			PARENT_TYPE& parent = parents[i];
+			for (int j = 0; j < N; j++)
+			{
+				unsigned int hash_id = (unsigned int)(parent.*field)[j];
+				ChildMap::iterator k = child_map.find(hash_id);
+				if (k != child_map.end())
+				{
+					(parent.*field)[j] = (FIELD_TYPE*)k->second;
+				}
 			}
 		}
 	}
@@ -403,13 +440,14 @@ namespace
 		GatherGlobalPrimitives(cppexp.db->global_namespace.enums, cppexp.db->enums, cppexp.allocator);
 		GatherGlobalPrimitives(cppexp.db->global_namespace.classes, cppexp.db->classes, cppexp.allocator);
 		GatherGlobalPrimitives(cppexp.db->global_namespace.functions, cppexp.db->functions, cppexp.allocator);
+		GatherGlobalPrimitives(cppexp.db->global_namespace.templates, cppexp.db->templates, cppexp.allocator);
 	}
 
 
 	void GatherTypePrimitives(CppExport& cppexp)
 	{
 		// Allocate the array
-		int nb_type_primitives = cppexp.db->types.size() + cppexp.db->classes.size() + cppexp.db->enums.size();
+		int nb_type_primitives = cppexp.db->types.size() + cppexp.db->classes.size() + cppexp.db->enums.size() + cppexp.db->template_types.size();
 		cppexp.db->type_primitives.copy(crcpp::CArray<const crcpp::Type*>(cppexp.allocator.Alloc<const crcpp::Type*>(nb_type_primitives), nb_type_primitives));
 
 		// Generate references to anything that is a type
@@ -425,6 +463,10 @@ namespace
 		for (int i = 0; i < cppexp.db->enums.size(); i++)
 		{
 			cppexp.db->type_primitives[index++] = &cppexp.db->enums[i];
+		}
+		for (int i = 0; i < cppexp.db->template_types.size(); i++)
+		{
+			cppexp.db->type_primitives[index++] = &cppexp.db->template_types[i];
 		}
 	}
 
@@ -463,6 +505,11 @@ namespace
 		SortPrimitives(primitive.methods);
 		SortPrimitives(primitive.fields);
 		SortPrimitives(primitive.attributes);
+		SortPrimitives(primitive.templates);
+	}
+	void SortPrimitives(crcpp::Template& primitive)
+	{
+		SortPrimitives(primitive.instances);
 	}
 	void SortPrimitives(crcpp::Namespace& primitive)
 	{
@@ -471,6 +518,7 @@ namespace
 		SortPrimitives(primitive.enums);
 		SortPrimitives(primitive.classes);
 		SortPrimitives(primitive.functions);
+		SortPrimitives(primitive.templates);
 	}
 
 
@@ -519,11 +567,13 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	// will physically point to or contain each other, but they will reference each other
 	// using hash values aliased in their pointers.
 	BuildCArray<crdb::Type>(cppexp, cppexp.db->types, db);
-	BuildCArray<crdb::Class>(cppexp, cppexp.db->classes, db);
-	BuildCArray<crdb::Enum>(cppexp, cppexp.db->enums, db);
 	BuildCArray<crdb::EnumConstant>(cppexp, cppexp.db->enum_constants, db);
-	BuildCArray<crdb::Function>(cppexp, cppexp.db->functions, db);
+	BuildCArray<crdb::Enum>(cppexp, cppexp.db->enums, db);
 	BuildCArray<crdb::Field>(cppexp, cppexp.db->fields, db);
+	BuildCArray<crdb::Function>(cppexp, cppexp.db->functions, db);
+	BuildCArray<crdb::Class>(cppexp, cppexp.db->classes, db);
+	BuildCArray<crdb::Template>(cppexp, cppexp.db->templates, db);
+	BuildCArray<crdb::TemplateType>(cppexp, cppexp.db->template_types, db);
 	BuildCArray<crdb::Namespace>(cppexp, cppexp.db->namespaces, db);
 	BuildCArray<crdb::FlagAttribute>(cppexp, cppexp.db->flag_attributes, db);
 	BuildCArray<crdb::IntAttribute>(cppexp, cppexp.db->int_attributes, db);
@@ -534,21 +584,27 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	// Now ensure all name and text data are pointing into the data to be memory mapped
 	AssignAttributeNamesAndText(cppexp);
 
+	// Generate a list of references to all type primitives so that runtime serialisation code
+	// can quickly look them up.
+	GatherTypePrimitives(cppexp);
+
 	// Construct the primitive scope hierarchy, pointing primitives at their parents
 	// and adding them to the arrays within their parents.
 	// TODO: Pull multimap construction out of the functions so that they're not repeatedly generated
-	// TODO: Use GatherTypePrimitives to prevent multiple passes for enum, type, class
 	Parent(cppexp.db->enums, &crcpp::Enum::constants, cppexp.db->enum_constants, cppexp.allocator);
 	Parent(cppexp.db->functions, &crcpp::Function::parameters, cppexp.db->fields, cppexp.allocator);
 	Parent(cppexp.db->classes, &crcpp::Class::enums, cppexp.db->enums, cppexp.allocator);
 	Parent(cppexp.db->classes, &crcpp::Class::classes, cppexp.db->classes, cppexp.allocator);
 	Parent(cppexp.db->classes, &crcpp::Class::methods, cppexp.db->functions, cppexp.allocator);
 	Parent(cppexp.db->classes, &crcpp::Class::fields, cppexp.db->fields, cppexp.allocator);
+	Parent(cppexp.db->classes, &crcpp::Class::templates, cppexp.db->templates, cppexp.allocator);
 	Parent(cppexp.db->namespaces, &crcpp::Namespace::namespaces, cppexp.db->namespaces, cppexp.allocator);
 	Parent(cppexp.db->namespaces, &crcpp::Namespace::types, cppexp.db->types, cppexp.allocator);
 	Parent(cppexp.db->namespaces, &crcpp::Namespace::enums, cppexp.db->enums, cppexp.allocator);
 	Parent(cppexp.db->namespaces, &crcpp::Namespace::classes, cppexp.db->classes, cppexp.allocator);
 	Parent(cppexp.db->namespaces, &crcpp::Namespace::functions, cppexp.db->functions, cppexp.allocator);
+	Parent(cppexp.db->namespaces, &crcpp::Namespace::templates, cppexp.db->templates, cppexp.allocator);
+	Parent(cppexp.db->templates, &crcpp::Template::instances, cppexp.db->template_types, cppexp.allocator);
 
 	// Construct the primitive hierarchy for attributes by first collecting all attributes into
 	// a single pointer array
@@ -560,10 +616,9 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	Parent(cppexp.db->classes, &crcpp::Class::attributes, attributes, cppexp.allocator);
 
 	// Link up any references between primitives
-	Link(cppexp.db->fields, &crcpp::Field::type, cppexp.db->types);
-	Link(cppexp.db->fields, &crcpp::Field::type, cppexp.db->enums);
-	Link(cppexp.db->fields, &crcpp::Field::type, cppexp.db->classes);
-	Link(cppexp.db->classes, &crcpp::Class::base_class, cppexp.db->classes);
+	Link(cppexp.db->fields, &crcpp::Field::type, cppexp.db->type_primitives);
+	Link(cppexp.db->classes, &crcpp::Class::base_class, cppexp.db->type_primitives);
+	Link(cppexp.db->template_types, &crcpp::TemplateType::parameter_types, cppexp.db->type_primitives);
 
 	// Return parameters are parented to their functions as parameters. Move them from
 	// wherever they are in the list and into the return parameter data member.
@@ -572,10 +627,6 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	// Gather any unparented primitives into the root namespace
 	BuildGlobalNamespace(cppexp);
 
-	// Generate a list of references to all type primitives so that runtime serialisation code
-	// can quickly look them up.
-	GatherTypePrimitives(cppexp);
-
 	// Sort any primitive pointer arrays in the database by name hash, ascending. This
 	// is to allow fast O(logN) searching of the primitive arrays at runtime with a
 	// binary search.
@@ -583,6 +634,7 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	SortPrimitives(cppexp.db->fields);
 	SortPrimitives(cppexp.db->functions);
 	SortPrimitives(cppexp.db->classes);
+	SortPrimitives(cppexp.db->templates);
 	SortPrimitives(cppexp.db->namespaces);
 	SortPrimitives(cppexp.db->type_primitives);
 
@@ -611,6 +663,8 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		(&crcpp::internal::DatabaseMem::fields, array_data_offset)
 		(&crcpp::internal::DatabaseMem::functions, array_data_offset)
 		(&crcpp::internal::DatabaseMem::classes, array_data_offset)
+		(&crcpp::internal::DatabaseMem::template_types, array_data_offset)
+		(&crcpp::internal::DatabaseMem::templates, array_data_offset)
 		(&crcpp::internal::DatabaseMem::namespaces, array_data_offset)
 		(&crcpp::internal::DatabaseMem::text_attribute_data)
 		(&crcpp::internal::DatabaseMem::flag_attributes, array_data_offset)
@@ -656,14 +710,25 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		(&crcpp::Class::classes, array_data_offset)
 		(&crcpp::Class::methods, array_data_offset)
 		(&crcpp::Class::fields, array_data_offset)
-		(&crcpp::Class::attributes, array_data_offset);
+		(&crcpp::Class::attributes, array_data_offset)
+		(&crcpp::Class::templates, array_data_offset);
+
+	PtrSchema& schema_template_type = relocator.AddSchema<crcpp::TemplateType>(&schema_type)
+		(&crcpp::TemplateType::parameter_types, 0)
+		(&crcpp::TemplateType::parameter_types, sizeof(void*))
+		(&crcpp::TemplateType::parameter_types, sizeof(void*) * 2)
+		(&crcpp::TemplateType::parameter_types, sizeof(void*) * 3);
+
+	PtrSchema& schema_template = relocator.AddSchema<crcpp::Template>(&schema_primitive)
+		(&crcpp::Template::instances, array_data_offset);
 
 	PtrSchema& schema_namespace = relocator.AddSchema<crcpp::Namespace>(&schema_primitive)
 		(&crcpp::Namespace::namespaces, array_data_offset)
 		(&crcpp::Namespace::types, array_data_offset)
 		(&crcpp::Namespace::enums, array_data_offset)
 		(&crcpp::Namespace::classes, array_data_offset)
-		(&crcpp::Namespace::functions, array_data_offset);
+		(&crcpp::Namespace::functions, array_data_offset)
+		(&crcpp::Namespace::templates, array_data_offset);
 
 	PtrSchema& schema_int_attribute = relocator.AddSchema<crcpp::IntAttribute>(&schema_primitive);
 	PtrSchema& schema_float_attribute = relocator.AddSchema<crcpp::FloatAttribute>(&schema_primitive);
@@ -685,6 +750,8 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 	relocator.AddPointers(schema_field, cppexp.db->fields);
 	relocator.AddPointers(schema_function, cppexp.db->functions);
 	relocator.AddPointers(schema_class, cppexp.db->classes);
+	relocator.AddPointers(schema_template_type, cppexp.db->template_types);
+	relocator.AddPointers(schema_template, cppexp.db->templates);
 	relocator.AddPointers(schema_namespace, cppexp.db->namespaces);
 	relocator.AddPointers(schema_primitive, cppexp.db->flag_attributes);
 	relocator.AddPointers(schema_int_attribute, cppexp.db->int_attributes);
@@ -720,6 +787,11 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		relocator.AddPointers(schema_ptr, cls.methods);
 		relocator.AddPointers(schema_ptr, cls.fields);
 		relocator.AddPointers(schema_ptr, cls.attributes);
+		relocator.AddPointers(schema_ptr, cls.templates);
+	}
+	for (int i = 0; i < cppexp.db->templates.size(); i++)
+	{
+		relocator.AddPointers(schema_ptr, cppexp.db->templates[i].instances);
 	}
 	for (int i = 0; i < cppexp.db->namespaces.size(); i++)
 	{
@@ -728,6 +800,7 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		relocator.AddPointers(schema_ptr, cppexp.db->namespaces[i].enums);
 		relocator.AddPointers(schema_ptr, cppexp.db->namespaces[i].classes);
 		relocator.AddPointers(schema_ptr, cppexp.db->namespaces[i].functions);
+		relocator.AddPointers(schema_ptr, cppexp.db->namespaces[i].templates);
 	}
 
 	// Make all pointers relative to the start address
@@ -884,6 +957,26 @@ namespace
 		LOG(cppexp, INFO, "};");
 	}
 
+
+	void LogPrimitive(const crcpp::TemplateType& tt)
+	{
+		LOG(cppexp, INFO, "%s\n", tt.name.text);
+	}
+
+
+	void LogPrimitive(const crcpp::Template& t)
+	{
+		const char* name = t.name.text;
+		LOG(cppexp, INFO, "template %s\n", name);
+		LOG(cppexp, INFO, "{\n");
+		LOG_PUSH_INDENT(cppexp);
+
+		LogPrimitives(t.instances);
+
+		LOG_POP_INDENT(cppexp);
+		LOG(cppexp, INFO, "};");
+	}
+
 	
 	void LogPrimitive(const crcpp::Class& cls)
 	{
@@ -907,6 +1000,7 @@ namespace
 		LogPrimitives(sorted_fields);
 		LogPrimitives(cls.enums);
 		LogPrimitives(cls.methods);
+		LogPrimitives(cls.templates);
 
 		LOG_POP_INDENT(cppexp);
 		LOG(cppexp, INFO, "};");
@@ -926,6 +1020,7 @@ namespace
 		LogPrimitives(ns.classes);
 		LogPrimitives(ns.enums);
 		LogPrimitives(ns.functions);
+		LogPrimitives(ns.templates);
 
 		if (ns.name.text)
 		{

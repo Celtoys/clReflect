@@ -62,6 +62,8 @@ namespace crcpp
 			KIND_ENUM,
 			KIND_FIELD,
 			KIND_FUNCTION,
+			KIND_TEMPLATE_TYPE,
+			KIND_TEMPLATE,
 			KIND_CLASS,
 			KIND_NAMESPACE,
 		};
@@ -264,6 +266,53 @@ namespace crcpp
 
 
 	//
+	// Template types are instantiations of templates with fully specified parameters.
+	// They don't specify the primitives contained within as these can vary between instantiation,
+	// leading to prohibitive memory requirements.
+	//
+	struct TemplateType : public Type
+	{
+		static const Kind KIND = KIND_TEMPLATE_TYPE;
+
+		static const int MAX_NB_ARGS = 4;
+
+		TemplateType()
+			: Type(KIND)
+		{
+			for (int i = 0; i < MAX_NB_ARGS; i++)
+			{
+				parameter_types[i] = 0;
+				parameter_ptrs[i] = false;
+			}
+		}
+
+		// A pointer to the type of each template argument
+		const Type* parameter_types[MAX_NB_ARGS];
+
+		// Specifies whether each argument is a pointer
+		bool parameter_ptrs[MAX_NB_ARGS];
+	};
+
+
+	//
+	// A template is not a type but a record of a template declaration without specified parameters
+	// that instantiations can reference.
+	//
+	struct Template : public Primitive
+	{
+		static const Kind KIND = KIND_TEMPLATE;
+
+		Template()
+			: Primitive(KIND)
+		{
+		}
+
+		// All sorted by name
+		CArray<const TemplateType*> instances;
+	};
+
+
+	//
 	// Description of a C++ struct or class with containing fields, functions, classes, etc.
 	// Only one base class is supported until it becomes necessary to do otherwise.
 	//
@@ -290,6 +339,7 @@ namespace crcpp
 		CArray<const Function*> methods;
 		CArray<const Field*> fields;
 		CArray<const Attribute*> attributes;
+		CArray<const Template*> templates;
 	};
 
 
@@ -311,6 +361,7 @@ namespace crcpp
 		CArray<const Enum*> enums;
 		CArray<const Class*> classes;
 		CArray<const Function*> functions;
+		CArray<const Template*> templates;
 	};
 
 
@@ -419,6 +470,8 @@ namespace crcpp
 			CArray<Field> fields;
 			CArray<Function> functions;
 			CArray<Class> classes;
+			CArray<Template> templates;
+			CArray<TemplateType> template_types;
 			CArray<Namespace> namespaces;
 
 			// Raw allocation of all null-terminated text attribute strings

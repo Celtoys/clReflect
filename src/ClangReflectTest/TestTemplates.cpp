@@ -60,9 +60,9 @@ namespace TestTemplates
 		MultiSpecTemplate<ParamEnum, ParamEnum*> MultiSpecTemplateParamEnumParamEnumPtr;
 		MultiSpecTemplate<BasicTemplate<int>, BasicTemplate<int>*> MultiSpecTemplateBasicTemplateBasicTemplateIntBasicTemplateBasicTemplateIntPtr;
 
-		BasicTemplate<int> SameBasicTemplateA;
-		BasicTemplate<int> SameBasicTemplateB;
-
+		// Duplicate uses of template types
+		BasicTemplate<int> BasicTemplateIntA;
+		BasicTemplate<int> BasicTemplateIntB;
 		BasicTemplate<ParamStruct> BasicTemplateStructParamA;
 		BasicTemplate<ParamStruct> BasicTemplateStructParamB;
 		BasicTemplate<ParamClass> BasicTemplateClassParamA;
