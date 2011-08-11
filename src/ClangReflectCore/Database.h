@@ -69,13 +69,13 @@ namespace crdb
 			KIND_NAME_ATTRIBUTE,
 			KIND_TEXT_ATTRIBUTE,
 			KIND_TYPE,
-			KIND_TEMPLATE,
-			KIND_TEMPLATE_TYPE,
 			KIND_ENUM_CONSTANT,
 			KIND_ENUM,
 			KIND_FIELD,
 			KIND_FUNCTION,
 			KIND_CLASS,
+			KIND_TEMPLATE,
+			KIND_TEMPLATE_TYPE,
 			KIND_NAMESPACE,
 		};
 
@@ -209,56 +209,6 @@ namespace crdb
 		// Total size of the type, including alignment
 		u32 size;
 	};
-
-
-	//
-	// A template is not a type but a record of a template declaration without specified types
-	// that instantiations can reference.
-	//
-	struct Template : public Primitive
-	{
-		Template()
-			: Primitive(Primitive::KIND_TEMPLATE)
-		{
-		}
-		Template(Name n, Name p)
-			: Primitive(Primitive::KIND_TEMPLATE, n, p)
-		{
-		}
-	};
-
-
-	//
-	// Template types are instantiations of templates with fully specified parameters.
-	// They don't specify the primitives contained within as these can vary between instantiation,
-	// leading to prohibitive memory requirements.
-	//
-	struct TemplateType : public Type
-	{
-		// Enough for std::map
-		static const int MAX_NB_ARGS = 4;
-
-		TemplateType()
-			: Type(KIND_TEMPLATE_TYPE)
-		{
-			for (int i = 0; i < MAX_NB_ARGS; i++)
-				parameter_ptrs[i] = false;
-		}
-		TemplateType(Name n, Name p)
-			: Type(KIND_TEMPLATE_TYPE, n, p, 0)
-		{
-			for (int i = 0; i < MAX_NB_ARGS; i++)
-				parameter_ptrs[i] = false;
-		}
-
-		// Currently only support parameter types that are values or pointers. Template arguments
-		// can be anything from integers to function pointers and I really haven't got the time to
-		// implement any of this because it will see very limited -- if any -- use from me.
-		Name parameter_types[MAX_NB_ARGS];
-		bool parameter_ptrs[MAX_NB_ARGS];
-	};
-
-
 	//
 	// A name/value pair for enumeration constants
 	//
@@ -423,6 +373,56 @@ namespace crdb
 
 		// Single base class
 		Name base_class;
+	};
+
+
+
+
+	//
+	// A template is not a type but a record of a template declaration without specified types
+	// that instantiations can reference.
+	//
+	struct Template : public Primitive
+	{
+		Template()
+			: Primitive(Primitive::KIND_TEMPLATE)
+		{
+		}
+		Template(Name n, Name p)
+			: Primitive(Primitive::KIND_TEMPLATE, n, p)
+		{
+		}
+	};
+
+
+	//
+	// Template types are instantiations of templates with fully specified parameters.
+	// They don't specify the primitives contained within as these can vary between instantiation,
+	// leading to prohibitive memory requirements.
+	//
+	struct TemplateType : public Type
+	{
+		// Enough for std::map
+		static const int MAX_NB_ARGS = 4;
+
+		TemplateType()
+			: Type(KIND_TEMPLATE_TYPE)
+		{
+			for (int i = 0; i < MAX_NB_ARGS; i++)
+				parameter_ptrs[i] = false;
+		}
+		TemplateType(Name n, Name p)
+			: Type(KIND_TEMPLATE_TYPE, n, p, 0)
+		{
+			for (int i = 0; i < MAX_NB_ARGS; i++)
+				parameter_ptrs[i] = false;
+		}
+
+		// Currently only support parameter types that are values or pointers. Template arguments
+		// can be anything from integers to function pointers and I really haven't got the time to
+		// implement any of this because it will see very limited -- if any -- use from me.
+		Name parameter_types[MAX_NB_ARGS];
+		bool parameter_ptrs[MAX_NB_ARGS];
 	};
 
 
