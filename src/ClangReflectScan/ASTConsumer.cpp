@@ -329,6 +329,7 @@ namespace
 		crdb::PrimitiveStore<TYPE>::const_iterator i = store.find(attribute->name.hash);
 		if (i == store.end() || !i->second.Equals(*attribute))
 		{
+			LOG(ast, INFO, "attribute %s\n", attribute->name.text.c_str());
 			db.AddPrimitive(*attribute);
 		}
 

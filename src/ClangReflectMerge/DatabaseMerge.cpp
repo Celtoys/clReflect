@@ -108,6 +108,8 @@ void MergeDatabases(crdb::Database& dest_db, const crdb::Database& src_db)
 	MergeUniques<crdb::Namespace>(dest_db, src_db);
 	MergeUniques<crdb::Type>(dest_db, src_db);
 	MergeUniques<crdb::Enum>(dest_db, src_db);
+	MergeUniques<crdb::Template>(dest_db, src_db);
+	MergeUniques<crdb::TemplateType>(dest_db, src_db);
 
 	// Class symbol names can't be overloaded but extra checks can be used to make sure
 	// the same class isn't violating the One Definition Rule
