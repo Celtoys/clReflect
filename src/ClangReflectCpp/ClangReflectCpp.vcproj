@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="ClangReflectCpp"
-	ProjectGUID="{ECDD2B00-B383-11E0-9A32-F46D04D48D5F}"
+	ProjectGUID="{5BAB3200-C71D-11E0-A6BC-F46D04D48D5F}"
 	RootNamespace="ClangReflectCpp"
 	Keyword="Win32Proj"
 	>
@@ -63,18 +63,14 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{bfa74b9e-c271-11e0-8bab-f46d04d48d5f}"
+			UniqueIdentifier="{5bac6a80-c71d-11e0-b515-f46d04d48d5f}"
 			>
 			<Filter
 				Name="crcpp"
-				UniqueIdentifier="{bfa74b9f-c271-11e0-8691-f46d04d48d5f}"
+				UniqueIdentifier="{5bac6a81-c71d-11e0-9082-f46d04d48d5f}"
 				>
 				<File
 					RelativePath="..\..\inc\crcpp\Core.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\inc\crcpp\crcpp.h"
 					>
 				</File>
 				<File
@@ -83,6 +79,10 @@
 				</File>
 				<File
 					RelativePath="..\..\inc\crcpp\FunctionCall.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\inc\crcpp\crcpp.h"
 					>
 				</File>
 			</Filter>

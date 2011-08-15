@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="ClangReflectCore"
-	ProjectGUID="{ECDB5640-B383-11E0-816D-F46D04D48D5F}"
+	ProjectGUID="{5BAC9190-C71D-11E0-82E0-F46D04D48D5F}"
 	RootNamespace="ClangReflectCore"
 	Keyword="Win32Proj"
 	>
