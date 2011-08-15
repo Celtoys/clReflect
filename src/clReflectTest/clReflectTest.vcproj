@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="clReflectTest"
+	ProjectGUID="{51A8695E-C71F-11E0-8879-F46D04D48D5F}"
+	RootNamespace="clReflectTest"
+	Keyword="Win32Proj"
+	>
+	<Platforms>
+		<Platform
+			Name="Win32"
+		/>
+	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="..\..\bin\Debug"
+			IntermediateDirectory="..\..\obj\Debug"
+			ConfigurationType="0"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cd ..\.. &amp; pib debug -target cltest"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target cltest"
+				CleanCommandLine="cd ..\.. &amp; pib clean debug -target cltest"
+				Output="..\..\bin\Debug\cltest.exe"
+				PreprocessorDefinitions=""
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="..\..\bin\Release"
+			IntermediateDirectory="..\..\obj\Release"
+			ConfigurationType="0"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cd ..\.. &amp; pib release -target cltest"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target cltest"
+				CleanCommandLine="cd ..\.. &amp; pib clean release -target cltest"
+				Output="..\..\bin\Release\cltest.exe"
+				PreprocessorDefinitions=""
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
+		</Configuration>
+	</Configurations>
+	<References>
+	</References>
+	<Files>
+		<File
+			RelativePath="Main.cpp"
+			>
+		</File>
+		<File
+			RelativePath="Test.cpp"
+			>
+		</File>
+		<File
+			RelativePath="TestAttributes.cpp"
+			>
+		</File>
+		<File
+			RelativePath="TestClassImpl.cpp"
+			>
+		</File>
+		<File
+			RelativePath="TestCollections.cpp"
+			>
+		</File>
+		<File
+			RelativePath="TestReflectionSpecs.cpp"
+			>
+		</File>
+		<File
+			RelativePath="TestTemplates.cpp"
+			>
+		</File>
+	</Files>
+	<Globals>
+		<Global
+			Name="PiBDigest"
+			Value="PQiLFOTuG4QoY_-FG-zPmw=="
+		/>
+	</Globals>
+</VisualStudioProject>

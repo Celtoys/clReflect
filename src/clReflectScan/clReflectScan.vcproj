@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="clReflectScan"
+	ProjectGUID="{51A77F00-C71F-11E0-8F5F-F46D04D48D5F}"
+	RootNamespace="clReflectScan"
+	Keyword="Win32Proj"
+	>
+	<Platforms>
+		<Platform
+			Name="Win32"
+		/>
+	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="..\..\bin\Debug"
+			IntermediateDirectory="..\..\obj\Debug"
+			ConfigurationType="0"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cd ..\.. &amp; pib debug -target clscan"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target clscan"
+				CleanCommandLine="cd ..\.. &amp; pib clean debug -target clscan"
+				Output="..\..\bin\Debug\clscan.exe"
+				PreprocessorDefinitions=""
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="..\..\bin\Release"
+			IntermediateDirectory="..\..\obj\Release"
+			ConfigurationType="0"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cd ..\.. &amp; pib release -target clscan"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target clscan"
+				CleanCommandLine="cd ..\.. &amp; pib clean release -target clscan"
+				Output="..\..\bin\Release\clscan.exe"
+				PreprocessorDefinitions=""
+				IncludeSearchPath=""
+				ForcedIncludes=""
+				AssemblySearchPath=""
+				ForcedUsingAssemblies=""
+				CompileAsManaged=""
+			/>
+		</Configuration>
+	</Configurations>
+	<References>
+	</References>
+	<Files>
+		<File
+			RelativePath="ASTConsumer.cpp"
+			>
+		</File>
+		<File
+			RelativePath="ASTConsumer.h"
+			>
+		</File>
+		<File
+			RelativePath="AttributeParser.cpp"
+			>
+		</File>
+		<File
+			RelativePath="AttributeParser.h"
+			>
+		</File>
+		<File
+			RelativePath="ClangFrontend.cpp"
+			>
+		</File>
+		<File
+			RelativePath="ClangFrontend.h"
+			>
+		</File>
+		<File
+			RelativePath="Main.cpp"
+			>
+		</File>
+		<File
+			RelativePath="ReflectionSpecs.cpp"
+			>
+		</File>
+		<File
+			RelativePath="ReflectionSpecs.h"
+			>
+		</File>
+	</Files>
+	<Globals>
+		<Global
+			Name="PiBDigest"
+			Value="g2ggKT-RADAlClHC0eDlMg=="
+		/>
+	</Globals>
+</VisualStudioProject>

@@ -137,12 +137,12 @@ env.Build([ cltest.exe, cltest.cppbin_file ], "cltest")
 
 
 # Generate MSVC project files
-VCGenerateProjectFile(env, "src/clReflectCpp/clReflectCpp", crcpp.cpp_files + crcpp.hpp_files + crcpp.api_files, crcpp.lib, "clcpp", [ ("..\\..\\inc", "Public API") ])
-VCGenerateProjectFile(env, "src/clReflectCore/clReflectCore", crcore.cpp_files + crcore.hpp_files, crcore.lib, "crcore")
-VCGenerateProjectFile(env, "src/clReflectScan/clReflectScan", crscan.cpp_files + crscan.hpp_files, crscan.exe, "crscan")
-VCGenerateProjectFile(env, "src/clReflectMerge/clReflectMerge", crmerge.cpp_files + crmerge.hpp_files, crmerge.exe, "crmerge")
-VCGenerateProjectFile(env, "src/clReflectExport/clReflectExport", crexport.cpp_files + crexport.hpp_files, crexport.exe, "crexport")
-VCGenerateProjectFile(env, "src/clReflectTest/clReflectTest", crtest.cpp_files, crtest.exe, "crtest")
+VCGenerateProjectFile(env, "src/clReflectCpp/clReflectCpp", clcpp.cpp_files + clcpp.hpp_files + clcpp.api_files, clcpp.lib, "clcpp", [ ("..\\..\\inc", "Public API") ])
+VCGenerateProjectFile(env, "src/clReflectCore/clReflectCore", clcore.cpp_files + clcore.hpp_files, clcore.lib, "clcore")
+VCGenerateProjectFile(env, "src/clReflectScan/clReflectScan", clscan.cpp_files + clscan.hpp_files, clscan.exe, "clscan")
+VCGenerateProjectFile(env, "src/clReflectMerge/clReflectMerge", clmerge.cpp_files + clmerge.hpp_files, clmerge.exe, "clmerge")
+VCGenerateProjectFile(env, "src/clReflectExport/clReflectExport", clexport.cpp_files + clexport.hpp_files, clexport.exe, "clexport")
+VCGenerateProjectFile(env, "src/clReflectTest/clReflectTest", cltest.cpp_files, cltest.exe, "cltest")
 VCGenerateSolutionFile(env, "clReflect", [
     "src/clReflectCpp/clReflectCpp",
     "src/clReflectCore/clReflectCore",
