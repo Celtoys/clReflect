@@ -5,11 +5,11 @@
 #include <vector>
 
 
-namespace crdb
+namespace cldb
 {
 	struct Attribute;
 	class Database;
 }
 
 
-std::vector<crdb::Attribute*> ParseAttributes(crdb::Database& db, const char* text, const char* filename, int line);
+std::vector<cldb::Attribute*> ParseAttributes(cldb::Database& db, const char* text, const char* filename, int line);

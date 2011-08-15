@@ -1,9 +1,9 @@
 
-#include <crcpp/crcpp.h>
+#include <clcpp/clcpp.h>
 
 
 // Reflect the entire namespace and implement each class
-crcpp_reflect(TestClassImpl)
+clcpp_reflect(TestClassImpl)
 namespace TestClassImpl
 {
 	class A
@@ -32,14 +32,14 @@ namespace TestClassImpl
 	};
 }
 
-crcpp_impl_class(TestClassImpl::A, A)
-crcpp_impl_class(TestClassImpl::B, B)
+clcpp_impl_class(TestClassImpl::A, A)
+clcpp_impl_class(TestClassImpl::B, B)
 
 
-void TestConstructorDestructor(crcpp::Database& db)
+void TestConstructorDestructor(clcpp::Database& db)
 {
-	const crcpp::Class* ca = crcpp_get_type(db, TestClassImpl::A)->AsClass();
-	const crcpp::Class* cb = crcpp_get_type(db, TestClassImpl::B)->AsClass();
+	const clcpp::Class* ca = clcpp_get_type(db, TestClassImpl::A)->AsClass();
+	const clcpp::Class* cb = clcpp_get_type(db, TestClassImpl::B)->AsClass();
 
 	TestClassImpl::A* a = (TestClassImpl::A*)new char[sizeof(TestClassImpl::A)];
 	TestClassImpl::B* b = (TestClassImpl::B*)new char[sizeof(TestClassImpl::B)];

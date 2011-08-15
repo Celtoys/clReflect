@@ -1,6 +1,6 @@
 
 //
-// Metadata describing the database types in the crdb namespace for serialisation use.
+// Metadata describing the database types in the cldb namespace for serialisation use.
 //
 
 #pragma once
@@ -9,7 +9,7 @@
 #include "Database.h"
 
 
-namespace crdb
+namespace cldb
 {
 	namespace meta
 	{
@@ -33,15 +33,15 @@ namespace crdb
 			static const FieldType type = FIELD_TYPE_BASIC;
 			static const int packed_size = sizeof(TYPE);
 		};
-		template <> struct FieldTypeTraits<crdb::Name>
+		template <> struct FieldTypeTraits<cldb::Name>
 		{
 			static const FieldType type = FIELD_TYPE_NAME;
-			static const int packed_size = sizeof(crdb::u32);
+			static const int packed_size = sizeof(cldb::u32);
 		};
 		template <> struct FieldTypeTraits<std::string>
 		{
 			static const FieldType type = FIELD_TYPE_STRING;
-			static const int packed_size = sizeof(crdb::u32);
+			static const int packed_size = sizeof(cldb::u32);
 		};
 
 

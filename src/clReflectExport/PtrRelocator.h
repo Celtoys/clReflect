@@ -4,7 +4,7 @@
 
 #include <vector>
 #include <list>
-#include <crcpp/Core.h>
+#include <clcpp/Core.h>
 
 
 //
@@ -89,7 +89,7 @@ public:
 
 	// Helper for adding pointers for an array of objects
 	template <typename TYPE>
-	void AddPointers(const PtrSchema& schema, const crcpp::CArray<TYPE>& array)
+	void AddPointers(const PtrSchema& schema, const clcpp::CArray<TYPE>& array)
 	{
 		assert(sizeof(TYPE) == schema.stride);
 		AddPointers(schema, array.data(), array.size());

@@ -1,8 +1,8 @@
 
 #include "AttributeParser.h"
 
-#include <ClangReflectCore/Database.h>
-#include <ClangReflectCore/Logging.h>
+#include <clReflectCore/Database.h>
+#include <clReflectCore/Logging.h>
 
 #include <ctype.h>
 
@@ -221,37 +221,37 @@ namespace
 	//
 	// Overloads for adding attribute pointers to a vector that need to be released at a later point
 	//
-	void AddFlagAttribute(crdb::Database& db, std::vector<crdb::Attribute*>& attributes, const Token* attribute_name)
+	void AddFlagAttribute(cldb::Database& db, std::vector<cldb::Attribute*>& attributes, const Token* attribute_name)
 	{
-		crdb::Name name = db.GetName(attribute_name->GetText());
-		attributes.push_back(new crdb::FlagAttribute(name, crdb::Name()));
+		cldb::Name name = db.GetName(attribute_name->GetText());
+		attributes.push_back(new cldb::FlagAttribute(name, cldb::Name()));
 	}
-	void AddIntAttribute(crdb::Database& db, std::vector<crdb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
+	void AddIntAttribute(cldb::Database& db, std::vector<cldb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
 	{
-		crdb::Name name = db.GetName(attribute_name->GetText());
+		cldb::Name name = db.GetName(attribute_name->GetText());
 		int value = atoi(val.GetText());
-		attributes.push_back(new crdb::IntAttribute(name, crdb::Name(), value));
+		attributes.push_back(new cldb::IntAttribute(name, cldb::Name(), value));
 	}
-	void AddFloatAttribute(crdb::Database& db, std::vector<crdb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
+	void AddFloatAttribute(cldb::Database& db, std::vector<cldb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
 	{
-		crdb::Name name = db.GetName(attribute_name->GetText());
+		cldb::Name name = db.GetName(attribute_name->GetText());
 		float value;
 		sscanf(val.GetText(), "%f", &value);
-		attributes.push_back(new crdb::FloatAttribute(name, crdb::Name(), value));
+		attributes.push_back(new cldb::FloatAttribute(name, cldb::Name(), value));
 	}
-	void AddNameAttribute(crdb::Database& db, std::vector<crdb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
+	void AddNameAttribute(cldb::Database& db, std::vector<cldb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
 	{
-		crdb::Name name = db.GetName(attribute_name->GetText());
-		attributes.push_back(new crdb::NameAttribute(name, crdb::Name(), db.GetName(val.GetText())));
+		cldb::Name name = db.GetName(attribute_name->GetText());
+		attributes.push_back(new cldb::NameAttribute(name, cldb::Name(), db.GetName(val.GetText())));
 	}
-	void AddTextAttribute(crdb::Database& db, std::vector<crdb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
+	void AddTextAttribute(cldb::Database& db, std::vector<cldb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
 	{
-		crdb::Name name = db.GetName(attribute_name->GetText());
-		attributes.push_back(new crdb::TextAttribute(name, crdb::Name(), val.GetText()));
+		cldb::Name name = db.GetName(attribute_name->GetText());
+		attributes.push_back(new cldb::TextAttribute(name, cldb::Name(), val.GetText()));
 	}
 
 
-	bool AttributeDef(crdb::Database& db, std::vector<crdb::Attribute*>& attributes, const std::vector<Token>& tokens, size_t& pos)
+	bool AttributeDef(cldb::Database& db, std::vector<cldb::Attribute*>& attributes, const std::vector<Token>& tokens, size_t& pos)
 	{
 		// Expect a symbol to start the attribute
 		const Token* attribute_name = ExpectNext(tokens, pos, TOKEN_SYMBOL);
@@ -301,10 +301,10 @@ namespace
 	}
 
 
-	std::vector<crdb::Attribute*> Parser(crdb::Database& db, const std::vector<Token>& tokens)
+	std::vector<cldb::Attribute*> Parser(cldb::Database& db, const std::vector<Token>& tokens)
 	{
 		// Don't parse if there are no tokens (this could be a lexer error or an explicit line code)
-		std::vector<crdb::Attribute*> attributes;
+		std::vector<cldb::Attribute*> attributes;
 		if (tokens.empty())
 		{
 			return attributes;
@@ -332,7 +332,7 @@ namespace
 }
 
 
-std::vector<crdb::Attribute*> ParseAttributes(crdb::Database& db, const char* text, const char* filename, int line)
+std::vector<cldb::Attribute*> ParseAttributes(cldb::Database& db, const char* text, const char* filename, int line)
 {
 	g_Filename = filename;
 	g_Line = line;

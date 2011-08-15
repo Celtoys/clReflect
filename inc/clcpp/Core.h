@@ -2,7 +2,7 @@
 #pragma once
 
 
-namespace crcpp
+namespace clcpp
 {
 	namespace internal
 	{

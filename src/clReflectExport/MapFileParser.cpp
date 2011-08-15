@@ -5,9 +5,9 @@
 #include <windows.h>
 #include <DbgHelp.h>
 
-#include <ClangReflectCore/Database.h>
-#include <ClangReflectCore/FileUtils.h>
-#include <ClangReflectCore/Logging.h>
+#include <clReflectCore/Database.h>
+#include <clReflectCore/FileUtils.h>
+#include <clReflectCore/Logging.h>
 
 #include <cstdio>
 #include <cstring>
@@ -93,12 +93,12 @@ namespace
 	}
 
 
-	crdb::Field MatchParameter(crdb::Database& db, const char*& ptr, const char* end, bool& is_this_call)
+	cldb::Field MatchParameter(cldb::Database& db, const char*& ptr, const char* end, bool& is_this_call)
 	{
 		// TODO: Not exactly proud of this parsing code - started thinking it would be a simple problem
 		// but the unseen complexity forced it to grow oddly. It works, though. Needs a rewrite.
 
-		crdb::Field parameter;
+		cldb::Field parameter;
 
 		const char* skip_tokens[] =
 		{
@@ -128,11 +128,11 @@ namespace
 			// Check for modifiers
 			if (token[0] == '&')
 			{
-				parameter.modifier = crdb::Field::MODIFIER_REFERENCE;
+				parameter.modifier = cldb::Field::MODIFIER_REFERENCE;
 			}
 			else if (token[0] == '*')
 			{
-				parameter.modifier = crdb::Field::MODIFIER_POINTER;
+				parameter.modifier = cldb::Field::MODIFIER_POINTER;
 			}
 
 			// Check for const qualification
@@ -185,7 +185,7 @@ namespace
 	}
 
 
-	void AddFunctionAddress(crdb::Database& db, const std::string& function_name, const std::string& function_signature, unsigned int function_address)
+	void AddFunctionAddress(cldb::Database& db, const std::string& function_name, const std::string& function_signature, unsigned int function_address)
 	{
 		if (function_address == 0)
 		{
@@ -203,8 +203,8 @@ namespace
 		// Parse the return parameter and only remember it if it's non-void
 		bool is_this_call = false;
 		const char* ptr = function_signature.c_str();
-		crdb::Field return_parameter = MatchParameter(db, ptr, ptr + func_pos, is_this_call);
-		crdb::Field* return_parameter_ptr = 0;
+		cldb::Field return_parameter = MatchParameter(db, ptr, ptr + func_pos, is_this_call);
+		cldb::Field* return_parameter_ptr = 0;
 		if (return_parameter.type.text != "void")
 		{
 			return_parameter_ptr = &return_parameter;
@@ -224,7 +224,7 @@ namespace
 			return;
 		}
 
-		std::vector<crdb::Field> parameters;
+		std::vector<cldb::Field> parameters;
 		if (is_this_call)
 		{
 			// Find the end of the type name
@@ -241,9 +241,9 @@ namespace
 			type_name[rsep] = 0;
 
 			// Add the this parameter at the beginning
-			crdb::Field this_parameter;
+			cldb::Field this_parameter;
 			this_parameter.type = db.GetName(type_name);
-			this_parameter.modifier = crdb::Field::MODIFIER_POINTER;
+			this_parameter.modifier = cldb::Field::MODIFIER_POINTER;
 			parameters.push_back(this_parameter);
 		}
 
@@ -252,7 +252,7 @@ namespace
 		const char* end = function_signature.c_str() + r_pos;
 		while (ptr < end)
 		{
-			crdb::Field parameter = MatchParameter(db, ptr, end, is_this_call);
+			cldb::Field parameter = MatchParameter(db, ptr, end, is_this_call);
 			if (parameter.type.text != "void")
 			{
 				parameters.push_back(parameter);
@@ -260,15 +260,15 @@ namespace
 		}
 
 		// Calculate the ID of the matching function
-		crdb::u32 unique_id = crdb::CalculateFunctionUniqueID(return_parameter_ptr, parameters);
+		cldb::u32 unique_id = cldb::CalculateFunctionUniqueID(return_parameter_ptr, parameters);
 
 		// Search through all functions of the same name
-		crdb::u32 function_hash = crcpp::internal::HashNameString(function_name.c_str());
-		crdb::PrimitiveStore<crdb::Function>::range functions = db.m_Functions.equal_range(function_hash);
-		for (crdb::PrimitiveStore<crdb::Function>::iterator i = functions.first; i != functions.second; ++i)
+		cldb::u32 function_hash = clcpp::internal::HashNameString(function_name.c_str());
+		cldb::PrimitiveStore<cldb::Function>::range functions = db.m_Functions.equal_range(function_hash);
+		for (cldb::PrimitiveStore<cldb::Function>::iterator i = functions.first; i != functions.second; ++i)
 		{
 			// Assign the function address when the unique IDs match
-			crdb::Function& function = i->second;
+			cldb::Function& function = i->second;
 			if (function.unique_id == unique_id)
 			{
 				function.address = function_address;
@@ -278,7 +278,7 @@ namespace
 	}
 
 
-	void AddClassImplFunction(crdb::Database& db, const std::string& function_signature, unsigned int function_address, bool is_constructor)
+	void AddClassImplFunction(cldb::Database& db, const std::string& function_signature, unsigned int function_address, bool is_constructor)
 	{
 		if (function_address == 0)
 		{
@@ -317,8 +317,8 @@ namespace
 
 		// Generate the names for the parameter
 		std::string parameter_type_name_str = function_signature.substr(pos, end_pos - pos + 1);
-		crdb::Name parameter_type_name = db.GetName(parameter_type_name_str.c_str());
-		crdb::Name parameter_name = db.GetName("this");
+		cldb::Name parameter_type_name = db.GetName(parameter_type_name_str.c_str());
+		cldb::Name parameter_name = db.GetName("this");
 
 		// Generate a name for the new function
 		std::string function_name_str = parameter_type_name_str + "::";
@@ -330,24 +330,24 @@ namespace
 		{
 			function_name_str += "DestructObject";
 		}
-		crdb::Name function_name = db.GetName(function_name_str.c_str());
+		cldb::Name function_name = db.GetName(function_name_str.c_str());
 
 		// Create the parameter
-		crdb::Field parameter(
+		cldb::Field parameter(
 			parameter_name,
 			function_name,
 			parameter_type_name,
-			crdb::Field::MODIFIER_POINTER,
+			cldb::Field::MODIFIER_POINTER,
 			false,
 			0);
 
 		// Generate a unique ID that binds the function and parameter together
-		std::vector<crdb::Field> parameters;
+		std::vector<cldb::Field> parameters;
 		parameters.push_back(parameter);
-		crdb::u32 unique_id = crdb::CalculateFunctionUniqueID(0, parameters);
+		cldb::u32 unique_id = cldb::CalculateFunctionUniqueID(0, parameters);
 
 		// Create the function and bind the parameter to it
-		crdb::Function function(
+		cldb::Function function(
 			function_name,
 			parameter_type_name,
 			unique_id);
@@ -362,23 +362,23 @@ namespace
 	}
 
 
-	void AddConstructFunction(crdb::Database& db, const std::string& function_signature, unsigned int function_address)
+	void AddConstructFunction(cldb::Database& db, const std::string& function_signature, unsigned int function_address)
 	{
 		AddClassImplFunction(db, function_signature, function_address, true);
 	}
 
 
-	void AddDestructFunction(crdb::Database& db, const std::string& function_signature, unsigned int function_address)
+	void AddDestructFunction(cldb::Database& db, const std::string& function_signature, unsigned int function_address)
 	{
 		AddClassImplFunction(db, function_signature, function_address, false);
 	}
 }
 
 
-MapFileParser::MapFileParser(crdb::Database& db, const char* filename)
+MapFileParser::MapFileParser(cldb::Database& db, const char* filename)
 {
-	static const char* construct_object = "crcpp::internal::ConstructObject";
-	static const char* destruct_object = "crcpp::internal::DestructObject";
+	static const char* construct_object = "clcpp::internal::ConstructObject";
+	static const char* destruct_object = "clcpp::internal::DestructObject";
 
 	if (!InitialiseSymbolHandler())
 	{
@@ -404,7 +404,7 @@ MapFileParser::MapFileParser(crdb::Database& db, const char* filename)
 			line = SkipWhitespace(line);
 			line = ConsumeToken(line, ' ', token, sizeof(token));
 
-			// Undecorate the symbol name alone and see if it's a known crcpp function
+			// Undecorate the symbol name alone and see if it's a known clcpp function
 			std::string function_name = UndecorateFunctionName(token);
 			if (function_name == construct_object)
 			{
@@ -420,7 +420,7 @@ MapFileParser::MapFileParser(crdb::Database& db, const char* filename)
 			}
 
 			// Otherwise see if it's a function in the database
-			else if (const crdb::Function* function = db.GetFirstPrimitive<crdb::Function>(function_name.c_str()))
+			else if (const cldb::Function* function = db.GetFirstPrimitive<cldb::Function>(function_name.c_str()))
 			{
 				std::string function_signature = UndecorateFunctionSignature(token);
 				unsigned int function_address = ParseAddressField(line, function_name.c_str());

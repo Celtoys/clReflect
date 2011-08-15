@@ -2,7 +2,7 @@
 #pragma once
 
 
-namespace crdb
+namespace cldb
 {
 	class Database;
 }
@@ -11,6 +11,6 @@ namespace crdb
 class MapFileParser
 {
 public:
-	MapFileParser(crdb::Database& db, const char* filename);
+	MapFileParser(cldb::Database& db, const char* filename);
 private:
 };

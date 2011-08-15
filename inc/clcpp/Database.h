@@ -10,7 +10,7 @@
 #include "Core.h"
 
 
-namespace crcpp
+namespace clcpp
 {
 	struct Primitive;
 	struct Enum;

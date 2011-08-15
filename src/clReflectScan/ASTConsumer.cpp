@@ -28,9 +28,9 @@
 #include "ReflectionSpecs.h"
 #include "AttributeParser.h"
 
-#include <crcpp/Core.h>
+#include <clcpp/Core.h>
 
-#include <ClangReflectCore/Logging.h>
+#include <clReflectCore/Logging.h>
 
 // clang\ast\decltemplate.h(1484) : warning C4345: behavior change: an object of POD type constructed with an initializer of the form () will be default-initialized
 #pragma warning(disable:4345)
@@ -58,18 +58,18 @@ namespace
 	struct ParameterInfo
 	{
 		ParameterInfo()
-			: modifier(crdb::Field::MODIFIER_VALUE)
+			: modifier(cldb::Field::MODIFIER_VALUE)
 			, is_const(false)
 		{
 		}
 
 		std::string type_name;
-		crdb::Field::Modifier modifier;
+		cldb::Field::Modifier modifier;
 		bool is_const;
 	};
 
 
-	bool GetParameterInfo(crdb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, ParameterInfo& info)
+	bool GetParameterInfo(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, ParameterInfo& info)
 	{
 		// Get type info for the parameter
 		clang::SplitQualType sqt = qual_type.split();
@@ -80,7 +80,7 @@ namespace
 		// Get pointee type info if this is a pointer
 		if (const clang::PointerType* ptr_type = dyn_cast<clang::PointerType>(type))
 		{
-			info.modifier = crdb::Field::MODIFIER_POINTER;
+			info.modifier = cldb::Field::MODIFIER_POINTER;
 			qual_type = ptr_type->getPointeeType();
 			sqt = qual_type.split();
 		}
@@ -88,7 +88,7 @@ namespace
 		// Get pointee type info if this is a reference
 		else if (const clang::LValueReferenceType* ref_type = dyn_cast<clang::LValueReferenceType>(type))
 		{
-			info.modifier = crdb::Field::MODIFIER_REFERENCE;
+			info.modifier = cldb::Field::MODIFIER_REFERENCE;
 			qual_type = ref_type->getPointeeType();
 			sqt = qual_type.split();
 		}
@@ -133,18 +133,18 @@ namespace
 			}
 
 			// Parent the instance to its declaring template
-			crdb::Name parent_name = db.GetName(info.type_name.c_str());
+			cldb::Name parent_name = db.GetName(info.type_name.c_str());
 
 			// Prepare for adding template arguments to the type name
 			info.type_name += "<";
 
 			// Iterate over template argument
 			int arg_pos = 0;
-			ParameterInfo template_args[crdb::TemplateType::MAX_NB_ARGS];
+			ParameterInfo template_args[cldb::TemplateType::MAX_NB_ARGS];
 			for (clang::TemplateSpecializationType::iterator i = template_type->begin(); i != template_type->end(); ++i)
 			{
 				// Check for template argument overflow
-				if (arg_pos == crdb::TemplateType::MAX_NB_ARGS)
+				if (arg_pos == cldb::TemplateType::MAX_NB_ARGS)
 				{
 					return false;
 				}
@@ -163,7 +163,7 @@ namespace
 				}
 
 				// References currently not supported
-				if (template_args[arg_pos].modifier == crdb::Field::MODIFIER_REFERENCE)
+				if (template_args[arg_pos].modifier == cldb::Field::MODIFIER_REFERENCE)
 				{
 					return false;
 				}
@@ -174,7 +174,7 @@ namespace
 					info.type_name += ",";
 				}
 				info.type_name += template_args[arg_pos].type_name;
-				if (template_args[arg_pos].modifier == crdb::Field::MODIFIER_POINTER)
+				if (template_args[arg_pos].modifier == cldb::Field::MODIFIER_POINTER)
 				{
 					info.type_name += "*";
 				}
@@ -184,16 +184,16 @@ namespace
 			info.type_name += ">";
 
 			// Create the referenced template type on demand if it doesn't exist
-			if (db.GetFirstPrimitive<crdb::TemplateType>(info.type_name.c_str()) == 0)
+			if (db.GetFirstPrimitive<cldb::TemplateType>(info.type_name.c_str()) == 0)
 			{
-				crdb::Name type_name = db.GetName(info.type_name.c_str());
-				crdb::TemplateType type(type_name, parent_name);
+				cldb::Name type_name = db.GetName(info.type_name.c_str());
+				cldb::TemplateType type(type_name, parent_name);
 
 				// Populate the template argument list
 				for (int i = 0; i < arg_pos; i++)
 				{
 					type.parameter_types[i] = db.GetName(template_args[i].type_name.c_str());
-					type.parameter_ptrs[i] = template_args[i].modifier == crdb::Field::MODIFIER_POINTER;
+					type.parameter_ptrs[i] = template_args[i].modifier == cldb::Field::MODIFIER_POINTER;
 				}
 
 				db.AddPrimitive(type);
@@ -215,7 +215,7 @@ namespace
 	}
 
 
-	bool MakeField(crdb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, const char* param_name, crdb::Name parent_name, int index, crdb::Field& field)
+	bool MakeField(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, const char* param_name, cldb::Name parent_name, int index, cldb::Field& field)
 	{
 		ParameterInfo info;
 		if (!GetParameterInfo(db, specs, ctx, qual_type, info))
@@ -224,13 +224,13 @@ namespace
 		}
 
 		// Construct the field
-		crdb::Name type_name = db.GetName(info.type_name.c_str());
-		field = crdb::Field(db.GetName(param_name), parent_name, type_name, info.modifier, info.is_const, index);
+		cldb::Name type_name = db.GetName(info.type_name.c_str());
+		field = cldb::Field(db.GetName(param_name), parent_name, type_name, info.modifier, info.is_const, index);
 		return true;
 	}
 
 
-	void MakeFunction(crdb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::NamedDecl* decl, crdb::Name function_name, crdb::Name parent_name, std::vector<crdb::Field>& parameters)
+	void MakeFunction(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::NamedDecl* decl, cldb::Name function_name, cldb::Name parent_name, std::vector<cldb::Field>& parameters)
 	{
 		// Cast to a function
 		clang::FunctionDecl* function_decl = dyn_cast<clang::FunctionDecl>(decl);
@@ -243,7 +243,7 @@ namespace
 		}
 
 		// Parse the return type - named as a reserved keyword so it won't clash with user symbols
-		crdb::Field return_parameter;
+		cldb::Field return_parameter;
 		if (!MakeField(db, specs, ctx, function_decl->getResultType(), "return", function_name, -1, return_parameter))
 		{
 			LOG(ast, WARNING, "Unsupported/unreflected return type for '%s' - skipping reflection\n", function_name.text.c_str());
@@ -264,7 +264,7 @@ namespace
 			}
 
 			// Collect a list of constructed parameters in case evaluating one of them fails
-			crdb::Field parameter;
+			cldb::Field parameter;
 			if (!MakeField(db, specs, ctx, param_decl->getType(), param_decl->getNameAsString().c_str(), function_name, index++, parameter))
 			{
 				LOG(ast, WARNING, "Unsupported/unreflected parameter type for '%s' - skipping reflection of '%s'\n", param_decl->getNameAsString().c_str(), function_name.text.c_str());
@@ -275,12 +275,12 @@ namespace
 
 		// Generate a hash unique to this function among other functions of the same name
 		// This is so that its parameters/return code can re-parent themselves correctly
-		crdb::Field* return_parameter_ptr = 0;
+		cldb::Field* return_parameter_ptr = 0;
 		if (return_parameter.type.text != "void")
 		{
 			return_parameter_ptr = &return_parameter;
 		}
-		crdb::u32 unique_id = crdb::CalculateFunctionUniqueID(return_parameter_ptr, parameters);
+		cldb::u32 unique_id = cldb::CalculateFunctionUniqueID(return_parameter_ptr, parameters);
 
 		// Parent each parameter to the function
 		return_parameter.parent_unique_id = unique_id;
@@ -291,7 +291,7 @@ namespace
 
 		// Add the function
 		LOG(ast, INFO, "function %s\n", function_name.text.c_str());
-		db.AddPrimitive(crdb::Function(function_name, parent_name, unique_id));
+		db.AddPrimitive(cldb::Function(function_name, parent_name, unique_id));
 
 		LOG_PUSH_INDENT(ast);
 
@@ -301,7 +301,7 @@ namespace
 			LOG(ast, INFO, "Returns: %s%s%s\n",
 				return_parameter.is_const ? "const " : "",
 				return_parameter.type.text.c_str(),
-				return_parameter.modifier == crdb::Field::MODIFIER_POINTER ? "*" : return_parameter.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "");
+				return_parameter.modifier == cldb::Field::MODIFIER_POINTER ? "*" : return_parameter.modifier == cldb::Field::MODIFIER_REFERENCE ? "&" : "");
 			db.AddPrimitive(return_parameter);
 		}
 		else
@@ -310,12 +310,12 @@ namespace
 		}
 
 		// Add the parameters
-		for (std::vector<crdb::Field>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+		for (std::vector<cldb::Field>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 		{
 			LOG(ast, INFO, "%s%s%s %s\n",
 				i->is_const ? "const " : "",
 				i->type.text.c_str(),
-				i->modifier == crdb::Field::MODIFIER_POINTER ? "*" : i->modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "",
+				i->modifier == cldb::Field::MODIFIER_POINTER ? "*" : i->modifier == cldb::Field::MODIFIER_REFERENCE ? "&" : "",
 				i->name.text.c_str());
 			db.AddPrimitive(*i);
 		}
@@ -325,11 +325,11 @@ namespace
 
 
 	template <typename TYPE>
-	void AddAttribute(crdb::Database& db, TYPE* attribute)
+	void AddAttribute(cldb::Database& db, TYPE* attribute)
 	{
 		// Only add the attribute if its unique
-		const crdb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>();
-		crdb::PrimitiveStore<TYPE>::const_iterator i = store.find(attribute->name.hash);
+		const cldb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>();
+		cldb::PrimitiveStore<TYPE>::const_iterator i = store.find(attribute->name.hash);
 		if (i == store.end() || !i->second.Equals(*attribute))
 		{
 			LOG(ast, INFO, "attribute %s\n", attribute->name.text.c_str());
@@ -341,7 +341,7 @@ namespace
 	}
 
 
-	void ParseAttributes(crdb::Database& db, clang::SourceManager& srcmgr, clang::NamedDecl* decl, crdb::Name parent)
+	void ParseAttributes(cldb::Database& db, clang::SourceManager& srcmgr, clang::NamedDecl* decl, cldb::Name parent)
 	{
 		// Reflection attributes are stored as clang annotation attributes
 		clang::specific_attr_iterator<clang::AnnotateAttr> i = decl->specific_attr_begin<clang::AnnotateAttr>();
@@ -367,28 +367,28 @@ namespace
 		int line = presumed_loc.getLine();
 
 		// Parse and iterate over all attributes in the text
-		std::vector<crdb::Attribute*> attributes = ::ParseAttributes(db, attribute_text.str().c_str(), filename, line);
+		std::vector<cldb::Attribute*> attributes = ::ParseAttributes(db, attribute_text.str().c_str(), filename, line);
 		for (size_t i = 0; i < attributes.size(); i++)
 		{
 			// Add the attributes to the database, parented to the calling declaration
-			crdb::Attribute* attribute = attributes[i];
+			cldb::Attribute* attribute = attributes[i];
 			attribute->parent = parent;
 			switch (attribute->kind)
 			{
-			case (crdb::Primitive::KIND_FLAG_ATTRIBUTE):
-				AddAttribute(db, (crdb::FlagAttribute*)attribute);
+			case (cldb::Primitive::KIND_FLAG_ATTRIBUTE):
+				AddAttribute(db, (cldb::FlagAttribute*)attribute);
 				break;
-			case (crdb::Primitive::KIND_INT_ATTRIBUTE):
-				AddAttribute(db, (crdb::IntAttribute*)attribute);
+			case (cldb::Primitive::KIND_INT_ATTRIBUTE):
+				AddAttribute(db, (cldb::IntAttribute*)attribute);
 				break;
-			case (crdb::Primitive::KIND_FLOAT_ATTRIBUTE):
-				AddAttribute(db, (crdb::FloatAttribute*)attribute);
+			case (cldb::Primitive::KIND_FLOAT_ATTRIBUTE):
+				AddAttribute(db, (cldb::FloatAttribute*)attribute);
 				break;
-			case (crdb::Primitive::KIND_NAME_ATTRIBUTE):
-				AddAttribute(db, (crdb::NameAttribute*)attribute);
+			case (cldb::Primitive::KIND_NAME_ATTRIBUTE):
+				AddAttribute(db, (cldb::NameAttribute*)attribute);
 				break;
-			case (crdb::Primitive::KIND_TEXT_ATTRIBUTE):
-				AddAttribute(db, (crdb::TextAttribute*)attribute);
+			case (cldb::Primitive::KIND_TEXT_ATTRIBUTE):
+				AddAttribute(db, (cldb::TextAttribute*)attribute);
 				break;
 			}
 		}
@@ -396,7 +396,7 @@ namespace
 }
 
 
-ASTConsumer::ASTConsumer(clang::ASTContext& context, crdb::Database& db, const ReflectionSpecs& rspecs, const std::string& ast_log)
+ASTConsumer::ASTConsumer(clang::ASTContext& context, cldb::Database& db, const ReflectionSpecs& rspecs, const std::string& ast_log)
 	: m_ASTContext(context)
 	, m_DB(db)
 	, m_ReflectionSpecs(rspecs)
@@ -414,7 +414,7 @@ ASTConsumer::ASTConsumer(clang::ASTContext& context, crdb::Database& db, const R
 void ASTConsumer::WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl)
 {
 	// Root namespace
-	crdb::Name parent_name;
+	cldb::Name parent_name;
 
 	// Iterate over every named declaration
 	for (clang::DeclContext::decl_iterator i = tu_decl->decls_begin(); i != tu_decl->decls_end(); ++i)
@@ -439,7 +439,7 @@ void ASTConsumer::WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl)
 }
 
 
-void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name, const clang::ASTRecordLayout* layout)
+void ASTConsumer::AddDecl(clang::NamedDecl* decl, const cldb::Name& parent_name, const clang::ASTRecordLayout* layout)
 {
 	// Skip decls with errors and those marked by the Reflection Spec pass to ignore
 	if (decl->isInvalidDecl())
@@ -455,7 +455,7 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name,
 	}
 
 	// Generate a name for the decl
-	crdb::Name name = m_DB.GetName(name_str.c_str());
+	cldb::Name name = m_DB.GetName(name_str.c_str());
 
 	// Gather all attributes associated with this primitive
 	ParseAttributes(m_DB, m_ASTContext.getSourceManager(), decl, name);
@@ -474,12 +474,12 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const crdb::Name& parent_name,
 }
 
 
-void ASTConsumer::AddNamespaceDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
+void ASTConsumer::AddNamespaceDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name)
 {
 	// Only add the namespace if it doesn't exist yet
-	if (m_DB.GetFirstPrimitive<crdb::Namespace>(name.text.c_str()) == 0)
+	if (m_DB.GetFirstPrimitive<cldb::Namespace>(name.text.c_str()) == 0)
 	{
-		m_DB.AddPrimitive(crdb::Namespace(name, parent_name));
+		m_DB.AddPrimitive(cldb::Namespace(name, parent_name));
 		LOG(ast, INFO, "namespace %s\n", name.text.c_str());
 	}
 
@@ -488,7 +488,7 @@ void ASTConsumer::AddNamespaceDecl(clang::NamedDecl* decl, const crdb::Name& nam
 }
 
 
-void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
+void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name)
 {
 	// Cast to a record (NOTE: CXXRecord is a temporary clang type and will change in future revisions)
 	clang::CXXRecordDecl* record_decl = dyn_cast<clang::CXXRecordDecl>(decl);
@@ -508,7 +508,7 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 	}
 
 	// Parse any base classes
-	crdb::Name base_name;
+	cldb::Name base_name;
 	if (record_decl->getNumBases() > 0)
 	{
 		// Can't support virtual base classes - offsets change at runtime
@@ -536,19 +536,19 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 
 	// Add to the database
 	LOG(ast, INFO, "class %s", name.text.c_str());
-	if (base_name != crdb::Name())
+	if (base_name != cldb::Name())
 	{
 		LOG(ast, INFO, " : %s", base_name.text.c_str());
 	}
 	LOG_NEWLINE(ast);
 	const clang::ASTRecordLayout& layout = m_ASTContext.getASTRecordLayout(record_decl);
-	crdb::u32 size = layout.getSize().getQuantity();
-	m_DB.AddPrimitive(crdb::Class(name, parent_name, base_name, size));
+	cldb::u32 size = layout.getSize().getQuantity();
+	m_DB.AddPrimitive(cldb::Class(name, parent_name, base_name, size));
 	AddContainedDecls(decl, name, &layout);
 }
 
 
-void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
+void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name)
 {
 	// Note that by unnamed enums are not explicitly discarded here. This is because they don't generally
 	// get this far because you can't can't reference them in reflection specs.
@@ -559,7 +559,7 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const crdb::Name& name, co
 
 	// Add to the database
 	LOG(ast, INFO, "enum %s\n", name.text.c_str());
-	m_DB.AddPrimitive(crdb::Enum(name, parent_name));
+	m_DB.AddPrimitive(cldb::Enum(name, parent_name));
 
 	LOG_PUSH_INDENT(ast);
 
@@ -576,13 +576,13 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const crdb::Name& name, co
 		// Clang doesn't construct the enum name as a C++ compiler would see it so do that first
 		// NOTE: May want to revisit this later
 		std::string constant_name = constant_decl->getNameAsString();
-		if (parent_name != crdb::Name())
+		if (parent_name != cldb::Name())
 		{
 			constant_name = parent_name.text + "::" + constant_name;
 		}
 
 		// Add to the database
-		m_DB.AddPrimitive(crdb::EnumConstant(m_DB.GetName(constant_name.c_str()), name, value_int));
+		m_DB.AddPrimitive(cldb::EnumConstant(m_DB.GetName(constant_name.c_str()), name, value_int));
 		LOG(ast, INFO, "   %s = 0x%x\n", constant_name.c_str(), value_int);
 	}
 
@@ -590,25 +590,25 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const crdb::Name& name, co
 }
 
 
-void ASTConsumer::AddFunctionDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
+void ASTConsumer::AddFunctionDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name)
 {
 	// Parse and add the function
-	std::vector<crdb::Field> parameters;
+	std::vector<cldb::Field> parameters;
 	MakeFunction(m_DB, m_ReflectionSpecs, m_ASTContext, decl, name, parent_name, parameters);
 }
 
 
-void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
+void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name)
 {
 	// Cast to a method
 	clang::CXXMethodDecl* method_decl = dyn_cast<clang::CXXMethodDecl>(decl);
 	assert(method_decl != 0 && "Failed to cast to C++ method declaration");
 
-	std::vector<crdb::Field> parameters;
+	std::vector<cldb::Field> parameters;
 	if (method_decl->isInstance())
 	{
 		// Parse the 'this' type, treating it as the first parameter to the method
-		crdb::Field this_param;
+		cldb::Field this_param;
 		if (!MakeField(m_DB, m_ReflectionSpecs, m_ASTContext, method_decl->getThisType(m_ASTContext), "this", name, 0, this_param))
 		{
 			LOG(ast, WARNING, "Unsupported/unreflected 'this' type for '%s'\n", name.text.c_str());
@@ -622,15 +622,15 @@ void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const crdb::Name& name, 
 }
 
 
-void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name, const clang::ASTRecordLayout* layout)
+void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name, const clang::ASTRecordLayout* layout)
 {
 	// Cast to a field
 	clang::FieldDecl* field_decl = dyn_cast<clang::FieldDecl>(decl);
 	assert(field_decl != 0 && "Failed to cast to field declaration");
 
 	// Parse and add the field
-	crdb::Field field;
-	crdb::u32 offset = layout->getFieldOffset(field_decl->getFieldIndex()) / 8;
+	cldb::Field field;
+	cldb::u32 offset = layout->getFieldOffset(field_decl->getFieldIndex()) / 8;
 	std::string field_name = field_decl->getQualifiedNameAsString();
 	if (!MakeField(m_DB, m_ReflectionSpecs, m_ASTContext, field_decl->getType(), field_name.c_str(), parent_name, offset, field))
 	{
@@ -641,24 +641,24 @@ void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const crdb::Name& name, c
 	LOG(ast, INFO, "Field: %s%s%s %s\n",
 		field.is_const ? "const " : "",
 		field.type.text.c_str(),
-		field.modifier == crdb::Field::MODIFIER_POINTER ? "*" : field.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "",
+		field.modifier == cldb::Field::MODIFIER_POINTER ? "*" : field.modifier == cldb::Field::MODIFIER_REFERENCE ? "&" : "",
 		field.name.text.c_str());
 	m_DB.AddPrimitive(field);
 }
 
 
-void ASTConsumer::AddClassTemplateDecl(clang::NamedDecl* decl, const crdb::Name& name, const crdb::Name& parent_name)
+void ASTConsumer::AddClassTemplateDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name)
 {
 	// Cast to class template decl
 	clang::ClassTemplateDecl* template_decl = dyn_cast<clang::ClassTemplateDecl>(decl);
 	assert(template_decl != 0 && "Failed to cast template declaration");
 
 	// Only add the template if it doesn't exist yet
-	if (m_DB.GetFirstPrimitive<crdb::Template>(name.text.c_str()) == 0)
+	if (m_DB.GetFirstPrimitive<cldb::Template>(name.text.c_str()) == 0)
 	{
 		// First check that the argument count is valid
 		const clang::TemplateParameterList* parameters = template_decl->getTemplateParameters();
-		if (parameters->size() > crdb::TemplateType::MAX_NB_ARGS)
+		if (parameters->size() > cldb::TemplateType::MAX_NB_ARGS)
 		{
 			LOG(ast, WARNING, "Too many template arguments for '%s'\n", name.text.c_str());
 			return;
@@ -674,13 +674,13 @@ void ASTConsumer::AddClassTemplateDecl(clang::NamedDecl* decl, const crdb::Name&
 			}
 		}
 
-		m_DB.AddPrimitive(crdb::Template(name, parent_name));
+		m_DB.AddPrimitive(cldb::Template(name, parent_name));
 		LOG(ast, INFO, "template %s\n", name.text.c_str());
 	}
 }
 
 
-void ASTConsumer::AddContainedDecls(clang::NamedDecl* decl, const crdb::Name& parent_name, const clang::ASTRecordLayout* layout)
+void ASTConsumer::AddContainedDecls(clang::NamedDecl* decl, const cldb::Name& parent_name, const clang::ASTRecordLayout* layout)
 {
 	LOG_PUSH_INDENT(ast)
 

@@ -5,7 +5,7 @@
 #include "Database.h"
 
 
-namespace crcpp
+namespace clcpp
 {
 	//
 	// This code will call reflected functions with signatures that you assume the functions to hold.
@@ -13,7 +13,7 @@ namespace crcpp
 	// become unstable or present a security risk. It's not recommended that you use these functions
 	// in the general case and instead build your own function library which performs parameter checking.
 	//
-	// Note that you can use Koenig lookup to avoid having to specify the crcpp namespace when calling
+	// Note that you can use Koenig lookup to avoid having to specify the clcpp namespace when calling
 	// these functions.
 	//
 

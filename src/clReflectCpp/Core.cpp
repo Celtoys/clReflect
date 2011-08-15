@@ -1,5 +1,5 @@
 
-#include <crcpp/Core.h>
+#include <clcpp/Core.h>
 
 
 namespace
@@ -81,13 +81,13 @@ namespace
 }
 
 
-unsigned int crcpp::internal::HashNameString(const char* name_string)
+unsigned int clcpp::internal::HashNameString(const char* name_string)
 {
 	return MurmurHash3(name_string, strlen(name_string), 0);
 }
 
 
-unsigned int crcpp::internal::MixHashes(unsigned int a, unsigned int b)
+unsigned int clcpp::internal::MixHashes(unsigned int a, unsigned int b)
 {
 	return MurmurHash3(&b, sizeof(unsigned int), a);
 }

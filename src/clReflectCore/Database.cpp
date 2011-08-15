@@ -1,7 +1,7 @@
 
 #include "Database.h"
 
-#include <crcpp/Core.h>
+#include <clcpp/Core.h>
 
 #include <stdlib.h>
 #include <assert.h>
@@ -9,22 +9,22 @@
 
 namespace
 {
-	crdb::u32 CalcFieldHash(const crdb::Field& field)
+	cldb::u32 CalcFieldHash(const cldb::Field& field)
 	{
 		// Construct the fully-qualified type name and hash that
 		std::string name;
 		name += field.is_const ? "const " : "";
 		name += field.type.text;
-		name += field.modifier == crdb::Field::MODIFIER_POINTER ? "*" : field.modifier == crdb::Field::MODIFIER_REFERENCE ? "&" : "";
-		return crcpp::internal::HashNameString(name.c_str());
+		name += field.modifier == cldb::Field::MODIFIER_POINTER ? "*" : field.modifier == cldb::Field::MODIFIER_REFERENCE ? "&" : "";
+		return clcpp::internal::HashNameString(name.c_str());
 	}
 }
 
 
-crdb::u32 crdb::CalculateFunctionUniqueID(const Field* return_parameter, const std::vector<Field>& parameters)
+cldb::u32 cldb::CalculateFunctionUniqueID(const Field* return_parameter, const std::vector<Field>& parameters)
 {
 	// The return parameter is optional as it may be void
-	crdb::u32 unique_id = 0;
+	cldb::u32 unique_id = 0;
 	if (return_parameter != 0)
 	{
 		unique_id = CalcFieldHash(*return_parameter);
@@ -33,20 +33,20 @@ crdb::u32 crdb::CalculateFunctionUniqueID(const Field* return_parameter, const s
 	// Mix with all parameter field hashes
 	for (size_t i = 0; i < parameters.size(); i++)
 	{
-		crdb::u32 field_hash = CalcFieldHash(parameters[i]);
-		unique_id = crcpp::internal::MixHashes(unique_id, field_hash);
+		cldb::u32 field_hash = CalcFieldHash(parameters[i]);
+		unique_id = clcpp::internal::MixHashes(unique_id, field_hash);
 	}
 
 	return unique_id;
 }
 
 
-crdb::Database::Database()
+cldb::Database::Database()
 {
 }
 
 
-void crdb::Database::AddBaseTypePrimitives()
+void cldb::Database::AddBaseTypePrimitives()
 {
 	// Create a selection of basic C++ types
 	// TODO: Figure the size of these out based on platform
@@ -66,7 +66,7 @@ void crdb::Database::AddBaseTypePrimitives()
 }
 
 
-const crdb::Name& crdb::Database::GetName(const char* text)
+const cldb::Name& cldb::Database::GetName(const char* text)
 {
 	// Check for nullptr and empty string representations of a "noname"
 	static Name noname;
@@ -74,7 +74,7 @@ const crdb::Name& crdb::Database::GetName(const char* text)
 	{
 		return noname;
 	}
-	u32 hash = crcpp::internal::HashNameString(text);
+	u32 hash = clcpp::internal::HashNameString(text);
 	if (hash == 0)
 	{
 		return noname;
@@ -95,7 +95,7 @@ const crdb::Name& crdb::Database::GetName(const char* text)
 }
 
 
-const crdb::Name& crdb::Database::GetName(u32 hash) const
+const cldb::Name& cldb::Database::GetName(u32 hash) const
 {
 	// Check for DB existence first
 	NameMap::const_iterator i = m_Names.find(hash);

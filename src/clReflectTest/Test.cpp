@@ -1,6 +1,6 @@
 
 
-#include <crcpp/crcpp.h>
+#include <clcpp/clcpp.h>
 
 
 // test:
@@ -37,7 +37,7 @@
 // --------------------------------------------------------------------------------------------
 // Named global enumeration
 // --------------------------------------------------------------------------------------------
-crcpp_reflect(NamedGlobalEnum)
+clcpp_reflect(NamedGlobalEnum)
 enum NamedGlobalEnum
 {
 	VALUE_UNASSIGNED,
@@ -65,10 +65,10 @@ void GlobalParamFunction(int pa, char pb);
 void GlobalParamFunction(int pa, char pb) { }
 char GlobalReturnParamFunction(float x, double y);
 char GlobalReturnParamFunction(float x, double y) { return 0; }
-crcpp_reflect(GlobalEmptyFunction)
-crcpp_reflect(GlobalReturnFunction)
-crcpp_reflect(GlobalParamFunction)
-crcpp_reflect(GlobalReturnParamFunction)
+clcpp_reflect(GlobalEmptyFunction)
+clcpp_reflect(GlobalReturnFunction)
+clcpp_reflect(GlobalParamFunction)
+clcpp_reflect(GlobalReturnParamFunction)
 
 
 // --------------------------------------------------------------------------------------------
@@ -77,13 +77,13 @@ crcpp_reflect(GlobalReturnParamFunction)
 void OverloadTest(int a) { }
 void OverloadTest(int a, int b) { }
 void OverloadTest(int a, int b, int c) { }
-crcpp_reflect(OverloadTest)
+clcpp_reflect(OverloadTest)
 
 
 // --------------------------------------------------------------------------------------------
 // Forward declaration and definition of a global class
 // --------------------------------------------------------------------------------------------
-crcpp_reflect(ClassGlobalA)
+clcpp_reflect(ClassGlobalA)
 class ClassGlobalA;
 class ClassGlobalA
 {
@@ -115,7 +115,7 @@ char ClassGlobalA::DeclReturnParamFunction(float x, double y) { return 0; }
 // --------------------------------------------------------------------------------------------
 // Forward declaration and definition of a global struct
 // --------------------------------------------------------------------------------------------
-crcpp_reflect(StructGlobalA)
+clcpp_reflect(StructGlobalA)
 struct StructGlobalA;
 struct StructGlobalA
 {
@@ -156,7 +156,7 @@ struct StructGlobalA
 // --------------------------------------------------------------------------------------------
 // Inheritance relationships
 // --------------------------------------------------------------------------------------------
-crcpp_reflect(Inheritance)
+clcpp_reflect(Inheritance)
 namespace Inheritance
 {
 	struct BaseClass
@@ -181,7 +181,7 @@ namespace Inheritance
 // --------------------------------------------------------------------------------------------
 // Varying field parameter types
 // --------------------------------------------------------------------------------------------
-crcpp_reflect(FieldTypes)
+clcpp_reflect(FieldTypes)
 class FieldTypes
 {
 	// Just to keep the compiler happy about the reference types stored below
@@ -252,7 +252,7 @@ class FieldTypes
 // --------------------------------------------------------------------------------------------
 // Varying function parameter types
 // --------------------------------------------------------------------------------------------
-crcpp_reflect(FuncParams)
+clcpp_reflect(FuncParams)
 namespace FuncParams
 {
 	void FunctionTypes(char a, short b, int c, long d, unsigned char e, unsigned short f, unsigned int g, unsigned long h, float i, double j) { }
@@ -266,7 +266,7 @@ namespace FuncParams
 // --------------------------------------------------------------------------------------------
 // Varying function return types
 // --------------------------------------------------------------------------------------------
-crcpp_reflect(FuncReturns)
+clcpp_reflect(FuncReturns)
 namespace FuncReturns
 {
 	char FunctionRetChar() { return 0; }
@@ -329,7 +329,7 @@ namespace FuncReturns
 // --------------------------------------------------------------------------------------------
 // Named namespace
 // --------------------------------------------------------------------------------------------
-crcpp_reflect(NamespaceA)
+clcpp_reflect(NamespaceA)
 namespace NamespaceA
 {
 	// Namespace functions with overload testing
@@ -353,7 +353,7 @@ namespace NamespaceA
 // --------------------------------------------------------------------------------------------
 // Another named namespace
 // --------------------------------------------------------------------------------------------
-crcpp_reflect(NamespaceB)
+clcpp_reflect(NamespaceB)
 namespace NamespaceB
 {
 	// Namespace functions with overload testing
@@ -405,7 +405,7 @@ namespace NamespaceA
 // --------------------------------------------------------------------------------------------
 // Namespace and class nesting
 // --------------------------------------------------------------------------------------------
-crcpp_reflect(OuterNamespace)
+clcpp_reflect(OuterNamespace)
 namespace OuterNamespace
 {
 	namespace InnerNamespace
@@ -436,7 +436,7 @@ namespace OuterNamespace
 // --------------------------------------------------------------------------------------------
 // Referencing the already created classes as function parameters
 // --------------------------------------------------------------------------------------------
-crcpp_reflect(FunctionClasses)
+clcpp_reflect(FunctionClasses)
 void FunctionClasses(
 					 ClassGlobalA a,
 					 StructGlobalA b,
@@ -448,7 +448,7 @@ void FunctionClasses(
 					 OuterNamespace::InnerNamespace::OuterClass h,
 					 OuterNamespace::InnerNamespace::OuterClass::InnerClass i) { }
 
-crcpp_reflect(FunctionEnums)
+clcpp_reflect(FunctionEnums)
 void FunctionEnums(
 				   NamedGlobalEnum a,
 				   NamespaceA::NamedNSEnumA b,
@@ -465,7 +465,7 @@ void FunctionEnums(
 
 
 // Trigger warnings for unnamed parameters
-crcpp_reflect(myfunc)
+clcpp_reflect(myfunc)
 int UnnamedParameterFunction(int)
 {
 	return 0;
@@ -478,7 +478,7 @@ int UnnamedParameterFunction(int)
 struct MissingType
 {
 };
-crcpp_reflect(TestMissingType)
+clcpp_reflect(TestMissingType)
 namespace TestMissingType
 {
 	struct Struct
@@ -494,15 +494,15 @@ namespace TestMissingType
 }
 
 
-void TestGetType(crcpp::Database& db)
+void TestGetType(clcpp::Database& db)
 {
-	crcpp::Name na = db.GetName("ClassGlobalA");
-	crcpp::Name nb = db.GetName("Inheritance::DerivedClass");
-	crcpp::Name nc = db.GetName("NamespaceA::NamedNSClassA::EnumWithinNamedClassA");
+	clcpp::Name na = db.GetName("ClassGlobalA");
+	clcpp::Name nb = db.GetName("Inheritance::DerivedClass");
+	clcpp::Name nc = db.GetName("NamespaceA::NamedNSClassA::EnumWithinNamedClassA");
 
-	const crcpp::Type* e0 = crcpp_get_type(db, ClassGlobalA);
-	const crcpp::Class* e1 = crcpp_get_type(db, Inheritance::DerivedClass)->AsClass();
-	const crcpp::Enum* e2 = crcpp_get_type(db, NamespaceA::NamedNSClassA::EnumWithinNamedClassA)->AsEnum();
+	const clcpp::Type* e0 = clcpp_get_type(db, ClassGlobalA);
+	const clcpp::Class* e1 = clcpp_get_type(db, Inheritance::DerivedClass)->AsClass();
+	const clcpp::Enum* e2 = clcpp_get_type(db, NamespaceA::NamedNSClassA::EnumWithinNamedClassA)->AsEnum();
 	int x;
 }
 

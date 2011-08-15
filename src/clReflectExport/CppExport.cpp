@@ -5,22 +5,22 @@
 #include "CppExport.h"
 #include "PtrRelocator.h"
 
-#include <ClangReflectCore\Database.h>
-#include <ClangReflectCore\Logging.h>
-#include <ClangReflectCpp\DatabaseLoader.h>
+#include <clReflectCore/Database.h>
+#include <clReflectCore/Logging.h>
+#include <clReflectCpp/DatabaseLoader.h>
 
-#include <crcpp\Database.h>
+#include <clcpp/Database.h>
 
 #include <algorithm>
 
 
 namespace
 {
-	void BuildNames(const crdb::Database& db, CppExport& cppexp)
+	void BuildNames(const cldb::Database& db, CppExport& cppexp)
 	{
 		// Allocate the name data
 		unsigned int name_data_size = 0;
-		for (crdb::NameMap::const_iterator i = db.m_Names.begin(); i != db.m_Names.end(); ++i)
+		for (cldb::NameMap::const_iterator i = db.m_Names.begin(); i != db.m_Names.end(); ++i)
 		{
 			name_data_size += i->second.text.length() + 1;
 		}
@@ -28,22 +28,22 @@ namespace
 
 		// Populate the name data and build the sorted name map
 		name_data_size = 0;
-		for (crdb::NameMap::const_iterator i = db.m_Names.begin(); i != db.m_Names.end(); ++i)
+		for (cldb::NameMap::const_iterator i = db.m_Names.begin(); i != db.m_Names.end(); ++i)
 		{
 			char* text_ptr = (char*)(cppexp.db->name_text_data + name_data_size);
 			cppexp.name_map[i->first] = text_ptr;
-			const crdb::Name& name = i->second;
+			const cldb::Name& name = i->second;
 			strcpy(text_ptr, name.text.c_str());
 			name_data_size += name.text.length() + 1;
 		}
 
 		// Build the in-memory name array
 		unsigned int nb_names = cppexp.name_map.size();
-		cppexp.db->names.copy(crcpp::CArray<crcpp::Name>(cppexp.allocator.Alloc<crcpp::Name>(nb_names), nb_names));
+		cppexp.db->names.copy(clcpp::CArray<clcpp::Name>(cppexp.allocator.Alloc<clcpp::Name>(nb_names), nb_names));
 		unsigned int index = 0;
 		for (CppExport::NameMap::const_iterator i = cppexp.name_map.begin(); i != cppexp.name_map.end(); ++i)
 		{
-			crcpp::Name name;
+			clcpp::Name name;
 			name.hash = i->first;
 			name.text = i->second;
 			cppexp.db->names[index++] = name;
@@ -53,86 +53,86 @@ namespace
 
 	// Overloads for copying between databases
 	// TODO: Rewrite with database metadata?
-	void CopyPrimitive(crcpp::Primitive& dest, const crdb::Primitive& src)
+	void CopyPrimitive(clcpp::Primitive& dest, const cldb::Primitive& src)
 	{
 	}
-	void CopyPrimitive(crcpp::EnumConstant& dest, const crdb::EnumConstant& src)
+	void CopyPrimitive(clcpp::EnumConstant& dest, const cldb::EnumConstant& src)
 	{
 		dest.value = src.value;
 	}
-	void CopyPrimitive(crcpp::Function& dest, const crdb::Function& src)
+	void CopyPrimitive(clcpp::Function& dest, const cldb::Function& src)
 	{
 		dest.address = src.address;
 		dest.unique_id = src.unique_id;
 	}
-	void CopyPrimitive(crcpp::Field& dest, const crdb::Field& src)
+	void CopyPrimitive(clcpp::Field& dest, const cldb::Field& src)
 	{
-		dest.type = (crcpp::Type*)src.type.hash;
+		dest.type = (clcpp::Type*)src.type.hash;
 		dest.is_const = src.is_const;
 		dest.offset = src.offset;
 		dest.parent_unique_id = src.parent_unique_id;
 		switch (src.modifier)
 		{
-		case (crdb::Field::MODIFIER_VALUE): dest.modifier = crcpp::Field::MODIFIER_VALUE; break;
-		case (crdb::Field::MODIFIER_POINTER): dest.modifier = crcpp::Field::MODIFIER_POINTER; break;
-		case (crdb::Field::MODIFIER_REFERENCE): dest.modifier = crcpp::Field::MODIFIER_REFERENCE; break;
+		case (cldb::Field::MODIFIER_VALUE): dest.modifier = clcpp::Field::MODIFIER_VALUE; break;
+		case (cldb::Field::MODIFIER_POINTER): dest.modifier = clcpp::Field::MODIFIER_POINTER; break;
+		case (cldb::Field::MODIFIER_REFERENCE): dest.modifier = clcpp::Field::MODIFIER_REFERENCE; break;
 		default: assert(false && "Case not handled");
 		}
 	}
-	void CopyPrimitive(crcpp::Type& dest, const crdb::Type& src)
+	void CopyPrimitive(clcpp::Type& dest, const cldb::Type& src)
 	{
 		dest.size = src.size;
 	}
-	void CopyPrimitive(crcpp::TemplateType& dest, const crdb::TemplateType& src)
+	void CopyPrimitive(clcpp::TemplateType& dest, const cldb::TemplateType& src)
 	{
-		for (int i = 0; i < crdb::TemplateType::MAX_NB_ARGS; i++)
+		for (int i = 0; i < cldb::TemplateType::MAX_NB_ARGS; i++)
 		{
-			dest.parameter_types[i] = (crcpp::Type*)src.parameter_types[i].hash;
+			dest.parameter_types[i] = (clcpp::Type*)src.parameter_types[i].hash;
 			dest.parameter_ptrs[i] = src.parameter_ptrs[i];
 		}
 	}
-	void CopyPrimitive(crcpp::Class& dest, const crdb::Class& src)
+	void CopyPrimitive(clcpp::Class& dest, const cldb::Class& src)
 	{
 		dest.size = src.size;
-		dest.base_class = (crcpp::Class*)src.base_class.hash;
+		dest.base_class = (clcpp::Class*)src.base_class.hash;
 	}
-	void CopyPrimitive(crcpp::IntAttribute& dest, const crdb::IntAttribute& src)
+	void CopyPrimitive(clcpp::IntAttribute& dest, const cldb::IntAttribute& src)
 	{
 		dest.value = src.value;
 	}
-	void CopyPrimitive(crcpp::FloatAttribute& dest, const crdb::FloatAttribute& src)
+	void CopyPrimitive(clcpp::FloatAttribute& dest, const cldb::FloatAttribute& src)
 	{
 		dest.value = src.value;
 	}
-	void CopyPrimitive(crcpp::NameAttribute& dest, const crdb::NameAttribute& src)
+	void CopyPrimitive(clcpp::NameAttribute& dest, const cldb::NameAttribute& src)
 	{
 		// Only copy the hash as the string will be patched up later
 		dest.value.hash = src.value.hash;
 	}
-	void CopyPrimitive(crcpp::TextAttribute& dest, const crdb::TextAttribute& src)
+	void CopyPrimitive(clcpp::TextAttribute& dest, const cldb::TextAttribute& src)
 	{
-		// Store a pointer to the crdb text allocation that will be replaced later
+		// Store a pointer to the cldb text allocation that will be replaced later
 		dest.value = src.value.c_str();
 	}
 
 
-	template <typename CRDB_TYPE, typename CRCPP_TYPE>
-	void BuildCArray(CppExport& cppexp, crcpp::CArray<CRCPP_TYPE>& dest, const crdb::Database& db)
+	template <typename CLDB_TYPE, typename CLCPP_TYPE>
+	void BuildCArray(CppExport& cppexp, clcpp::CArray<CLCPP_TYPE>& dest, const cldb::Database& db)
 	{
 		// Allocate enough entries for all primitives
-		const crdb::PrimitiveStore<CRDB_TYPE>& src = db.GetPrimitiveStore<CRDB_TYPE>();
-		dest.copy(crcpp::CArray<CRCPP_TYPE>(cppexp.allocator.Alloc<CRCPP_TYPE>(src.size()), src.size()));
+		const cldb::PrimitiveStore<CLDB_TYPE>& src = db.GetPrimitiveStore<CLDB_TYPE>();
+		dest.copy(clcpp::CArray<CLCPP_TYPE>(cppexp.allocator.Alloc<CLCPP_TYPE>(src.size()), src.size()));
 
 		// Copy individually
 		int index = 0;
-		for (crdb::PrimitiveStore<CRDB_TYPE>::const_iterator i = src.begin(); i != src.end(); ++i)
+		for (cldb::PrimitiveStore<CLDB_TYPE>::const_iterator i = src.begin(); i != src.end(); ++i)
 		{
 			// Copy as a primitive first
-			CRCPP_TYPE& dest_prim = dest[index++];
-			const CRDB_TYPE& src_prim = i->second;
-			dest_prim.kind = CRCPP_TYPE::KIND;
+			CLCPP_TYPE& dest_prim = dest[index++];
+			const CLDB_TYPE& src_prim = i->second;
+			dest_prim.kind = CLCPP_TYPE::KIND;
 			dest_prim.name.hash = src_prim.name.hash;
-			dest_prim.parent = (crcpp::Primitive*)src_prim.parent.hash;
+			dest_prim.parent = (clcpp::Primitive*)src_prim.parent.hash;
 
 			// Early reference the text of the name for easier debugging
 			dest_prim.name.text = cppexp.name_map[src_prim.name.hash];
@@ -143,18 +143,18 @@ namespace
 	}
 
 
-	bool ParentAndChildMatch(const crcpp::Primitive&, const crcpp::Primitive&)
+	bool ParentAndChildMatch(const clcpp::Primitive&, const clcpp::Primitive&)
 	{
 		return true;
 	}
-	bool ParentAndChildMatch(const crcpp::Function& parent, const crcpp::Field& child)
+	bool ParentAndChildMatch(const clcpp::Function& parent, const clcpp::Field& child)
 	{
 		return parent.unique_id == child.parent_unique_id;
 	}
 
 
 	template <typename PARENT_TYPE, typename CHILD_TYPE>
-	void Parent(crcpp::CArray<PARENT_TYPE>& parents, crcpp::CArray<const CHILD_TYPE*> (PARENT_TYPE::*carray), crcpp::CArray<CHILD_TYPE*>& children, StackAllocator& allocator)
+	void Parent(clcpp::CArray<PARENT_TYPE>& parents, clcpp::CArray<const CHILD_TYPE*> (PARENT_TYPE::*carray), clcpp::CArray<CHILD_TYPE*>& children, StackAllocator& allocator)
 	{
 		// Create a lookup table from hash ID to parent and the number of references the parent has
 		typedef std::pair<PARENT_TYPE*, int> ParentAndRefCount;
@@ -193,7 +193,7 @@ namespace
 			if (int nb_refs = i->second.second)
 			{
 				PARENT_TYPE& parent = *i->second.first;
-				(parent.*carray).copy(crcpp::CArray<const CHILD_TYPE*>(allocator.Alloc<const CHILD_TYPE*>(nb_refs), nb_refs));
+				(parent.*carray).copy(clcpp::CArray<const CHILD_TYPE*>(allocator.Alloc<const CHILD_TYPE*>(nb_refs), nb_refs));
 
 				// To save having to do any further lookups, store the count inside the array
 				// at the end
@@ -227,11 +227,11 @@ namespace
 	}
 
 	template <typename PARENT_TYPE, typename CHILD_TYPE>
-	void Parent(crcpp::CArray<PARENT_TYPE>& parents, crcpp::CArray<const CHILD_TYPE*> (PARENT_TYPE::*carray), crcpp::CArray<CHILD_TYPE>& children, StackAllocator& allocator)
+	void Parent(clcpp::CArray<PARENT_TYPE>& parents, clcpp::CArray<const CHILD_TYPE*> (PARENT_TYPE::*carray), clcpp::CArray<CHILD_TYPE>& children, StackAllocator& allocator)
 	{
 		// Create an array of pointers to the children and forward that to the Parent function
 		// that acts on arrays of pointers
-		crcpp::CArray<CHILD_TYPE*> children_ptrs(children.size());
+		clcpp::CArray<CHILD_TYPE*> children_ptrs(children.size());
 		for (int i = 0; i < children_ptrs.size(); i++)
 		{
 			children_ptrs[i] = &children[i];
@@ -242,7 +242,7 @@ namespace
 
 
 	template <typename TYPE>
-	void BuildAttributePtrArray(crcpp::CArray<crcpp::Attribute*>& dest, crcpp::CArray<TYPE>& src, int& pos)
+	void BuildAttributePtrArray(clcpp::CArray<clcpp::Attribute*>& dest, clcpp::CArray<TYPE>& src, int& pos)
 	{
 		for (int i = 0; i < src.size(); i++)
 		{
@@ -251,7 +251,7 @@ namespace
 	}
 
 
-	void BuildAttributePtrArray(CppExport& cppexp, crcpp::CArray<crcpp::Attribute*>& attributes)
+	void BuildAttributePtrArray(CppExport& cppexp, clcpp::CArray<clcpp::Attribute*>& attributes)
 	{
 		// Total count of all attributes
 		int size =
@@ -262,7 +262,7 @@ namespace
 			cppexp.db->text_attributes.size();
 
 		// Create the destination array
-		attributes.copy(crcpp::CArray<crcpp::Attribute*>(cppexp.allocator.Alloc<crcpp::Attribute*>(size), size));
+		attributes.copy(clcpp::CArray<clcpp::Attribute*>(cppexp.allocator.Alloc<clcpp::Attribute*>(size), size));
 
 		// Collect all attribute pointers
 		int pos = 0;
@@ -279,7 +279,7 @@ namespace
 		// First assign the name value text pointers
 		for (int i = 0; i < cppexp.db->name_attributes.size(); i++)
 		{
-			crcpp::NameAttribute& attr = cppexp.db->name_attributes[i];
+			clcpp::NameAttribute& attr = cppexp.db->name_attributes[i];
 			attr.value.text = cppexp.name_map[attr.value.hash];
 		}
 
@@ -287,7 +287,7 @@ namespace
 		int text_size = 0;
 		for (int i = 0; i < cppexp.db->text_attributes.size(); i++)
 		{
-			crcpp::TextAttribute& attr = cppexp.db->text_attributes[i];
+			clcpp::TextAttribute& attr = cppexp.db->text_attributes[i];
 			text_size += strlen(attr.value) + 1;
 		}
 
@@ -298,7 +298,7 @@ namespace
 		char* pos = (char*)cppexp.db->text_attribute_data;
 		for (int i = 0; i < cppexp.db->text_attributes.size(); i++)
 		{
-			crcpp::TextAttribute& attr = cppexp.db->text_attributes[i];
+			clcpp::TextAttribute& attr = cppexp.db->text_attributes[i];
 			strcpy(pos, attr.value);
 			attr.value = pos;
 			pos += strlen(attr.value) + 1;
@@ -307,7 +307,7 @@ namespace
 
 
 	template <typename PARENT_TYPE, typename FIELD_TYPE, typename CHILD_TYPE>
-	void Link(crcpp::CArray<PARENT_TYPE>& parents, const FIELD_TYPE* (PARENT_TYPE::*field), crcpp::CArray<const CHILD_TYPE*>& children)
+	void Link(clcpp::CArray<PARENT_TYPE>& parents, const FIELD_TYPE* (PARENT_TYPE::*field), clcpp::CArray<const CHILD_TYPE*>& children)
 	{
 		// Create a lookup table from hash ID to child
 		typedef std::multimap<unsigned int, const CHILD_TYPE*> ChildMap;
@@ -335,7 +335,7 @@ namespace
 
 	// Link for array sources
 	template <typename PARENT_TYPE, typename FIELD_TYPE, typename CHILD_TYPE, int N>
-	void Link(crcpp::CArray<PARENT_TYPE>& parents, const FIELD_TYPE* (PARENT_TYPE::*field)[N], crcpp::CArray<const CHILD_TYPE*>& children)
+	void Link(clcpp::CArray<PARENT_TYPE>& parents, const FIELD_TYPE* (PARENT_TYPE::*field)[N], clcpp::CArray<const CHILD_TYPE*>& children)
 	{
 		// Create a lookup table from hash ID to child
 		typedef std::multimap<unsigned int, const CHILD_TYPE*> ChildMap;
@@ -364,10 +364,10 @@ namespace
 	}
 
 
-	int ReturnParameterIndex(const crcpp::CArray<const crcpp::Field*>& parameters)
+	int ReturnParameterIndex(const clcpp::CArray<const clcpp::Field*>& parameters)
 	{
 		// Linear search for the named return value
-		static unsigned int return_hash = crcpp::internal::HashNameString("return");
+		static unsigned int return_hash = clcpp::internal::HashNameString("return");
 		for (int i = 0; i < parameters.size(); i++)
 		{
 			if (parameters[i]->name.hash == return_hash)
@@ -384,7 +384,7 @@ namespace
 		// Iterate over every function that has the return parameter in its parameter list
 		for (int i = 0; i < cppexp.db->functions.size(); i++)
 		{
-			crcpp::Function& func = cppexp.db->functions[i];
+			clcpp::Function& func = cppexp.db->functions[i];
 			int return_index = ReturnParameterIndex(func.parameters);
 			if (return_index == -1)
 			{
@@ -399,7 +399,7 @@ namespace
 
 
 	template <typename TYPE>
-	int CountGlobalPrimitives(const crcpp::CArray<TYPE>& primitives)
+	int CountGlobalPrimitives(const clcpp::CArray<TYPE>& primitives)
 	{
 		// Finding all unparented primitives
 		int nb_global_primitives = 0;
@@ -415,11 +415,11 @@ namespace
 
 
 	template <typename TYPE>
-	void GatherGlobalPrimitives(crcpp::CArray<const TYPE*>& dest, const crcpp::CArray<TYPE>& src, StackAllocator& allocator)
+	void GatherGlobalPrimitives(clcpp::CArray<const TYPE*>& dest, const clcpp::CArray<TYPE>& src, StackAllocator& allocator)
 	{
 		// Allocate enough space for the primitives
 		int nb_global_primitives = CountGlobalPrimitives(src);
-		dest.copy(crcpp::CArray<const TYPE*>(allocator.Alloc<const TYPE*>(nb_global_primitives), nb_global_primitives));
+		dest.copy(clcpp::CArray<const TYPE*>(allocator.Alloc<const TYPE*>(nb_global_primitives), nb_global_primitives));
 
 		// Gather all unparented primitives
 		int index = 0;
@@ -448,7 +448,7 @@ namespace
 	{
 		// Allocate the array
 		int nb_type_primitives = cppexp.db->types.size() + cppexp.db->classes.size() + cppexp.db->enums.size() + cppexp.db->template_types.size();
-		cppexp.db->type_primitives.copy(crcpp::CArray<const crcpp::Type*>(cppexp.allocator.Alloc<const crcpp::Type*>(nb_type_primitives), nb_type_primitives));
+		cppexp.db->type_primitives.copy(clcpp::CArray<const clcpp::Type*>(cppexp.allocator.Alloc<const clcpp::Type*>(nb_type_primitives), nb_type_primitives));
 
 		// Generate references to anything that is a type
 		int index = 0;
@@ -472,33 +472,33 @@ namespace
 
 
 	// Sort an array of primitive pointers by name
-	bool SortPrimitiveByName(const crcpp::Primitive* a, const crcpp::Primitive* b)
+	bool SortPrimitiveByName(const clcpp::Primitive* a, const clcpp::Primitive* b)
 	{
 		return a->name.hash < b->name.hash;
 	}
 	template <typename TYPE>
-	void SortPrimitives(crcpp::CArray<const TYPE*>& primitives)
+	void SortPrimitives(clcpp::CArray<const TYPE*>& primitives)
 	{
 		std::sort(primitives.data(), primitives.data() + primitives.size(), SortPrimitiveByName);
 	}
 
 
 	// Overloads for sorting primitive arrays within a primitive
-	void SortPrimitives(crcpp::Enum& primitive)
+	void SortPrimitives(clcpp::Enum& primitive)
 	{
 		SortPrimitives(primitive.constants);
 		SortPrimitives(primitive.attributes);
 	}
-	void SortPrimitives(crcpp::Field& primitive)
+	void SortPrimitives(clcpp::Field& primitive)
 	{
 		SortPrimitives(primitive.attributes);
 	}
-	void SortPrimitives(crcpp::Function& primitive)
+	void SortPrimitives(clcpp::Function& primitive)
 	{
 		SortPrimitives(primitive.parameters);
 		SortPrimitives(primitive.attributes);
 	}
-	void SortPrimitives(crcpp::Class& primitive)
+	void SortPrimitives(clcpp::Class& primitive)
 	{
 		SortPrimitives(primitive.enums);
 		SortPrimitives(primitive.classes);
@@ -507,11 +507,11 @@ namespace
 		SortPrimitives(primitive.attributes);
 		SortPrimitives(primitive.templates);
 	}
-	void SortPrimitives(crcpp::Template& primitive)
+	void SortPrimitives(clcpp::Template& primitive)
 	{
 		SortPrimitives(primitive.instances);
 	}
-	void SortPrimitives(crcpp::Namespace& primitive)
+	void SortPrimitives(clcpp::Namespace& primitive)
 	{
 		SortPrimitives(primitive.namespaces);
 		SortPrimitives(primitive.types);
@@ -524,7 +524,7 @@ namespace
 
 	// Iterate over all provided primitives and sort their primitive arrays
 	template <typename TYPE>
-	void SortPrimitives(crcpp::CArray<TYPE>& primitives)
+	void SortPrimitives(clcpp::CArray<TYPE>& primitives)
 	{
 		for (int i = 0; i < primitives.size(); i++)
 		{
@@ -536,50 +536,50 @@ namespace
 	void FindClassConstructors(CppExport& cppexp)
 	{
 		// Search each class method list for constructors and destructors
-		crcpp::CArray<crcpp::Class>& classes = cppexp.db->classes;
+		clcpp::CArray<clcpp::Class>& classes = cppexp.db->classes;
 		for (int i = 0; i < classes.size(); i++)
 		{
-			crcpp::Class& cls = classes[i];
+			clcpp::Class& cls = classes[i];
 
 			// Methods in a class have fully-scoped names so these need to be constructed first
 			// TODO: This isn't ideal for the client :/
 			std::string construct_name = std::string(cls.name.text) + "::ConstructObject";
 			std::string destruct_name = std::string(cls.name.text) + "::DestructObject";
-			unsigned int construct_hash = crcpp::internal::HashNameString(construct_name.c_str());
-			unsigned int destruct_hash = crcpp::internal::HashNameString(destruct_name.c_str());
+			unsigned int construct_hash = clcpp::internal::HashNameString(construct_name.c_str());
+			unsigned int destruct_hash = clcpp::internal::HashNameString(destruct_name.c_str());
 
-			cls.constructor = crcpp::FindPrimitive(cls.methods, construct_hash);
-			cls.destructor = crcpp::FindPrimitive(cls.methods, destruct_hash);
+			cls.constructor = clcpp::FindPrimitive(cls.methods, construct_hash);
+			cls.destructor = clcpp::FindPrimitive(cls.methods, destruct_hash);
 		}
 	}
 }
 
 
-void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
+void BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 {
 	// Allocate the in-memory database
-	cppexp.db = cppexp.allocator.Alloc<crcpp::internal::DatabaseMem>(1);
+	cppexp.db = cppexp.allocator.Alloc<clcpp::internal::DatabaseMem>(1);
 
 	// Build all the name data ready for the client to use and the exporter to debug with
 	BuildNames(db, cppexp);
 
-	// Generate a raw crcpp equivalent of the crdb database. At this point no primitives
+	// Generate a raw clcpp equivalent of the cldb database. At this point no primitives
 	// will physically point to or contain each other, but they will reference each other
 	// using hash values aliased in their pointers.
-	BuildCArray<crdb::Type>(cppexp, cppexp.db->types, db);
-	BuildCArray<crdb::EnumConstant>(cppexp, cppexp.db->enum_constants, db);
-	BuildCArray<crdb::Enum>(cppexp, cppexp.db->enums, db);
-	BuildCArray<crdb::Field>(cppexp, cppexp.db->fields, db);
-	BuildCArray<crdb::Function>(cppexp, cppexp.db->functions, db);
-	BuildCArray<crdb::Class>(cppexp, cppexp.db->classes, db);
-	BuildCArray<crdb::Template>(cppexp, cppexp.db->templates, db);
-	BuildCArray<crdb::TemplateType>(cppexp, cppexp.db->template_types, db);
-	BuildCArray<crdb::Namespace>(cppexp, cppexp.db->namespaces, db);
-	BuildCArray<crdb::FlagAttribute>(cppexp, cppexp.db->flag_attributes, db);
-	BuildCArray<crdb::IntAttribute>(cppexp, cppexp.db->int_attributes, db);
-	BuildCArray<crdb::FloatAttribute>(cppexp, cppexp.db->float_attributes, db);
-	BuildCArray<crdb::NameAttribute>(cppexp, cppexp.db->name_attributes, db);
-	BuildCArray<crdb::TextAttribute>(cppexp, cppexp.db->text_attributes, db);
+	BuildCArray<cldb::Type>(cppexp, cppexp.db->types, db);
+	BuildCArray<cldb::EnumConstant>(cppexp, cppexp.db->enum_constants, db);
+	BuildCArray<cldb::Enum>(cppexp, cppexp.db->enums, db);
+	BuildCArray<cldb::Field>(cppexp, cppexp.db->fields, db);
+	BuildCArray<cldb::Function>(cppexp, cppexp.db->functions, db);
+	BuildCArray<cldb::Class>(cppexp, cppexp.db->classes, db);
+	BuildCArray<cldb::Template>(cppexp, cppexp.db->templates, db);
+	BuildCArray<cldb::TemplateType>(cppexp, cppexp.db->template_types, db);
+	BuildCArray<cldb::Namespace>(cppexp, cppexp.db->namespaces, db);
+	BuildCArray<cldb::FlagAttribute>(cppexp, cppexp.db->flag_attributes, db);
+	BuildCArray<cldb::IntAttribute>(cppexp, cppexp.db->int_attributes, db);
+	BuildCArray<cldb::FloatAttribute>(cppexp, cppexp.db->float_attributes, db);
+	BuildCArray<cldb::NameAttribute>(cppexp, cppexp.db->name_attributes, db);
+	BuildCArray<cldb::TextAttribute>(cppexp, cppexp.db->text_attributes, db);
 
 	// Now ensure all name and text data are pointing into the data to be memory mapped
 	AssignAttributeNamesAndText(cppexp);
@@ -591,34 +591,34 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 	// Construct the primitive scope hierarchy, pointing primitives at their parents
 	// and adding them to the arrays within their parents.
 	// TODO: Pull multimap construction out of the functions so that they're not repeatedly generated
-	Parent(cppexp.db->enums, &crcpp::Enum::constants, cppexp.db->enum_constants, cppexp.allocator);
-	Parent(cppexp.db->functions, &crcpp::Function::parameters, cppexp.db->fields, cppexp.allocator);
-	Parent(cppexp.db->classes, &crcpp::Class::enums, cppexp.db->enums, cppexp.allocator);
-	Parent(cppexp.db->classes, &crcpp::Class::classes, cppexp.db->classes, cppexp.allocator);
-	Parent(cppexp.db->classes, &crcpp::Class::methods, cppexp.db->functions, cppexp.allocator);
-	Parent(cppexp.db->classes, &crcpp::Class::fields, cppexp.db->fields, cppexp.allocator);
-	Parent(cppexp.db->classes, &crcpp::Class::templates, cppexp.db->templates, cppexp.allocator);
-	Parent(cppexp.db->namespaces, &crcpp::Namespace::namespaces, cppexp.db->namespaces, cppexp.allocator);
-	Parent(cppexp.db->namespaces, &crcpp::Namespace::types, cppexp.db->types, cppexp.allocator);
-	Parent(cppexp.db->namespaces, &crcpp::Namespace::enums, cppexp.db->enums, cppexp.allocator);
-	Parent(cppexp.db->namespaces, &crcpp::Namespace::classes, cppexp.db->classes, cppexp.allocator);
-	Parent(cppexp.db->namespaces, &crcpp::Namespace::functions, cppexp.db->functions, cppexp.allocator);
-	Parent(cppexp.db->namespaces, &crcpp::Namespace::templates, cppexp.db->templates, cppexp.allocator);
-	Parent(cppexp.db->templates, &crcpp::Template::instances, cppexp.db->template_types, cppexp.allocator);
+	Parent(cppexp.db->enums, &clcpp::Enum::constants, cppexp.db->enum_constants, cppexp.allocator);
+	Parent(cppexp.db->functions, &clcpp::Function::parameters, cppexp.db->fields, cppexp.allocator);
+	Parent(cppexp.db->classes, &clcpp::Class::enums, cppexp.db->enums, cppexp.allocator);
+	Parent(cppexp.db->classes, &clcpp::Class::classes, cppexp.db->classes, cppexp.allocator);
+	Parent(cppexp.db->classes, &clcpp::Class::methods, cppexp.db->functions, cppexp.allocator);
+	Parent(cppexp.db->classes, &clcpp::Class::fields, cppexp.db->fields, cppexp.allocator);
+	Parent(cppexp.db->classes, &clcpp::Class::templates, cppexp.db->templates, cppexp.allocator);
+	Parent(cppexp.db->namespaces, &clcpp::Namespace::namespaces, cppexp.db->namespaces, cppexp.allocator);
+	Parent(cppexp.db->namespaces, &clcpp::Namespace::types, cppexp.db->types, cppexp.allocator);
+	Parent(cppexp.db->namespaces, &clcpp::Namespace::enums, cppexp.db->enums, cppexp.allocator);
+	Parent(cppexp.db->namespaces, &clcpp::Namespace::classes, cppexp.db->classes, cppexp.allocator);
+	Parent(cppexp.db->namespaces, &clcpp::Namespace::functions, cppexp.db->functions, cppexp.allocator);
+	Parent(cppexp.db->namespaces, &clcpp::Namespace::templates, cppexp.db->templates, cppexp.allocator);
+	Parent(cppexp.db->templates, &clcpp::Template::instances, cppexp.db->template_types, cppexp.allocator);
 
 	// Construct the primitive hierarchy for attributes by first collecting all attributes into
 	// a single pointer array
-	crcpp::CArray<crcpp::Attribute*> attributes;
+	clcpp::CArray<clcpp::Attribute*> attributes;
 	BuildAttributePtrArray(cppexp, attributes);
-	Parent(cppexp.db->enums, &crcpp::Enum::attributes, attributes, cppexp.allocator);
-	Parent(cppexp.db->fields, &crcpp::Field::attributes, attributes, cppexp.allocator);
-	Parent(cppexp.db->functions, &crcpp::Function::attributes, attributes, cppexp.allocator);
-	Parent(cppexp.db->classes, &crcpp::Class::attributes, attributes, cppexp.allocator);
+	Parent(cppexp.db->enums, &clcpp::Enum::attributes, attributes, cppexp.allocator);
+	Parent(cppexp.db->fields, &clcpp::Field::attributes, attributes, cppexp.allocator);
+	Parent(cppexp.db->functions, &clcpp::Function::attributes, attributes, cppexp.allocator);
+	Parent(cppexp.db->classes, &clcpp::Class::attributes, attributes, cppexp.allocator);
 
 	// Link up any references between primitives
-	Link(cppexp.db->fields, &crcpp::Field::type, cppexp.db->type_primitives);
-	Link(cppexp.db->classes, &crcpp::Class::base_class, cppexp.db->type_primitives);
-	Link(cppexp.db->template_types, &crcpp::TemplateType::parameter_types, cppexp.db->type_primitives);
+	Link(cppexp.db->fields, &clcpp::Field::type, cppexp.db->type_primitives);
+	Link(cppexp.db->classes, &clcpp::Class::base_class, cppexp.db->type_primitives);
+	Link(cppexp.db->template_types, &clcpp::TemplateType::parameter_types, cppexp.db->type_primitives);
 
 	// Return parameters are parented to their functions as parameters. Move them from
 	// wherever they are in the list and into the return parameter data member.
@@ -640,7 +640,7 @@ void BuildCppExport(const crdb::Database& db, CppExport& cppexp)
 
 	// Each class may have constructor/destructor methods in their method list. Run through
 	// each class and make pointers to these in the class. This is done after sorting so that
-	// local searches can take advantage of crcpp::FindPrimitive.
+	// local searches can take advantage of clcpp::FindPrimitive.
 	FindClassConstructors(cppexp);
 }
 
@@ -650,94 +650,94 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 	PtrRelocator relocator(cppexp.allocator.GetData(), cppexp.allocator.GetAllocatedSize());
 
 	// The position of the data member within a CArray is fixed, independent of type
-	size_t array_data_offset = crcpp::CArray<int>::data_offset();
+	size_t array_data_offset = clcpp::CArray<int>::data_offset();
 
-	// Construct schemas for all memory-mapped crcpp types
+	// Construct schemas for all memory-mapped clcpp types
 
-	PtrSchema& schema_database = relocator.AddSchema<crcpp::internal::DatabaseMem>()
-		(&crcpp::internal::DatabaseMem::name_text_data)
-		(&crcpp::internal::DatabaseMem::names, array_data_offset)
-		(&crcpp::internal::DatabaseMem::types, array_data_offset)
-		(&crcpp::internal::DatabaseMem::enum_constants, array_data_offset)
-		(&crcpp::internal::DatabaseMem::enums, array_data_offset)
-		(&crcpp::internal::DatabaseMem::fields, array_data_offset)
-		(&crcpp::internal::DatabaseMem::functions, array_data_offset)
-		(&crcpp::internal::DatabaseMem::classes, array_data_offset)
-		(&crcpp::internal::DatabaseMem::template_types, array_data_offset)
-		(&crcpp::internal::DatabaseMem::templates, array_data_offset)
-		(&crcpp::internal::DatabaseMem::namespaces, array_data_offset)
-		(&crcpp::internal::DatabaseMem::text_attribute_data)
-		(&crcpp::internal::DatabaseMem::flag_attributes, array_data_offset)
-		(&crcpp::internal::DatabaseMem::int_attributes, array_data_offset)
-		(&crcpp::internal::DatabaseMem::float_attributes, array_data_offset)
-		(&crcpp::internal::DatabaseMem::name_attributes, array_data_offset)
-		(&crcpp::internal::DatabaseMem::text_attributes, array_data_offset)
-		(&crcpp::internal::DatabaseMem::type_primitives, array_data_offset)
-		(&crcpp::Namespace::namespaces, array_data_offset + offsetof(crcpp::internal::DatabaseMem, global_namespace))
-		(&crcpp::Namespace::types, array_data_offset + offsetof(crcpp::internal::DatabaseMem, global_namespace))
-		(&crcpp::Namespace::enums, array_data_offset + offsetof(crcpp::internal::DatabaseMem, global_namespace))
-		(&crcpp::Namespace::classes, array_data_offset + offsetof(crcpp::internal::DatabaseMem, global_namespace))
-		(&crcpp::Namespace::functions, array_data_offset + offsetof(crcpp::internal::DatabaseMem, global_namespace));
+	PtrSchema& schema_database = relocator.AddSchema<clcpp::internal::DatabaseMem>()
+		(&clcpp::internal::DatabaseMem::name_text_data)
+		(&clcpp::internal::DatabaseMem::names, array_data_offset)
+		(&clcpp::internal::DatabaseMem::types, array_data_offset)
+		(&clcpp::internal::DatabaseMem::enum_constants, array_data_offset)
+		(&clcpp::internal::DatabaseMem::enums, array_data_offset)
+		(&clcpp::internal::DatabaseMem::fields, array_data_offset)
+		(&clcpp::internal::DatabaseMem::functions, array_data_offset)
+		(&clcpp::internal::DatabaseMem::classes, array_data_offset)
+		(&clcpp::internal::DatabaseMem::template_types, array_data_offset)
+		(&clcpp::internal::DatabaseMem::templates, array_data_offset)
+		(&clcpp::internal::DatabaseMem::namespaces, array_data_offset)
+		(&clcpp::internal::DatabaseMem::text_attribute_data)
+		(&clcpp::internal::DatabaseMem::flag_attributes, array_data_offset)
+		(&clcpp::internal::DatabaseMem::int_attributes, array_data_offset)
+		(&clcpp::internal::DatabaseMem::float_attributes, array_data_offset)
+		(&clcpp::internal::DatabaseMem::name_attributes, array_data_offset)
+		(&clcpp::internal::DatabaseMem::text_attributes, array_data_offset)
+		(&clcpp::internal::DatabaseMem::type_primitives, array_data_offset)
+		(&clcpp::Namespace::namespaces, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace))
+		(&clcpp::Namespace::types, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace))
+		(&clcpp::Namespace::enums, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace))
+		(&clcpp::Namespace::classes, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace))
+		(&clcpp::Namespace::functions, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace));
 
-	PtrSchema& schema_name = relocator.AddSchema<crcpp::Name>()
-		(&crcpp::Name::text);
+	PtrSchema& schema_name = relocator.AddSchema<clcpp::Name>()
+		(&clcpp::Name::text);
 
-	PtrSchema& schema_primitive = relocator.AddSchema<crcpp::Primitive>()
-		(&crcpp::Name::text, offsetof(crcpp::Primitive, name))
-		(&crcpp::Primitive::parent);
+	PtrSchema& schema_primitive = relocator.AddSchema<clcpp::Primitive>()
+		(&clcpp::Name::text, offsetof(clcpp::Primitive, name))
+		(&clcpp::Primitive::parent);
 
-	PtrSchema& schema_type = relocator.AddSchema<crcpp::Type>(&schema_primitive);
-	PtrSchema& schema_enum_constant = relocator.AddSchema<crcpp::EnumConstant>(&schema_primitive);
+	PtrSchema& schema_type = relocator.AddSchema<clcpp::Type>(&schema_primitive);
+	PtrSchema& schema_enum_constant = relocator.AddSchema<clcpp::EnumConstant>(&schema_primitive);
 
-	PtrSchema& schema_enum = relocator.AddSchema<crcpp::Enum>(&schema_type)
-		(&crcpp::Enum::constants, array_data_offset)
-		(&crcpp::Enum::attributes, array_data_offset);
+	PtrSchema& schema_enum = relocator.AddSchema<clcpp::Enum>(&schema_type)
+		(&clcpp::Enum::constants, array_data_offset)
+		(&clcpp::Enum::attributes, array_data_offset);
 
-	PtrSchema& schema_field = relocator.AddSchema<crcpp::Field>(&schema_primitive)
-		(&crcpp::Field::type)
-		(&crcpp::Field::attributes, array_data_offset);
+	PtrSchema& schema_field = relocator.AddSchema<clcpp::Field>(&schema_primitive)
+		(&clcpp::Field::type)
+		(&clcpp::Field::attributes, array_data_offset);
 
-	PtrSchema& schema_function = relocator.AddSchema<crcpp::Function>(&schema_primitive)
-		(&crcpp::Function::return_parameter)
-		(&crcpp::Function::parameters, array_data_offset)
-		(&crcpp::Function::attributes, array_data_offset);
+	PtrSchema& schema_function = relocator.AddSchema<clcpp::Function>(&schema_primitive)
+		(&clcpp::Function::return_parameter)
+		(&clcpp::Function::parameters, array_data_offset)
+		(&clcpp::Function::attributes, array_data_offset);
 
-	PtrSchema& schema_class = relocator.AddSchema<crcpp::Class>(&schema_type)
-		(&crcpp::Class::base_class)
-		(&crcpp::Class::constructor)
-		(&crcpp::Class::destructor)
-		(&crcpp::Class::enums, array_data_offset)
-		(&crcpp::Class::classes, array_data_offset)
-		(&crcpp::Class::methods, array_data_offset)
-		(&crcpp::Class::fields, array_data_offset)
-		(&crcpp::Class::attributes, array_data_offset)
-		(&crcpp::Class::templates, array_data_offset);
+	PtrSchema& schema_class = relocator.AddSchema<clcpp::Class>(&schema_type)
+		(&clcpp::Class::base_class)
+		(&clcpp::Class::constructor)
+		(&clcpp::Class::destructor)
+		(&clcpp::Class::enums, array_data_offset)
+		(&clcpp::Class::classes, array_data_offset)
+		(&clcpp::Class::methods, array_data_offset)
+		(&clcpp::Class::fields, array_data_offset)
+		(&clcpp::Class::attributes, array_data_offset)
+		(&clcpp::Class::templates, array_data_offset);
 
-	PtrSchema& schema_template_type = relocator.AddSchema<crcpp::TemplateType>(&schema_type)
-		(&crcpp::TemplateType::parameter_types, 0)
-		(&crcpp::TemplateType::parameter_types, sizeof(void*))
-		(&crcpp::TemplateType::parameter_types, sizeof(void*) * 2)
-		(&crcpp::TemplateType::parameter_types, sizeof(void*) * 3);
+	PtrSchema& schema_template_type = relocator.AddSchema<clcpp::TemplateType>(&schema_type)
+		(&clcpp::TemplateType::parameter_types, 0)
+		(&clcpp::TemplateType::parameter_types, sizeof(void*))
+		(&clcpp::TemplateType::parameter_types, sizeof(void*) * 2)
+		(&clcpp::TemplateType::parameter_types, sizeof(void*) * 3);
 
-	PtrSchema& schema_template = relocator.AddSchema<crcpp::Template>(&schema_primitive)
-		(&crcpp::Template::instances, array_data_offset);
+	PtrSchema& schema_template = relocator.AddSchema<clcpp::Template>(&schema_primitive)
+		(&clcpp::Template::instances, array_data_offset);
 
-	PtrSchema& schema_namespace = relocator.AddSchema<crcpp::Namespace>(&schema_primitive)
-		(&crcpp::Namespace::namespaces, array_data_offset)
-		(&crcpp::Namespace::types, array_data_offset)
-		(&crcpp::Namespace::enums, array_data_offset)
-		(&crcpp::Namespace::classes, array_data_offset)
-		(&crcpp::Namespace::functions, array_data_offset)
-		(&crcpp::Namespace::templates, array_data_offset);
+	PtrSchema& schema_namespace = relocator.AddSchema<clcpp::Namespace>(&schema_primitive)
+		(&clcpp::Namespace::namespaces, array_data_offset)
+		(&clcpp::Namespace::types, array_data_offset)
+		(&clcpp::Namespace::enums, array_data_offset)
+		(&clcpp::Namespace::classes, array_data_offset)
+		(&clcpp::Namespace::functions, array_data_offset)
+		(&clcpp::Namespace::templates, array_data_offset);
 
-	PtrSchema& schema_int_attribute = relocator.AddSchema<crcpp::IntAttribute>(&schema_primitive);
-	PtrSchema& schema_float_attribute = relocator.AddSchema<crcpp::FloatAttribute>(&schema_primitive);
+	PtrSchema& schema_int_attribute = relocator.AddSchema<clcpp::IntAttribute>(&schema_primitive);
+	PtrSchema& schema_float_attribute = relocator.AddSchema<clcpp::FloatAttribute>(&schema_primitive);
 
-	PtrSchema& schema_name_attribute = relocator.AddSchema<crcpp::NameAttribute>(&schema_primitive)
-		(&crcpp::Name::text, offsetof(crcpp::NameAttribute, value));
+	PtrSchema& schema_name_attribute = relocator.AddSchema<clcpp::NameAttribute>(&schema_primitive)
+		(&clcpp::Name::text, offsetof(clcpp::NameAttribute, value));
 
-	PtrSchema& schema_text_attribute = relocator.AddSchema<crcpp::TextAttribute>(&schema_primitive)
-		(&crcpp::TextAttribute::value);
+	PtrSchema& schema_text_attribute = relocator.AddSchema<clcpp::TextAttribute>(&schema_primitive)
+		(&clcpp::TextAttribute::value);
 
 	PtrSchema& schema_ptr = relocator.AddSchema<void*>()(0);
 
@@ -781,7 +781,7 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 	}
 	for (int i = 0; i < cppexp.db->classes.size(); i++)
 	{
-		crcpp::Class& cls = cppexp.db->classes[i];
+		clcpp::Class& cls = cppexp.db->classes[i];
 		relocator.AddPointers(schema_ptr, cls.enums);
 		relocator.AddPointers(schema_ptr, cls.classes);
 		relocator.AddPointers(schema_ptr, cls.methods);
@@ -822,7 +822,7 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 	}
 
 	// Write the header
-	crcpp::internal::DatabaseFileHeader header;
+	clcpp::internal::DatabaseFileHeader header;
 	header.nb_ptr_schemas = schemas.size();
 	header.nb_ptr_offsets = nb_ptr_offsets;
 	const std::vector<PtrRelocation>& relocations = relocator.GetRelocations();
@@ -861,18 +861,18 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 
 namespace
 {
-	bool SortFieldByOffset(const crcpp::Field* a, const crcpp::Field* b)
+	bool SortFieldByOffset(const clcpp::Field* a, const clcpp::Field* b)
 	{
 		return a->offset < b->offset;
 	}
-	bool SortEnumConstantByValue(const crcpp::EnumConstant* a, const crcpp::EnumConstant* b)
+	bool SortEnumConstantByValue(const clcpp::EnumConstant* a, const clcpp::EnumConstant* b)
 	{
 		return a->value < b->value;
 	}
 
 
 	template <typename TYPE>
-	void LogPrimitives(const crcpp::CArray<const TYPE*>& primitives)
+	void LogPrimitives(const clcpp::CArray<const TYPE*>& primitives)
 	{
 		for (int i = 0; i < primitives.size(); i++)
 		{
@@ -882,12 +882,12 @@ namespace
 	}
 
 
-	void LogField(const crcpp::Field& field, bool name = true)
+	void LogField(const clcpp::Field& field, bool name = true)
 	{
 		LOG_APPEND(cppexp, INFO, "%s", field.is_const ? "const " : "");
 		LOG_APPEND(cppexp, INFO, "%s", field.type->name.text);
-		LOG_APPEND(cppexp, INFO, "%s", field.modifier == crcpp::Field::MODIFIER_POINTER ? "*" :
-			field.modifier == crcpp::Field::MODIFIER_REFERENCE ? "&" : "");
+		LOG_APPEND(cppexp, INFO, "%s", field.modifier == clcpp::Field::MODIFIER_POINTER ? "*" :
+			field.modifier == clcpp::Field::MODIFIER_REFERENCE ? "&" : "");
 
 		if (name)
 		{
@@ -896,7 +896,7 @@ namespace
 	}
 
 
-	void LogPrimitive(const crcpp::Field& field)
+	void LogPrimitive(const clcpp::Field& field)
 	{
 		LOG(cppexp, INFO, "");
 		LogField(field);
@@ -904,7 +904,7 @@ namespace
 	}
 
 
-	void LogPrimitive(const crcpp::Function& func)
+	void LogPrimitive(const clcpp::Function& func)
 	{
 		if (func.return_parameter)
 		{
@@ -919,7 +919,7 @@ namespace
 		LOG_APPEND(cppexp, INFO, " %s(", func.name.text);
 
 		// Sort parameters by index for viewing
-		crcpp::CArray<const crcpp::Field*> sorted_parameters = func.parameters;
+		clcpp::CArray<const clcpp::Field*> sorted_parameters = func.parameters;
 		std::sort(sorted_parameters.data(), sorted_parameters.data() + sorted_parameters.size(), SortFieldByOffset);
 
 		for (int i = 0; i < sorted_parameters.size(); i++)
@@ -935,20 +935,20 @@ namespace
 	}
 
 
-	void LogPrimitive(const crcpp::EnumConstant& constant)
+	void LogPrimitive(const clcpp::EnumConstant& constant)
 	{
 		LOG(cppexp, INFO, "%s = %d,", constant.name.text, constant.value);
 	}
 
 
-	void LogPrimitive(const crcpp::Enum& e)
+	void LogPrimitive(const clcpp::Enum& e)
 	{
 		LOG(cppexp, INFO, "enum %s\n", e.name.text);
 		LOG(cppexp, INFO, "{\n");
 		LOG_PUSH_INDENT(cppexp);
 
 		// Sort constants by value for viewing
-		crcpp::CArray<const crcpp::EnumConstant*> sorted_constants = e.constants;
+		clcpp::CArray<const clcpp::EnumConstant*> sorted_constants = e.constants;
 		std::sort(sorted_constants.data(), sorted_constants.data() + sorted_constants.size(), SortEnumConstantByValue);
 
 		LogPrimitives(sorted_constants);
@@ -958,13 +958,13 @@ namespace
 	}
 
 
-	void LogPrimitive(const crcpp::TemplateType& tt)
+	void LogPrimitive(const clcpp::TemplateType& tt)
 	{
 		LOG(cppexp, INFO, "%s\n", tt.name.text);
 	}
 
 
-	void LogPrimitive(const crcpp::Template& t)
+	void LogPrimitive(const clcpp::Template& t)
 	{
 		const char* name = t.name.text;
 		LOG(cppexp, INFO, "template %s\n", name);
@@ -978,7 +978,7 @@ namespace
 	}
 
 	
-	void LogPrimitive(const crcpp::Class& cls)
+	void LogPrimitive(const clcpp::Class& cls)
 	{
 		LOG(cppexp, INFO, "class %s", cls.name.text);
 		if (cls.base_class)
@@ -993,7 +993,7 @@ namespace
 		LOG_PUSH_INDENT(cppexp);
 
 		// Sort fields by offset for viewing
-		crcpp::CArray<const crcpp::Field*> sorted_fields = cls.fields;
+		clcpp::CArray<const clcpp::Field*> sorted_fields = cls.fields;
 		std::sort(sorted_fields.data(), sorted_fields.data() + sorted_fields.size(), SortFieldByOffset);
 
 		LogPrimitives(cls.classes);
@@ -1007,7 +1007,7 @@ namespace
 	}
 
 
-	void LogPrimitive(const crcpp::Namespace& ns)
+	void LogPrimitive(const clcpp::Namespace& ns)
 	{
 		if (ns.name.text)
 		{

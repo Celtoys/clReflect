@@ -10,7 +10,7 @@ namespace clang
 	class TranslationUnitDecl;
 }
 
-namespace crdb
+namespace cldb
 {
 	class Database;
 }

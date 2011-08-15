@@ -1,10 +1,10 @@
 
-#include <crcpp/crcpp.h>
+#include <clcpp/clcpp.h>
 #include <vector>
 #include <map>
 
 
-crcpp_reflect(TestCollections)
+clcpp_reflect(TestCollections)
 namespace TestCollections
 {
 	struct Struct
@@ -13,4 +13,4 @@ namespace TestCollections
 	};
 }
 
-crcpp_reflect(std::vector)
+clcpp_reflect(std::vector)

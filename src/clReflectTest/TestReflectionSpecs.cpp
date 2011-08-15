@@ -25,15 +25,15 @@
 
 // Always reflect members?
 
-#include <crcpp/crcpp.h>
+#include <clcpp/clcpp.h>
 
 
 // --------------------------------------------------------------------------------------------
 // Reflect all primitives in the global namespace with the specification coming before the definition
-crcpp_reflect(NamespaceA)
-crcpp_reflect(ClassA)
-crcpp_reflect(EnumA)
-crcpp_reflect(FunctionA)
+clcpp_reflect(NamespaceA)
+clcpp_reflect(ClassA)
+clcpp_reflect(EnumA)
+clcpp_reflect(FunctionA)
 namespace NamespaceA { class ShouldReflect { }; }
 class ClassA { int ShouldReflect; };
 enum EnumA { };
@@ -42,10 +42,10 @@ void FunctionA() { }
 
 // --------------------------------------------------------------------------------------------
 // Reflect all primitives in a namespace from outside before the definition
-crcpp_reflect(NamespaceB::NamespaceA)
-crcpp_reflect(NamespaceB::ClassA)
-crcpp_reflect(NamespaceB::EnumA)
-crcpp_reflect(NamespaceB::FunctionA)
+clcpp_reflect(NamespaceB::NamespaceA)
+clcpp_reflect(NamespaceB::ClassA)
+clcpp_reflect(NamespaceB::EnumA)
+clcpp_reflect(NamespaceB::FunctionA)
 namespace NamespaceB
 {
 	namespace NamespaceA { class ShouldReflect { }; }
@@ -57,10 +57,10 @@ namespace NamespaceB
 
 // --------------------------------------------------------------------------------------------
 // Reflect all primitives in a nested namespace from global scope before the definition
-crcpp_reflect(NamespaceD::Inner::NamespaceA)
-crcpp_reflect(NamespaceD::Inner::ClassA)
-crcpp_reflect(NamespaceD::Inner::EnumA)
-crcpp_reflect(NamespaceD::Inner::FunctionA)
+clcpp_reflect(NamespaceD::Inner::NamespaceA)
+clcpp_reflect(NamespaceD::Inner::ClassA)
+clcpp_reflect(NamespaceD::Inner::EnumA)
+clcpp_reflect(NamespaceD::Inner::FunctionA)
 namespace NamespaceD
 {
 	namespace Inner
@@ -75,10 +75,10 @@ namespace NamespaceD
 
 // --------------------------------------------------------------------------------------------
 // Partial reflect a namespace with only half the contents reflected
-crcpp_reflect(NamespaceE::NamespaceA)
-crcpp_reflect(NamespaceE::ClassA)
-crcpp_reflect(NamespaceE::EnumA)
-crcpp_reflect(NamespaceE::FunctionA)
+clcpp_reflect(NamespaceE::NamespaceA)
+clcpp_reflect(NamespaceE::ClassA)
+clcpp_reflect(NamespaceE::EnumA)
+clcpp_reflect(NamespaceE::FunctionA)
 namespace NamespaceE
 {
 	namespace NamespaceA { class ShouldReflect { }; }
@@ -95,7 +95,7 @@ namespace NamespaceE
 
 // --------------------------------------------------------------------------------------------
 // Full reflect of the contents of the namespace
-crcpp_reflect(NamespaceF)
+clcpp_reflect(NamespaceF)
 namespace NamespaceF
 {
 	namespace NamespaceA { class ShouldReflect { }; }
@@ -107,22 +107,22 @@ namespace NamespaceF
 
 // --------------------------------------------------------------------------------------------
 // Trigger ill-formed Reflection Spec warnings
-namespace crcpp_internal { }
-namespace crcpp_internal { int x; }
-namespace crcpp_internal { struct crdb_reflect_ { }; }
+namespace clcpp_internal { }
+namespace clcpp_internal { int x; }
+namespace clcpp_internal { struct cldb_reflect_ { }; }
 
 
 // --------------------------------------------------------------------------------------------
 // Trigger duplicate spec warning
-crcpp_reflect(NamespaceA)
+clcpp_reflect(NamespaceA)
 
 
 // --------------------------------------------------------------------------------------------
 // Trigger unnecessary reflection spec warnings
 // TODO: See if specs map to actual symbols
-crcpp_reflect(NamespaceG)
-crcpp_reflect(NamespaceG::NamespaceA)
-crcpp_reflect(NamespaceG::NamespaceA::C)
+clcpp_reflect(NamespaceG)
+clcpp_reflect(NamespaceG::NamespaceA)
+clcpp_reflect(NamespaceG::NamespaceA::C)
 namespace G
 {
 	namespace A

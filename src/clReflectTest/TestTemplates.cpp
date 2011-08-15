@@ -1,5 +1,5 @@
 
-#include <crcpp/crcpp.h>
+#include <clcpp/clcpp.h>
 
 
 struct NonReflectedStruct
@@ -7,7 +7,7 @@ struct NonReflectedStruct
 };
 
 
-crcpp_reflect(TestTemplates)
+clcpp_reflect(TestTemplates)
 namespace TestTemplates
 {
 	// Some structures for using as template arguments

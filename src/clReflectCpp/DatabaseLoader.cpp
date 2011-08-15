@@ -1,6 +1,6 @@
 
 #include "DatabaseLoader.h"
-#include <crcpp/Core.h>
+#include <clcpp/Core.h>
 
 
 namespace
@@ -22,7 +22,7 @@ namespace
 }
 
 
-crcpp::internal::DatabaseFileHeader::DatabaseFileHeader()
+clcpp::internal::DatabaseFileHeader::DatabaseFileHeader()
 	: signature0('pcrc')
 	, signature1('bdp')
 	, version(1)
@@ -34,7 +34,7 @@ crcpp::internal::DatabaseFileHeader::DatabaseFileHeader()
 }
 
 
-crcpp::internal::DatabaseMem* crcpp::internal::LoadMemoryMappedDatabase(IFile* file)
+clcpp::internal::DatabaseMem* clcpp::internal::LoadMemoryMappedDatabase(IFile* file)
 {
 	// Read the header and verify the version and signature
 	DatabaseFileHeader file_header, cmp_header;

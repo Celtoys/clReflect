@@ -1,9 +1,9 @@
 
 
-namespace crdb
+namespace cldb
 {
 	class Database;
 }
 
 
-void MergeDatabases(crdb::Database& dest_db, const crdb::Database& src_db);
+void MergeDatabases(cldb::Database& dest_db, const cldb::Database& src_db);

@@ -2,11 +2,11 @@
 #include "CppExport.h"
 #include "MapFileParser.h"
 
-#include <ClangReflectCore\Arguments.h>
-#include <ClangReflectCore\Logging.h>
-#include <ClangReflectCore\Database.h>
-#include <ClangReflectCore\DatabaseTextSerialiser.h>
-#include <ClangReflectCore\DatabaseBinarySerialiser.h>
+#include <clReflectCore/Arguments.h>
+#include <clReflectCore/Logging.h>
+#include <clReflectCore/Database.h>
+#include <clReflectCore/DatabaseTextSerialiser.h>
+#include <clReflectCore/DatabaseBinarySerialiser.h>
 
 
 int main(int argc, const char* argv[])
@@ -23,10 +23,10 @@ int main(int argc, const char* argv[])
 
 	// Try to load the database
 	const char* input_filename = args[1].c_str();
-	crdb::Database db;
-	if (!crdb::ReadBinaryDatabase(input_filename, db))
+	cldb::Database db;
+	if (!cldb::ReadBinaryDatabase(input_filename, db))
 	{
-		if (!crdb::ReadTextDatabase(input_filename, db))
+		if (!cldb::ReadTextDatabase(input_filename, db))
 		{
 			LOG(main, ERROR, "Couldn't read '%s' as binary or text database - does it exist?", input_filename);
 			return 1;

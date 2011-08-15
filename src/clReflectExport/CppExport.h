@@ -5,10 +5,10 @@
 #include "StackAllocator.h"
 #include <map>
 #include <vector>
-#include <crcpp/crcpp.h>
+#include <clcpp/clcpp.h>
 
 
-namespace crdb
+namespace cldb
 {
 	class Database;
 }
@@ -24,7 +24,7 @@ struct CppExport
 
 	StackAllocator allocator;
 
-	crcpp::internal::DatabaseMem* db;
+	clcpp::internal::DatabaseMem* db;
 
 	// Hash of names for easier debugging
 	typedef std::map<unsigned int, const char*> NameMap;
@@ -32,6 +32,6 @@ struct CppExport
 };
 
 
-void BuildCppExport(const crdb::Database& db, CppExport& cppexp);
+void BuildCppExport(const cldb::Database& db, CppExport& cppexp);
 void SaveCppExport(CppExport& cppexport, const char* filename);
 void WriteCppExportAsText(const CppExport& cppexp, const char* filename);

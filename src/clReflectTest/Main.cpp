@@ -1,10 +1,10 @@
 
-#include <crcpp/crcpp.h>
+#include <clcpp/clcpp.h>
 
 #include <cstdio>
 
 
-class StdFile : public crcpp::IFile
+class StdFile : public clcpp::IFile
 {
 public:
 	StdFile(const char* filename)
@@ -39,20 +39,20 @@ private:
 };
 
 
-extern void TestGetType(crcpp::Database& db);
-extern void TestConstructorDestructor(crcpp::Database& db);
-extern void TestAttributesFunc(crcpp::Database& db);
+extern void TestGetType(clcpp::Database& db);
+extern void TestConstructorDestructor(clcpp::Database& db);
+extern void TestAttributesFunc(clcpp::Database& db);
 
 
 int main()
 {
-	StdFile file("../../bin/Debug/ClangReflectTest.cppbin");
+	StdFile file("../../bin/Debug/clReflectTest.cppbin");
 	if (!file.IsOpen())
 	{
 		return 1;
 	}
 
-	crcpp::Database db;
+	clcpp::Database db;
 	db.Load(&file);
 	TestGetType(db);
 	TestConstructorDestructor(db);

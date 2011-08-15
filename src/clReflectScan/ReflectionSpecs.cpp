@@ -1,12 +1,12 @@
 
 #include "ReflectionSpecs.h"
 
-#include "ClangReflectCore/Database.h"
-#include "ClangReflectCore/Logging.h"
+#include <clReflectCore/Database.h>
+#include <clReflectCore/Logging.h>
 
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclCxx.h"
-#include "clang/AST/DeclGroup.h"
+#include <clang/AST/Decl.h>
+#include <clang/AST/DeclCxx.h>
+#include <clang/AST/DeclGroup.h>
 
 
 namespace
@@ -21,7 +21,7 @@ namespace
 		}
 
 		// Looking for internal registration namespaces
-		if (ns_decl->getNameAsString() != "crcpp_internal")
+		if (ns_decl->getNameAsString() != "clcpp_internal")
 		{
 			return 0;
 		}

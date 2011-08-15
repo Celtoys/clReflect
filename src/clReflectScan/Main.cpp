@@ -3,11 +3,11 @@
 #include "ASTConsumer.h"
 #include "ReflectionSpecs.h"
 
-#include "ClangReflectCore/Arguments.h"
-#include "ClangReflectCore/Logging.h"
-#include "ClangReflectCore/Database.h"
-#include "ClangReflectCore/DatabaseTextSerialiser.h"
-#include "ClangReflectCore/DatabaseBinarySerialiser.h"
+#include "clReflectCore/Arguments.h"
+#include "clReflectCore/Logging.h"
+#include "clReflectCore/Database.h"
+#include "clReflectCore/DatabaseTextSerialiser.h"
+#include "clReflectCore/DatabaseBinarySerialiser.h"
 
 
 namespace
@@ -47,31 +47,31 @@ namespace
 	}
 
 
-	void WriteDatabase(const crdb::Database& db, const std::string& filename)
+	void WriteDatabase(const cldb::Database& db, const std::string& filename)
 	{
 		if (EndsWith(filename, ".csv"))
 		{
-			crdb::WriteTextDatabase(filename.c_str(), db);
+			cldb::WriteTextDatabase(filename.c_str(), db);
 		}
 		else
 		{
-			crdb::WriteBinaryDatabase(filename.c_str(), db);
+			cldb::WriteBinaryDatabase(filename.c_str(), db);
 		}
 	}
 
 
-	void TestDBReadWrite(const crdb::Database& db)
+	void TestDBReadWrite(const cldb::Database& db)
 	{
-		crdb::WriteTextDatabase("output.csv", db);
-		crdb::WriteBinaryDatabase("output.bin", db);
+		cldb::WriteTextDatabase("output.csv", db);
+		cldb::WriteBinaryDatabase("output.bin", db);
 
-		crdb::Database indb_text;
-		crdb::ReadTextDatabase("output.csv", indb_text);
-		crdb::WriteTextDatabase("output2.csv", indb_text);
+		cldb::Database indb_text;
+		cldb::ReadTextDatabase("output.csv", indb_text);
+		cldb::WriteTextDatabase("output2.csv", indb_text);
 
-		crdb::Database indb_bin;
-		crdb::ReadBinaryDatabase("output.bin", indb_bin);
-		crdb::WriteBinaryDatabase("output2.bin", indb_bin);
+		cldb::Database indb_bin;
+		cldb::ReadBinaryDatabase("output.bin", indb_bin);
+		cldb::WriteBinaryDatabase("output2.bin", indb_bin);
 	}
 }
 
@@ -109,7 +109,7 @@ int main(int argc, const char* argv[])
 	reflection_specs.Gather(ast_context.getTranslationUnitDecl());
 
 	// On the second pass, build the reflection database
-	crdb::Database db;
+	cldb::Database db;
 	db.AddBaseTypePrimitives();
 	std::string ast_log = args.GetProperty("-ast_log");
 	ASTConsumer ast_consumer(ast_context, db, reflection_specs, ast_log);

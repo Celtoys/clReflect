@@ -21,7 +21,7 @@ namespace
 	}
 
 
-	const char* HexStringFromName(crdb::Name name, const crdb::Database& db)
+	const char* HexStringFromName(cldb::Name name, const cldb::Database& db)
 	{
 		return itohex(name.hash);
 	}
@@ -59,7 +59,7 @@ namespace
 	}
 
 
-	void WriteName(FILE* fp, const crdb::Name& name, const crdb::Database& db)
+	void WriteName(FILE* fp, const cldb::Name& name, const cldb::Database& db)
 	{
 		fputs(itohex(name.hash), fp);
 		fputs("\t", fp);
@@ -67,7 +67,7 @@ namespace
 	}
 
 
-	void WritePrimitive(FILE* fp, const crdb::Primitive& primitive, const crdb::Database& db)
+	void WritePrimitive(FILE* fp, const cldb::Primitive& primitive, const cldb::Database& db)
 	{
 		fputs(HexStringFromName(primitive.name, db), fp);
 		fputs("\t", fp);
@@ -75,7 +75,7 @@ namespace
 	}
 
 
-	void WriteType(FILE* fp, const crdb::Type& primitive, const crdb::Database& db)
+	void WriteType(FILE* fp, const cldb::Type& primitive, const cldb::Database& db)
 	{
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
@@ -83,7 +83,7 @@ namespace
 	}
 
 
-	void WriteEnumConstant(FILE* fp, const crdb::EnumConstant& primitive, const crdb::Database& db)
+	void WriteEnumConstant(FILE* fp, const cldb::EnumConstant& primitive, const cldb::Database& db)
 	{
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
@@ -91,7 +91,7 @@ namespace
 	}
 
 
-	void WriteField(FILE* fp, const crdb::Field& primitive, const crdb::Database& db)
+	void WriteField(FILE* fp, const cldb::Field& primitive, const cldb::Database& db)
 	{
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
@@ -100,9 +100,9 @@ namespace
 
 		switch (primitive.modifier)
 		{
-		case (crdb::Field::MODIFIER_VALUE): fputs("v", fp); break;
-		case (crdb::Field::MODIFIER_POINTER): fputs("p", fp); break;
-		case (crdb::Field::MODIFIER_REFERENCE): fputs("r", fp); break;
+		case (cldb::Field::MODIFIER_VALUE): fputs("v", fp); break;
+		case (cldb::Field::MODIFIER_POINTER): fputs("p", fp); break;
+		case (cldb::Field::MODIFIER_REFERENCE): fputs("r", fp); break;
 		}
 
 		fputs(primitive.is_const ? "\t1" : "\t0", fp);
@@ -114,7 +114,7 @@ namespace
 	}
 
 
-	void WriteFunction(FILE* fp, const crdb::Function& primitive, const crdb::Database& db)
+	void WriteFunction(FILE* fp, const cldb::Function& primitive, const cldb::Database& db)
 	{
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
@@ -122,12 +122,12 @@ namespace
 	}
 
 
-	void WriteTemplateType(FILE* fp, const crdb::TemplateType& primitive, const crdb::Database& db)
+	void WriteTemplateType(FILE* fp, const cldb::TemplateType& primitive, const cldb::Database& db)
 	{
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
 
-		for (int i = 0; i < crdb::TemplateType::MAX_NB_ARGS; i++)
+		for (int i = 0; i < cldb::TemplateType::MAX_NB_ARGS; i++)
 		{
 			if (primitive.parameter_types[i].hash)
 			{
@@ -139,7 +139,7 @@ namespace
 	}
 
 
-	void WriteClass(FILE* fp, const crdb::Class& primitive, const crdb::Database& db)
+	void WriteClass(FILE* fp, const cldb::Class& primitive, const cldb::Database& db)
 	{
 		WriteType(fp, primitive, db);
 		fputs("\t", fp);
@@ -147,7 +147,7 @@ namespace
 	}
 
 
-	void WriteIntAttribute(FILE* fp, const crdb::IntAttribute& primitive, const crdb::Database& db)
+	void WriteIntAttribute(FILE* fp, const cldb::IntAttribute& primitive, const cldb::Database& db)
 	{
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
@@ -155,7 +155,7 @@ namespace
 	}
 
 
-	void WriteFloatAttribute(FILE* fp, const crdb::FloatAttribute& primitive, const crdb::Database& db)
+	void WriteFloatAttribute(FILE* fp, const cldb::FloatAttribute& primitive, const cldb::Database& db)
 	{
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
@@ -163,7 +163,7 @@ namespace
 	}
 
 
-	void WriteNameAttribute(FILE* fp, const crdb::NameAttribute& primitive, const crdb::Database& db)
+	void WriteNameAttribute(FILE* fp, const cldb::NameAttribute& primitive, const cldb::Database& db)
 	{
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
@@ -171,7 +171,7 @@ namespace
 	}
 
 
-	void WriteTextAttribute(FILE* fp, const crdb::TextAttribute& primitive, const crdb::Database& db)
+	void WriteTextAttribute(FILE* fp, const cldb::TextAttribute& primitive, const cldb::Database& db)
 	{
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
@@ -180,7 +180,7 @@ namespace
 
 
 	template <typename TABLE_TYPE, typename PRINT_FUNC>
-	void WriteTable(FILE* fp, const crdb::Database& db, const TABLE_TYPE& table, PRINT_FUNC print_func, const char* title, const char* headers)
+	void WriteTable(FILE* fp, const cldb::Database& db, const TABLE_TYPE& table, PRINT_FUNC print_func, const char* title, const char* headers)
 	{
 		WriteTableHeader(fp, title, headers);
 		for (typename TABLE_TYPE::const_iterator i = table.begin(); i != table.end(); ++i)
@@ -193,17 +193,17 @@ namespace
 
 
 	template <typename TYPE, typename PRINT_FUNC>
-	void WritePrimitives(FILE* fp, const crdb::Database& db, PRINT_FUNC print_func, const char* title, const char* headers)
+	void WritePrimitives(FILE* fp, const cldb::Database& db, PRINT_FUNC print_func, const char* title, const char* headers)
 	{
-		const crdb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>();
+		const cldb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>();
 		WriteTable(fp, db, store, print_func, title, headers);
 	}
 
 
-	void WriteNameTable(FILE* fp, const crdb::Database& db, const crdb::NameMap& table)
+	void WriteNameTable(FILE* fp, const cldb::Database& db, const cldb::NameMap& table)
 	{
 		WriteTableHeader(fp, "Names", "Hash\t\tName");
-		for (crdb::NameMap::const_iterator i = table.begin(); i != table.end(); ++i)
+		for (cldb::NameMap::const_iterator i = table.begin(); i != table.end(); ++i)
 		{
 			WriteName(fp, i->second, db);
 			fputs("\n", fp);
@@ -213,12 +213,12 @@ namespace
 }
 
 
-void crdb::WriteTextDatabase(const char* filename, const Database& db)
+void cldb::WriteTextDatabase(const char* filename, const Database& db)
 {
 	FILE* fp = fopen(filename, "w");
 
 	// Write the header
-	fputs("\nClang Reflect Database\n", fp);
+	fputs("\nclReflect Database\n", fp);
 	fputs("Format Version: ", fp);
 	fputs(itoa(CURRENT_VERSION), fp);
 	fputs("\n\n\n", fp);
@@ -271,7 +271,7 @@ namespace
 		}
 
 		// Helper for safely retrieving the next hex string token as an integer
-		crdb::u32 GetHexInt()
+		cldb::u32 GetHexInt()
 		{
 			const char* token = Get();
 			if (token == 0)
@@ -282,7 +282,7 @@ namespace
 		}
 
 		// Automating the process of getting the common primitive data
-		void GetNameAndParent(crdb::u32& name, crdb::u32& parent)
+		void GetNameAndParent(cldb::u32& name, cldb::u32& parent)
 		{
 			name = GetHexInt();
 			parent = GetHexInt();
@@ -294,25 +294,25 @@ namespace
 	};
 
 
-	void ParseName(char* line, crdb::Database& db)
+	void ParseName(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
-		crdb::u32 hash = tok.GetHexInt();
+		cldb::u32 hash = tok.GetHexInt();
 		const char* name = tok.Get();
 		if (hash != 0 && name != 0)
 		{
-			db.m_Names[hash] = crdb::Name(hash, name);
+			db.m_Names[hash] = cldb::Name(hash, name);
 		}
 	}
 
 
 	template <typename TYPE>
-	void ParsePrimitive(char* line, crdb::Database& db)
+	void ParsePrimitive(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
-		crdb::u32 name, parent;
+		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 		
 		// Add a new primitive to the database
@@ -324,19 +324,19 @@ namespace
 	}
 
 
-	void ParseType(char* line, crdb::Database& db)
+	void ParseType(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
-		crdb::u32 name, parent;
+		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
 		// Type parsing
-		crdb::u32 size = tok.GetHexInt();
+		cldb::u32 size = tok.GetHexInt();
 
 		// Add a new primitive to the database
-		crdb::Type primitive(
+		cldb::Type primitive(
 			db.GetName(name),
 			db.GetName(parent),
 			size);
@@ -345,19 +345,19 @@ namespace
 	}
 
 
-	void ParseEnumConstant(char* line, crdb::Database& db)
+	void ParseEnumConstant(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
-		crdb::u32 name, parent;
+		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
 		// Enum constant parsing
 		int value = atoi(tok.Get());
 
 		// Add a new enum constant to the database
-		crdb::EnumConstant primitive(
+		cldb::EnumConstant primitive(
 			db.GetName(name),
 			db.GetName(parent),
 			value);
@@ -366,19 +366,19 @@ namespace
 	}
 
 
-	void ParseEnum(char* line, crdb::Database& db)
+	void ParseEnum(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
-		crdb::u32 name, parent;
+		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
 		// Type parsing - discard the size
 		tok.GetHexInt();
 
 		// Add a new class to the database
-		crdb::Enum primitive(
+		cldb::Enum primitive(
 			db.GetName(name),
 			db.GetName(parent));
 
@@ -386,25 +386,25 @@ namespace
 	}
 
 
-	void ParseField(char* line, crdb::Database& db)
+	void ParseField(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
-		crdb::u32 name, parent;
+		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
 		// Field parsing
 
-		crdb::u32 type = tok.GetHexInt();
+		cldb::u32 type = tok.GetHexInt();
 
 		const char* mod = tok.Get();
-		crdb::Field::Modifier modifier;
+		cldb::Field::Modifier modifier;
 		switch (mod[0])
 		{
-		case ('v'): modifier = crdb::Field::MODIFIER_VALUE; break;
-		case ('p'): modifier = crdb::Field::MODIFIER_POINTER; break;
-		case ('r'): modifier = crdb::Field::MODIFIER_REFERENCE; break;
+		case ('v'): modifier = cldb::Field::MODIFIER_VALUE; break;
+		case ('p'): modifier = cldb::Field::MODIFIER_POINTER; break;
+		case ('r'): modifier = cldb::Field::MODIFIER_REFERENCE; break;
 		}
 
 		const char* cst = tok.Get();
@@ -413,10 +413,10 @@ namespace
 		const char* idx = tok.Get();
 		int index = atoi(idx);
 
-		crdb::u32 parent_unique_id = tok.GetHexInt();
+		cldb::u32 parent_unique_id = tok.GetHexInt();
 
 		// Add a new field to the database
-		crdb::Field primitive(
+		cldb::Field primitive(
 			db.GetName(name),
 			db.GetName(parent),
 			db.GetName(type),
@@ -429,19 +429,19 @@ namespace
 	}
 
 
-	void ParseFunction(char* line, crdb::Database& db)
+	void ParseFunction(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
-		crdb::u32 name, parent;
+		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
 		// Function parsing
-		crdb::u32 unique_id = tok.GetHexInt();
+		cldb::u32 unique_id = tok.GetHexInt();
 
 		// Add a new function to the database
-		crdb::Function primitive(
+		cldb::Function primitive(
 			db.GetName(name),
 			db.GetName(parent),
 			unique_id);
@@ -450,22 +450,22 @@ namespace
 	}
 
 
-	void ParseClass(char* line, crdb::Database& db)
+	void ParseClass(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
-		crdb::u32 name, parent;
+		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
 		// Type parsing
-		crdb::u32 size = tok.GetHexInt();
+		cldb::u32 size = tok.GetHexInt();
 
 		// Class parsing
-		crdb::u32 base = tok.GetHexInt();
+		cldb::u32 base = tok.GetHexInt();
 
 		// Add a new class to the database
-		crdb::Class primitive(
+		cldb::Class primitive(
 			db.GetName(name),
 			db.GetName(parent),
 			db.GetName(base),
@@ -475,19 +475,19 @@ namespace
 	}
 
 
-	void ParseTemplateType(char* line, crdb::Database& db)
+	void ParseTemplateType(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
-		crdb::u32 name, parent;
+		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
 		// Template type argument parsing
-		crdb::TemplateType primitive(db.GetName(name), db.GetName(parent));
-		for (int i = 0; i < crdb::TemplateType::MAX_NB_ARGS; i++)
+		cldb::TemplateType primitive(db.GetName(name), db.GetName(parent));
+		for (int i = 0; i < cldb::TemplateType::MAX_NB_ARGS; i++)
 		{
-			crdb::u32 type = tok.GetHexInt();
+			cldb::u32 type = tok.GetHexInt();
 			if (type == 0)
 			{
 				break;
@@ -501,19 +501,19 @@ namespace
 	}
 
 
-	void ParseIntAttribute(char* line, crdb::Database& db)
+	void ParseIntAttribute(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
-		crdb::u32 name, parent;
+		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
 		// Int attribute parsing
 		int value = atoi(tok.Get());
 
 		// Add a new attribute to the database
-		crdb::IntAttribute primitive(
+		cldb::IntAttribute primitive(
 			db.GetName(name),
 			db.GetName(parent),
 			value);
@@ -522,12 +522,12 @@ namespace
 	}
 
 
-	void ParseFloatAttribute(char* line, crdb::Database& db)
+	void ParseFloatAttribute(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
-		crdb::u32 name, parent;
+		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
 		// Attribute parsing
@@ -535,7 +535,7 @@ namespace
 		sscanf(tok.Get(), "%f", &value);
 
 		// Add a new attribute to the database
-		crdb::FloatAttribute primitive(
+		cldb::FloatAttribute primitive(
 			db.GetName(name),
 			db.GetName(parent),
 			value);
@@ -544,19 +544,19 @@ namespace
 	}
 
 
-	void ParseNameAttribute(char* line, crdb::Database& db)
+	void ParseNameAttribute(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
-		crdb::u32 name, parent;
+		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
 		// Attribute parsing
-		crdb::u32 value = tok.GetHexInt();
+		cldb::u32 value = tok.GetHexInt();
 
 		// Add a new attribute to the database
-		crdb::NameAttribute primitive(
+		cldb::NameAttribute primitive(
 			db.GetName(name),
 			db.GetName(parent),
 			db.GetName(value));
@@ -565,19 +565,19 @@ namespace
 	}
 
 
-	void ParseTextAttribute(char* line, crdb::Database& db)
+	void ParseTextAttribute(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
 		// Primitive parsing
-		crdb::u32 name, parent;
+		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
 		// Attribute parsing
 		const char* value = tok.Get();
 
 		// Add a new attribute to the database
-		crdb::TextAttribute primitive(
+		cldb::TextAttribute primitive(
 			db.GetName(name),
 			db.GetName(parent),
 			value);
@@ -587,7 +587,7 @@ namespace
 
 
 	template <typename PARSE_FUNC>
-	void ParseTable(FILE* fp, char* line, crdb::Database& db, const char* table_name, PARSE_FUNC parse_func)
+	void ParseTable(FILE* fp, char* line, cldb::Database& db, const char* table_name, PARSE_FUNC parse_func)
 	{
 		// Format the table header
 		char table_header[256] = "---- ";
@@ -621,7 +621,7 @@ namespace
 }
 
 
-bool crdb::ReadTextDatabase(const char* filename, Database& db)
+bool cldb::ReadTextDatabase(const char* filename, Database& db)
 {
 	if (!IsTextDatabase(filename))
 	{
@@ -634,16 +634,16 @@ bool crdb::ReadTextDatabase(const char* filename, Database& db)
 	while (char* line = ReadLine(fp))
 	{
 		ParseTable(fp, line, db, "Names", ParseName);
-		ParseTable(fp, line, db, "Namespaces", ParsePrimitive<crdb::Namespace>);
+		ParseTable(fp, line, db, "Namespaces", ParsePrimitive<cldb::Namespace>);
 		ParseTable(fp, line, db, "Types", ParseType);
 		ParseTable(fp, line, db, "Enum Constants", ParseEnumConstant);
 		ParseTable(fp, line, db, "Enums", ParseEnum);
 		ParseTable(fp, line, db, "Fields", ParseField);
 		ParseTable(fp, line, db, "Functions", ParseFunction);
-		ParseTable(fp, line, db, "Templates", ParsePrimitive<crdb::Template>);
+		ParseTable(fp, line, db, "Templates", ParsePrimitive<cldb::Template>);
 		ParseTable(fp, line, db, "Template Types", ParseTemplateType);
 		ParseTable(fp, line, db, "Classes", ParseClass);
-		ParseTable(fp, line, db, "Flag Attributes", ParsePrimitive<crdb::FlagAttribute>);
+		ParseTable(fp, line, db, "Flag Attributes", ParsePrimitive<cldb::FlagAttribute>);
 		ParseTable(fp, line, db, "Int Attributes", ParseIntAttribute);
 		ParseTable(fp, line, db, "Float Attributes", ParseFloatAttribute);
 		ParseTable(fp, line, db, "Name Attributes", ParseNameAttribute);
@@ -655,7 +655,7 @@ bool crdb::ReadTextDatabase(const char* filename, Database& db)
 }
 
 
-bool crdb::IsTextDatabase(const char* filename)
+bool cldb::IsTextDatabase(const char* filename)
 {
 	// Not a database if it doesn't exist
 	FILE* fp = fopen(filename, "r");
@@ -669,7 +669,7 @@ bool crdb::IsTextDatabase(const char* filename)
 	bool is_text_db = true;
 	while (char* line = ReadLine(fp))
 	{
-		if (startswith(line, "Clang Reflect Database"))
+		if (startswith(line, "clReflect Database"))
 		{
 			is_text_db = true;
 		}

@@ -2,7 +2,7 @@
 #pragma once
 
 
-namespace crdb
+namespace cldb
 {
 	class Database;
 
