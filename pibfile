@@ -73,6 +73,13 @@ def SetLinkOptions(name, lib_paths):
     opts.UpdateCommandLine()
 
 
+# Output everything to the "build" directory
+env.Configs["debug"].SetPathPrefix("build")
+env.Configs["release"].SetPathPrefix("build")
+
+# Tell clReflect where to find the executables - note they're config-specific
+clReflect.SetInstallLocation(env.CurrentConfig.OutputPath)
+
 SetCPPOptions("debug", MSVCPlatform.VCCRTType.MT_DEBUG_DLL)
 SetLinkOptions("debug", lib_paths_debug)
 

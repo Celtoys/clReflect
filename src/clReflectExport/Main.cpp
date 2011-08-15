@@ -70,9 +70,19 @@ int main(int argc, const char* argv[])
 	std::string cpp_export = args.GetProperty("-cpp");
 	if (cpp_export != "")
 	{
+		// First build the C++ export representation
 		CppExport cppexp;
 		BuildCppExport(db, cppexp);
-		WriteCppExportAsText(cppexp, "out.txt");
+
+		// Pretty-print the result to the specified output file
+		std::string cpp_log = args.GetProperty("-cpp_log");
+		if (cpp_log != "")
+		{
+			WriteCppExportAsText(cppexp, cpp_log.c_str());
+		}
+
+		// Save to disk
+		// NOTE: After this point the CppExport object is useless (TODO: fix)
 		SaveCppExport(cppexp, cpp_export.c_str());
 	}
 
