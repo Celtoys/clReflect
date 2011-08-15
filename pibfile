@@ -109,44 +109,44 @@ class CppBuildExe:
 
 
 # Build the C++ API
-crcpp = CppBuildExe(env, [ "src/ClangReflectCpp" ], "crcpp.lib")
-crcpp.api_files = Glob("inc", "*.h")
+clcpp = CppBuildExe(env, [ "src/clReflectCpp" ], "clcpp.lib")
+clcpp.api_files = Glob("inc", "*.h")
 
 # Build the core library
-crcore = CppBuildExe(env, [ "src/ClangReflectCore" ], "crcore.lib")
+clcore = CppBuildExe(env, [ "src/clReflectCore" ], "clcore.lib")
 
 # Build the scanner
-crscan = CppBuildExe(env, [ "src/ClangReflectScan" ], "crscan.exe", libs, [ crcore.lib, crcpp.lib ])
+clscan = CppBuildExe(env, [ "src/clReflectScan" ], "clscan.exe", libs, [ clcore.lib, clcpp.lib ])
 
 # Build the merger
-crmerge = CppBuildExe(env, [ "src/ClangReflectMerge" ], "crmerge.exe", [], [ crcore.lib, crcpp.lib ])
+clmerge = CppBuildExe(env, [ "src/clReflectMerge" ], "clmerge.exe", [], [ clcore.lib, clcpp.lib ])
 
 # Build the exporter
-crexport = CppBuildExe(env, [ "src/ClangReflectExport" ], "crexport.exe", [ "dbghelp.lib" ], [ crcore.lib, crcpp.lib ])
+clexport = CppBuildExe(env, [ "src/clReflectExport" ], "clexport.exe", [ "dbghelp.lib" ], [ clcore.lib, clcpp.lib ])
 
 # Build the test code
-crtest = CppBuildExe(env, [ "src/ClangReflectTest" ], "crtest.exe", [], [ crcpp.lib ], False)
+cltest = CppBuildExe(env, [ "src/clReflectTest" ], "cltest.exe", [], [ clcpp.lib ], False)
 
-# Inject the ClangReflect build dependencies
+# Inject the clReflect build dependencies
 # TODO: Probably going to have to flatten the graph before visiting
 # test_obj_files is traversed twice below!
-crtest.csv_files = [ ClangReflect.CppScan(include_paths, file) for file in crtest.obj_files ]
-crtest.db_file = ClangReflect.Merge("ClangReflectTest.csv", crtest.csv_files)
-crtest.cppbin_file = ClangReflect.CppExport("ClangReflectTest.cppbin", crtest.db_file, crtest.output.GetOutputFiles(env)[1])
-env.Build([ crtest.exe, crtest.cppbin_file ], "crtest")
+cltest.csv_files = [ ClangReflect.CppScan(include_paths, file) for file in cltest.obj_files ]
+cltest.db_file = ClangReflect.Merge("clReflectTest.csv", cltest.csv_files)
+cltest.cppbin_file = ClangReflect.CppExport("clReflectTest.cppbin", cltest.db_file, cltest.output.GetOutputFiles(env)[1])
+env.Build([ cltest.exe, cltest.cppbin_file ], "cltest")
 
 
 # Generate MSVC project files
-VCGenerateProjectFile(env, "src/ClangReflectCpp/ClangReflectCpp", crcpp.cpp_files + crcpp.hpp_files + crcpp.api_files, crcpp.lib, "crcpp", [ ("..\\..\\inc", "Public API") ])
-VCGenerateProjectFile(env, "src/ClangReflectCore/ClangReflectCore", crcore.cpp_files + crcore.hpp_files, crcore.lib, "crcore")
-VCGenerateProjectFile(env, "src/ClangReflectScan/ClangReflectScan", crscan.cpp_files + crscan.hpp_files, crscan.exe, "crscan")
-VCGenerateProjectFile(env, "src/ClangReflectMerge/ClangReflectMerge", crmerge.cpp_files + crmerge.hpp_files, crmerge.exe, "crmerge")
-VCGenerateProjectFile(env, "src/ClangReflectExport/ClangReflectExport", crexport.cpp_files + crexport.hpp_files, crexport.exe, "crexport")
-VCGenerateProjectFile(env, "src/ClangReflectTest/ClangReflectTest", crtest.cpp_files, crtest.exe, "crtest")
-VCGenerateSolutionFile(env, "ClangReflect", [
-    "src/ClangReflectCpp/ClangReflectCpp",
-    "src/ClangReflectCore/ClangReflectCore",
-    "src/ClangReflectScan/ClangReflectScan",
-    "src/ClangReflectMerge/ClangReflectMerge",
-    "src/ClangReflectExport/ClangReflectExport",
-    "src/ClangReflectTest/ClangReflectTest" ])
+VCGenerateProjectFile(env, "src/clReflectCpp/clReflectCpp", crcpp.cpp_files + crcpp.hpp_files + crcpp.api_files, crcpp.lib, "clcpp", [ ("..\\..\\inc", "Public API") ])
+VCGenerateProjectFile(env, "src/clReflectCore/clReflectCore", crcore.cpp_files + crcore.hpp_files, crcore.lib, "crcore")
+VCGenerateProjectFile(env, "src/clReflectScan/clReflectScan", crscan.cpp_files + crscan.hpp_files, crscan.exe, "crscan")
+VCGenerateProjectFile(env, "src/clReflectMerge/clReflectMerge", crmerge.cpp_files + crmerge.hpp_files, crmerge.exe, "crmerge")
+VCGenerateProjectFile(env, "src/clReflectExport/clReflectExport", crexport.cpp_files + crexport.hpp_files, crexport.exe, "crexport")
+VCGenerateProjectFile(env, "src/clReflectTest/clReflectTest", crtest.cpp_files, crtest.exe, "crtest")
+VCGenerateSolutionFile(env, "clReflect", [
+    "src/clReflectCpp/clReflectCpp",
+    "src/clReflectCore/clReflectCore",
+    "src/clReflectScan/clReflectScan",
+    "src/clReflectMerge/clReflectMerge",
+    "src/clReflectExport/clReflectExport",
+    "src/clReflectTest/clReflectTest" ])
