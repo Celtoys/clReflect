@@ -1,7 +1,7 @@
 
 # TODO: Configs should be build-specific, not environment specific
 
-import ClangReflect
+import clReflect
 
 
 include_paths = [
@@ -130,9 +130,9 @@ cltest = CppBuildExe(env, [ "src/clReflectTest" ], "cltest.exe", [], [ clcpp.lib
 # Inject the clReflect build dependencies
 # TODO: Probably going to have to flatten the graph before visiting
 # test_obj_files is traversed twice below!
-cltest.csv_files = [ ClangReflect.CppScan(include_paths, file) for file in cltest.obj_files ]
-cltest.db_file = ClangReflect.Merge("clReflectTest.csv", cltest.csv_files)
-cltest.cppbin_file = ClangReflect.CppExport("clReflectTest.cppbin", cltest.db_file, cltest.output.GetOutputFiles(env)[1])
+cltest.csv_files = [ clReflect.CppScan(include_paths, file) for file in cltest.obj_files ]
+cltest.db_file = clReflect.Merge("clReflectTest.csv", cltest.csv_files)
+cltest.cppbin_file = clReflect.CppExport("clReflectTest.cppbin", cltest.db_file, cltest.output.GetOutputFiles(env)[1])
 env.Build([ cltest.exe, cltest.cppbin_file ], "cltest")
 
 
