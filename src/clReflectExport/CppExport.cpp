@@ -578,10 +578,87 @@ namespace
 			cls.destructor = clcpp::FindPrimitive(cls.methods, destruct_hash);
 		}
 	}
+
+
+	template <typename TYPE>
+	bool VerifyPtr(CppExport& cppexp, const TYPE* ptr)
+	{
+		// Cast to a hash value
+		unsigned int hash = (unsigned int)ptr;
+
+		// Report an error if the reference hasn't been patched up
+		CppExport::NameMap::const_iterator i = cppexp.name_map.find(hash);
+		if (i != cppexp.name_map.end())
+		{
+			LOG(main, ERROR, "Couldn't find reference to '%s'\n", i->second);
+			return false;
+		}
+
+		return true;
+	}
+
+	// Overloads for verifying the pointers of each primitive type
+	bool VerifyPrimitive(CppExport& cppexp, const clcpp::Primitive& primitive)
+	{
+		return VerifyPtr(cppexp, primitive.parent);
+	}
+	bool VerifyPrimitive(CppExport& cppexp, const clcpp::Field& primitive)
+	{
+		return VerifyPrimitive(cppexp, (clcpp::Primitive&)primitive) & VerifyPtr(cppexp, primitive.type);
+	}
+	bool VerifyPrimitive(CppExport& cppexp, const clcpp::Function& primitive)
+	{
+		return VerifyPrimitive(cppexp, (clcpp::Primitive&)primitive) & VerifyPtr(cppexp, primitive.return_parameter);
+	}
+	bool VerifyPrimitive(CppExport& cppexp, const clcpp::TemplateType& primitive)
+	{
+		bool result = VerifyPrimitive(cppexp, (clcpp::Primitive&)primitive);
+		for (int i = 0; i < clcpp::TemplateType::MAX_NB_ARGS; i++)
+		{
+			result &= VerifyPtr(cppexp, primitive.parameter_types[i]);
+		}
+		return result;
+	}
+	bool VerifyPrimitive(CppExport& cppexp, const clcpp::Class& primitive)
+	{
+		return VerifyPrimitive(cppexp, (clcpp::Type&)primitive) & VerifyPtr(cppexp, primitive.base_class);
+	}
+
+	template <typename TYPE>
+	bool VerifyPrimitives(CppExport& cppexp, const clcpp::CArray<TYPE>& primitives)
+	{
+		// Verifies all primitives in an array
+		bool result = true;
+		for (int i = 0; i < primitives.size(); i++)
+		{
+			result &= VerifyPrimitive(cppexp, primitives[i]);
+		}
+		return result;
+	}
+
+	bool VerifyPrimitives(CppExport& cppexp)
+	{
+		bool result = true;
+		result &= VerifyPrimitives(cppexp, cppexp.db->types);
+		result &= VerifyPrimitives(cppexp, cppexp.db->enum_constants);
+		result &= VerifyPrimitives(cppexp, cppexp.db->enums);
+		result &= VerifyPrimitives(cppexp, cppexp.db->fields);
+		result &= VerifyPrimitives(cppexp, cppexp.db->functions);
+		result &= VerifyPrimitives(cppexp, cppexp.db->classes);
+		result &= VerifyPrimitives(cppexp, cppexp.db->templates);
+		result &= VerifyPrimitives(cppexp, cppexp.db->template_types);
+		result &= VerifyPrimitives(cppexp, cppexp.db->namespaces);
+		result &= VerifyPrimitives(cppexp, cppexp.db->flag_attributes);
+		result &= VerifyPrimitives(cppexp, cppexp.db->int_attributes);
+		result &= VerifyPrimitives(cppexp, cppexp.db->float_attributes);
+		result &= VerifyPrimitives(cppexp, cppexp.db->name_attributes);
+		result &= VerifyPrimitives(cppexp, cppexp.db->text_attributes);
+		return result;
+	}
 }
 
 
-void BuildCppExport(const cldb::Database& db, CppExport& cppexp)
+bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 {
 	// Allocate the in-memory database
 	cppexp.db = cppexp.allocator.Alloc<clcpp::internal::DatabaseMem>(1);
@@ -668,6 +745,12 @@ void BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	// each class and make pointers to these in the class. This is done after sorting so that
 	// local searches can take advantage of clcpp::FindPrimitive.
 	FindClassConstructors(cppexp);
+
+	// Primitives reference each other via their names (hash codes). This code first of all copies
+	// hashes into the pointers and then patches them up via lookup. If the input database doesn't
+	// contain primitives that others reference then at this point, certain primitives will contain
+	// effectively garbage pointers. Do a check here for that.
+	return VerifyPrimitives(cppexp);
 }
 
 

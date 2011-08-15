@@ -72,7 +72,10 @@ int main(int argc, const char* argv[])
 	{
 		// First build the C++ export representation
 		CppExport cppexp;
-		BuildCppExport(db, cppexp);
+		if (!BuildCppExport(db, cppexp))
+		{
+			return 1;
+		}
 
 		// Pretty-print the result to the specified output file
 		std::string cpp_log = args.GetProperty("-cpp_log");
