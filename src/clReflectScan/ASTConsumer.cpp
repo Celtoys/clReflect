@@ -1,8 +1,31 @@
 
-// TODO: Is it worth reflecting anonymous enumerations, given they can only be used to pass function parameters?
+//
+// ===============================================================================
+// clReflect
+// -------------------------------------------------------------------------------
+// Copyright (c) 2011 Don Williamson
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy of
+// this software and associated documentation files (the "Software"), to deal in
+// the Software without restriction, including without limitation the rights to
+// use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+// of the Software, and to permit persons to whom the Software is furnished to do
+// so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+// ===============================================================================
+//
+
 // TODO: Parameter names no longer need to be unique
-// TODO: Do we really need fully qualified names at this point, given the use of a multimap?
-// TODO: Could make the hash key a pair of name/parent. This would require multiple lookups but it's linear only with scope depth
 //
 // Primitives that require full names:
 //
@@ -11,17 +34,6 @@
 //    * Enums: Yes. These are types and can be used as fields.
 //    * Classes: Yes. They can be used as fields.
 //    * Fields: No. Nothing references fields.
-//
-// A downside of having everything named is that usually anonymous entities need to be catered for. An example
-// is function return values - they're not named and would usually be stored as a property of the function.
-// In this case we have to think up some valid name that doesn't collide with other names and that hopefully
-// won't cause a CRC collision, either.
-//
-// I suppose we could have a list of un-named primitives in a list that can't really be hashed in any way.
-// The really important requirement is that these un-named primitives can parent themselves correctly. As a
-// result, they can't become parents themselves.
-//
-// On top of that, we lose order so each parameter will need to keep track of its index for functions.
 //
 
 #include "ASTConsumer.h"
