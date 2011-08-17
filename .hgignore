@@ -1,6 +1,5 @@
 syntax: glob
-bin/*
-obj/*
+build/*
 *.ncb
 *.suo
 *.pib
