@@ -65,4 +65,15 @@ namespace clcpp
 		CallFunc call_func = (CallFunc)function->address;
 		call_func(a0);
 	}
+
+
+	//
+	// Call a function with two parameters and no return value.
+	//
+	template <typename A0, typename A1> inline void CallFunction(const Function* function, A0 a0, A1 a1)
+	{
+		typedef void (*CallFunc)(A0, A1);
+		CallFunc call_func = (CallFunc)function->address;
+		call_func(a0, a1);
+	}
 }
