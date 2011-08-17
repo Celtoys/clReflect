@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectMerge"
-	ProjectGUID="{51A7CD22-C71F-11E0-ABA5-F46D04D48D5F}"
+	ProjectGUID="{117533F1-C8BE-11E0-AC01-F46D04D48D5F}"
 	RootNamespace="clReflectMerge"
 	Keyword="Win32Proj"
 	>
@@ -17,8 +17,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\bin\Debug"
-			IntermediateDirectory="..\..\obj\Debug"
+			OutputDirectory="..\..\build\bin\Debug"
+			IntermediateDirectory="..\..\build\obj\Debug"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -27,7 +27,7 @@
 				BuildCommandLine="cd ..\.. &amp; pib debug -target clmerge"
 				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target clmerge"
 				CleanCommandLine="cd ..\.. &amp; pib clean debug -target clmerge"
-				Output="..\..\bin\Debug\clmerge.exe"
+				Output="..\..\build\bin\Debug\clmerge.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -38,8 +38,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\bin\Release"
-			IntermediateDirectory="..\..\obj\Release"
+			OutputDirectory="..\..\build\bin\Release"
+			IntermediateDirectory="..\..\build\obj\Release"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -48,7 +48,7 @@
 				BuildCommandLine="cd ..\.. &amp; pib release -target clmerge"
 				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target clmerge"
 				CleanCommandLine="cd ..\.. &amp; pib clean release -target clmerge"
-				Output="..\..\bin\Release\clmerge.exe"
+				Output="..\..\build\bin\Release\clmerge.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""

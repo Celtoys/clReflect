@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectExport"
-	ProjectGUID="{51A81B40-C71F-11E0-BDB0-F46D04D48D5F}"
+	ProjectGUID="{117533F2-C8BE-11E0-9089-F46D04D48D5F}"
 	RootNamespace="clReflectExport"
 	Keyword="Win32Proj"
 	>
@@ -17,8 +17,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\bin\Debug"
-			IntermediateDirectory="..\..\obj\Debug"
+			OutputDirectory="..\..\build\bin\Debug"
+			IntermediateDirectory="..\..\build\obj\Debug"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -27,7 +27,7 @@
 				BuildCommandLine="cd ..\.. &amp; pib debug -target clexport"
 				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target clexport"
 				CleanCommandLine="cd ..\.. &amp; pib clean debug -target clexport"
-				Output="..\..\bin\Debug\clexport.exe"
+				Output="..\..\build\bin\Debug\clexport.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -38,8 +38,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\bin\Release"
-			IntermediateDirectory="..\..\obj\Release"
+			OutputDirectory="..\..\build\bin\Release"
+			IntermediateDirectory="..\..\build\obj\Release"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -48,7 +48,7 @@
 				BuildCommandLine="cd ..\.. &amp; pib release -target clexport"
 				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target clexport"
 				CleanCommandLine="cd ..\.. &amp; pib clean release -target clexport"
-				Output="..\..\bin\Release\clexport.exe"
+				Output="..\..\build\bin\Release\clexport.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""

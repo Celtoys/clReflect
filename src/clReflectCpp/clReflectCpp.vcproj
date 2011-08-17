@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectCpp"
-	ProjectGUID="{308549AE-C71F-11E0-A34E-F46D04D48D5F}"
+	ProjectGUID="{1172EA00-C8BE-11E0-9669-F46D04D48D5F}"
 	RootNamespace="clReflectCpp"
 	Keyword="Win32Proj"
 	>
@@ -17,8 +17,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\bin\Debug"
-			IntermediateDirectory="..\..\obj\Debug"
+			OutputDirectory="..\..\build\bin\Debug"
+			IntermediateDirectory="..\..\build\obj\Debug"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -27,7 +27,7 @@
 				BuildCommandLine="cd ..\.. &amp; pib debug -target clcpp"
 				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target clcpp"
 				CleanCommandLine="cd ..\.. &amp; pib clean debug -target clcpp"
-				Output="..\..\bin\Debug\clcpp.lib"
+				Output="..\..\build\bin\Debug\clcpp.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -38,8 +38,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\bin\Release"
-			IntermediateDirectory="..\..\obj\Release"
+			OutputDirectory="..\..\build\bin\Release"
+			IntermediateDirectory="..\..\build\obj\Release"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -48,7 +48,7 @@
 				BuildCommandLine="cd ..\.. &amp; pib release -target clcpp"
 				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target clcpp"
 				CleanCommandLine="cd ..\.. &amp; pib clean release -target clcpp"
-				Output="..\..\bin\Release\clcpp.lib"
+				Output="..\..\build\bin\Release\clcpp.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -63,11 +63,11 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{3086a940-c71f-11e0-af5c-f46d04d48d5f}"
+			UniqueIdentifier="{1172ea01-c8be-11e0-a159-f46d04d48d5f}"
 			>
 			<Filter
 				Name="clcpp"
-				UniqueIdentifier="{3086a941-c71f-11e0-9661-f46d04d48d5f}"
+				UniqueIdentifier="{1172ea02-c8be-11e0-a5a0-f46d04d48d5f}"
 				>
 				<File
 					RelativePath="..\..\inc\clcpp\Core.h"

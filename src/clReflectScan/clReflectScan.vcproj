@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectScan"
-	ProjectGUID="{51A77F00-C71F-11E0-8F5F-F46D04D48D5F}"
+	ProjectGUID="{117533F0-C8BE-11E0-B6AB-F46D04D48D5F}"
 	RootNamespace="clReflectScan"
 	Keyword="Win32Proj"
 	>
@@ -17,8 +17,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\bin\Debug"
-			IntermediateDirectory="..\..\obj\Debug"
+			OutputDirectory="..\..\build\bin\Debug"
+			IntermediateDirectory="..\..\build\obj\Debug"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -27,7 +27,7 @@
 				BuildCommandLine="cd ..\.. &amp; pib debug -target clscan"
 				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target clscan"
 				CleanCommandLine="cd ..\.. &amp; pib clean debug -target clscan"
-				Output="..\..\bin\Debug\clscan.exe"
+				Output="..\..\build\bin\Debug\clscan.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -38,8 +38,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\bin\Release"
-			IntermediateDirectory="..\..\obj\Release"
+			OutputDirectory="..\..\build\bin\Release"
+			IntermediateDirectory="..\..\build\obj\Release"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -48,7 +48,7 @@
 				BuildCommandLine="cd ..\.. &amp; pib release -target clscan"
 				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target clscan"
 				CleanCommandLine="cd ..\.. &amp; pib clean release -target clscan"
-				Output="..\..\bin\Release\clscan.exe"
+				Output="..\..\build\bin\Release\clscan.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""

@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectCore"
-	ProjectGUID="{51A709D0-C71F-11E0-B504-F46D04D48D5F}"
+	ProjectGUID="{1172EA03-C8BE-11E0-A83A-F46D04D48D5F}"
 	RootNamespace="clReflectCore"
 	Keyword="Win32Proj"
 	>
@@ -17,8 +17,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\bin\Debug"
-			IntermediateDirectory="..\..\obj\Debug"
+			OutputDirectory="..\..\build\bin\Debug"
+			IntermediateDirectory="..\..\build\obj\Debug"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -27,7 +27,7 @@
 				BuildCommandLine="cd ..\.. &amp; pib debug -target clcore"
 				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target clcore"
 				CleanCommandLine="cd ..\.. &amp; pib clean debug -target clcore"
-				Output="..\..\bin\Debug\clcore.lib"
+				Output="..\..\build\bin\Debug\clcore.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -38,8 +38,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\bin\Release"
-			IntermediateDirectory="..\..\obj\Release"
+			OutputDirectory="..\..\build\bin\Release"
+			IntermediateDirectory="..\..\build\obj\Release"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -48,7 +48,7 @@
 				BuildCommandLine="cd ..\.. &amp; pib release -target clcore"
 				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target clcore"
 				CleanCommandLine="cd ..\.. &amp; pib clean release -target clcore"
-				Output="..\..\bin\Release\clcore.lib"
+				Output="..\..\build\bin\Release\clcore.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
