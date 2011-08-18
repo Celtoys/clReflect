@@ -33,6 +33,7 @@
 namespace clcpp
 {
 	struct IFile;
+	struct IAllocator;
 
 	namespace internal
 	{
@@ -59,6 +60,6 @@ namespace clcpp
 		};
 
 
-		DatabaseMem* LoadMemoryMappedDatabase(IFile* file);
+		DatabaseMem* LoadMemoryMappedDatabase(IFile* file, IAllocator* allocator);
 	}
 }

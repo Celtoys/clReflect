@@ -60,7 +60,7 @@ clcpp::internal::DatabaseFileHeader::DatabaseFileHeader()
 }
 
 
-clcpp::internal::DatabaseMem* clcpp::internal::LoadMemoryMappedDatabase(IFile* file)
+clcpp::internal::DatabaseMem* clcpp::internal::LoadMemoryMappedDatabase(IFile* file, IAllocator* allocator)
 {
 	// Read the header and verify the version and signature
 	DatabaseFileHeader file_header, cmp_header;
@@ -78,7 +78,7 @@ clcpp::internal::DatabaseMem* clcpp::internal::LoadMemoryMappedDatabase(IFile* f
 	}
 
 	// Read the memory mapped data
-	char* base_data = new char[file_header.data_size];
+	char* base_data = (char*)allocator->Alloc(file_header.data_size);
 	DatabaseMem* database_mem = (DatabaseMem*)base_data;
 	if (!file->Read(base_data, file_header.data_size))
 	{
@@ -86,21 +86,21 @@ clcpp::internal::DatabaseMem* clcpp::internal::LoadMemoryMappedDatabase(IFile* f
 	}
 
 	// Read the schema descriptions
-	CArray<PtrSchema> schemas(file_header.nb_ptr_schemas);
+	CArray<PtrSchema> schemas(file_header.nb_ptr_schemas, allocator);
 	if (!file->Read(schemas))
 	{
 		return 0;
 	}
 
 	// Read the pointer offsets for all the schemas
-	CArray<int> ptr_offsets(file_header.nb_ptr_offsets);
+	CArray<int> ptr_offsets(file_header.nb_ptr_offsets, allocator);
 	if (!file->Read(ptr_offsets))
 	{
 		return 0;
 	}
 
 	// Read the pointer relocation instructions
-	CArray<PtrRelocation> relocations(file_header.nb_ptr_relocations);
+	CArray<PtrRelocation> relocations(file_header.nb_ptr_relocations, allocator);
 	if (!file->Read(relocations))
 	{
 		return 0;

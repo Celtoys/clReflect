@@ -99,13 +99,17 @@ const clcpp::Primitive* clcpp::internal::FindPrimitive(const CArray<const Primit
 
 clcpp::Database::Database()
 	: m_DatabaseMem(0)
+	, m_Allocator(0)
 {
 }
 
 
 clcpp::Database::~Database()
 {
-	delete (char*)m_DatabaseMem;
+	if (m_DatabaseMem)
+	{
+		m_Allocator->Free(m_DatabaseMem);
+	}
 }
 
 
@@ -163,8 +167,10 @@ const clcpp::Function* clcpp::Database::GetFunction(unsigned int hash) const
 }
 
 
-bool clcpp::Database::Load(IFile* file)
+bool clcpp::Database::Load(IFile* file, IAllocator* allocator)
 {
-	m_DatabaseMem = internal::LoadMemoryMappedDatabase(file);
+	internal::Assert(m_DatabaseMem == 0 && "Database already loaded");
+	m_Allocator = allocator;
+	m_DatabaseMem = internal::LoadMemoryMappedDatabase(file, m_Allocator);
 	return m_DatabaseMem != 0;
 }
