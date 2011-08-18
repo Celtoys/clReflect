@@ -28,6 +28,7 @@
 #include <clcpp/clcpp.h>
 
 #include <cstdio>
+#include <malloc.h>
 
 
 class StdFile : public clcpp::IFile
@@ -65,6 +66,19 @@ private:
 };
 
 
+class Malloc : public clcpp::IAllocator
+{
+	void* Alloc(unsigned int size)
+	{
+		return malloc(size);
+	}
+	void Free(void* ptr)
+	{
+		free(ptr);
+	}
+};
+
+
 extern void TestGetType(clcpp::Database& db);
 extern void TestConstructorDestructor(clcpp::Database& db);
 extern void TestAttributesFunc(clcpp::Database& db);
@@ -78,8 +92,9 @@ int main()
 		return 1;
 	}
 
+	Malloc allocator;
 	clcpp::Database db;
-	db.Load(&file);
+	db.Load(&file, &allocator);
 	TestGetType(db);
 	TestConstructorDestructor(db);
 	TestAttributesFunc(db);

@@ -446,7 +446,7 @@ namespace clcpp
 		Database();
 		~Database();
 
-		bool Load(IFile* file);
+		bool Load(IFile* file, IAllocator* allocator);
 
 		// This returns the name as it exists in the name database, with the text pointer
 		// pointing to within the database's allocated name data
@@ -464,6 +464,9 @@ namespace clcpp
 		Database& operator = (const Database&);
 
 		internal::DatabaseMem* m_DatabaseMem;
+
+		// Allocator used to load the database
+		IAllocator* m_Allocator;
 	};
 
 

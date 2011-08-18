@@ -29,6 +29,43 @@
 #pragma once
 
 
+//
+// The C++ standard specifies that use of default placement new does not require inclusion of <new>.
+// However, MSVC2005 disagrees and requires this. Since I don't want any CRT dependencies in the library,
+// I don't want to include that. However, the C++ standard also states that implementing your own
+// default new 
+//
+// I could just be pragmatic and ignore that (I have done for as long as I've known of the existence
+// of placement new). Or I could do this... wrap pointers in a specific type that forwards to its own
+// placement new, treating it like an allocator that returns the wrapped pointer.
+//
+// Much cleaner but there is some extra code in debug builds - I may revisit this :/
+//
+namespace clcpp
+{
+	namespace internal
+	{
+		struct PtrWrapper
+		{
+			PtrWrapper(void* p) : ptr(p) { }
+			void* ptr;
+		};
+	}
+}
+
+
+//
+// Placement new for the PtrWrapper logic specified above, which required matching delete
+//
+inline void* operator new (unsigned int size, const clcpp::internal::PtrWrapper& p)
+{
+	return p.ptr;
+}
+inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
+{
+}
+
+
 namespace clcpp
 {
 	namespace internal
@@ -62,6 +99,16 @@ namespace clcpp
 
 
 	//
+	// Simple allocator interface for abstracting allocations made by the runtime.
+	//
+	struct IAllocator
+	{
+		virtual void* Alloc(unsigned int size) = 0;
+		virtual void Free(void* ptr) = 0;
+	};
+
+
+	//
 	// Wrapper around a classic C-style array.
 	//
 	template <typename TYPE>
@@ -72,33 +119,40 @@ namespace clcpp
 		CArray()
 			: m_Size(0)
 			, m_Data(0)
-			, m_Owner(1)
+			, m_Allocator(0)
 		{
 		}
 
-		// Initialise with array count
-		CArray(unsigned int size)
+		// Initialise with array count and allocator
+		CArray(unsigned int size, IAllocator* allocator)
 			: m_Size(size)
-			, m_Data(new TYPE[size])
-			, m_Owner(1)
+			, m_Data(0)
+			, m_Allocator(allocator)
 		{
+			// Allocate and call the constructor for each element
+			m_Data = (TYPE*)m_Allocator->Alloc(m_Size * sizeof(TYPE));
+			for (unsigned int i = 0; i < m_Size; i++)
+			{
+				new (internal::PtrWrapper(m_Data + i)) TYPE;
+			}
 		}
 
 		// Initialise with pre-allocated data
 		CArray(void* data, unsigned int size)
 			: m_Size(size)
 			, m_Data((TYPE*)data)
-			, m_Owner(0)
+			, m_Allocator(0)
 		{
 		}
 
 		// Copy construct
 		CArray(const CArray& rhs)
 			: m_Size(rhs.size())
-			, m_Data(new TYPE[rhs.size()])
-			, m_Owner(1)
+			, m_Data(0)
+			, m_Allocator(rhs.m_Allocator)
 		{
-			// Copy each entry
+			// Allocate and copy each entry
+			m_Data = (TYPE*)m_Allocator->Alloc(m_Size * sizeof(TYPE));
 			for (unsigned int i = 0; i < m_Size; i++)
 			{
 				m_Data[i] = rhs.m_Data[i];
@@ -107,9 +161,14 @@ namespace clcpp
 
 		~CArray()
 		{
-			if (m_Owner)
+			if (m_Allocator)
 			{
-				delete [] m_Data;
+				// Call the destructor on each element and free the allocated memory
+				for (unsigned int i = 0; i < m_Size; i++)
+				{
+					m_Data[i].TYPE::~TYPE();
+				}
+				m_Allocator->Free(m_Data);
 			}
 		}
 
@@ -118,7 +177,7 @@ namespace clcpp
 		{
 			m_Size = rhs.m_Size;
 			m_Data = rhs.m_Data;
-			m_Owner = rhs.m_Owner;
+			m_Allocator = rhs.m_Allocator;
 		}
 
 		// Removes an element from the list without reallocating any memory
@@ -155,37 +214,18 @@ namespace clcpp
 			return m_Data[index];
 		}
 
-		CArray& operator = (const CArray& rhs)
-		{
-			// Check for self-assignment
-			if (this == &rhs)
-			{
-				return *this;
-			}
-
-			// Default construct the array data
-			delete [] m_Data;
-			m_Size = rhs.m_Size;
-			m_Data = new TYPE[m_Size];
-
-			// Assign each entry
-			for (unsigned int i = 0; i < m_Size; i++)
-			{
-				m_Data[i] = rhs.m_Data[i];
-			}
-
-			return *this;
-		}
-
 		static unsigned int data_offset()
 		{
 			return (unsigned int)&(((CArray<TYPE>*)0)->m_Data);
 		}
 
 	private:
-		unsigned int m_Size : 31;
-		unsigned int m_Owner : 1;
+		// No need to implement if it's not used
+		CArray& operator= (const CArray& rhs);
+
+		unsigned int m_Size;
 		TYPE* m_Data;
+		IAllocator* m_Allocator;
 	};
 
 
@@ -211,39 +251,4 @@ namespace clcpp
 		// true on success, false otherwise.
 		virtual bool Read(void* dest, int size) = 0;
 	};
-}
-
-
-//
-// The C++ standard specifies that use of default placement new does not require inclusion of <new>.
-// However, MSVC2005 disagrees and requires this. Since I don't want any CRT dependencies in the library,
-// I don't want to include that. However, the C++ standard also states that implementing your own
-// default new 
-//
-// I could just be pragmatic and ignore that (I have done for as long as I've known of the existence
-// of placement new). Or I could do this... wrap pointers in a specific type that forwards to its own
-// placement new, treating it like an allocator that returns the wrapped pointer.
-//
-// Much cleaner but there is some extra code in debug builds - I may revisit this :/
-//
-namespace clcpp
-{
-	namespace internal
-	{
-		struct PtrWrapper
-		{
-			PtrWrapper(void* p) : ptr(p) { }
-			void* ptr;
-		};
-	}
-}
-
-
-// Placement new for the PtrWrapper logic specified above, which required matching delete
-inline void* operator new (unsigned int size, const clcpp::internal::PtrWrapper& p)
-{
-	return p.ptr;
-}
-inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
-{
 }

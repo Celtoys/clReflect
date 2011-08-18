@@ -25,9 +25,6 @@
 // ===============================================================================
 //
 
-// TODO:
-//	* Check that every pointer has been linked up
-
 #include "CppExport.h"
 #include "PtrRelocator.h"
 
@@ -38,10 +35,25 @@
 #include <clcpp/Database.h>
 
 #include <algorithm>
+#include <malloc.h>
 
 
 namespace
 {
+	// A basic malloc allocator implementation
+	class Malloc : public clcpp::IAllocator
+	{
+		void* Alloc(unsigned int size)
+		{
+			return malloc(size);
+		}
+		void Free(void* ptr)
+		{
+			free(ptr);
+		}
+	};
+
+
 	void BuildNames(const cldb::Database& db, CppExport& cppexp)
 	{
 		// Allocate the name data
@@ -257,7 +269,8 @@ namespace
 	{
 		// Create an array of pointers to the children and forward that to the Parent function
 		// that acts on arrays of pointers
-		clcpp::CArray<CHILD_TYPE*> children_ptrs(children.size());
+		Malloc malloc_allocator;
+		clcpp::CArray<CHILD_TYPE*> children_ptrs(children.size(), &malloc_allocator);
 		for (int i = 0; i < children_ptrs.size(); i++)
 		{
 			children_ptrs[i] = &children[i];
