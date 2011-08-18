@@ -72,7 +72,7 @@ extern void TestAttributesFunc(clcpp::Database& db);
 
 int main()
 {
-	StdFile file("../../bin/Debug/clReflectTest.cppbin");
+	StdFile file("../../build/bin/Debug/clReflectTest.cppbin");
 	if (!file.IsOpen())
 	{
 		return 1;

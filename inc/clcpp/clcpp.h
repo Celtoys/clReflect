@@ -33,9 +33,6 @@
 // Placement new
 // TODO: Remove and implement in clcpp
 #include <new>
-// typeid calls for name()
-// TODO: Can this be removed?
-#include <typeinfo>
 
 
 // Include all dependencies
@@ -133,30 +130,14 @@
 		namespace internal
 		{
 			template <typename TYPE>
-			const Type* GetType(Database& db)
+			inline const Type* GetType(Database& db, const char* name)
 			{
-				// These are independent of the input database so can be cached
+				// This is independent of the input database so can be cached per type
 				// NOTE: Not thread-safe!
-				static const char* name = 0;
 				static unsigned int hash = 0;
 
-				if (name == 0)
+				if (hash == 0)
 				{
-					// Strip Microsoft-specific type name prefixes
-					name = typeid(TYPE).name();
-					if (name[0] == 's' && name[6] == ' ')
-					{
-						name += sizeof("struct");
-					}
-					else if (name[0] == 'c' && name[5] == ' ')
-					{
-						name += sizeof("class");
-					}
-					else if (name[0] == 'e' && name[4] == ' ')
-					{
-						name += sizeof("enum");
-					}
-
 					// Hash the name directly as we don't need to lookup the equivalent
 					// in the names database
 					hash = HashNameString(name);
@@ -172,7 +153,7 @@
 	}
 
 
-	#define clcpp_get_type(db, type) clcpp::internal::GetType<type>(db)
+	#define clcpp_get_type(db, type) clcpp::internal::GetType<type>(db, #type)
 
 
 	//
