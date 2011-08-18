@@ -212,3 +212,38 @@ namespace clcpp
 		virtual bool Read(void* dest, int size) = 0;
 	};
 }
+
+
+//
+// The C++ standard specifies that use of default placement new does not require inclusion of <new>.
+// However, MSVC2005 disagrees and requires this. Since I don't want any CRT dependencies in the library,
+// I don't want to include that. However, the C++ standard also states that implementing your own
+// default new 
+//
+// I could just be pragmatic and ignore that (I have done for as long as I've known of the existence
+// of placement new). Or I could do this... wrap pointers in a specific type that forwards to its own
+// placement new, treating it like an allocator that returns the wrapped pointer.
+//
+// Much cleaner but there is some extra code in debug builds - I may revisit this :/
+//
+namespace clcpp
+{
+	namespace internal
+	{
+		struct PtrWrapper
+		{
+			PtrWrapper(void* p) : ptr(p) { }
+			void* ptr;
+		};
+	}
+}
+
+
+// Placement new for the PtrWrapper logic specified above, which required matching delete
+inline void* operator new (unsigned int size, const clcpp::internal::PtrWrapper& p)
+{
+	return p.ptr;
+}
+inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
+{
+}

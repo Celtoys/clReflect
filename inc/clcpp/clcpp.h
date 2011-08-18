@@ -30,11 +30,6 @@
 #pragma once
 
 
-// Placement new
-// TODO: Remove and implement in clcpp
-#include <new>
-
-
 // Include all dependencies
 // These can be included independently if you want quicker compiles
 #include "Core.h"
@@ -171,7 +166,7 @@
 			{															\
 				clcpp_export void ConstructObject(scoped_type* object)	\
 				{														\
-					new (object) scoped_type;							\
+					new (PtrWrapper(object)) scoped_type;				\
 				}														\
 				clcpp_export void DestructObject(scoped_type* object)	\
 				{														\
