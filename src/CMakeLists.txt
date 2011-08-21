@@ -1,0 +1,6 @@
+add_subdirectory(clReflectCore)
+add_subdirectory(clReflectCpp)
+add_subdirectory(clReflectExport)
+add_subdirectory(clReflectMerge)
+add_subdirectory(clReflectScan)
+add_subdirectory(clReflectTest)
