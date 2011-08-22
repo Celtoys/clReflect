@@ -2,13 +2,18 @@
 # TODO: Configs should be build-specific, not environment specific
 
 import clReflect
+import os
+
+
+llvm_source = "../../sdk/llvm/llvm"
+llvm_build = "../../sdk/llvm/build"
 
 
 include_paths = [
-    "../../sdk/llvm/llvm/include",
-    "../../sdk/llvm/build/include",
-    "../../sdk/llvm/llvm/tools/clang/include",
-    "../../sdk/llvm/build/tools/clang/include",
+    os.path.join(llvm_source, "include"),
+    os.path.join(llvm_build, "include"),
+    os.path.join(llvm_source, "tools/clang/include"),
+    os.path.join(llvm_build, "tools/clang/include"),
     "src",
     "inc",
 ]
@@ -31,12 +36,12 @@ libs = [
 
 
 lib_paths_debug = [
-    "../../sdk/llvm/build/lib/debug"
+    os.path.join(llvm_build, "lib/debug")
 ]
 
 
 lib_paths_release = [
-    "../../sdk/llvm/build/lib/release"
+    os.path.join(llvm_build, "lib/release")
 ]
 
 
@@ -87,52 +92,24 @@ SetCPPOptions("release", MSVCPlatform.VCCRTType.MT_DLL)
 SetLinkOptions("release", lib_paths_release)
 
 
-# Experimental build class for automatings a few steps
-class CppBuildExe:
-    
-    def __init__(self, env, dirs, target, ext_libs = [], libs = [], build = True):
-
-        # Gather source/header files
-        self.cpp_files = []
-        self.hpp_files = []
-        for dir in dirs:
-            self.cpp_files += Glob(dir, "*.cpp")
-            self.hpp_files += Glob(dir, "*.h")
-
-        # Compile C++ files and create file nodes out of external library references
-        self.obj_files = [ env.CPPFile(file) for file in self.cpp_files ]
-        self.lib_files = [ env.NewFile(file) for file in ext_libs ]
-
-        # Link or use librarian dependent on output path
-        target = target.lower()
-        self.output = None
-        if target.endswith(".exe"):
-            self.output = self.exe = env.Link(target, self.obj_files, self.lib_files + libs)
-        elif target.endswith(".lib"):
-            self.output = self.lib = env.Lib(target, self.obj_files)
-        
-        if build:
-            env.Build(self.output, target[:-4])
-
-
 # Build the C++ API
-clcpp = CppBuildExe(env, [ "src/clReflectCpp" ], "clcpp.lib")
+clcpp = CppBuild(env, [ "src/clReflectCpp" ], "clcpp.lib")
 clcpp.api_files = Glob("inc", "*.h")
 
 # Build the core library
-clcore = CppBuildExe(env, [ "src/clReflectCore" ], "clcore.lib")
+clcore = CppBuild(env, [ "src/clReflectCore" ], "clcore.lib")
 
 # Build the scanner
-clscan = CppBuildExe(env, [ "src/clReflectScan" ], "clscan.exe", libs, [ clcore.lib, clcpp.lib ])
+clscan = CppBuild(env, [ "src/clReflectScan" ], "clscan.exe", libs, [ clcore.lib, clcpp.lib ])
 
 # Build the merger
-clmerge = CppBuildExe(env, [ "src/clReflectMerge" ], "clmerge.exe", [], [ clcore.lib, clcpp.lib ])
+clmerge = CppBuild(env, [ "src/clReflectMerge" ], "clmerge.exe", [], [ clcore.lib, clcpp.lib ])
 
 # Build the exporter
-clexport = CppBuildExe(env, [ "src/clReflectExport" ], "clexport.exe", [ "dbghelp.lib" ], [ clcore.lib, clcpp.lib ])
+clexport = CppBuild(env, [ "src/clReflectExport" ], "clexport.exe", [ "dbghelp.lib" ], [ clcore.lib, clcpp.lib ])
 
 # Build the test code
-cltest = CppBuildExe(env, [ "src/clReflectTest" ], "cltest.exe", [], [ clcpp.lib ], False)
+cltest = CppBuild(env, [ "src/clReflectTest" ], "cltest.exe", [], [ clcpp.lib ], None, False)
 
 # Inject the clReflect build dependencies
 # TODO: Probably going to have to flatten the graph before visiting
@@ -144,7 +121,7 @@ env.Build([ cltest.exe, cltest.cppbin_file ], "cltest")
 
 
 # Generate MSVC project files
-VCGenerateProjectFile(env, "src/clReflectCpp/clReflectCpp", clcpp.cpp_files + clcpp.hpp_files + clcpp.api_files, clcpp.lib, "clcpp", [ ("..\\..\\inc", "Public API") ])
+VCGenerateProjectFile(env, "src/clReflectCpp/clReflectCpp", clcpp.cpp_files + clcpp.hpp_files + clcpp.api_files, clcpp.lib, "clcpp", replacements = [ ("..\\..\\inc", "Public API") ])
 VCGenerateProjectFile(env, "src/clReflectCore/clReflectCore", clcore.cpp_files + clcore.hpp_files, clcore.lib, "clcore")
 VCGenerateProjectFile(env, "src/clReflectScan/clReflectScan", clscan.cpp_files + clscan.hpp_files, clscan.exe, "clscan")
 VCGenerateProjectFile(env, "src/clReflectMerge/clReflectMerge", clmerge.cpp_files + clmerge.hpp_files, clmerge.exe, "clmerge")

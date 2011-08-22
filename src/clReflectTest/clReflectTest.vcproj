@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectTest"
-	ProjectGUID="{117533F3-C8BE-11E0-BA3F-F46D04D48D5F}"
+	ProjectGUID="{9A6BE9C0-C9B2-11E0-B250-F46D04D48D5F}"
 	RootNamespace="clReflectTest"
 	Keyword="Win32Proj"
 	>
@@ -24,9 +24,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib debug -target cltest"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target cltest"
-				CleanCommandLine="cd ..\.. &amp; pib clean debug -target cltest"
+				BuildCommandLine="cd ..\.. &amp; pib -config debug -target cltest"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config debug -target cltest"
+				CleanCommandLine="cd ..\.. &amp; pib clean -config debug -target cltest"
 				Output="..\..\build\bin\Debug\cltest.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
@@ -45,9 +45,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib release -target cltest"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target cltest"
-				CleanCommandLine="cd ..\.. &amp; pib clean release -target cltest"
+				BuildCommandLine="cd ..\.. &amp; pib -config release -target cltest"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config release -target cltest"
+				CleanCommandLine="cd ..\.. &amp; pib clean -config release -target cltest"
 				Output="..\..\build\bin\Release\cltest.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""

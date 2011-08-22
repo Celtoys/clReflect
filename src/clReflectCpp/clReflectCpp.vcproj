@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectCpp"
-	ProjectGUID="{1172EA00-C8BE-11E0-9669-F46D04D48D5F}"
+	ProjectGUID="{9A6978C0-C9B2-11E0-A9C9-F46D04D48D5F}"
 	RootNamespace="clReflectCpp"
 	Keyword="Win32Proj"
 	>
@@ -24,9 +24,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib debug -target clcpp"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target clcpp"
-				CleanCommandLine="cd ..\.. &amp; pib clean debug -target clcpp"
+				BuildCommandLine="cd ..\.. &amp; pib -config debug -target clcpp"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config debug -target clcpp"
+				CleanCommandLine="cd ..\.. &amp; pib clean -config debug -target clcpp"
 				Output="..\..\build\bin\Debug\clcpp.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
@@ -45,9 +45,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib release -target clcpp"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target clcpp"
-				CleanCommandLine="cd ..\.. &amp; pib clean release -target clcpp"
+				BuildCommandLine="cd ..\.. &amp; pib -config release -target clcpp"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config release -target clcpp"
+				CleanCommandLine="cd ..\.. &amp; pib clean -config release -target clcpp"
 				Output="..\..\build\bin\Release\clcpp.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
@@ -63,11 +63,11 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{1172ea01-c8be-11e0-a159-f46d04d48d5f}"
+			UniqueIdentifier="{9a6a8a30-c9b2-11e0-9ac9-f46d04d48d5f}"
 			>
 			<Filter
 				Name="clcpp"
-				UniqueIdentifier="{1172ea02-c8be-11e0-a5a0-f46d04d48d5f}"
+				UniqueIdentifier="{9a6a8a31-c9b2-11e0-9fd9-f46d04d48d5f}"
 				>
 				<File
 					RelativePath="..\..\inc\clcpp\Core.h"

@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectScan"
-	ProjectGUID="{117533F0-C8BE-11E0-B6AB-F46D04D48D5F}"
+	ProjectGUID="{9A6AFF62-C9B2-11E0-A707-F46D04D48D5F}"
 	RootNamespace="clReflectScan"
 	Keyword="Win32Proj"
 	>
@@ -24,9 +24,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib debug -target clscan"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target clscan"
-				CleanCommandLine="cd ..\.. &amp; pib clean debug -target clscan"
+				BuildCommandLine="cd ..\.. &amp; pib -config debug -target clscan"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config debug -target clscan"
+				CleanCommandLine="cd ..\.. &amp; pib clean -config debug -target clscan"
 				Output="..\..\build\bin\Debug\clscan.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
@@ -45,9 +45,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib release -target clscan"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target clscan"
-				CleanCommandLine="cd ..\.. &amp; pib clean release -target clscan"
+				BuildCommandLine="cd ..\.. &amp; pib -config release -target clscan"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config release -target clscan"
+				CleanCommandLine="cd ..\.. &amp; pib clean -config release -target clscan"
 				Output="..\..\build\bin\Release\clscan.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""

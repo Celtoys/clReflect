@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectMerge"
-	ProjectGUID="{117533F1-C8BE-11E0-AC01-F46D04D48D5F}"
+	ProjectGUID="{9A6B4D80-C9B2-11E0-A2F8-F46D04D48D5F}"
 	RootNamespace="clReflectMerge"
 	Keyword="Win32Proj"
 	>
@@ -24,9 +24,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib debug -target clmerge"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target clmerge"
-				CleanCommandLine="cd ..\.. &amp; pib clean debug -target clmerge"
+				BuildCommandLine="cd ..\.. &amp; pib -config debug -target clmerge"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config debug -target clmerge"
+				CleanCommandLine="cd ..\.. &amp; pib clean -config debug -target clmerge"
 				Output="..\..\build\bin\Debug\clmerge.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
@@ -45,9 +45,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib release -target clmerge"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target clmerge"
-				CleanCommandLine="cd ..\.. &amp; pib clean release -target clmerge"
+				BuildCommandLine="cd ..\.. &amp; pib -config release -target clmerge"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config release -target clmerge"
+				CleanCommandLine="cd ..\.. &amp; pib clean -config release -target clmerge"
 				Output="..\..\build\bin\Release\clmerge.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""

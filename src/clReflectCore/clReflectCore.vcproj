@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectCore"
-	ProjectGUID="{1172EA03-C8BE-11E0-A83A-F46D04D48D5F}"
+	ProjectGUID="{9A6AB140-C9B2-11E0-8AA4-F46D04D48D5F}"
 	RootNamespace="clReflectCore"
 	Keyword="Win32Proj"
 	>
@@ -24,9 +24,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib debug -target clcore"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target clcore"
-				CleanCommandLine="cd ..\.. &amp; pib clean debug -target clcore"
+				BuildCommandLine="cd ..\.. &amp; pib -config debug -target clcore"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config debug -target clcore"
+				CleanCommandLine="cd ..\.. &amp; pib clean -config debug -target clcore"
 				Output="..\..\build\bin\Debug\clcore.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
@@ -45,9 +45,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib release -target clcore"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target clcore"
-				CleanCommandLine="cd ..\.. &amp; pib clean release -target clcore"
+				BuildCommandLine="cd ..\.. &amp; pib -config release -target clcore"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config release -target clcore"
+				CleanCommandLine="cd ..\.. &amp; pib clean -config release -target clcore"
 				Output="..\..\build\bin\Release\clcore.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""

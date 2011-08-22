@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectExport"
-	ProjectGUID="{117533F2-C8BE-11E0-9089-F46D04D48D5F}"
+	ProjectGUID="{9A6B9BA2-C9B2-11E0-B69D-F46D04D48D5F}"
 	RootNamespace="clReflectExport"
 	Keyword="Win32Proj"
 	>
@@ -24,9 +24,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib debug -target clexport"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild debug -target clexport"
-				CleanCommandLine="cd ..\.. &amp; pib clean debug -target clexport"
+				BuildCommandLine="cd ..\.. &amp; pib -config debug -target clexport"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config debug -target clexport"
+				CleanCommandLine="cd ..\.. &amp; pib clean -config debug -target clexport"
 				Output="..\..\build\bin\Debug\clexport.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
@@ -45,9 +45,9 @@
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib release -target clexport"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild release -target clexport"
-				CleanCommandLine="cd ..\.. &amp; pib clean release -target clexport"
+				BuildCommandLine="cd ..\.. &amp; pib -config release -target clexport"
+				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config release -target clexport"
+				CleanCommandLine="cd ..\.. &amp; pib clean -config release -target clexport"
 				Output="..\..\build\bin\Release\clexport.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
