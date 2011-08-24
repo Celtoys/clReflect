@@ -237,6 +237,8 @@ namespace cldb
 		// Total size of the type, including alignment
 		u32 size;
 	};
+
+
 	//
 	// A name/value pair for enumeration constants
 	//
