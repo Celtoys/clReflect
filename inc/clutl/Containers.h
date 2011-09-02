@@ -4,14 +4,18 @@
 
 namespace clutl
 {
-	class OutputBuffer
+	class DataBuffer
 	{
 	public:
-		OutputBuffer(unsigned int size);
-		~OutputBuffer();
+		DataBuffer(unsigned int size);
+		~DataBuffer();
+
+		void Reset();
 
 		void Write(const void* data, unsigned int length);
 		void WriteAt(const void* data, unsigned int length, unsigned int position);
+
+		void Read(void* data, unsigned int length);
 
 		unsigned int GetPosition() const { return m_Position; }
 

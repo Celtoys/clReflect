@@ -5,7 +5,7 @@
 #include <string.h>
 
 
-clutl::OutputBuffer::OutputBuffer(unsigned int size)
+clutl::DataBuffer::DataBuffer(unsigned int size)
 	: m_Data(0)
 	, m_Size(size)
 	, m_Position(0)
@@ -14,13 +14,19 @@ clutl::OutputBuffer::OutputBuffer(unsigned int size)
 }
 
 
-clutl::OutputBuffer::~OutputBuffer()
+clutl::DataBuffer::~DataBuffer()
 {
 	delete [] m_Data;
 }
 
 
-void clutl::OutputBuffer::Write(const void* data, unsigned int length)
+void clutl::DataBuffer::Reset()
+{
+	m_Position = 0;
+}
+
+
+void clutl::DataBuffer::Write(const void* data, unsigned int length)
 {
 	// Append to the internal buffer
 	clcpp::internal::Assert(m_Position + length <= m_Size && "Buffer overflow");
@@ -29,9 +35,18 @@ void clutl::OutputBuffer::Write(const void* data, unsigned int length)
 }
 
 
-void clutl::OutputBuffer::WriteAt(const void* data, unsigned int length, unsigned int position)
+void clutl::DataBuffer::WriteAt(const void* data, unsigned int length, unsigned int position)
 {
 	// Overwrite an existing location in the buffer
 	clcpp::internal::Assert(position + length <= m_Size && "Buffer overflow");
 	memcpy(m_Data + position, data, length);
+}
+
+
+void clutl::DataBuffer::Read(void* data, unsigned int length)
+{
+	// Copy from the buffer and move on length bytes
+	clcpp::internal::Assert(m_Position + length <= m_Size && "Buffer overflow");
+	memcpy(data, m_Data + m_Position, length);
+	m_Position += length;
 }

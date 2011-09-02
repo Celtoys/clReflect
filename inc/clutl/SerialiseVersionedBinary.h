@@ -10,7 +10,8 @@ namespace clcpp
 
 namespace clutl
 {
-	class OutputBuffer;
+	class DataBuffer;
 
-	void SaveVersionedBinary(OutputBuffer& out, const void* object, const clcpp::Type* type);
+	void SaveVersionedBinary(DataBuffer& out, const void* object, const clcpp::Type* type);
+	void LoadVersionedBinary(DataBuffer& in, void* object, const clcpp::Type* type);
 }
