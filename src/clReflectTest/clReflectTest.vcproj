@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectTest"
-	ProjectGUID="{DD660050-D559-11E0-966C-F46D04D48D5F}"
+	ProjectGUID="{F820DC10-D583-11E0-BD8A-F46D04D48D5F}"
 	RootNamespace="clReflectTest"
 	Keyword="Win32Proj"
 	>
@@ -62,10 +62,6 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="clReflectTest.pibfile"
-			>
-		</File>
-		<File
 			RelativePath="Main.cpp"
 			>
 		</File>
@@ -90,14 +86,22 @@
 			>
 		</File>
 		<File
+			RelativePath="TestSerialise.cpp"
+			>
+		</File>
+		<File
 			RelativePath="TestTemplates.cpp"
+			>
+		</File>
+		<File
+			RelativePath="clReflectTest.pibfile"
 			>
 		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="5fKhmgMRX3j06s4pohe0WA=="
+			Value="w3e2cnl0slb9yHtqJwamIw=="
 		/>
 	</Globals>
 </VisualStudioProject>

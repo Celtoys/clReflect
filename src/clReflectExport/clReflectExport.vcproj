@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectExport"
-	ProjectGUID="{14B269B0-D558-11E0-9ED1-F46D04D48D5F}"
+	ProjectGUID="{F8178D40-D583-11E0-99B8-F46D04D48D5F}"
 	RootNamespace="clReflectExport"
 	Keyword="Win32Proj"
 	>
@@ -62,10 +62,6 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="clReflectExport.pibfile"
-			>
-		</File>
-		<File
 			RelativePath="CppExport.cpp"
 			>
 		</File>
@@ -95,6 +91,10 @@
 		</File>
 		<File
 			RelativePath="StackAllocator.h"
+			>
+		</File>
+		<File
+			RelativePath="clReflectExport.pibfile"
 			>
 		</File>
 	</Files>

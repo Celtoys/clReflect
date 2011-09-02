@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectScan"
-	ProjectGUID="{C4563CB0-D554-11E0-9464-F46D04D48D5F}"
+	ProjectGUID="{F7FC8B30-D583-11E0-B961-F46D04D48D5F}"
 	RootNamespace="clReflectScan"
 	Keyword="Win32Proj"
 	>
@@ -86,10 +86,6 @@
 			>
 		</File>
 		<File
-			RelativePath="clReflectScan.pibfile"
-			>
-		</File>
-		<File
 			RelativePath="Main.cpp"
 			>
 		</File>
@@ -99,6 +95,10 @@
 		</File>
 		<File
 			RelativePath="ReflectionSpecs.h"
+			>
+		</File>
+		<File
+			RelativePath="clReflectScan.pibfile"
 			>
 		</File>
 	</Files>

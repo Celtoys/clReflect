@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectMerge"
-	ProjectGUID="{91E48AE2-D557-11E0-A6F3-F46D04D48D5F}"
+	ProjectGUID="{F80F28D0-D583-11E0-A0DB-F46D04D48D5F}"
 	RootNamespace="clReflectMerge"
 	Keyword="Win32Proj"
 	>
@@ -62,10 +62,6 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="clReflectMerge.pibfile"
-			>
-		</File>
-		<File
 			RelativePath="DatabaseMerge.cpp"
 			>
 		</File>
@@ -75,6 +71,10 @@
 		</File>
 		<File
 			RelativePath="Main.cpp"
+			>
+		</File>
+		<File
+			RelativePath="clReflectMerge.pibfile"
 			>
 		</File>
 	</Files>

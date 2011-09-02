@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectCore"
-	ProjectGUID="{A4C40822-D552-11E0-B749-F46D04D48D5F}"
+	ProjectGUID="{F7DFB45E-D583-11E0-878E-F46D04D48D5F}"
 	RootNamespace="clReflectCore"
 	Keyword="Win32Proj"
 	>
@@ -66,10 +66,6 @@
 			>
 		</File>
 		<File
-			RelativePath="clReflectCore.pibfile"
-			>
-		</File>
-		<File
 			RelativePath="Database.cpp"
 			>
 		</File>
@@ -115,6 +111,10 @@
 		</File>
 		<File
 			RelativePath="Logging.h"
+			>
+		</File>
+		<File
+			RelativePath="clReflectCore.pibfile"
 			>
 		</File>
 	</Files>

@@ -16,6 +16,7 @@ defines = [
 
 libs = [
     "clcpp.lib",
+    "clutil.lib",
 ]
 
 lib_paths_debug = [
