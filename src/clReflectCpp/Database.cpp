@@ -31,26 +31,22 @@
 
 namespace
 {
-	int CompareNames(clcpp::Name name, unsigned int hash)
+	unsigned int GetNameHash(clcpp::Name name)
 	{
-		return hash - name.hash;
+		return name.hash;
+	}
+	unsigned int GetPrimitiveHash(const clcpp::Primitive& primitive)
+	{
+		return primitive.name.hash;
+	}
+	unsigned int GetPrimitivePtrHash(const clcpp::Primitive* primitive)
+	{
+		return primitive->name.hash;
 	}
 
 
-	int ComparePrimitives(const clcpp::Primitive* primitive, unsigned int hash)
-	{
-		return hash - primitive->name.hash;
-	}
-
-
-	int ComparePrimitives(const clcpp::Primitive& primitive, unsigned int hash)
-	{
-		return hash - primitive.name.hash;
-	}
-
-
-	template <typename ARRAY_TYPE, typename COMPARE_L_TYPE, typename COMPARE_R_TYPE, int (COMPARE_FUNC)(COMPARE_L_TYPE, COMPARE_R_TYPE)>
-	int BinarySearch(const clcpp::CArray<ARRAY_TYPE>& entries, COMPARE_R_TYPE compare_value)
+	template <typename ARRAY_TYPE, typename COMPARE_L_TYPE, unsigned int (GET_HASH_FUNC)(COMPARE_L_TYPE)>
+	int BinarySearch(const clcpp::CArray<ARRAY_TYPE>& entries, unsigned int compare_hash)
 	{
 		// TODO: Return multiple entries
 
@@ -63,13 +59,13 @@ namespace
 			// Identify the mid point
 			int mid = (first + last) / 2;
 
-			int cmp = COMPARE_FUNC(entries[mid], compare_value);
-			if (cmp > 0)
+			unsigned entry_hash = GET_HASH_FUNC(entries[mid]);
+			if (compare_hash > entry_hash)
 			{
 				// Shift search to local upper half
 				first = mid + 1;
 			}
-			else if (cmp < 0)
+			else if (compare_hash < entry_hash)
 			{
 				// Shift search to local lower half
 				last = mid - 1;
@@ -88,7 +84,7 @@ namespace
 
 const clcpp::Primitive* clcpp::internal::FindPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash)
 {
-	int index = BinarySearch<const Primitive*, const Primitive*, unsigned int, ComparePrimitives>(primitives, hash);
+	int index = BinarySearch<const Primitive*, const Primitive*, GetPrimitivePtrHash>(primitives, hash);
 	if (index == -1)
 	{
 		return 0;
@@ -129,7 +125,7 @@ clcpp::Name clcpp::Database::GetName(const char* text) const
 	}
 
 	// Lookup the name by hash and see
-	int index = BinarySearch<Name, Name, unsigned int, CompareNames>(m_DatabaseMem->names, hash);
+	int index = BinarySearch<Name, Name, GetNameHash>(m_DatabaseMem->names, hash);
 	if (index == -1)
 	{
 		return clcpp::Name();
@@ -147,7 +143,7 @@ const clcpp::Type* clcpp::Database::GetType(unsigned int hash) const
 
 const clcpp::Namespace* clcpp::Database::GetNamespace(unsigned int hash) const
 {
-	int index = BinarySearch<Namespace, const Primitive&, unsigned int, ComparePrimitives>(m_DatabaseMem->namespaces, hash);
+	int index = BinarySearch<Namespace, const Primitive&, GetPrimitiveHash>(m_DatabaseMem->namespaces, hash);
 	if (index == -1)
 	{
 		return 0;
@@ -158,7 +154,7 @@ const clcpp::Namespace* clcpp::Database::GetNamespace(unsigned int hash) const
 
 const clcpp::Function* clcpp::Database::GetFunction(unsigned int hash) const
 {
-	int index = BinarySearch<Function, const Primitive&, unsigned int, ComparePrimitives>(m_DatabaseMem->functions, hash);
+	int index = BinarySearch<Function, const Primitive&, GetPrimitiveHash>(m_DatabaseMem->functions, hash);
 	if (index == -1)
 	{
 		return 0;
