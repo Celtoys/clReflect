@@ -9,7 +9,7 @@ defines = [
 ]
 
 config = env.Configs["debug"]
-config.IntermediatePath = "../../build/obj/debug/clReflectCpp"
+config.IntermediatePath = "../../build/obj/debug/clReflectUtil"
 config.OutputPath = "../../build/bin/debug"
 config.CPPOptions.IncludePaths += include_paths
 config.CPPOptions.Defines += defines
@@ -18,7 +18,7 @@ config.LibOptions.NoDefaultLibs = True
 
 
 config = env.Configs["release"]
-config.IntermediatePath = "../../build/obj/release/clReflectCpp"
+config.IntermediatePath = "../../build/obj/release/clReflectUtil"
 config.OutputPath = "../../build/bin/release"
 config.CPPOptions.IncludePaths += include_paths
 config.CPPOptions.Defines += defines
@@ -26,8 +26,8 @@ config.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DLL
 config.LibOptions.NoDefaultLibs = True
 
 # Build the library
-clcpp = CppBuild(env, [ "." ], "clcpp.lib")
-clcpp.hpp_files += Glob("../../inc/clcpp", "*.h")
+clutil = CppBuild(env, [ "." ], "clutil.lib")
+clutil.hpp_files += Glob("../../inc/clutl", "*.h")
 
-pibfile = "clReflectCpp.pibfile"
-VCGenerateProjectFile(env, "clReflectCpp", clcpp.cpp_files + clcpp.hpp_files + [ pibfile ], clcpp.output, replacements = [ ("..\\..\\inc\\clcpp", "Public API\\clcpp") ], pibfile = pibfile)
+pibfile = "clReflectUtil.pibfile"
+VCGenerateProjectFile(env, "clReflectUtil", clutil.cpp_files + clutil.hpp_files + [ pibfile ], clutil.output, replacements = [ ("..\\..\\inc\\clutl", "Public API\\clutl") ], pibfile = pibfile)

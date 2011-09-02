@@ -17,8 +17,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\build\bin\Debug\clReflectTest"
-			IntermediateDirectory="..\..\build\obj\Debug\clReflectTest"
+			OutputDirectory="..\..\build\bin\debug"
+			IntermediateDirectory="..\..\build\obj\debug\clReflectTest"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -27,7 +27,7 @@
 				BuildCommandLine="pib -pf clReflectTest.pibfile -config debug"
 				ReBuildCommandLine="pib -pf clReflectTest.pibfile rebuild -config debug"
 				CleanCommandLine="pib -pf clReflectTest.pibfile clean -config debug"
-				Output="..\..\build\bin\Debug\clReflectTest\cltest.exe"
+				Output="..\..\build\bin\debug\cltest.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -38,8 +38,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\build\bin\Release\clReflectTest"
-			IntermediateDirectory="..\..\build\obj\Release\clReflectTest"
+			OutputDirectory="..\..\build\bin\release"
+			IntermediateDirectory="..\..\build\obj\release\clReflectTest"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -48,7 +48,7 @@
 				BuildCommandLine="pib -pf clReflectTest.pibfile -config release"
 				ReBuildCommandLine="pib -pf clReflectTest.pibfile rebuild -config release"
 				CleanCommandLine="pib -pf clReflectTest.pibfile clean -config release"
-				Output="..\..\build\bin\Release\clReflectTest\cltest.exe"
+				Output="..\..\build\bin\release\cltest.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -61,6 +61,10 @@
 	<References>
 	</References>
 	<Files>
+		<File
+			RelativePath="clReflectTest.pibfile"
+			>
+		</File>
 		<File
 			RelativePath="Main.cpp"
 			>
@@ -87,10 +91,6 @@
 		</File>
 		<File
 			RelativePath="TestTemplates.cpp"
-			>
-		</File>
-		<File
-			RelativePath="clReflectTest.pibfile"
 			>
 		</File>
 	</Files>

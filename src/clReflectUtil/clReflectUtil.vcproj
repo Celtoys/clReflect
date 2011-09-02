@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="clReflectCpp"
-	ProjectGUID="{A234DC50-D553-11E0-B7B4-F46D04D48D5F}"
-	RootNamespace="clReflectCpp"
+	Name="clReflectUtil"
+	ProjectGUID="{AF8C8100-D56C-11E0-9AED-F46D04D48D5F}"
+	RootNamespace="clReflectUtil"
 	Keyword="Win32Proj"
 	>
 	<Platforms>
@@ -18,16 +18,16 @@
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory="..\..\build\bin\debug"
-			IntermediateDirectory="..\..\build\obj\debug\clReflectCpp"
+			IntermediateDirectory="..\..\build\obj\debug\clReflectUtil"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="pib -pf clReflectCpp.pibfile -config debug"
-				ReBuildCommandLine="pib -pf clReflectCpp.pibfile rebuild -config debug"
-				CleanCommandLine="pib -pf clReflectCpp.pibfile clean -config debug"
-				Output="..\..\build\bin\debug\clcpp.lib"
+				BuildCommandLine="pib -pf clReflectUtil.pibfile -config debug"
+				ReBuildCommandLine="pib -pf clReflectUtil.pibfile rebuild -config debug"
+				CleanCommandLine="pib -pf clReflectUtil.pibfile clean -config debug"
+				Output="..\..\build\bin\debug\clutil.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -39,16 +39,16 @@
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory="..\..\build\bin\release"
-			IntermediateDirectory="..\..\build\obj\release\clReflectCpp"
+			IntermediateDirectory="..\..\build\obj\release\clReflectUtil"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="pib -pf clReflectCpp.pibfile -config release"
-				ReBuildCommandLine="pib -pf clReflectCpp.pibfile rebuild -config release"
-				CleanCommandLine="pib -pf clReflectCpp.pibfile clean -config release"
-				Output="..\..\build\bin\release\clcpp.lib"
+				BuildCommandLine="pib -pf clReflectUtil.pibfile -config release"
+				ReBuildCommandLine="pib -pf clReflectUtil.pibfile rebuild -config release"
+				CleanCommandLine="pib -pf clReflectUtil.pibfile clean -config release"
+				Output="..\..\build\bin\release\clutil.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -63,55 +63,43 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{d9cb3e9e-d55f-11e0-ab18-f46d04d48d5f}"
+			UniqueIdentifier="{cd6158b0-d56f-11e0-ad0f-f46d04d48d5f}"
 			>
 			<Filter
-				Name="clcpp"
-				UniqueIdentifier="{d9cb3e9f-d55f-11e0-a17c-f46d04d48d5f}"
+				Name="clutl"
+				UniqueIdentifier="{cd6158b1-d56f-11e0-b648-f46d04d48d5f}"
 				>
 				<File
-					RelativePath="..\..\inc\clcpp\clcpp.h"
+					RelativePath="..\..\inc\clutl\Containers.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\inc\clcpp\Core.h"
+					RelativePath="..\..\inc\clutl\Object.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\inc\clcpp\Database.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\inc\clcpp\FunctionCall.h"
+					RelativePath="..\..\inc\clutl\SerialiseVersionedBinary.h"
 					>
 				</File>
 			</Filter>
 		</Filter>
 		<File
-			RelativePath="clReflectCpp.pibfile"
+			RelativePath="clReflectUtil.pibfile"
 			>
 		</File>
 		<File
-			RelativePath="Core.cpp"
+			RelativePath="Containers.cpp"
 			>
 		</File>
 		<File
-			RelativePath="Database.cpp"
-			>
-		</File>
-		<File
-			RelativePath="DatabaseLoader.cpp"
-			>
-		</File>
-		<File
-			RelativePath="DatabaseLoader.h"
+			RelativePath="SerialiseVersionedBinary.cpp"
 			>
 		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="4RHZkTolhu_oFogzTj-VXQ=="
+			Value="vUkcj9p3gVayI-0jtyRwNw=="
 		/>
 	</Globals>
 </VisualStudioProject>

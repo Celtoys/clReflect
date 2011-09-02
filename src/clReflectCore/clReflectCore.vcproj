@@ -17,8 +17,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\build\bin\Debug\clReflectCore"
-			IntermediateDirectory="..\..\build\obj\Debug\clReflectCore"
+			OutputDirectory="..\..\build\bin\debug"
+			IntermediateDirectory="..\..\build\obj\debug\clReflectCore"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -27,7 +27,7 @@
 				BuildCommandLine="pib -pf clReflectCore.pibfile -config debug"
 				ReBuildCommandLine="pib -pf clReflectCore.pibfile rebuild -config debug"
 				CleanCommandLine="pib -pf clReflectCore.pibfile clean -config debug"
-				Output="..\..\build\bin\Debug\clReflectCore\clcore.lib"
+				Output="..\..\build\bin\debug\clcore.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -38,8 +38,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\build\bin\Release\clReflectCore"
-			IntermediateDirectory="..\..\build\obj\Release\clReflectCore"
+			OutputDirectory="..\..\build\bin\release"
+			IntermediateDirectory="..\..\build\obj\release\clReflectCore"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -48,7 +48,7 @@
 				BuildCommandLine="pib -pf clReflectCore.pibfile -config release"
 				ReBuildCommandLine="pib -pf clReflectCore.pibfile rebuild -config release"
 				CleanCommandLine="pib -pf clReflectCore.pibfile clean -config release"
-				Output="..\..\build\bin\Release\clReflectCore\clcore.lib"
+				Output="..\..\build\bin\release\clcore.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -63,6 +63,10 @@
 	<Files>
 		<File
 			RelativePath="Arguments.h"
+			>
+		</File>
+		<File
+			RelativePath="clReflectCore.pibfile"
 			>
 		</File>
 		<File
@@ -111,10 +115,6 @@
 		</File>
 		<File
 			RelativePath="Logging.h"
-			>
-		</File>
-		<File
-			RelativePath="clReflectCore.pibfile"
 			>
 		</File>
 	</Files>

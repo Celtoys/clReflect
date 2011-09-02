@@ -17,8 +17,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\build\bin\Debug\clReflectScan"
-			IntermediateDirectory="..\..\build\obj\Debug\clReflectScan"
+			OutputDirectory="..\..\build\bin\debug"
+			IntermediateDirectory="..\..\build\obj\debug\clReflectScan"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -27,7 +27,7 @@
 				BuildCommandLine="pib -pf clReflectScan.pibfile -config debug"
 				ReBuildCommandLine="pib -pf clReflectScan.pibfile rebuild -config debug"
 				CleanCommandLine="pib -pf clReflectScan.pibfile clean -config debug"
-				Output="..\..\build\bin\Debug\clReflectScan\clscan.exe"
+				Output="..\..\build\bin\debug\clscan.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -38,8 +38,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\build\bin\Release\clReflectScan"
-			IntermediateDirectory="..\..\build\obj\Release\clReflectScan"
+			OutputDirectory="..\..\build\bin\release"
+			IntermediateDirectory="..\..\build\obj\release\clReflectScan"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -48,7 +48,7 @@
 				BuildCommandLine="pib -pf clReflectScan.pibfile -config release"
 				ReBuildCommandLine="pib -pf clReflectScan.pibfile rebuild -config release"
 				CleanCommandLine="pib -pf clReflectScan.pibfile clean -config release"
-				Output="..\..\build\bin\Release\clReflectScan\clscan.exe"
+				Output="..\..\build\bin\release\clscan.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -86,6 +86,10 @@
 			>
 		</File>
 		<File
+			RelativePath="clReflectScan.pibfile"
+			>
+		</File>
+		<File
 			RelativePath="Main.cpp"
 			>
 		</File>
@@ -95,10 +99,6 @@
 		</File>
 		<File
 			RelativePath="ReflectionSpecs.h"
-			>
-		</File>
-		<File
-			RelativePath="clReflectScan.pibfile"
 			>
 		</File>
 	</Files>

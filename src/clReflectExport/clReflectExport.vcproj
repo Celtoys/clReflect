@@ -17,8 +17,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\build\bin\Debug\clReflectExport"
-			IntermediateDirectory="..\..\build\obj\Debug\clReflectExport"
+			OutputDirectory="..\..\build\bin\debug"
+			IntermediateDirectory="..\..\build\obj\debug\clReflectExport"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -27,7 +27,7 @@
 				BuildCommandLine="pib -pf clReflectExport.pibfile -config debug"
 				ReBuildCommandLine="pib -pf clReflectExport.pibfile rebuild -config debug"
 				CleanCommandLine="pib -pf clReflectExport.pibfile clean -config debug"
-				Output="..\..\build\bin\Debug\clReflectExport\clexport.exe"
+				Output="..\..\build\bin\debug\clexport.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -38,8 +38,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\build\bin\Release\clReflectExport"
-			IntermediateDirectory="..\..\build\obj\Release\clReflectExport"
+			OutputDirectory="..\..\build\bin\release"
+			IntermediateDirectory="..\..\build\obj\release\clReflectExport"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
@@ -48,7 +48,7 @@
 				BuildCommandLine="pib -pf clReflectExport.pibfile -config release"
 				ReBuildCommandLine="pib -pf clReflectExport.pibfile rebuild -config release"
 				CleanCommandLine="pib -pf clReflectExport.pibfile clean -config release"
-				Output="..\..\build\bin\Release\clReflectExport\clexport.exe"
+				Output="..\..\build\bin\release\clexport.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -61,6 +61,10 @@
 	<References>
 	</References>
 	<Files>
+		<File
+			RelativePath="clReflectExport.pibfile"
+			>
+		</File>
 		<File
 			RelativePath="CppExport.cpp"
 			>
@@ -91,10 +95,6 @@
 		</File>
 		<File
 			RelativePath="StackAllocator.h"
-			>
-		</File>
-		<File
-			RelativePath="clReflectExport.pibfile"
 			>
 		</File>
 	</Files>
