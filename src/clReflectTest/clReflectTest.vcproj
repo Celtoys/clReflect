@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectTest"
-	ProjectGUID="{9A6BE9C0-C9B2-11E0-B250-F46D04D48D5F}"
+	ProjectGUID="{DD660050-D559-11E0-966C-F46D04D48D5F}"
 	RootNamespace="clReflectTest"
 	Keyword="Win32Proj"
 	>
@@ -17,17 +17,17 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\build\bin\Debug"
-			IntermediateDirectory="..\..\build\obj\Debug"
+			OutputDirectory="..\..\build\bin\Debug\clReflectTest"
+			IntermediateDirectory="..\..\build\obj\Debug\clReflectTest"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib -config debug -target cltest"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config debug -target cltest"
-				CleanCommandLine="cd ..\.. &amp; pib clean -config debug -target cltest"
-				Output="..\..\build\bin\Debug\cltest.exe"
+				BuildCommandLine="pib -pf clReflectTest.pibfile -config debug"
+				ReBuildCommandLine="pib -pf clReflectTest.pibfile rebuild -config debug"
+				CleanCommandLine="pib -pf clReflectTest.pibfile clean -config debug"
+				Output="..\..\build\bin\Debug\clReflectTest\cltest.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -38,17 +38,17 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\build\bin\Release"
-			IntermediateDirectory="..\..\build\obj\Release"
+			OutputDirectory="..\..\build\bin\Release\clReflectTest"
+			IntermediateDirectory="..\..\build\obj\Release\clReflectTest"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib -config release -target cltest"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config release -target cltest"
-				CleanCommandLine="cd ..\.. &amp; pib clean -config release -target cltest"
-				Output="..\..\build\bin\Release\cltest.exe"
+				BuildCommandLine="pib -pf clReflectTest.pibfile -config release"
+				ReBuildCommandLine="pib -pf clReflectTest.pibfile rebuild -config release"
+				CleanCommandLine="pib -pf clReflectTest.pibfile clean -config release"
+				Output="..\..\build\bin\Release\clReflectTest\cltest.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -89,11 +89,15 @@
 			RelativePath="TestTemplates.cpp"
 			>
 		</File>
+		<File
+			RelativePath="clReflectTest.pibfile"
+			>
+		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="PQiLFOTuG4QoY_-FG-zPmw=="
+			Value="5fKhmgMRX3j06s4pohe0WA=="
 		/>
 	</Globals>
 </VisualStudioProject>

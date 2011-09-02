@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectScan"
-	ProjectGUID="{9A6AFF62-C9B2-11E0-A707-F46D04D48D5F}"
+	ProjectGUID="{C4563CB0-D554-11E0-9464-F46D04D48D5F}"
 	RootNamespace="clReflectScan"
 	Keyword="Win32Proj"
 	>
@@ -17,17 +17,17 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\build\bin\Debug"
-			IntermediateDirectory="..\..\build\obj\Debug"
+			OutputDirectory="..\..\build\bin\Debug\clReflectScan"
+			IntermediateDirectory="..\..\build\obj\Debug\clReflectScan"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib -config debug -target clscan"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config debug -target clscan"
-				CleanCommandLine="cd ..\.. &amp; pib clean -config debug -target clscan"
-				Output="..\..\build\bin\Debug\clscan.exe"
+				BuildCommandLine="pib -pf clReflectScan.pibfile -config debug"
+				ReBuildCommandLine="pib -pf clReflectScan.pibfile rebuild -config debug"
+				CleanCommandLine="pib -pf clReflectScan.pibfile clean -config debug"
+				Output="..\..\build\bin\Debug\clReflectScan\clscan.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -38,17 +38,17 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\build\bin\Release"
-			IntermediateDirectory="..\..\build\obj\Release"
+			OutputDirectory="..\..\build\bin\Release\clReflectScan"
+			IntermediateDirectory="..\..\build\obj\Release\clReflectScan"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib -config release -target clscan"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config release -target clscan"
-				CleanCommandLine="cd ..\.. &amp; pib clean -config release -target clscan"
-				Output="..\..\build\bin\Release\clscan.exe"
+				BuildCommandLine="pib -pf clReflectScan.pibfile -config release"
+				ReBuildCommandLine="pib -pf clReflectScan.pibfile rebuild -config release"
+				CleanCommandLine="pib -pf clReflectScan.pibfile clean -config release"
+				Output="..\..\build\bin\Release\clReflectScan\clscan.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -97,11 +97,15 @@
 			RelativePath="ReflectionSpecs.h"
 			>
 		</File>
+		<File
+			RelativePath="clReflectScan.pibfile"
+			>
+		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="g2ggKT-RADAlClHC0eDlMg=="
+			Value="FQSiEy8Aulc4QSK_vODO6Q=="
 		/>
 	</Globals>
 </VisualStudioProject>

@@ -1,0 +1,64 @@
+
+import clReflect
+
+# Tell clReflect where to find the executables - note they're config-specific
+clReflect.SetInstallLocation("../../build/bin/" + env.ConfigName)
+
+include_paths = [
+	"..",
+	"../../inc",
+]
+
+defines = [
+	"_SCL_SECURE_NO_WARNINGS",
+	"_CRT_SECURE_NO_WARNINGS"
+]
+
+libs = [
+    "clcpp.lib",
+]
+
+lib_paths_debug = [
+	"../../build/bin/debug",
+]
+
+lib_paths_release = [
+	"../../build/bin/release",
+]
+
+config = env.Configs["debug"]
+config.IntermediatePath = "../../build/obj/debug/clReflectTest"
+config.OutputPath = "../../build/bin/debug"
+config.CPPOptions.IncludePaths += include_paths
+config.CPPOptions.Defines += defines
+config.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DEBUG_DLL
+config.LinkOptions.LibPaths += lib_paths_debug
+config.LinkOptions.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
+config.LinkOptions.MapFile = True
+
+config = env.Configs["release"]
+config.IntermediatePath = "../../build/obj/release/clReflectTest"
+config.OutputPath = "../../build/bin/release"
+config.CPPOptions.IncludePaths += include_paths
+config.CPPOptions.Defines += defines
+config.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DLL
+config.LinkOptions.LibPaths += lib_paths_release
+config.LinkOptions.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
+config.LinkOptions.MapFile = True
+
+# Construct a build node for the test executable
+cltest = CppBuild(env, [ "." ], "cltest.exe", libs, build = False)
+
+# Inject the clReflect build dependencies
+# TODO: Probably going to have to flatten the graph before visiting
+# test_obj_files is traversed twice below!
+cltest.csv_files = [ clReflect.CppScan(include_paths, file) for file in cltest.obj_files ]
+cltest.db_file = clReflect.Merge("clReflectTest.csv", cltest.csv_files)
+# TODO: I can't read the output files of cltest.exe directly as the current config is only active during Build
+map_file = env.Configs[env.ConfigName].IntermediatePath + "/cltest.map"
+cltest.cppbin_file = clReflect.CppExport("clReflectTest.cppbin", cltest.db_file, map_file)
+
+env.Build([ cltest.exe, cltest.cppbin_file ], "cltest")
+
+pibfile = "clReflectTest.pibfile"
+VCGenerateProjectFile(env, "clReflectTest", cltest.cpp_files + cltest.hpp_files + [ pibfile ], cltest.exe, pibfile = pibfile)

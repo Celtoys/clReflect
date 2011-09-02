@@ -1,0 +1,84 @@
+
+
+import os
+
+llvm_source = "../../../../sdk/llvm/llvm"
+llvm_build = "../../../../sdk/llvm/build"
+
+include_paths = [
+    os.path.join(llvm_source, "include"),
+    os.path.join(llvm_build, "include"),
+    os.path.join(llvm_source, "tools/clang/include"),
+    os.path.join(llvm_build, "tools/clang/include"),
+	"..",
+	"../../inc",
+]
+
+defines = [
+	"_SCL_SECURE_NO_WARNINGS",
+	"_CRT_SECURE_NO_WARNINGS"
+]
+
+# These are to allow clang/llvm to compile without hogging the output window
+disabled_warnings = [
+    4146,                   # unary minus operator applied to unsigned type, result still unsigned
+    4624,                   # 'clang::Preprocessor::MacroInfoChain' : destructor could not be generated because a base class destructor is inaccessible
+    4800,                   # 'clang::NestedNameSpecifier *const ' : forcing value to bool 'true' or 'false' (performance warning)
+    4355,                   # 'this' : used in base member initializer list
+    4291,                   # 'void *operator new(size_t,void *) throw()' : no matching operator delete found; memory will not be freed if initialization throws an exception
+    4244,                   # 'return' : conversion from 'uint64_t' to 'unsigned int', possible loss of data
+]
+
+libs = [
+    "clangParse.lib",
+    "clangSema.lib",
+    "clangAnalysis.lib",
+    "clangAST.lib",
+    "clangFrontend.lib",
+    "clangLex.lib",
+    "clangBasic.lib",
+    "LLVMSupport.lib",
+    "LLVMCore.lib",
+    "LLVMMC.lib",
+    "advapi32.lib",
+    "shell32.lib",
+    "clcpp.lib",
+    "clcore.lib",
+]
+
+lib_paths_debug = [
+    os.path.join(llvm_build, "lib/debug"),
+    "../../build/bin/debug",
+]
+
+
+lib_paths_release = [
+    os.path.join(llvm_build, "lib/release"),
+    "../../build/bin/release",
+]
+
+config = env.Configs["debug"]
+config.IntermediatePath = "../../build/obj/debug/clReflectScan"
+config.OutputPath = "../../build/bin/debug"
+config.CPPOptions.IncludePaths += include_paths
+config.CPPOptions.Defines += defines
+config.CPPOptions.DisabledWarnings = disabled_warnings
+config.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DEBUG_DLL
+config.LinkOptions.LibPaths += lib_paths_debug
+config.LinkOptions.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
+
+config = env.Configs["release"]
+config.IntermediatePath = "../../build/obj/release/clReflectScan"
+config.OutputPath = "../../build/bin/release"
+config.CPPOptions.IncludePaths += include_paths
+config.CPPOptions.Defines += defines
+config.CPPOptions.DisabledWarnings = disabled_warnings
+config.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DLL
+config.LinkOptions.LibPaths += lib_paths_release
+config.LinkOptions.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
+
+# Build the executable
+clscan = CppBuild(env, [ "." ], "clscan.exe", libs)
+
+pibfile = "clReflectScan.pibfile"
+VCGenerateProjectFile(env, "clReflectScan", clscan.cpp_files + clscan.hpp_files + [ pibfile ], clscan.output, pibfile = pibfile)

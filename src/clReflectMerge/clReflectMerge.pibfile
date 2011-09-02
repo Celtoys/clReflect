@@ -1,0 +1,47 @@
+
+include_paths = [
+	"..",
+	"../../inc",
+]
+
+defines = [
+	"_SCL_SECURE_NO_WARNINGS",
+	"_CRT_SECURE_NO_WARNINGS"
+]
+
+libs = [
+    "clcpp.lib",
+    "clcore.lib",
+]
+
+lib_paths_debug = [
+	"../../build/bin/debug",
+]
+
+lib_paths_release = [
+	"../../build/bin/release",
+]
+
+config = env.Configs["debug"]
+config.IntermediatePath = "../../build/obj/debug/clReflectMerge"
+config.OutputPath = "../../build/bin/debug"
+config.CPPOptions.IncludePaths += include_paths
+config.CPPOptions.Defines += defines
+config.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DEBUG_DLL
+config.LinkOptions.LibPaths += lib_paths_debug
+config.LinkOptions.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
+
+config = env.Configs["release"]
+config.IntermediatePath = "../../build/obj/release/clReflectMerge"
+config.OutputPath = "../../build/bin/release"
+config.CPPOptions.IncludePaths += include_paths
+config.CPPOptions.Defines += defines
+config.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DLL
+config.LinkOptions.LibPaths += lib_paths_release
+config.LinkOptions.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
+
+# Build the executable
+clmerge = CppBuild(env, [ "." ], "clmerge.exe", libs)
+
+pibfile = "clReflectMerge.pibfile"
+VCGenerateProjectFile(env, "clReflectMerge", clmerge.cpp_files + clmerge.hpp_files + [ pibfile ], clmerge.output, pibfile = pibfile)

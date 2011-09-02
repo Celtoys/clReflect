@@ -1,132 +1,14 @@
 
 # TODO: Configs should be build-specific, not environment specific
 
-import clReflect
-import os
-
-
-llvm_source = "../../sdk/llvm/llvm"
-llvm_build = "../../sdk/llvm/build"
-
-
-include_paths = [
-    os.path.join(llvm_source, "include"),
-    os.path.join(llvm_build, "include"),
-    os.path.join(llvm_source, "tools/clang/include"),
-    os.path.join(llvm_build, "tools/clang/include"),
-    "src",
-    "inc",
-]
-
-
-libs = [
-    "clangParse.lib",
-    "clangSema.lib",
-    "clangAnalysis.lib",
-    "clangAST.lib",
-    "clangFrontend.lib",
-    "clangLex.lib",
-    "clangBasic.lib",
-    "LLVMSupport.lib",
-    "LLVMCore.lib",
-    "LLVMMC.lib",
-    "advapi32.lib",
-    "shell32.lib"
-]
-
-
-lib_paths_debug = [
-    os.path.join(llvm_build, "lib/debug")
-]
-
-
-lib_paths_release = [
-    os.path.join(llvm_build, "lib/release")
-]
-
-
-defines = [
-    "_SCL_SECURE_NO_WARNINGS",
-    "_CRT_SECURE_NO_WARNINGS"
-]
-
-
-# These are to allow clang/llvm to compile without hogging the output window
-disabled_warnings = [
-    4146,                   # unary minus operator applied to unsigned type, result still unsigned
-    4624,                   # 'clang::Preprocessor::MacroInfoChain' : destructor could not be generated because a base class destructor is inaccessible
-    4800,                   # 'clang::NestedNameSpecifier *const ' : forcing value to bool 'true' or 'false' (performance warning)
-    4355,                   # 'this' : used in base member initializer list
-    4291,                   # 'void *operator new(size_t,void *) throw()' : no matching operator delete found; memory will not be freed if initialization throws an exception
-    4244,                   # 'return' : conversion from 'uint64_t' to 'unsigned int', possible loss of data
-]
-
-
-def SetCPPOptions(name, crt_type):
-    opts = env.Configs[name].CPPOptions
-    opts.IncludePaths = include_paths
-    opts.DisabledWarnings = disabled_warnings
-    opts.Defines += defines
-    opts.CRTType = crt_type
-    opts.UpdateCommandLine()
-
-def SetLinkOptions(name, lib_paths):
-    opts = env.Configs[name].LinkOptions
-    opts.LibPaths = lib_paths
-    opts.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
-    opts.MapFile = True
-    opts.UpdateCommandLine()
-
-
-# Output everything to the "build" directory
-env.Configs["debug"].SetPathPrefix("build")
-env.Configs["release"].SetPathPrefix("build")
-
-# Tell clReflect where to find the executables - note they're config-specific
-clReflect.SetInstallLocation(env.CurrentConfig.OutputPath)
-
-SetCPPOptions("debug", MSVCPlatform.VCCRTType.MT_DEBUG_DLL)
-SetLinkOptions("debug", lib_paths_debug)
-
-SetCPPOptions("release", MSVCPlatform.VCCRTType.MT_DLL)
-SetLinkOptions("release", lib_paths_release)
-
-
-# Build the C++ API
-clcpp = CppBuild(env, [ "src/clReflectCpp" ], "clcpp.lib")
-clcpp.api_files = Glob("inc", "*.h")
-
-# Build the core library
-clcore = CppBuild(env, [ "src/clReflectCore" ], "clcore.lib")
-
-# Build the scanner
-clscan = CppBuild(env, [ "src/clReflectScan" ], "clscan.exe", libs, [ clcore.lib, clcpp.lib ])
-
-# Build the merger
-clmerge = CppBuild(env, [ "src/clReflectMerge" ], "clmerge.exe", [], [ clcore.lib, clcpp.lib ])
-
-# Build the exporter
-clexport = CppBuild(env, [ "src/clReflectExport" ], "clexport.exe", [ "dbghelp.lib" ], [ clcore.lib, clcpp.lib ])
-
-# Build the test code
-cltest = CppBuild(env, [ "src/clReflectTest" ], "cltest.exe", [], [ clcpp.lib ], None, False)
-
-# Inject the clReflect build dependencies
-# TODO: Probably going to have to flatten the graph before visiting
-# test_obj_files is traversed twice below!
-cltest.csv_files = [ clReflect.CppScan(include_paths, file) for file in cltest.obj_files ]
-cltest.db_file = clReflect.Merge("clReflectTest.csv", cltest.csv_files)
-cltest.cppbin_file = clReflect.CppExport("clReflectTest.cppbin", cltest.db_file, cltest.output.GetOutputFiles(env)[1])
-env.Build([ cltest.exe, cltest.cppbin_file ], "cltest")
-
+ExecPibfile("src/clReflectCpp/clReflectCpp.pibfile")
+ExecPibfile("src/clReflectCore/clReflectCore.pibfile")
+ExecPibfile("src/clReflectScan/clReflectScan.pibfile")
+ExecPibfile("src/clReflectMerge/clReflectMerge.pibfile")
+ExecPibfile("src/clReflectExport/clReflectExport.pibfile")
+ExecPibfile("src/clReflectTest/clReflectTest.pibfile")
 
 # Generate MSVC project files
-VCGenerateProjectFile(env, "src/clReflectCpp/clReflectCpp", clcpp.cpp_files + clcpp.hpp_files + clcpp.api_files, clcpp.lib, "clcpp", replacements = [ ("..\\..\\inc", "Public API") ])
-VCGenerateProjectFile(env, "src/clReflectCore/clReflectCore", clcore.cpp_files + clcore.hpp_files, clcore.lib, "clcore")
-VCGenerateProjectFile(env, "src/clReflectScan/clReflectScan", clscan.cpp_files + clscan.hpp_files, clscan.exe, "clscan")
-VCGenerateProjectFile(env, "src/clReflectMerge/clReflectMerge", clmerge.cpp_files + clmerge.hpp_files, clmerge.exe, "clmerge")
-VCGenerateProjectFile(env, "src/clReflectExport/clReflectExport", clexport.cpp_files + clexport.hpp_files, clexport.exe, "clexport")
-VCGenerateProjectFile(env, "src/clReflectTest/clReflectTest", cltest.cpp_files, cltest.exe, "cltest")
 VCGenerateSolutionFile(env, "clReflect", [
     "src/clReflectCpp/clReflectCpp",
     "src/clReflectCore/clReflectCore",

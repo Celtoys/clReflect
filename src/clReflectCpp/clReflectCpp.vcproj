@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectCpp"
-	ProjectGUID="{9A6978C0-C9B2-11E0-A9C9-F46D04D48D5F}"
+	ProjectGUID="{A234DC50-D553-11E0-B7B4-F46D04D48D5F}"
 	RootNamespace="clReflectCpp"
 	Keyword="Win32Proj"
 	>
@@ -17,17 +17,17 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\build\bin\Debug"
-			IntermediateDirectory="..\..\build\obj\Debug"
+			OutputDirectory="..\..\build\bin\Debug\clReflectCpp"
+			IntermediateDirectory="..\..\build\obj\Debug\clReflectCpp"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib -config debug -target clcpp"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config debug -target clcpp"
-				CleanCommandLine="cd ..\.. &amp; pib clean -config debug -target clcpp"
-				Output="..\..\build\bin\Debug\clcpp.lib"
+				BuildCommandLine="pib -pf clReflectCpp.pibfile -config debug"
+				ReBuildCommandLine="pib -pf clReflectCpp.pibfile rebuild -config debug"
+				CleanCommandLine="pib -pf clReflectCpp.pibfile clean -config debug"
+				Output="..\..\build\bin\Debug\clReflectCpp\clcpp.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -38,17 +38,17 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\build\bin\Release"
-			IntermediateDirectory="..\..\build\obj\Release"
+			OutputDirectory="..\..\build\bin\Release\clReflectCpp"
+			IntermediateDirectory="..\..\build\obj\Release\clReflectCpp"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib -config release -target clcpp"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config release -target clcpp"
-				CleanCommandLine="cd ..\.. &amp; pib clean -config release -target clcpp"
-				Output="..\..\build\bin\Release\clcpp.lib"
+				BuildCommandLine="pib -pf clReflectCpp.pibfile -config release"
+				ReBuildCommandLine="pib -pf clReflectCpp.pibfile rebuild -config release"
+				CleanCommandLine="pib -pf clReflectCpp.pibfile clean -config release"
+				Output="..\..\build\bin\Release\clReflectCpp\clcpp.lib"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -63,11 +63,11 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{9a6a8a30-c9b2-11e0-9ac9-f46d04d48d5f}"
+			UniqueIdentifier="{a23614d2-d553-11e0-91f4-f46d04d48d5f}"
 			>
 			<Filter
 				Name="clcpp"
-				UniqueIdentifier="{9a6a8a31-c9b2-11e0-9fd9-f46d04d48d5f}"
+				UniqueIdentifier="{a23614d3-d553-11e0-adcf-f46d04d48d5f}"
 				>
 				<File
 					RelativePath="..\..\inc\clcpp\Core.h"
@@ -103,11 +103,15 @@
 			RelativePath="DatabaseLoader.h"
 			>
 		</File>
+		<File
+			RelativePath="clReflectCpp.pibfile"
+			>
+		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="v2ZfAfCs9Ena7cS8T4whGw=="
+			Value="vknm-La3jHGKCNCxpriilA=="
 		/>
 	</Globals>
 </VisualStudioProject>

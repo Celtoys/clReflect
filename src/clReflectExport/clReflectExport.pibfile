@@ -1,0 +1,48 @@
+
+include_paths = [
+	"..",
+	"../../inc",
+]
+
+defines = [
+	"_SCL_SECURE_NO_WARNINGS",
+	"_CRT_SECURE_NO_WARNINGS"
+]
+
+libs = [
+    "clcpp.lib",
+    "clcore.lib",
+    "dbghelp.lib",
+]
+
+lib_paths_debug = [
+	"../../build/bin/debug",
+]
+
+lib_paths_release = [
+	"../../build/bin/release",
+]
+
+config = env.Configs["debug"]
+config.IntermediatePath = "../../build/obj/debug/clReflectExport"
+config.OutputPath = "../../build/bin/debug"
+config.CPPOptions.IncludePaths += include_paths
+config.CPPOptions.Defines += defines
+config.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DEBUG_DLL
+config.LinkOptions.LibPaths += lib_paths_debug
+config.LinkOptions.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
+
+config = env.Configs["release"]
+config.IntermediatePath = "../../build/obj/release/clReflectExport"
+config.OutputPath = "../../build/bin/release"
+config.CPPOptions.IncludePaths += include_paths
+config.CPPOptions.Defines += defines
+config.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DLL
+config.LinkOptions.LibPaths += lib_paths_release
+config.LinkOptions.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
+
+# Build the executable
+clexport = CppBuild(env, [ "." ], "clexport.exe", libs)
+
+pibfile = "clReflectExport.pibfile"
+VCGenerateProjectFile(env, "clReflectExport", clexport.cpp_files + clexport.hpp_files + [ pibfile ], clexport.output, pibfile = pibfile)

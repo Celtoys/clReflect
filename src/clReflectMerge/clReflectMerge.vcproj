@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectMerge"
-	ProjectGUID="{9A6B4D80-C9B2-11E0-A2F8-F46D04D48D5F}"
+	ProjectGUID="{91E48AE2-D557-11E0-A6F3-F46D04D48D5F}"
 	RootNamespace="clReflectMerge"
 	Keyword="Win32Proj"
 	>
@@ -17,17 +17,17 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="..\..\build\bin\Debug"
-			IntermediateDirectory="..\..\build\obj\Debug"
+			OutputDirectory="..\..\build\bin\Debug\clReflectMerge"
+			IntermediateDirectory="..\..\build\obj\Debug\clReflectMerge"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib -config debug -target clmerge"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config debug -target clmerge"
-				CleanCommandLine="cd ..\.. &amp; pib clean -config debug -target clmerge"
-				Output="..\..\build\bin\Debug\clmerge.exe"
+				BuildCommandLine="pib -pf clReflectMerge.pibfile -config debug"
+				ReBuildCommandLine="pib -pf clReflectMerge.pibfile rebuild -config debug"
+				CleanCommandLine="pib -pf clReflectMerge.pibfile clean -config debug"
+				Output="..\..\build\bin\Debug\clReflectMerge\clmerge.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -38,17 +38,17 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\..\build\bin\Release"
-			IntermediateDirectory="..\..\build\obj\Release"
+			OutputDirectory="..\..\build\bin\Release\clReflectMerge"
+			IntermediateDirectory="..\..\build\obj\Release\clReflectMerge"
 			ConfigurationType="0"
 			CharacterSet="1"
 			>
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cd ..\.. &amp; pib -config release -target clmerge"
-				ReBuildCommandLine="cd ..\.. &amp; pib rebuild -config release -target clmerge"
-				CleanCommandLine="cd ..\.. &amp; pib clean -config release -target clmerge"
-				Output="..\..\build\bin\Release\clmerge.exe"
+				BuildCommandLine="pib -pf clReflectMerge.pibfile -config release"
+				ReBuildCommandLine="pib -pf clReflectMerge.pibfile rebuild -config release"
+				CleanCommandLine="pib -pf clReflectMerge.pibfile clean -config release"
+				Output="..\..\build\bin\Release\clReflectMerge\clmerge.exe"
 				PreprocessorDefinitions=""
 				IncludeSearchPath=""
 				ForcedIncludes=""
@@ -73,11 +73,15 @@
 			RelativePath="Main.cpp"
 			>
 		</File>
+		<File
+			RelativePath="clReflectMerge.pibfile"
+			>
+		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="OLMmrRyWC8Nj7d02po6CLg=="
+			Value="tbEqJlSS_ONCs_M3L-ipzg=="
 		/>
 	</Globals>
 </VisualStudioProject>

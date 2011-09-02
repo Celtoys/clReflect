@@ -1,0 +1,30 @@
+
+include_paths = [
+	"..",
+	"../../inc",
+]
+
+defines = [
+	"_SCL_SECURE_NO_WARNINGS",
+	"_CRT_SECURE_NO_WARNINGS"
+]
+
+config = env.Configs["debug"]
+config.IntermediatePath = "../../build/obj/debug/clReflectCore"
+config.OutputPath = "../../build/bin/debug"
+config.CPPOptions.IncludePaths += include_paths
+config.CPPOptions.Defines += defines
+config.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DEBUG_DLL
+
+config = env.Configs["release"]
+config.IntermediatePath = "../../build/obj/release/clReflectCore"
+config.OutputPath = "../../build/bin/release"
+config.CPPOptions.IncludePaths += include_paths
+config.CPPOptions.Defines += defines
+config.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DLL
+
+# Build the library
+clcore = CppBuild(env, [ "." ], "clcore.lib")
+
+pibfile = "clReflectCore.pibfile"
+VCGenerateProjectFile(env, "clReflectCore", clcore.cpp_files + clcore.hpp_files + [ pibfile ], clcore.output, pibfile = pibfile)
