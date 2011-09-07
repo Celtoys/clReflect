@@ -83,11 +83,16 @@ extern void TestGetType(clcpp::Database& db);
 extern void TestConstructorDestructor(clcpp::Database& db);
 extern void TestAttributesFunc(clcpp::Database& db);
 extern void TestSerialise(clcpp::Database& db);
+extern void TestOffsets(clcpp::Database& db);
 
 
 int main()
 {
+#ifdef _DEBUG
 	StdFile file("../../build/bin/Debug/clReflectTest.cppbin");
+#else
+	StdFile file("../../build/bin/Release/clReflectTest.cppbin");
+#endif
 	if (!file.IsOpen())
 	{
 		return 1;
@@ -100,6 +105,7 @@ int main()
 	TestConstructorDestructor(db);
 	TestAttributesFunc(db);
 	TestSerialise(db);
+	TestOffsets(db);
 
 	return 0;
 }

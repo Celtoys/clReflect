@@ -46,6 +46,8 @@ template <> inline bool is_builtin<long>() { return true; }
 template <> inline bool is_builtin<unsigned long>() { return true; }
 template <> inline bool is_builtin<float>() { return true; }
 template <> inline bool is_builtin<double>() { return true; }
+template <> inline bool is_builtin<__int64>() { return true; }
+template <> inline bool is_builtin<unsigned __int64>() { return true; }
 
 
 //

@@ -337,15 +337,18 @@ namespace
 
 
 	template <typename TYPE>
-	void AddAttribute(cldb::Database& db, TYPE* attribute)
+	void ProcessAttribute(cldb::Database& db, TYPE* attribute, bool add)
 	{
-		// Only add the attribute if its unique
-		const cldb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>();
-		cldb::PrimitiveStore<TYPE>::const_iterator i = store.find(attribute->name.hash);
-		if (i == store.end() || !i->second.Equals(*attribute))
+		if (add)
 		{
-			LOG(ast, INFO, "attribute %s\n", attribute->name.text.c_str());
-			db.AddPrimitive(*attribute);
+			// Only add the attribute if its unique
+			const cldb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>();
+			cldb::PrimitiveStore<TYPE>::const_iterator i = store.find(attribute->name.hash);
+			if (i == store.end() || !i->second.Equals(*attribute))
+			{
+				LOG(ast, INFO, "attribute %s\n", attribute->name.text.c_str());
+				db.AddPrimitive(*attribute);
+			}
 		}
 
 		// Delete as the specified type to catch the correct destructor
@@ -353,13 +356,13 @@ namespace
 	}
 
 
-	void ParseAttributes(cldb::Database& db, clang::SourceManager& srcmgr, clang::NamedDecl* decl, cldb::Name parent)
+	bool ParseAttributes(cldb::Database& db, clang::SourceManager& srcmgr, clang::NamedDecl* decl, cldb::Name parent)
 	{
 		// Reflection attributes are stored as clang annotation attributes
 		clang::specific_attr_iterator<clang::AnnotateAttr> i = decl->specific_attr_begin<clang::AnnotateAttr>();
 		if (i == decl->specific_attr_end<clang::AnnotateAttr>())
 		{
-			return;
+			return true;
 		}
 
 		// Get the annotation text
@@ -378,32 +381,47 @@ namespace
 		const char* filename = presumed_loc.getFilename();
 		int line = presumed_loc.getLine();
 
-		// Parse and iterate over all attributes in the text
+		// Parse all attributes in the text
 		std::vector<cldb::Attribute*> attributes = ::ParseAttributes(db, attribute_text.str().c_str(), filename, line);
+
+		// Determine if the attributes are being added or whether their memory is just being deleted
+		// TODO: Need to evaluate whether this works on parent primitives, too.
+		bool add = true;
+		static unsigned int noreflect_hash = clcpp::internal::HashNameString("noreflect");
+		if (attributes.size() && attributes[0]->name.hash == noreflect_hash)
+			add = false;
+
 		for (size_t i = 0; i < attributes.size(); i++)
 		{
-			// Add the attributes to the database, parented to the calling declaration
 			cldb::Attribute* attribute = attributes[i];
+
+			// 'noreflect' must be the first attribute
+			if (i && attribute->name.hash == noreflect_hash)
+				LOG(ast, WARNING, "'noreflect' attribute unexpected and ignored");
+
+			// Add the attributes to the database, parented to the calling declaration
 			attribute->parent = parent;
 			switch (attribute->kind)
 			{
 			case (cldb::Primitive::KIND_FLAG_ATTRIBUTE):
-				AddAttribute(db, (cldb::FlagAttribute*)attribute);
+				ProcessAttribute(db, (cldb::FlagAttribute*)attribute, add);
 				break;
 			case (cldb::Primitive::KIND_INT_ATTRIBUTE):
-				AddAttribute(db, (cldb::IntAttribute*)attribute);
+				ProcessAttribute(db, (cldb::IntAttribute*)attribute, add);
 				break;
 			case (cldb::Primitive::KIND_FLOAT_ATTRIBUTE):
-				AddAttribute(db, (cldb::FloatAttribute*)attribute);
+				ProcessAttribute(db, (cldb::FloatAttribute*)attribute, add);
 				break;
 			case (cldb::Primitive::KIND_NAME_ATTRIBUTE):
-				AddAttribute(db, (cldb::NameAttribute*)attribute);
+				ProcessAttribute(db, (cldb::NameAttribute*)attribute, add);
 				break;
 			case (cldb::Primitive::KIND_TEXT_ATTRIBUTE):
-				AddAttribute(db, (cldb::TextAttribute*)attribute);
+				ProcessAttribute(db, (cldb::TextAttribute*)attribute, add);
 				break;
 			}
 		}
+
+		return add;
 	}
 }
 
@@ -470,7 +488,8 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const cldb::Name& parent_name,
 	cldb::Name name = m_DB.GetName(name_str.c_str());
 
 	// Gather all attributes associated with this primitive
-	ParseAttributes(m_DB, m_ASTContext.getSourceManager(), decl, name);
+	if (!ParseAttributes(m_DB, m_ASTContext.getSourceManager(), decl, name))
+		return;
 
 	clang::Decl::Kind kind = decl->getKind();
 	switch (kind)
@@ -615,6 +634,10 @@ void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const cldb::Name& name, 
 	// Cast to a method
 	clang::CXXMethodDecl* method_decl = dyn_cast<clang::CXXMethodDecl>(decl);
 	assert(method_decl != 0 && "Failed to cast to C++ method declaration");
+
+	// Ignore overloaded operators for now
+	if (method_decl->isOverloadedOperator())
+		return;
 
 	std::vector<cldb::Field> parameters;
 	if (method_decl->isInstance())

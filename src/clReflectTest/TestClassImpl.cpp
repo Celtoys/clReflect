@@ -61,7 +61,6 @@ namespace TestClassImpl
 clcpp_impl_class(TestClassImpl::A, A)
 clcpp_impl_class(TestClassImpl::B, B)
 
-
 void TestConstructorDestructor(clcpp::Database& db)
 {
 	const clcpp::Class* ca = clcpp_get_type(db, TestClassImpl::A)->AsClass();

@@ -70,6 +70,8 @@ ClangHost::ClangHost(Arguments& args)
 	lang_options.CPlusPlus = 1;
 	lang_options.Bool = 1;
 	lang_options.Microsoft = 1;
+	lang_options.MSBitfields = 1;
+	lang_options.RTTI = 0;
 
 	//
 	// This is MSVC specific to get STL compiling with clang. MSVC doesn't do semantic analysis

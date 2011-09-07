@@ -192,6 +192,8 @@ class FieldTypes
 	unsigned long UnsignedLong;
 	float Float;
 	double Double;
+	__int64 Int64;
+	unsigned __int64 UnsignedInt64;
 	// --- Pointers
 	bool* BoolPtr;
 	char* CharPtr;
@@ -204,6 +206,8 @@ class FieldTypes
 	unsigned long* UnsignedLongPtr;
 	float* FloatPtr;
 	double* DoublePtr;
+	__int64* Int64Ptr;
+	unsigned __int64* UnsignedInt64Ptr;
 
 	const bool* ConstBoolPtr;
 	const char* ConstCharPtr;
@@ -216,6 +220,8 @@ class FieldTypes
 	const unsigned long* ConstUnsignedLongPtr;
 	const float* ConstFloatPtr;
 	const double* ConstDoublePtr;
+	const __int64* ConstInt64Ptr;
+	const unsigned __int64* ConstUnsignedInt64Ptr;
 	// --- References
 	bool& BoolRef;
 	char& CharRef;
@@ -228,6 +234,8 @@ class FieldTypes
 	unsigned long& UnsignedLongRef;
 	float& FloatRef;
 	double& DoubleRef;
+	__int64& Int64Ref;
+	unsigned __int64& UnsignedInt64Ref;
 
 	const bool& ConstBoolRef;
 	const char& ConstCharRef;
@@ -240,6 +248,8 @@ class FieldTypes
 	const unsigned long& ConstUnsignedLongRef;
 	const float& ConstFloatRef;
 	const double& ConstDoubleRef;
+	const __int64& ConstInt64Ref;
+	const unsigned __int64& ConstUnsignedInt64Ref;
 };
 
 
@@ -249,11 +259,11 @@ class FieldTypes
 clcpp_reflect(FuncParams)
 namespace FuncParams
 {
-	void FunctionTypes(char a, short b, int c, long d, unsigned char e, unsigned short f, unsigned int g, unsigned long h, float i, double j) { }
-	void FunctionTypesPtr(char* a, short* b, int* c, long* d, unsigned char* e, unsigned short* f, unsigned int* g, unsigned long* h, float* i, double* j) { }
-	void FunctionTypesConstPtr(const char* a, const short* b, const int* c, const long* d, const unsigned char* e, const unsigned short* f, const unsigned int* g, const unsigned long* h, const float* i, const double* j) { }
-	void FunctionTypesRef(char& a, short& b, int& c, long& d, unsigned char& e, unsigned short& f, unsigned int& g, unsigned long& h, float& i, double& j) { }
-	void FunctionTypesConstRef(const char& a, const short& b, const int& c, const long& d, const unsigned char& e, const unsigned short& f, const unsigned int& g, const unsigned long& h, const float& i, const double& j) { }
+	void FunctionTypes(char a, short b, int c, long d, unsigned char e, unsigned short f, unsigned int g, unsigned long h, float i, double j, __int64 k, unsigned __int64 l) { }
+	void FunctionTypesPtr(char* a, short* b, int* c, long* d, unsigned char* e, unsigned short* f, unsigned int* g, unsigned long* h, float* i, double* j, __int64* k, unsigned __int64* l) { }
+	void FunctionTypesConstPtr(const char* a, const short* b, const int* c, const long* d, const unsigned char* e, const unsigned short* f, const unsigned int* g, const unsigned long* h, const float* i, const double* j, const __int64* k, const unsigned __int64* l) { }
+	void FunctionTypesRef(char& a, short& b, int& c, long& d, unsigned char& e, unsigned short& f, unsigned int& g, unsigned long& h, float& i, double& j, __int64& k, unsigned __int64& l) { }
+	void FunctionTypesConstRef(const char& a, const short& b, const int& c, const long& d, const unsigned char& e, const unsigned short& f, const unsigned int& g, const unsigned long& h, const float& i, const double& j, const __int64& k, const unsigned __int64& l) { }
 }
 
 
@@ -273,6 +283,8 @@ namespace FuncReturns
 	unsigned long FunctionRetUnsignedLong() { return 0; }
 	float FunctionRetFloat() { return 0; }
 	double FunctionRetDouble() { return 0; }
+	__int64 FunctionRetInt64() { return 0; }
+	unsigned __int64 FunctionRetUnsignedInt64() { return 0; }
 	// --- Pointers
 	char* FunctionRetCharPtr() { return 0; }
 	short* FunctionRetShortPtr() { return 0; }
@@ -284,6 +296,8 @@ namespace FuncReturns
 	unsigned long* FunctionRetUnsignedLongPtr() { return 0; }
 	float* FunctionRetFloatPtr() { return 0; }
 	double* FunctionRetDoublePtr() { return 0; }
+	__int64* FunctionRetInt64Ptr() { return 0; }
+	unsigned __int64* FunctionRetUnsignedInt64Ptr() { return 0; }
 
 	const char* FunctionRetCharConstPtr() { return 0; }
 	const short* FunctionRetShortConstPtr() { return 0; }
@@ -295,6 +309,8 @@ namespace FuncReturns
 	const unsigned long* FunctionRetUnsignedLongConstPtr() { return 0; }
 	const float* FunctionRetFloatConstPtr() { return 0; }
 	const double* FunctionRetDoubleConstPtr() { return 0; }
+	const __int64* FunctionRetConstInt64Ptr() { return 0; }
+	const unsigned __int64* FunctionRetConstUnsignedInt64Ptr() { return 0; }
 	// --- References
 	char& FunctionRetCharRef() { return *(char*)0; }
 	short& FunctionRetShortRef() { return *(short*)0; }
@@ -306,6 +322,8 @@ namespace FuncReturns
 	unsigned long& FunctionRetUnsignedLongRef() { return *(unsigned long*)0; }
 	float& FunctionRetFloatRef() { return *(float*)0; }
 	double& FunctionRetDoubleRef() { return *(double*)0; }
+	__int64& FunctionRetInt64Ref() { return *(__int64*)0; }
+	unsigned __int64& FunctionRetUnsignedInt64Ref() { return *(unsigned __int64*)0; }
 
 	const char& FunctionRetCharConstRef() { return *(char*)0; }
 	const short& FunctionRetShortConstRef() { return *(short*)0; }
@@ -317,6 +335,8 @@ namespace FuncReturns
 	const unsigned long& FunctionRetUnsignedLongConstRef() { return *(unsigned long*)0; }
 	const float& FunctionRetFloatConstRef() { return *(float*)0; }
 	const double& FunctionRetDoubleConstRef() { return *(double*)0; }
+	const __int64& FunctionRetConstInt64Ref() { return *(__int64*)0; }
+	const unsigned __int64& FunctionRetConstUnsignedInt64Ref() { return *(const unsigned __int64*)0; }
 }
 
 
@@ -497,6 +517,5 @@ void TestGetType(clcpp::Database& db)
 	const clcpp::Type* e0 = clcpp_get_type(db, ClassGlobalA);
 	const clcpp::Class* e1 = clcpp_get_type(db, Inheritance::DerivedClass)->AsClass();
 	const clcpp::Enum* e2 = clcpp_get_type(db, NamespaceA::NamedNSClassA::EnumWithinNamedClassA)->AsEnum();
-	int x;
 }
 
