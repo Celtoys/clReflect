@@ -17,16 +17,14 @@ namespace Stuff
 	enum NoInit { NO_INIT };
 
 
-	#pragma pack(push, 8)
 	struct BaseStruct
 	{
-		/*BaseStruct()
-			//: be(VAL_C), v0(0), v1(1)
+		BaseStruct()
+			: be(VAL_C), v0(0), v1(1)
 		{
 		}
-		BaseStruct(NoInit) { }*/
-		//SomeEnum be;
-		BaseStruct() { }
+		BaseStruct(NoInit) { }
+		SomeEnum be;
 		double v0;
 		float v1;
 	};
@@ -43,22 +41,21 @@ namespace Stuff
 		char d, e, f;
 		int g, h, i;
 	};
-	#pragma pack(pop)
 
 
 	struct DerivedStruct : public BaseStruct
 	{
-		/*DerivedStruct()
-		//	: x(1), y(2), z(3), w(4), e(VAL_B)
+		DerivedStruct()
+			: x(1), y(2), z(3), w(4), e(VAL_B)
 		{
 		}
-		DerivedStruct(NoInit) {}//: BaseStruct(NO_INIT), n(NO_INIT) { }*/
+		DerivedStruct(NoInit) : BaseStruct(NO_INIT), n(NO_INIT) { }
 		int x;
-		//float y;
-		//char z;
-		//double w;
-		//SomeEnum e;
-		//NestedStruct n;
+		float y;
+		char z;
+		double w;
+		SomeEnum e;
+		NestedStruct n;
 	};
 };
 
@@ -74,22 +71,9 @@ void TestSerialise(clcpp::Database& db)
 	//      DerivedStruct::x is at 24 in MSVC and 20 in Clang.
 	//      Odd point: sizeof(BaseStruct) is 24!
 
-	int s = sizeof(Stuff::BaseStruct);
-
-	//int offset = (int)&(((Stuff::DerivedStruct*)0)->x);
-	const clcpp::Class* cptr = clcpp_get_type(db, Stuff::DerivedStruct)->AsClass();
-	const clcpp::Field* fptr = clcpp::FindPrimitive(cptr->fields, db.GetName("Stuff::DerivedStruct::x").hash);
-
-	printf("sizeof(BaseStruct):         %d\n", sizeof(Stuff::BaseStruct));
-	printf("clang size:                 %d\n", clcpp_get_type(db, Stuff::BaseStruct)->size);
-	printf("sizeof(DerivedStruct):      %d\n", sizeof(Stuff::DerivedStruct));
-	printf("clang size:                 %d\n", clcpp_get_type(db, Stuff::DerivedStruct)->size);
-	printf("offsetof(DerivedStruct::x): %d\n", (int)&(((Stuff::DerivedStruct*)0)->x));
-	printf("clang offset:               %d\n", fptr->offset);
-
-	/*Stuff::DerivedStruct src;
+	Stuff::DerivedStruct src;
 	clutl::SaveVersionedBinary(buffer, &src, clcpp_get_type(db, Stuff::DerivedStruct));
 	buffer.Reset();
 	Stuff::DerivedStruct dest(Stuff::NO_INIT);
-	clutl::LoadVersionedBinary(buffer, &dest, clcpp_get_type(db, Stuff::DerivedStruct));*/
+	clutl::LoadVersionedBinary(buffer, &dest, clcpp_get_type(db, Stuff::DerivedStruct));
 }
