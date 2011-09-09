@@ -14,4 +14,6 @@ namespace clutl
 
 	void SaveVersionedBinary(DataBuffer& out, const void* object, const clcpp::Type* type);
 	void LoadVersionedBinary(DataBuffer& in, void* object, const clcpp::Type* type);
+
+	void LoadJSON(DataBuffer& in, void* object, const clcpp::Type* type);
 }

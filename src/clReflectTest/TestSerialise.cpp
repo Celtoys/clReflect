@@ -1,7 +1,7 @@
 
 #include <clcpp/clcpp.h>
 #include <clutl/Containers.h>
-#include <clutl/SerialiseVersionedBinary.h>
+#include <clutl/Serialise.h>
 
 
 clcpp_reflect(Stuff)

@@ -63,11 +63,11 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{f7d79e10-d583-11e0-b71d-f46d04d48d5f}"
+			UniqueIdentifier="{f020fcd0-dabe-11e0-b4f9-f46d04d48d5f}"
 			>
 			<Filter
 				Name="clutl"
-				UniqueIdentifier="{f7d79e11-d583-11e0-9baf-f46d04d48d5f}"
+				UniqueIdentifier="{f020fcd1-dabe-11e0-afe4-f46d04d48d5f}"
 				>
 				<File
 					RelativePath="..\..\inc\clutl\Containers.h"
@@ -78,28 +78,32 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\inc\clutl\SerialiseVersionedBinary.h"
+					RelativePath="..\..\inc\clutl\Serialise.h"
 					>
 				</File>
 			</Filter>
 		</Filter>
 		<File
+			RelativePath="clReflectUtil.pibfile"
+			>
+		</File>
+		<File
 			RelativePath="Containers.cpp"
+			>
+		</File>
+		<File
+			RelativePath="SerialiseJSON.cpp"
 			>
 		</File>
 		<File
 			RelativePath="SerialiseVersionedBinary.cpp"
 			>
 		</File>
-		<File
-			RelativePath="clReflectUtil.pibfile"
-			>
-		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="vUkcj9p3gVayI-0jtyRwNw=="
+			Value="NYDeU6XB3B6BOyteRa81Xg=="
 		/>
 	</Globals>
 </VisualStudioProject>

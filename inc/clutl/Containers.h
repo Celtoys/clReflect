@@ -16,6 +16,11 @@ namespace clutl
 		void WriteAt(const void* data, unsigned int length, unsigned int position);
 
 		void Read(void* data, unsigned int length);
+		const char* ReadAt(unsigned int position) const;
+
+		void SeekAbs(unsigned int position);
+		void SeekRel(int offset);
+		void SeekEnd(int offset);
 
 		unsigned int GetPosition() const { return m_Position; }
 
