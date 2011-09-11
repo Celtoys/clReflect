@@ -25,6 +25,11 @@ namespace
 		TT_RBRACKET = ']',
 
 		TT_STRING,
+
+		TT_TRUE,
+		TT_FALSE,
+		TT_NULL,
+
 		TT_INTEGER,
 		TT_DECIMAL,
 	};
@@ -75,7 +80,7 @@ namespace
 	}
 
 
-	bool Parse32bitHexDigits(clutl::DataBuffer& in)
+	bool Lexer32bitHexDigits(clutl::DataBuffer& in)
 	{
 		in.SeekRel(1);
 
@@ -93,7 +98,7 @@ namespace
 	}
 
 
-	bool ParseEscapeSequence(clutl::DataBuffer& in)
+	bool LexerEscapeSequence(clutl::DataBuffer& in)
 	{
 		in.SeekRel(1);
 
@@ -116,7 +121,7 @@ namespace
 
 		// Parse the unicode hex digits
 		case ('u'):
-			return Parse32bitHexDigits(in);
+			return Lexer32bitHexDigits(in);
 
 		default:
 			// ERROR: Invalid escape sequence
@@ -125,7 +130,7 @@ namespace
 	}
 
 
-	Token ParseString(clutl::DataBuffer& in)
+	Token LexerString(clutl::DataBuffer& in)
 	{
 		// Start off construction of the string
 		int pos = in.GetPosition();
@@ -149,7 +154,7 @@ namespace
 
 			// Escape sequence
 			case ('\\'):
-				if (!ParseEscapeSequence(in))
+				if (!LexerEscapeSequence(in))
 					return Token();
 				token.length += in.GetPosition() - pos;
 				break;
@@ -168,7 +173,7 @@ namespace
 	//
 	// This will return an integer in the range [-9,223,372,036,854,775,808:9,223,372,036,854,775,807]
 	//
-	bool ParseInteger(clutl::DataBuffer& in, unsigned __int64& uintval)
+	bool LexerInteger(clutl::DataBuffer& in, unsigned __int64& uintval)
 	{
 		// Consume the first digit
 		int pos = in.GetPosition();
@@ -192,7 +197,7 @@ namespace
 	}
 
 
-	Token ParseNumber(clutl::DataBuffer& in)
+	Token LexerNumber(clutl::DataBuffer& in)
 	{
 		// Start off construction of an integer
 		int start_pos = in.GetPosition();
@@ -208,7 +213,7 @@ namespace
 
 		// Parse the integer digits
 		unsigned __int64 uintval;
-		if (!ParseInteger(in, uintval))
+		if (!LexerInteger(in, uintval))
 			// TODO: error
 			return Token();
 
@@ -237,7 +242,31 @@ namespace
 	}
 
 
-	Token ParseToken(clutl::DataBuffer& in)
+	Token LexerKeyword(clutl::DataBuffer& in, TokenType type, const char* keyword, int len)
+	{
+		// Consume the first letter
+		int start_pos = in.GetPosition();
+		in.SeekRel(1);
+
+		// TODO: Overflow without buffer assert
+
+		// Try to match the remaining letters of the keyword
+		int pos = in.GetPosition();
+		while (len && *in.ReadAt(pos) == *keyword)
+		{
+			keyword++;
+			pos++;
+		}
+
+		if (len)
+			// ERROR: Keyword didn't match
+			return Token();
+
+		return Token(type, start_pos, in.GetPosition() - start_pos);
+	}
+
+
+	Token LexerToken(clutl::DataBuffer& in)
 	{
 	start:
 		unsigned int pos = in.GetPosition();
@@ -266,8 +295,9 @@ namespace
 
 		// Strings
 		case ('\"'):
-			return ParseString(in);
+			return LexerString(in);
 
+		// Integer or floating point numbers
 		case ('-'):
 		case ('0'):
 		case ('1'):
@@ -279,13 +309,141 @@ namespace
 		case ('7'):
 		case ('8'):
 		case ('9'):
-			return ParseNumber(in);
+			return LexerNumber(in);
+
+		// Keywords
+		case ('t'): return LexerKeyword(in, TT_TRUE, "rue", 3);
+		case ('f'): return LexerKeyword(in, TT_FALSE, "alse", 4);
+		case ('n'): return LexerKeyword(in, TT_NULL, "ull", 3);
 
 		default:
-			// sequence of chars
+			// ERROR: Unexpected character
 			break;
 		}
 
 		return Token();
+	}
+
+
+	void ParserValue(clutl::DataBuffer& in, Token& t);
+	void ParserObject(clutl::DataBuffer& in, Token& t);
+
+
+	Token Expect(clutl::DataBuffer& in, Token& t, TokenType type)
+	{
+		if (t.type != type)
+			// ERROR
+			return Token();
+		Token old = t;
+		t = LexerToken(in);
+		return old;
+	}
+
+
+	void ParserString(const Token& t)
+	{
+	}
+
+
+	void ParserInteger(const Token& t)
+	{
+	}
+
+
+	void ParserDecimal(const Token& t)
+	{
+	}
+
+
+	void ParserElements(clutl::DataBuffer& in, Token& t)
+	{
+		// Expect a value first
+		ParserValue(in, t);
+
+		if (t.type == TT_COMMA)
+		{
+			t = LexerToken(in);
+			ParserElements(in, t);
+		}
+	}
+
+
+	void ParserArray(clutl::DataBuffer& in, Token& t)
+	{
+		Expect(in, t, TT_LBRACKET);
+
+		if (t.type == TT_RBRACKET)
+		{
+			t = LexerToken(in);
+			return;
+		}
+
+		ParserElements(in, t);
+		Expect(in, t, TT_RBRACKET);
+	}
+
+
+	void ParserLiteralValue(clutl::DataBuffer& in, Token& t, TokenType type, int val)
+	{
+		if (t.type != type)
+			// ERROR
+			return;
+		// process integer
+		t = LexerToken(in);
+	}
+
+
+	void ParserValue(clutl::DataBuffer& in, Token& t)
+	{
+		switch (t.type)
+		{
+		case (TT_STRING): return ParserString(Expect(in, t, TT_STRING));
+		case (TT_INTEGER): return ParserInteger(Expect(in, t, TT_INTEGER));
+		case (TT_DECIMAL): return ParserDecimal(Expect(in, t, TT_DECIMAL));
+		case (TT_LBRACE): return ParserObject(in, t);
+		case (TT_LBRACKET): return ParserArray(in, t);
+		case (TT_TRUE): return ParserLiteralValue(in, t, TT_TRUE, 1);
+		case (TT_FALSE): return ParserLiteralValue(in, t, TT_FALSE, 0);
+		case (TT_NULL): return ParserLiteralValue(in, t, TT_NULL, 0);
+
+		default:
+			// ERROR unexpected token
+			break;
+		}
+	}
+
+
+	void ParserPair(clutl::DataBuffer& in, Token& t)
+	{
+		Expect(in, t, TT_STRING);
+		Expect(in, t, TT_COLON);
+		ParserValue(in, t);
+	}
+
+
+	void ParserMembers(clutl::DataBuffer& in, Token& t)
+	{
+		ParserPair(in, t);
+
+		if (t.type == TT_COMMA)
+		{
+			t = LexerToken(in);
+			ParserMembers(in, t);
+		}
+	}
+
+
+	void ParserObject(clutl::DataBuffer& in, Token& t)
+	{
+		Expect(in, t, TT_LBRACE);
+
+		if (t.type == TT_RBRACE)
+		{
+			t = LexerToken(in);
+			return;
+		}
+
+		ParserMembers(in, t);
+		Expect(in, t, TT_RBRACE);
 	}
 }
