@@ -9,73 +9,6 @@
 
 namespace
 {
-	const char* g_TestEmptyObject = "{ }";
-	const char* g_TestNestedEmptyObjects = "{ \"nested\" : { } }";
-	const char* g_TestEmptyArrayObject = "{ \"nested\" : [ ] }";
-
-	const char* g_TestString = "{ \"string\" : \"val\" }";
-	const char* g_TestInteger = "{ \"integer\" : 123 }";
-	const char* g_TestNegInteger = "{ \"integer\" : -123 }";
-	const char* g_TestDecimal = "{ \"decimal\" : 123.123 }";
-	const char* g_TestNegDecimal = "{ \"decimal\" : -123.123 }";
-
-	const char* g_TestDecimalE0 = "{ \"decimal\" : 123e4 }";
-	const char* g_TestDecimalE1 = "{ \"decimal\" : 123e+4 }";
-	const char* g_TestDecimalE2 = "{ \"decimal\" : 123e-4 }";
-	const char* g_TestDecimalE3 = "{ \"decimal\" : 123E4 }";
-	const char* g_TestDecimalE4 = "{ \"decimal\" : 123E+4 }";
-	const char* g_TestDecimalE5 = "{ \"decimal\" : 123E-4 }";
-	const char* g_TestDecimalE6 = "{ \"decimal\" : 123.123e4 }";
-	const char* g_TestDecimalE7 = "{ \"decimal\" : 123.123e+4 }";
-	const char* g_TestDecimalE8 = "{ \"decimal\" : 123.123e-4 }";
-	const char* g_TestDecimalE9 = "{ \"decimal\" : 123.123E4 }";
-	const char* g_TestDecimalE10 = "{ \"decimal\" : 123.123E+4 }";
-	const char* g_TestDecimalE11 = "{ \"decimal\" : 123.123E-4 }";
-
-	const char* g_TestNegDecimalE0 = "{ \"decimal\" : -123e4 }";
-	const char* g_TestNegDecimalE1 = "{ \"decimal\" : -123e+4 }";
-	const char* g_TestNegDecimalE2 = "{ \"decimal\" : -123e-4 }";
-	const char* g_TestNegDecimalE3 = "{ \"decimal\" : -123E4 }";
-	const char* g_TestNegDecimalE4 = "{ \"decimal\" : -123E+4 }";
-	const char* g_TestNegDecimalE5 = "{ \"decimal\" : -123E-4 }";
-	const char* g_TestNegDecimalE6 = "{ \"decimal\" : -123.123e4 }";
-	const char* g_TestNegDecimalE7 = "{ \"decimal\" : -123.123e+4 }";
-	const char* g_TestNegDecimalE8 = "{ \"decimal\" : -123.123e-4 }";
-	const char* g_TestNegDecimalE9 = "{ \"decimal\" : -123.123E4 }";
-	const char* g_TestNegDecimalE10 = "{ \"decimal\" : -123.123E+4 }";
-	const char* g_TestNegDecimalE11 = "{ \"decimal\" : -123.123E-4 }";
-
-	const char* g_TestEscapeSequences = "{ \"string\" : \" \\\" \\\\ \\/ \\b \\f \\n \\r \\t \\u0123 \" }";
-
-	const char* g_TestTrue = "{ \"value\" : true }";
-	const char* g_TestFalse = "{ \"value\" : false }";
-	const char* g_TestNull = "{ \"value\" : null }";
-
-	const char* g_TestStringErrorStart = "{ \"string\" : \"";
-	const char* g_TestStringErrorMid = "{ \"string\" : \"asd";
-	const char* g_TestStringErrorEscape = "{ \"string\" : \\";
-	const char* g_TestStringErrorHexOverflow = "{ \"string\" : \\u1";
-	const char* g_TestStringErrorHexInvalid = "{ \"string\" : \\ug000";
-	
-	const char* g_TestIntegerErrorSignOverflow = "{ \"integer\" : -";
-	const char* g_TestIntegerErrorNegOverflow = "{ \"integer\" : -123";
-	const char* g_TestIntegerErrorIntegerOverflow = "{ \"integer\" : 123";
-
-	const char* g_TestDecimalErrorOverflow = "{ \"decimal\" : 123.";
-	const char* g_TestDecimalErrorDigitOverflow = "{ \"decimal\" : 123.123";
-	const char* g_TestDecimalErrorEOverflow = "{ \"decimal\" : 123e";
-	const char* g_TestDecimalErrorEOverflowP = "{ \"decimal\" : 123e+";
-	const char* g_TestDecimalErrorEOverflowN = "{ \"decimal\" : 123e-";
-	const char* g_TestDecimalErrorEOverflowE = "{ \"decimal\" : 123e123";
-
-	const char* g_TestPairErrorNoString = "{ : \"value\" }";
-	const char* g_TestPairErrorNoValue = "{ \"string\" : }";
-	const char* g_TestPairErrorInvalidValue = "{ \"string\" : x }";
-
-	const char* g_TestErrorTrueOverflow = "{ \"value\" : tru";
-	const char* g_TestErrorFalseOverflow = "{ \"value\" : fal";
-	const char* g_TestErrorNullOverflow = "{ \"value\" : nu";
-
 	// strings with hex digits and escape sequences
 	// hex digits with invalid characters
 	// invalid escape sequences
@@ -87,15 +20,39 @@ namespace
 	// pair without string
 
 
-	// garbage data, overflows
-	// overflow reading hex digits
-
-	void Test(const char* test)
+	void Test(const char* name, const char* test)
 	{
+		printf("---------------------\n");
+		printf("NAME: %s\n", name);
+		printf("INP: %s\n", test);
+
 		clutl::DataBuffer buffer(strlen(test));
 		buffer.Write(test, strlen(test));
 		buffer.Reset();
-		clutl::LoadJSON(buffer, 0, 0);
+
+		printf("OUT: ");
+		clutl::JSONError error = clutl::LoadJSON(buffer, 0, 0);
+		printf("\n");
+
+		if (error.code == clutl::JSONError::NONE)
+		{
+			printf("PASS\n");
+		}
+		else
+		{
+			printf("FAIL (%d, %d): ", error.line, error.column);
+
+			switch (error.code)
+			{
+			case (clutl::JSONError::UNEXPECTED_END_OF_DATA): printf("UNEXPECTED_END_OF_DATA\n"); break;
+			case (clutl::JSONError::EXPECTING_HEX_DIGIT): printf("EXPECTING_HEX_DIGIT\n"); break;
+			case (clutl::JSONError::EXPECTING_DIGIT): printf("EXPECTING_DIGIT\n"); break;
+			case (clutl::JSONError::UNEXPECTED_CHARACTER): printf("UNEXPECTED_CHARACTER\n"); break;
+			case (clutl::JSONError::INVALID_KEYWORD): printf("INVALID_KEYWORD\n"); break;
+			case (clutl::JSONError::INVALID_ESCAPE_SEQUENCE): printf("INVALID_ESCAPE_SEQUENCE\n"); break;
+			case (clutl::JSONError::UNEXPECTED_TOKEN): printf("UNEXPECTED_TOKEN\n"); break;
+			}
+		}
 	}
 }
 
@@ -113,55 +70,74 @@ void TestSerialiseJSON(clcpp::Database& db)
 
 	clutl::LoadJSON(buffer, 0, 0);*/
 
-	Test(g_TestEmptyObject);
-	Test(g_TestNestedEmptyObjects);
-	Test(g_TestEmptyArrayObject);
+	Test("EmptyObject", "{ }");
+	Test("NestedEmptyObjects", "{ \"nested\" : { } }");
+	Test("EmptyArrayObject", "{ \"nested\" : [ ] }");
 
-	Test(g_TestString);
-	Test(g_TestInteger);
-	Test(g_TestDecimal);
+	Test("String", "{ \"string\" : \"val\" }");
+	Test("Integer", "{ \"integer\" : 123 }");
+	Test("NegInteger", "{ \"integer\" : -123 }");
+	Test("Decimal", "{ \"decimal\" : 123.123 }");
+	Test("NegDecimal", "{ \"decimal\" : -123.123 }");
 
-	Test(g_TestEscapeSequences);
+	Test("DecimalE0", "{ \"decimal\" : 123e4 }");
+	Test("DecimalE1", "{ \"decimal\" : 123e+4 }");
+	Test("DecimalE2", "{ \"decimal\" : 123e-4 }");
+	Test("DecimalE3", "{ \"decimal\" : 123E4 }");
+	Test("DecimalE4", "{ \"decimal\" : 123E+4 }");
+	Test("DecimalE5", "{ \"decimal\" : 123E-4 }");
+	Test("DecimalE6", "{ \"decimal\" : 123.123e4 }");
+	Test("DecimalE7", "{ \"decimal\" : 123.123e+4 }");
+	Test("DecimalE8", "{ \"decimal\" : 123.123e-4 }");
+	Test("DecimalE9", "{ \"decimal\" : 123.123E4 }");
+	Test("DecimalE10", "{ \"decimal\" : 123.123E+4 }");
+	Test("DecimalE11", "{ \"decimal\" : 123.123E-4 }");
 
-	Test(g_TestEmptyObject);
-	Test(g_TestNestedEmptyObjects);
-	Test(g_TestEmptyArrayObject);
+	Test("NegDecimalE0", "{ \"decimal\" : -123e4 }");
+	Test("NegDecimalE1", "{ \"decimal\" : -123e+4 }");
+	Test("NegDecimalE2", "{ \"decimal\" : -123e-4 }");
+	Test("NegDecimalE3", "{ \"decimal\" : -123E4 }");
+	Test("NegDecimalE4", "{ \"decimal\" : -123E+4 }");
+	Test("NegDecimalE5", "{ \"decimal\" : -123E-4 }");
+	Test("NegDecimalE6", "{ \"decimal\" : -123.123e4 }");
+	Test("NegDecimalE7", "{ \"decimal\" : -123.123e+4 }");
+	Test("NegDecimalE8", "{ \"decimal\" : -123.123e-4 }");
+	Test("NegDecimalE9", "{ \"decimal\" : -123.123E4 }");
+	Test("NegDecimalE10", "{ \"decimal\" : -123.123E+4 }");
+	Test("NegDecimalE11", "{ \"decimal\" : -123.123E-4 }");
 
-	Test(g_TestString);
-	Test(g_TestInteger);
-	Test(g_TestNegInteger);
-	Test(g_TestDecimal);
-	Test(g_TestNegDecimal);
+	Test("EscapeSequences", "{ \"string\" : \" \\\" \\\\ \\/ \\b \\f \\n \\r \\t \\u0123 \" }");
 
-	Test(g_TestDecimalE0);
-	Test(g_TestDecimalE1);
-	Test(g_TestDecimalE2);
-	Test(g_TestDecimalE3);
-	Test(g_TestDecimalE4);
-	Test(g_TestDecimalE5);
-	Test(g_TestDecimalE6);
-	Test(g_TestDecimalE7);
-	Test(g_TestDecimalE8);
-	Test(g_TestDecimalE9);
-	Test(g_TestDecimalE10);
-	Test(g_TestDecimalE11);
+	Test("True", "{ \"value\" : true }");
+	Test("False", "{ \"value\" : false }");
+	Test("Null", "{ \"value\" : null }");
 
-	Test(g_TestNegDecimalE0);
-	Test(g_TestNegDecimalE1);
-	Test(g_TestNegDecimalE2);
-	Test(g_TestNegDecimalE3);
-	Test(g_TestNegDecimalE4);
-	Test(g_TestNegDecimalE5);
-	Test(g_TestNegDecimalE6);
-	Test(g_TestNegDecimalE7);
-	Test(g_TestNegDecimalE8);
-	Test(g_TestNegDecimalE9);
-	Test(g_TestNegDecimalE10);
-	Test(g_TestNegDecimalE11);
+	Test("StringErrorStart", "{ \"string\" : \"");
+	Test("StringErrorMid", "{ \"string\" : \"asd");
+	Test("StringErrorEscape", "{ \"string\" : \\");
+	Test("StringErrorHexOverflow", "{ \"string\" : \"\\u1");
+	Test("StringErrorHexInvalid", "{ \"string\" : \"\\ug000\"");
+	Test("StringErrorInvalidEscape", "{ \"string\" : \"\\y\"");
 
-	Test(g_TestEscapeSequences);
+	Test("IntegerErrorSignOverflow", "{ \"integer\" : -");
+	Test("IntegerErrorNegOverflow", "{ \"integer\" : -123");
+	Test("IntegerErrorIntegerOverflow", "{ \"integer\" : 123");
 
-	Test(g_TestTrue);
-	Test(g_TestFalse);
-	Test(g_TestNull);
+	Test("DecimalErrorOverflow", "{ \"decimal\" : 123.");
+	Test("DecimalErrorDigitOverflow", "{ \"decimal\" : 123.123");
+	Test("DecimalErrorEOverflow", "{ \"decimal\" : 123e");
+	Test("DecimalErrorEOverflowP", "{ \"decimal\" : 123e+");
+	Test("DecimalErrorEOverflowN", "{ \"decimal\" : 123e-");
+	Test("DecimalErrorEOverflowE", "{ \"decimal\" : 123e123");
+
+	Test("PairErrorNoString", "{ : \"value\" }");
+	Test("PairErrorNoValue", "{ \"string\" : }");
+	Test("PairErrorInvalidValue", "{ \"string\" : x }");
+
+	Test("ErrorTrueOverflow", "{ \"value\" : tru");
+	Test("ErrorFalseOverflow", "{ \"value\" : fal");
+	Test("ErrorNullOverflow", "{ \"value\" : nu");
+	Test("ErrorTrueInvalidKeyword", "{ \"value\" : tru ");
+	Test("ErrorFalseInvalidKeyword", "{ \"value\" : fal ");
+	Test("ErrorNullInvalidKeyword", "{ \"value\" : nu ");
 }

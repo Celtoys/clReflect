@@ -20,14 +20,35 @@ namespace clutl
 	{
 		enum Code
 		{
-			ERROR_NONE,
-			ERROR_LEXER_UNEXPECTED_END,
-			ERROR_PARSER_UNEXPECTED_TOKEN,
+			NONE,
+			UNEXPECTED_END_OF_DATA,
+			EXPECTING_HEX_DIGIT,
+			EXPECTING_DIGIT,
+			UNEXPECTED_CHARACTER,
+			INVALID_KEYWORD,
+			INVALID_ESCAPE_SEQUENCE,
+			UNEXPECTED_TOKEN,
 		};
 
-		Code error;
+		JSONError()
+			: code(NONE)
+			, position(0)
+			, line(0)
+			, column(0)
+		{
+		}
+
+		Code code;
+
+		// Position in the data buffer where the error occurred
+		unsigned int position;
+
+		// An attempt to specify the exact line/column where the error occurred
+		// Assuming the data buffer is reasonably formatted
+		unsigned int line;
+		unsigned int column;
 	};
 
 
-	void LoadJSON(DataBuffer& in, void* object, const clcpp::Type* type);
+	JSONError LoadJSON(DataBuffer& in, void* object, const clcpp::Type* type);
 }

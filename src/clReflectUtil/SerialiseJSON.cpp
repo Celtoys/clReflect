@@ -4,6 +4,7 @@
 //    * Allow names to be specified as CRCs?
 //    * Allow IEEE754 hex float representation.
 //    * Escape sequences need converting.
+//    * Enums communicated by value.
 //
 
 #include <clutl/Serialise.h>
@@ -41,22 +42,27 @@ namespace
 
 	struct Token
 	{
+		// An empty token to prevent the need to construct tokens for comparison
+		static Token Null;
+
 		Token()
 			: type(TT_NONE)
-			, position(0)
 			, length(0)
 		{
 		}
 
-		explicit Token(TokenType type, int position, int length)
+		explicit Token(TokenType type, int length)
 			: type(type)
-			, position(position)
 			, length(length)
 		{
 		}
 
+		bool IsValid() const
+		{
+			return type != TT_NONE;
+		}
+
 		TokenType type;
-		int position;
 		int length;
 
 		struct
@@ -70,6 +76,9 @@ namespace
 		} val;
 	};
 
+	// Definition of the null token
+	Token Token::Null;
+
 
 	bool isdigit(char c)
 	{
@@ -81,41 +90,126 @@ namespace
 	}
 
 
-	bool Lexer32bitHexDigits(clutl::DataBuffer& in)
+	//
+	// The main lexer/parser context, for keeping tracking of errors and proving a level of
+	// text parsing abstraction above the data buffer.
+	//
+	class Context
 	{
-		in.SeekRel(1);
-
-		// Check for overflow
-		if (in.GetPosition() + 4 > in.GetSize())
+	public:
+		Context(clutl::DataBuffer& in)
+			: m_DataBuffer(in)
+			, m_Line(1)
+			, m_LinePosition(0)
 		{
-			printf("ERROR: overflow\n");
+		}
+
+		// Consume the given amount of characters in the data buffer, assuming
+		// they have been parsed correctly. The original position before the
+		// consume operation is returned.
+		unsigned int ConsumeChars(int size)
+		{
+			unsigned int pos = m_DataBuffer.GetPosition();
+			m_DataBuffer.SeekRel(size);
+			return pos;
+		}
+		unsigned int ConsumeChar()
+		{
+			return ConsumeChars(1);
+		}
+
+		// Take a peek at the next N characters in the data buffer
+		const char* PeekChars()
+		{
+			return m_DataBuffer.ReadAt(m_DataBuffer.GetPosition());
+		}
+		char PeekChar()
+		{
+			return *PeekChars();
+		}
+
+		// Test to see if reading a specific count of characters would overflow the input
+		// data buffer. Automatically sets the error code as a result.
+		bool ReadOverflows(int size, clutl::JSONError::Code code = clutl::JSONError::UNEXPECTED_END_OF_DATA)
+		{
+			if (m_DataBuffer.GetPosition() + size >= m_DataBuffer.GetSize())
+			{
+				SetError(code);
+				return true;
+			}
 			return false;
 		}
+
+		// How many bytes are left to parse?
+		unsigned int Remaining() const
+		{
+			return m_DataBuffer.GetSize() - m_DataBuffer.GetPosition();
+		}
+
+		// Record the first error only, along with its position
+		void SetError(clutl::JSONError::Code code)
+		{
+			if (m_Error.code == clutl::JSONError::NONE)
+			{
+				m_Error.code = code;
+				m_Error.position = m_DataBuffer.GetPosition();
+				m_Error.line = m_Line;
+				m_Error.column = m_Error.position - m_LinePosition;
+			}
+		}
+
+		// Increment the current line for error reporting
+		void IncLine()
+		{
+			m_Line++;
+			m_LinePosition = m_DataBuffer.GetPosition();
+		}
+
+		clutl::JSONError GetError() const
+		{
+			return m_Error;
+		}
+
+	private:
+		clutl::DataBuffer& m_DataBuffer;
+		clutl::JSONError m_Error;
+		unsigned int m_Line;
+		unsigned int m_LinePosition;
+	};
+
+
+	int Lexer32bitHexDigits(Context& ctx)
+	{
+		// Skip the 'u' and check for overflow
+		ctx.ConsumeChar();
+		if (ctx.ReadOverflows(4))
+			return 0;
 
 		// Ensure the next 4 bytes are hex digits
 		// NOTE: \u is not valid - C has the equivalent \xhh and \xhhhh
-		unsigned int pos = in.GetPosition();
-		in.SeekRel(4);
-		const char* digits = in.ReadAt(pos);
-		return
-			ishexdigit(digits[0]) &&
+		const char* digits = ctx.PeekChars();
+		if (ishexdigit(digits[0]) &&
 			ishexdigit(digits[1]) &&
 			ishexdigit(digits[2]) &&
-			ishexdigit(digits[3]);
+			ishexdigit(digits[3]))
+		{
+			ctx.ConsumeChars(4);
+			return 4;
+		}
+
+		ctx.SetError(clutl::JSONError::EXPECTING_HEX_DIGIT);
+
+		return 0;
 	}
 
 
-	bool LexerEscapeSequence(clutl::DataBuffer& in)
+	int LexerEscapeSequence(Context& ctx)
 	{
-		in.SeekRel(1);
+		ctx.ConsumeChar();
 
-		unsigned int pos = in.GetPosition();
-		if (pos >= in.GetSize())
-		{
-			printf("ERROR: Buffer overflow escape sequence");
-			return false;
-		}
-		char c = *in.ReadAt(pos);
+		if (ctx.ReadOverflows(0))
+			return 0;
+		char c = ctx.PeekChar();
 
 		switch (c)
 		{
@@ -124,62 +218,58 @@ namespace
 		case ('\\'):
 		case ('/'):
 		case ('b'):
-		case ('f'):
 		case ('n'):
+		case ('f'):
 		case ('r'):
 		case ('t'):
-			in.SeekRel(1);
-			return true;
+			ctx.ConsumeChar();
+			return 1;
 
 		// Parse the unicode hex digits
 		case ('u'):
-			return Lexer32bitHexDigits(in);
+			return 1 + Lexer32bitHexDigits(ctx);
 
 		default:
-			// ERROR: Invalid escape sequence
-			return false;
+			ctx.SetError(clutl::JSONError::INVALID_ESCAPE_SEQUENCE);
+			return 0;
 		}
 	}
 
 
-	Token LexerString(clutl::DataBuffer& in)
+	Token LexerString(Context& ctx)
 	{
-		// Start off construction of the string
-		in.SeekRel(1);
-		unsigned int pos = in.GetPosition();
-		Token token(TT_STRING, pos, 0);
-		token.val.string = in.ReadAt(pos);
+		// Start off construction of the string beyond the open quote
+		ctx.ConsumeChar();
+		Token token(TT_STRING, 0);
+		token.val.string = ctx.PeekChars();
 
 		// The common case here is another character as opposed to quotes so
 		// keep looping until that happens
+		int len = 0;
 		while (true)
 		{
-			pos = in.GetPosition();
-			if (pos >= in.GetSize())
-			{
-				printf("ERROR: Buffer overflow while lexing string\n");
-				return Token();
-			}
-			char c = *in.ReadAt(pos);
+			if (ctx.ReadOverflows(0))
+				return Token::Null;
+			char c = ctx.PeekChar();
 
 			switch (c)
 			{
 			// The string terminates with a quote
 			case ('\"'):
-				in.WriteAt("\0", 1, in.GetPosition());
-				in.SeekRel(1);
+				ctx.ConsumeChar();
 				return token;
 
 			// Escape sequence
 			case ('\\'):
-				if (!LexerEscapeSequence(in))
-					return Token();
-				token.length += in.GetPosition() - pos;
+				len = LexerEscapeSequence(ctx);
+				if (len == 0)
+					return Token::Null;
+				token.length += 1 + len;
 				break;
 
 			// A typical string character
 			default:
-				in.SeekRel(1);
+				ctx.ConsumeChar();
 				token.length++;
 			}
 		}
@@ -191,109 +281,101 @@ namespace
 	//
 	// This will return an integer in the range [-9,223,372,036,854,775,808:9,223,372,036,854,775,807]
 	//
-	bool LexerInteger(clutl::DataBuffer& in, unsigned __int64& uintval)
+	bool LexerInteger(Context& ctx, unsigned __int64& uintval)
 	{
 		// Consume the first digit
-		unsigned int pos = in.GetPosition();
-		if (pos >= in.GetSize())
+		if (ctx.ReadOverflows(0))
+			return false;
+		char c = ctx.PeekChar();
+		if (!isdigit(c))
 		{
-			printf("ERROR: Overflow\n");
+			ctx.SetError(clutl::JSONError::EXPECTING_DIGIT);
 			return false;
 		}
-		char c = *in.ReadAt(pos);
-		if (!isdigit(c))
-			// ERROR: Expecting digit for number
-			return false;
 
 		uintval = 0;
 		do 
 		{
 			// Consume and accumulate the digit
-			in.SeekRel(1);
+			ctx.ConsumeChar();
 			uintval = (uintval * 10) + (c - '0');
 
 			// Peek at the next character and leave if its not a digit
-			pos = in.GetPosition();
-			if (pos >= in.GetSize())
-			{
-				printf("ERROR: Overflow\n");
+			if (ctx.ReadOverflows(0))
 				return false;
-			}
-			c = *in.ReadAt(pos);
+			c = ctx.PeekChar();
 		} while (isdigit(c));
 
 		return true;
 	}
 
 
-	int VerifyDigits(clutl::DataBuffer& in, unsigned int pos)
+	const char* VerifyDigits(Context& ctx, const char* decimal, const char* end)
 	{
-		char c = 0;
 		do
 		{
-			if (pos >= in.GetSize())
+			if (decimal >= end)
 			{
-				printf("ERROR: Overdflow\n");
-				return -1;
+				ctx.SetError(clutl::JSONError::UNEXPECTED_END_OF_DATA);
+				return 0;
 			}
-			c = *in.ReadAt(pos++);
-		} while (isdigit(c));
+		} while (isdigit(*decimal++));
 
-		return pos;
+		return decimal;
 	}
 
 
-	bool VerifyDecimal(clutl::DataBuffer& in, char sep)
+	bool VerifyDecimal(Context& ctx, const char* decimal, int len)
 	{
 		// Check that there is stuff beyond the .,e,E
-		unsigned int pos = in.GetPosition() + 1;
-		if (pos >= in.GetSize())
+		if (len < 2)
 		{
-			printf("ERROR: overflow\n");
+			ctx.SetError(clutl::JSONError::UNEXPECTED_END_OF_DATA);
 			return false;
 		}
 
-		if (sep == '.')
+		const char* end = decimal + len;
+		if (*decimal++ == '.')
 		{
 			// Ensure there are digits trailing the decimal point
-			pos = VerifyDigits(in, pos);
-			if (pos == -1)
+			decimal = VerifyDigits(ctx, decimal, end);
+			if (decimal == 0)
 				return false;
 
 			// Only need to continue if there's an exponent
-			char c = *in.ReadAt(pos);
+			char c = *decimal++;
 			if (c != 'e' && c != 'E')
 				return true;
 		}
 
 		// Skip over any pos/neg qualifiers
-		char c = *in.ReadAt(pos);
+		char c = *decimal;
 		if (c == '-' || c == '+')
-			pos++;
+			decimal++;
 
 		// Ensure there are digits trailing the exponent
-		return VerifyDigits(in, pos) != -1;
+		return VerifyDigits(ctx, decimal, end) != 0;
 	}
 
 
-	Token LexerNumber(clutl::DataBuffer& in)
+	Token LexerNumber(Context& ctx)
 	{
 		// Start off construction of an integer
-		unsigned int start_pos = in.GetPosition();
-		Token token(TT_INTEGER, start_pos, 0);
+		const char* number_start = ctx.PeekChars();
+		Token token(TT_INTEGER, 0);
 
 		// Consume negative
 		bool is_negative = false;
-		if (*in.ReadAt(start_pos) == '-')
+		if (ctx.PeekChar() == '-')
 		{
 			is_negative = true;
-			in.SeekRel(1);
+			ctx.ConsumeChar();
 		}
 
 		// Parse the integer digits
 		unsigned __int64 uintval;
-		if (!LexerInteger(in, uintval))
-			return Token();
+		if (!LexerInteger(ctx, uintval))
+			return Token::Null;
 
 		// Convert to signed integer
 		if (is_negative)
@@ -302,80 +384,75 @@ namespace
 			token.val.integer = uintval;
 
 		// Is this a decimal?
-		unsigned int pos = in.GetPosition();
-		char c = *in.ReadAt(pos);
+		const char* decimal_start = ctx.PeekChars();
+		char c = *decimal_start;
 		if (c == '.' || c == 'e' || c == 'E')
 		{
-			if (!VerifyDecimal(in, c))
-				return Token();
+			if (!VerifyDecimal(ctx, decimal_start, ctx.Remaining()))
+				return Token::Null;
 
 			// Re-evaluate as a decimal using the more expensive strtod function
-			const char* decimal_start = in.ReadAt(start_pos);
-			char* decimal_end;
+			char* number_end;
 			token.type = TT_DECIMAL;
-			token.val.decimal = strtod(decimal_start, &decimal_end);
+			token.val.decimal = strtod(number_start, &number_end);
 
 			// Skip over the parsed decimal
-			in.SeekAbs(start_pos + (decimal_end - decimal_start));
+			ctx.ConsumeChars(number_end - decimal_start);
 		}
 
 		return token;
 	}
 
 
-	Token LexerKeyword(clutl::DataBuffer& in, TokenType type, const char* keyword, int len)
+	Token LexerKeyword(Context& ctx, TokenType type, const char* keyword, int len)
 	{
-		// Consume the first letter
-		unsigned int start_pos = in.GetPosition();
-		in.SeekRel(1);
+		// Consume the matched first letter
+		ctx.ConsumeChar();
 
 		// Try to match the remaining letters of the keyword
-		unsigned int pos = 0;
-		while (len)
+		int dlen = len;
+		while (dlen)
 		{
-			pos = in.GetPosition();
-			if (pos >= in.GetSize())
-			{
-				printf("ERROR: overflow\n");
-				return Token();
-			}
-			in.SeekRel(1);
+			if (ctx.ReadOverflows(0))
+				return Token::Null;
 
-			if (*keyword++ != *in.ReadAt(pos))
+			// Early out when keyword no longer matches
+			if (*keyword++ != ctx.PeekChar())
 				break;
 
-			len--;
+			ctx.ConsumeChar();
+			dlen--;
 		}
 
-		if (len)
+		if (dlen)
 		{
-			printf("ERROR:Invalid keyword\n");
-			return Token();
+			ctx.SetError(clutl::JSONError::INVALID_KEYWORD);
+			return Token::Null;
 		}
 
-		return Token(type, start_pos, in.GetPosition() - start_pos);
+		return Token(type, len + 1);
 	}
 
 
-	Token LexerToken(clutl::DataBuffer& in)
+	Token LexerToken(Context& ctx)
 	{
 	start:
 		// Read the current character and return an empty token at stream end
-		unsigned int pos = in.GetPosition();
-		if (pos >= in.GetSize())
-			return Token();
-		char c = *in.ReadAt(pos);
+		if (ctx.ReadOverflows(0, clutl::JSONError::NONE))
+			return Token::Null;
+		char c = ctx.PeekChar();
 
 		switch (c)
 		{
 		// Branch to the start only if it's a whitespace (the least-common case)
+		case ('\n'):
+			ctx.IncLine();
 		case (' '):
 		case ('\t'):
-		case ('\n'):
 		case ('\v'):
 		case ('\f'):
 		case ('\r'):
-			in.SeekRel(1);
+			ctx.ConsumeChar();
 			goto start;
 
 		// Structural single character tokens
@@ -385,12 +462,12 @@ namespace
 		case ('['):
 		case (']'):
 		case (':'):
-			in.SeekRel(1);
-			return Token((TokenType)c, pos, 1);
+			ctx.ConsumeChar();
+			return Token((TokenType)c, 1);
 
 		// Strings
 		case ('\"'):
-			return LexerString(in);
+			return LexerString(ctx);
 
 		// Integer or floating point numbers
 		case ('-'):
@@ -404,159 +481,186 @@ namespace
 		case ('7'):
 		case ('8'):
 		case ('9'):
-			return LexerNumber(in);
+			return LexerNumber(ctx);
 
 		// Keywords
-		case ('t'): return LexerKeyword(in, TT_TRUE, "rue", 3);
-		case ('f'): return LexerKeyword(in, TT_FALSE, "alse", 4);
-		case ('n'): return LexerKeyword(in, TT_NULL, "ull", 3);
+		case ('t'): return LexerKeyword(ctx, TT_TRUE, "rue", 3);
+		case ('f'): return LexerKeyword(ctx, TT_FALSE, "alse", 4);
+		case ('n'): return LexerKeyword(ctx, TT_NULL, "ull", 3);
 
 		default:
-			// ERROR: Unexpected character
-			return Token();
+			ctx.SetError(clutl::JSONError::UNEXPECTED_CHARACTER);
+			return Token::Null;
 		}
 	}
 
 
-	void ParserValue(clutl::DataBuffer& in, Token& t);
-	void ParserObject(clutl::DataBuffer& in, Token& t);
+	void ParserValue(Context& ctx, Token& t);
+	void ParserObject(Context& ctx, Token& t);
 
 
-	Token Expect(clutl::DataBuffer& in, Token& t, TokenType type)
+	Token Expect(Context& ctx, Token& t, TokenType type)
 	{
+		// Check the tokens match
 		if (t.type != type)
-			// ERROR
-			return Token();
+		{
+			ctx.SetError(clutl::JSONError::UNEXPECTED_TOKEN);
+			return Token::Null;
+		}
+
+		// Look-ahead one token
 		Token old = t;
-		t = LexerToken(in);
+		t = LexerToken(ctx);
 		return old;
 	}
 
 
 	void ParserString(const Token& t)
 	{
-		printf("%s\n", t.val.string);
+		// Was there an error expecting a string?
+		if (!t.IsValid())
+			return;
+
+		printf("%.*s ", t.length, t.val.string);
 	}
 
 
 	void ParserInteger(const Token& t)
 	{
-		printf("%d\n", t.val.integer);
+		// Was there an error expecting an integer
+		if (!t.IsValid())
+			return;
+
+		printf("%d ", t.val.integer);
 	}
 
 
 	void ParserDecimal(const Token& t)
 	{
-		printf("%f\n", t.val.decimal);
+		// Was there an error expecting a decimal?
+		if (!t.IsValid())
+			return;
+
+		printf("%f ", t.val.decimal);
 	}
 
 
-	void ParserElements(clutl::DataBuffer& in, Token& t)
+	void ParserElements(Context& ctx, Token& t)
 	{
 		// Expect a value first
-		ParserValue(in, t);
+		ParserValue(ctx, t);
 
 		if (t.type == TT_COMMA)
 		{
 			printf(", ");
-			t = LexerToken(in);
-			ParserElements(in, t);
+			t = LexerToken(ctx);
+			ParserElements(ctx, t);
 		}
 	}
 
 
-	void ParserArray(clutl::DataBuffer& in, Token& t)
+	void ParserArray(Context& ctx, Token& t)
 	{
-		Expect(in, t, TT_LBRACKET);
-		printf("[\n");
+		if (!Expect(ctx, t, TT_LBRACKET).IsValid())
+			return;
+		printf("[ ");
 
+		// Empty array?
 		if (t.type == TT_RBRACKET)
 		{
-			printf("]\n");
-			t = LexerToken(in);
+			printf("] ");
+			t = LexerToken(ctx);
 			return;
 		}
 
-		ParserElements(in, t);
-		Expect(in, t, TT_RBRACKET);
-		printf("]\n");
+		ParserElements(ctx, t);
+		Expect(ctx, t, TT_RBRACKET);
+		printf("] ");
 	}
 
 
-	void ParserLiteralValue(clutl::DataBuffer& in, Token& t, TokenType type, int val)
+	void ParserLiteralValue(Token& t, int val)
 	{
-		if (t.type != type)
-			// ERROR
+		// Was there an error expecting a literal value?
+		if (!t.IsValid())
 			return;
-		// process integer
-		t = LexerToken(in);
+
+		printf("%d ", val);
 	}
 
 
-	void ParserValue(clutl::DataBuffer& in, Token& t)
+	void ParserValue(Context& ctx, Token& t)
 	{
 		switch (t.type)
 		{
-		case (TT_STRING): return ParserString(Expect(in, t, TT_STRING));
-		case (TT_INTEGER): return ParserInteger(Expect(in, t, TT_INTEGER));
-		case (TT_DECIMAL): return ParserDecimal(Expect(in, t, TT_DECIMAL));
-		case (TT_LBRACE): return ParserObject(in, t);
-		case (TT_LBRACKET): return ParserArray(in, t);
-		case (TT_TRUE): return ParserLiteralValue(in, t, TT_TRUE, 1);
-		case (TT_FALSE): return ParserLiteralValue(in, t, TT_FALSE, 0);
-		case (TT_NULL): return ParserLiteralValue(in, t, TT_NULL, 0);
+		case (TT_STRING): return ParserString(Expect(ctx, t, TT_STRING));
+		case (TT_INTEGER): return ParserInteger(Expect(ctx, t, TT_INTEGER));
+		case (TT_DECIMAL): return ParserDecimal(Expect(ctx, t, TT_DECIMAL));
+		case (TT_LBRACE): return ParserObject(ctx, t);
+		case (TT_LBRACKET): return ParserArray(ctx, t);
+		case (TT_TRUE): return ParserLiteralValue(Expect(ctx, t, TT_TRUE), 1);
+		case (TT_FALSE): return ParserLiteralValue(Expect(ctx, t, TT_FALSE), 0);
+		case (TT_NULL): return ParserLiteralValue(Expect(ctx, t, TT_NULL), 0);
 
 		default:
-			// ERROR unexpected token
+			ctx.SetError(clutl::JSONError::UNEXPECTED_TOKEN);
 			break;
 		}
 	}
 
 
-	void ParserPair(clutl::DataBuffer& in, Token& t)
+	void ParserPair(Context& ctx, Token& t)
 	{
-		Token o = Expect(in, t, TT_STRING);
-		printf("%s", o.val.string);
-		Expect(in, t, TT_COLON);
-		printf(":");
-		ParserValue(in, t);
+		Token o = Expect(ctx, t, TT_STRING);
+		if (!o.IsValid())
+			return;
+		printf("%.*s ", o.length, o.val.string);
+
+		if (!Expect(ctx, t, TT_COLON).IsValid())
+			return;
+		printf(": ");
+
+		ParserValue(ctx, t);
 	}
 
 
-	void ParserMembers(clutl::DataBuffer& in, Token& t)
+	void ParserMembers(Context& ctx, Token& t)
 	{
-		ParserPair(in, t);
+		ParserPair(ctx, t);
 
 		if (t.type == TT_COMMA)
 		{
 			printf(", ");
-			t = LexerToken(in);
-			ParserMembers(in, t);
+			t = LexerToken(ctx);
+			ParserMembers(ctx, t);
 		}
 	}
 
 
-	void ParserObject(clutl::DataBuffer& in, Token& t)
+	void ParserObject(Context& ctx, Token& t)
 	{
-		Expect(in, t, TT_LBRACE);
-		printf("{\n");
+		if (!Expect(ctx, t, TT_LBRACE).IsValid())
+			return;
+		printf("{ ");
 
 		if (t.type == TT_RBRACE)
 		{
-			t = LexerToken(in);
-			printf("}\n");
+			t = LexerToken(ctx);
+			printf("} ");
 			return;
 		}
 
-		ParserMembers(in, t);
-		Expect(in, t, TT_RBRACE);
-		printf("}\n");
+		ParserMembers(ctx, t);
+		Expect(ctx, t, TT_RBRACE);
+		printf("} ");
 	}
 }
 
 
-void clutl::LoadJSON(DataBuffer& in, void* object, const clcpp::Type* type)
+clutl::JSONError clutl::LoadJSON(DataBuffer& in, void* object, const clcpp::Type* type)
 {
-	Token t = LexerToken(in);
-	ParserObject(in, t);
+	Context ctx(in);
+	Token t = LexerToken(ctx);
+	ParserObject(ctx, t);
+	return ctx.GetError();
 }
