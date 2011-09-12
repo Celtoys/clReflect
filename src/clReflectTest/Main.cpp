@@ -83,6 +83,7 @@ extern void TestGetType(clcpp::Database& db);
 extern void TestConstructorDestructor(clcpp::Database& db);
 extern void TestAttributesFunc(clcpp::Database& db);
 extern void TestSerialise(clcpp::Database& db);
+extern void TestSerialiseJSON(clcpp::Database& db);
 extern void TestOffsets(clcpp::Database& db);
 
 
@@ -106,6 +107,7 @@ int main()
 	TestAttributesFunc(db);
 	TestSerialise(db);
 	TestOffsets(db);
+	TestSerialiseJSON(db);
 
 	return 0;
 }

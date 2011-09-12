@@ -1,6 +1,9 @@
 
 //
-// IEEE754 text encode/decode of double values
+// TODO:
+//    * Allow names to be specified as CRCs?
+//    * Allow IEEE754 hex float representation.
+//    * Escape sequences need converting.
 //
 
 #include <clutl/Serialise.h>
@@ -8,6 +11,7 @@
 
 
 extern "C" double strtod(const char* s00, char** se);
+extern "C" int printf(const char* format, ...);
 
 
 namespace
@@ -67,9 +71,6 @@ namespace
 	};
 
 
-	// TODO: buffer overflow checking without the data buffer asserting!
-
-
 	bool isdigit(char c)
 	{
 		return c >= '0' && c <= '9';
@@ -84,11 +85,17 @@ namespace
 	{
 		in.SeekRel(1);
 
-		// TODO: verify there are enough bytes to read 4 characters
-		// NOTE: \u is not valid - C has the equivalent \xhh and \xhhhh
+		// Check for overflow
+		if (in.GetPosition() + 4 > in.GetSize())
+		{
+			printf("ERROR: overflow\n");
+			return false;
+		}
 
 		// Ensure the next 4 bytes are hex digits
-		int pos = in.GetPosition();
+		// NOTE: \u is not valid - C has the equivalent \xhh and \xhhhh
+		unsigned int pos = in.GetPosition();
+		in.SeekRel(4);
 		const char* digits = in.ReadAt(pos);
 		return
 			ishexdigit(digits[0]) &&
@@ -102,7 +109,12 @@ namespace
 	{
 		in.SeekRel(1);
 
-		int pos = in.GetPosition();
+		unsigned int pos = in.GetPosition();
+		if (pos >= in.GetSize())
+		{
+			printf("ERROR: Buffer overflow escape sequence");
+			return false;
+		}
 		char c = *in.ReadAt(pos);
 
 		switch (c)
@@ -111,11 +123,11 @@ namespace
 		case ('\"'):
 		case ('\\'):
 		case ('/'):
-		case ('\b'):
-		case ('\f'):
-		case ('\n'):
-		case ('\r'):
-		case ('\t'):
+		case ('b'):
+		case ('f'):
+		case ('n'):
+		case ('r'):
+		case ('t'):
 			in.SeekRel(1);
 			return true;
 
@@ -133,9 +145,9 @@ namespace
 	Token LexerString(clutl::DataBuffer& in)
 	{
 		// Start off construction of the string
-		int pos = in.GetPosition();
-		Token token(TT_STRING, pos, 0);
 		in.SeekRel(1);
+		unsigned int pos = in.GetPosition();
+		Token token(TT_STRING, pos, 0);
 		token.val.string = in.ReadAt(pos);
 
 		// The common case here is another character as opposed to quotes so
@@ -143,12 +155,18 @@ namespace
 		while (true)
 		{
 			pos = in.GetPosition();
+			if (pos >= in.GetSize())
+			{
+				printf("ERROR: Buffer overflow while lexing string\n");
+				return Token();
+			}
 			char c = *in.ReadAt(pos);
 
 			switch (c)
 			{
 			// The string terminates with a quote
 			case ('\"'):
+				in.WriteAt("\0", 1, in.GetPosition());
 				in.SeekRel(1);
 				return token;
 
@@ -176,9 +194,15 @@ namespace
 	bool LexerInteger(clutl::DataBuffer& in, unsigned __int64& uintval)
 	{
 		// Consume the first digit
-		int pos = in.GetPosition();
+		unsigned int pos = in.GetPosition();
+		if (pos >= in.GetSize())
+		{
+			printf("ERROR: Overflow\n");
+			return false;
+		}
 		char c = *in.ReadAt(pos);
 		if (!isdigit(c))
+			// ERROR: Expecting digit for number
 			return false;
 
 		uintval = 0;
@@ -190,6 +214,11 @@ namespace
 
 			// Peek at the next character and leave if its not a digit
 			pos = in.GetPosition();
+			if (pos >= in.GetSize())
+			{
+				printf("ERROR: Overflow\n");
+				return false;
+			}
 			c = *in.ReadAt(pos);
 		} while (isdigit(c));
 
@@ -197,10 +226,60 @@ namespace
 	}
 
 
+	int VerifyDigits(clutl::DataBuffer& in, unsigned int pos)
+	{
+		char c = 0;
+		do
+		{
+			if (pos >= in.GetSize())
+			{
+				printf("ERROR: Overdflow\n");
+				return -1;
+			}
+			c = *in.ReadAt(pos++);
+		} while (isdigit(c));
+
+		return pos;
+	}
+
+
+	bool VerifyDecimal(clutl::DataBuffer& in, char sep)
+	{
+		// Check that there is stuff beyond the .,e,E
+		unsigned int pos = in.GetPosition() + 1;
+		if (pos >= in.GetSize())
+		{
+			printf("ERROR: overflow\n");
+			return false;
+		}
+
+		if (sep == '.')
+		{
+			// Ensure there are digits trailing the decimal point
+			pos = VerifyDigits(in, pos);
+			if (pos == -1)
+				return false;
+
+			// Only need to continue if there's an exponent
+			char c = *in.ReadAt(pos);
+			if (c != 'e' && c != 'E')
+				return true;
+		}
+
+		// Skip over any pos/neg qualifiers
+		char c = *in.ReadAt(pos);
+		if (c == '-' || c == '+')
+			pos++;
+
+		// Ensure there are digits trailing the exponent
+		return VerifyDigits(in, pos) != -1;
+	}
+
+
 	Token LexerNumber(clutl::DataBuffer& in)
 	{
 		// Start off construction of an integer
-		int start_pos = in.GetPosition();
+		unsigned int start_pos = in.GetPosition();
 		Token token(TT_INTEGER, start_pos, 0);
 
 		// Consume negative
@@ -214,7 +293,6 @@ namespace
 		// Parse the integer digits
 		unsigned __int64 uintval;
 		if (!LexerInteger(in, uintval))
-			// TODO: error
 			return Token();
 
 		// Convert to signed integer
@@ -224,10 +302,13 @@ namespace
 			token.val.integer = uintval;
 
 		// Is this a decimal?
-		int pos = in.GetPosition();
+		unsigned int pos = in.GetPosition();
 		char c = *in.ReadAt(pos);
-		if (c == '.')
+		if (c == '.' || c == 'e' || c == 'E')
 		{
+			if (!VerifyDecimal(in, c))
+				return Token();
+
 			// Re-evaluate as a decimal using the more expensive strtod function
 			const char* decimal_start = in.ReadAt(start_pos);
 			char* decimal_end;
@@ -245,22 +326,32 @@ namespace
 	Token LexerKeyword(clutl::DataBuffer& in, TokenType type, const char* keyword, int len)
 	{
 		// Consume the first letter
-		int start_pos = in.GetPosition();
+		unsigned int start_pos = in.GetPosition();
 		in.SeekRel(1);
 
-		// TODO: Overflow without buffer assert
-
 		// Try to match the remaining letters of the keyword
-		int pos = in.GetPosition();
-		while (len && *in.ReadAt(pos) == *keyword)
+		unsigned int pos = 0;
+		while (len)
 		{
-			keyword++;
-			pos++;
+			pos = in.GetPosition();
+			if (pos >= in.GetSize())
+			{
+				printf("ERROR: overflow\n");
+				return Token();
+			}
+			in.SeekRel(1);
+
+			if (*keyword++ != *in.ReadAt(pos))
+				break;
+
+			len--;
 		}
 
 		if (len)
-			// ERROR: Keyword didn't match
+		{
+			printf("ERROR:Invalid keyword\n");
 			return Token();
+		}
 
 		return Token(type, start_pos, in.GetPosition() - start_pos);
 	}
@@ -269,7 +360,10 @@ namespace
 	Token LexerToken(clutl::DataBuffer& in)
 	{
 	start:
+		// Read the current character and return an empty token at stream end
 		unsigned int pos = in.GetPosition();
+		if (pos >= in.GetSize())
+			return Token();
 		char c = *in.ReadAt(pos);
 
 		switch (c)
@@ -290,6 +384,7 @@ namespace
 		case (','):
 		case ('['):
 		case (']'):
+		case (':'):
 			in.SeekRel(1);
 			return Token((TokenType)c, pos, 1);
 
@@ -318,10 +413,8 @@ namespace
 
 		default:
 			// ERROR: Unexpected character
-			break;
+			return Token();
 		}
-
-		return Token();
 	}
 
 
@@ -342,16 +435,19 @@ namespace
 
 	void ParserString(const Token& t)
 	{
+		printf("%s\n", t.val.string);
 	}
 
 
 	void ParserInteger(const Token& t)
 	{
+		printf("%d\n", t.val.integer);
 	}
 
 
 	void ParserDecimal(const Token& t)
 	{
+		printf("%f\n", t.val.decimal);
 	}
 
 
@@ -362,6 +458,7 @@ namespace
 
 		if (t.type == TT_COMMA)
 		{
+			printf(", ");
 			t = LexerToken(in);
 			ParserElements(in, t);
 		}
@@ -371,15 +468,18 @@ namespace
 	void ParserArray(clutl::DataBuffer& in, Token& t)
 	{
 		Expect(in, t, TT_LBRACKET);
+		printf("[\n");
 
 		if (t.type == TT_RBRACKET)
 		{
+			printf("]\n");
 			t = LexerToken(in);
 			return;
 		}
 
 		ParserElements(in, t);
 		Expect(in, t, TT_RBRACKET);
+		printf("]\n");
 	}
 
 
@@ -415,8 +515,10 @@ namespace
 
 	void ParserPair(clutl::DataBuffer& in, Token& t)
 	{
-		Expect(in, t, TT_STRING);
+		Token o = Expect(in, t, TT_STRING);
+		printf("%s", o.val.string);
 		Expect(in, t, TT_COLON);
+		printf(":");
 		ParserValue(in, t);
 	}
 
@@ -427,6 +529,7 @@ namespace
 
 		if (t.type == TT_COMMA)
 		{
+			printf(", ");
 			t = LexerToken(in);
 			ParserMembers(in, t);
 		}
@@ -436,14 +539,24 @@ namespace
 	void ParserObject(clutl::DataBuffer& in, Token& t)
 	{
 		Expect(in, t, TT_LBRACE);
+		printf("{\n");
 
 		if (t.type == TT_RBRACE)
 		{
 			t = LexerToken(in);
+			printf("}\n");
 			return;
 		}
 
 		ParserMembers(in, t);
 		Expect(in, t, TT_RBRACE);
+		printf("}\n");
 	}
+}
+
+
+void clutl::LoadJSON(DataBuffer& in, void* object, const clcpp::Type* type)
+{
+	Token t = LexerToken(in);
+	ParserObject(in, t);
 }

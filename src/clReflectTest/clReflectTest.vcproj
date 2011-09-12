@@ -98,6 +98,10 @@
 			>
 		</File>
 		<File
+			RelativePath="TestSerialiseJSON.cpp"
+			>
+		</File>
+		<File
 			RelativePath="TestTemplates.cpp"
 			>
 		</File>
@@ -105,7 +109,7 @@
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="NgjtoASkA_6oc7gVxoL82g=="
+			Value="2IjDD90kD9HlI4tFEWdajw=="
 		/>
 	</Globals>
 </VisualStudioProject>

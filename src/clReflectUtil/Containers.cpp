@@ -54,21 +54,21 @@ void clutl::DataBuffer::Read(void* data, unsigned int length)
 
 const char* clutl::DataBuffer::ReadAt(unsigned int position) const
 {
-	clcpp::internal::Assert(m_Position < m_Size && "Buffer overflow");
-	return m_Data + m_Position;
+	clcpp::internal::Assert(position <= m_Size && "Buffer overflow");
+	return m_Data + position;
 }
 
 
 void clutl::DataBuffer::SeekAbs(unsigned int position)
 {
-	clcpp::internal::Assert(position < m_Size && "Buffer overflow");
+	clcpp::internal::Assert(position <= m_Size && "Buffer overflow");
 	m_Position = position;	
 }
 
 
 void clutl::DataBuffer::SeekRel(int offset)
 {
-	clcpp::internal::Assert(m_Position + offset < m_Size && "Buffer overflow");
+	clcpp::internal::Assert(m_Position + offset <= m_Size && "Buffer overflow");
 	m_Position += offset;	
 }
 
@@ -76,5 +76,5 @@ void clutl::DataBuffer::SeekRel(int offset)
 void clutl::DataBuffer::SeekEnd(int offset)
 {
 	m_Position -= offset;
-	clcpp::internal::Assert(m_Position < m_Size && "Buffer overflow");
+	clcpp::internal::Assert(m_Position <= m_Size && "Buffer overflow");
 }
