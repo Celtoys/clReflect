@@ -65,6 +65,13 @@ namespace jsontest
 {
 	enum NoInit { NO_INIT };
 
+	enum Value
+	{
+		VALUE_A,
+		WHATEVER,
+		YUP
+	};
+
 	struct AllFields
 	{
 		AllFields()
@@ -107,6 +114,10 @@ namespace jsontest
 			, f28(0xFFFFFFFF)
 			, f29(0xFFFFFFFF)
 			, f30(0xFFFFFFFFFFFFFFFF)
+
+			, e0(VALUE_A)
+			, e1(WHATEVER)
+			, e2(YUP)
 		{
 		}
 		AllFields(NoInit)
@@ -152,6 +163,10 @@ namespace jsontest
 		unsigned int f28;
 		unsigned long f29;
 		unsigned __int64 f30;
+
+		Value e0;
+		Value e1;
+		Value e2;
 	};
 }
 
@@ -245,5 +260,5 @@ void TestSerialiseJSON(clcpp::Database& db)
 	clutl::SaveJSON(buffer, &a, clcpp_get_type(db, jsontest::AllFields));
 	buffer.ResetPosition();
 	jsontest::AllFields b(jsontest::NO_INIT);
-	clutl::LoadJSON(buffer, &a, clcpp_get_type(db, jsontest::AllFields));
+	clutl::LoadJSON(buffer, &b, clcpp_get_type(db, jsontest::AllFields));
 }

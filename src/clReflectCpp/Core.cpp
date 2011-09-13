@@ -107,6 +107,12 @@ namespace
 }
 
 
+unsigned int clcpp::internal::HashData(const void* data, int length)
+{
+	return MurmurHash3(data, length, 0);
+}
+
+
 unsigned int clcpp::internal::HashNameString(const char* name_string)
 {
 	return MurmurHash3(name_string, strlen(name_string), 0);

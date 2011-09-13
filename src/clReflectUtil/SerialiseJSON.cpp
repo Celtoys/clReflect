@@ -19,8 +19,8 @@ extern "C" double strtod(const char* s00, char** se);
 // for overflow checking and thread safety
 extern "C" int _fcvt_s(char* buffer, size_t buffer_size, double val, int count, int* dec, int* sign);
 
-// TODO: REMOVE
-extern "C" int printf(const char* format, ...);
+
+static void SetupTypeDispatchLUT();
 
 
 namespace
@@ -504,8 +504,58 @@ namespace
 	}
 
 
-	void ParserValue(Context& ctx, Token& t);
-	void ParserObject(Context& ctx, Token& t);
+	typedef void (*SaveNumberFunc)(clutl::DataBuffer&, const char*);
+	typedef void (*LoadIntegerFunc)(char*, __int64);
+	typedef void (*LoadDecimalFunc)(char*, double);
+
+	struct TypeDispatch
+	{
+		TypeDispatch()
+			: valid(false)
+			, save_number(0)
+			, load_integer(0)
+			, load_decimal(0)
+		{
+		}
+
+		bool valid;
+		SaveNumberFunc save_number;
+		LoadIntegerFunc load_integer;
+		LoadDecimalFunc load_decimal;
+	};
+
+	// A save function lookup table for all supported C++ types
+	static const int g_TypeDispatchMod = 47;
+	TypeDispatch g_TypeDispatchLUT[g_TypeDispatchMod];
+	bool g_TypeDispatchLUTReady = false;
+
+
+	// For the given data set of basic type name hashes, this combines to make
+	// a perfect hash function with no collisions, allowing quick indexed lookup.
+	unsigned int GetTypeDispatchIndex(unsigned int hash)
+	{
+		return hash % g_TypeDispatchMod;
+	}
+	unsigned int GetTypeDispatchIndex(const char* type_name)
+	{
+		return GetTypeDispatchIndex(clcpp::internal::HashNameString(type_name));
+	}
+
+
+	void AddTypeDispatch(const char* type_name, SaveNumberFunc save_func, LoadIntegerFunc loadi_func, LoadDecimalFunc loadd_func)
+	{
+		// Ensure there are no collisions before adding the functions
+		unsigned index = GetTypeDispatchIndex(type_name);
+		clcpp::internal::Assert(g_TypeDispatchLUT[index].valid == false && "Lookup table index collision");
+		g_TypeDispatchLUT[index].valid = true;
+		g_TypeDispatchLUT[index].save_number = save_func;
+		g_TypeDispatchLUT[index].load_integer = loadi_func;
+		g_TypeDispatchLUT[index].load_decimal = loadd_func;
+	}
+
+
+	void ParserValue(Context& ctx, Token& t, char* object, const clcpp::Field* field);
+	void ParserObject(Context& ctx, Token& t, char* object, const clcpp::Type* type);
 
 
 	Token Expect(Context& ctx, Token& t, TokenType type)
@@ -530,38 +580,76 @@ namespace
 		if (!t.IsValid())
 			return;
 
-		printf("%.*s ", t.length, t.val.string);
+		//printf("%.*s ", t.length, t.val.string);
 	}
 
 
-	void ParserInteger(const Token& t)
+	template <typename TYPE>
+	void LoadIntegerWithCast(char* dest, __int64 integer)
+	{
+		*(TYPE*)dest = (TYPE)integer;
+	}
+	void LoadIntegerBool(char* dest, __int64 integer)
+	{
+		*(bool*)dest = integer != 0;
+	}
+
+
+	template <typename TYPE>
+	void LoadDecimalWithCast(char* dest, double decimal)
+	{
+		*(TYPE*)dest = (TYPE)decimal;
+	}
+	void LoadDecimalBool(char* dest, double decimal)
+	{
+		*(bool*)dest = decimal != 0;
+	}
+
+
+	void ParserInteger(const Token& t, char* object, const clcpp::Field* field)
 	{
 		// Was there an error expecting an integer
 		if (!t.IsValid())
 			return;
 
-		printf("%d ", t.val.integer);
+		if (field)
+		{
+			// Dispatch to the correct integer loader based on the field type
+			unsigned int index = GetTypeDispatchIndex(field->type->name.hash);
+			clcpp::internal::Assert(index < g_TypeDispatchMod && "Index is out of range");
+			LoadIntegerFunc func = g_TypeDispatchLUT[index].load_integer;
+			if (func)
+				func(object + field->offset, t.val.integer);
+		}
 	}
 
 
-	void ParserDecimal(const Token& t)
+	void ParserDecimal(const Token& t, char* object, const clcpp::Field* field)
 	{
 		// Was there an error expecting a decimal?
 		if (!t.IsValid())
 			return;
 
-		printf("%f ", t.val.decimal);
+		if (field)
+		{
+			// Dispatch to the correct decimal loader based on the field type
+			unsigned int index = GetTypeDispatchIndex(field->type->name.hash);
+			clcpp::internal::Assert(index < g_TypeDispatchMod && "Index is out of range");
+			LoadDecimalFunc func = g_TypeDispatchLUT[index].load_decimal;
+			if (func)
+				func(object + field->offset, t.val.decimal);
+		}
 	}
 
 
 	void ParserElements(Context& ctx, Token& t)
 	{
 		// Expect a value first
-		ParserValue(ctx, t);
+		// TODO: Fill in when arrays are supported by clReflect
+		ParserValue(ctx, t, 0, 0);
 
 		if (t.type == TT_COMMA)
 		{
-			printf(", ");
 			t = LexerToken(ctx);
 			ParserElements(ctx, t);
 		}
@@ -572,19 +660,16 @@ namespace
 	{
 		if (!Expect(ctx, t, TT_LBRACKET).IsValid())
 			return;
-		printf("[ ");
 
 		// Empty array?
 		if (t.type == TT_RBRACKET)
 		{
-			printf("] ");
 			t = LexerToken(ctx);
 			return;
 		}
 
 		ParserElements(ctx, t);
 		Expect(ctx, t, TT_RBRACKET);
-		printf("] ");
 	}
 
 
@@ -594,18 +679,23 @@ namespace
 		if (!t.IsValid())
 			return;
 
-		printf("%d ", val);
+		//printf("%d ", val);
 	}
 
 
-	void ParserValue(Context& ctx, Token& t)
+	void ParserValue(Context& ctx, Token& t, char* object, const clcpp::Field* field)
 	{
 		switch (t.type)
 		{
 		case (TT_STRING): return ParserString(Expect(ctx, t, TT_STRING));
-		case (TT_INTEGER): return ParserInteger(Expect(ctx, t, TT_INTEGER));
-		case (TT_DECIMAL): return ParserDecimal(Expect(ctx, t, TT_DECIMAL));
-		case (TT_LBRACE): return ParserObject(ctx, t);
+		case (TT_INTEGER): return ParserInteger(Expect(ctx, t, TT_INTEGER), object, field);
+		case (TT_DECIMAL): return ParserDecimal(Expect(ctx, t, TT_DECIMAL), object, field);
+		case (TT_LBRACE):
+			{
+				if (field)
+					return ParserObject(ctx, t, object + field->offset, field->type);
+				return ParserObject(ctx, t, 0, 0);
+			}
 		case (TT_LBRACKET): return ParserArray(ctx, t);
 		case (TT_TRUE): return ParserLiteralValue(Expect(ctx, t, TT_TRUE), 1);
 		case (TT_FALSE): return ParserLiteralValue(Expect(ctx, t, TT_FALSE), 0);
@@ -618,94 +708,73 @@ namespace
 	}
 
 
-	void ParserPair(Context& ctx, Token& t)
+	void ParserPair(Context& ctx, Token& t, char* object, const clcpp::Type* type)
 	{
-		Token o = Expect(ctx, t, TT_STRING);
-		if (!o.IsValid())
+		// Get the field name
+		Token name = Expect(ctx, t, TT_STRING);
+		if (!name.IsValid())
 			return;
-		printf("%.*s ", o.length, o.val.string);
+
+		// Lookup the field in the parent class, if the type is class
+		// We want to continue parsing even if there's a mismatch, to skip the invalid data
+		const clcpp::Field* field = 0;
+		if (type && type->kind == clcpp::Primitive::KIND_CLASS)
+		{
+			const clcpp::Class* class_type = type->AsClass();
+			unsigned int field_hash = clcpp::internal::HashData(name.val.string, name.length);
+			field = clcpp::FindPrimitive(class_type->fields, field_hash);
+		}
 
 		if (!Expect(ctx, t, TT_COLON).IsValid())
 			return;
-		printf(": ");
 
-		ParserValue(ctx, t);
+		ParserValue(ctx, t, object, field);
 	}
 
 
-	void ParserMembers(Context& ctx, Token& t)
+	void ParserMembers(Context& ctx, Token& t, char* object, const clcpp::Type* type)
 	{
-		ParserPair(ctx, t);
+		ParserPair(ctx, t, object, type);
 
+		// Recurse, parsing more members in the list
 		if (t.type == TT_COMMA)
 		{
-			printf(", ");
 			t = LexerToken(ctx);
-			ParserMembers(ctx, t);
+			ParserMembers(ctx, t, object, type);
 		}
 	}
 
 
-	void ParserObject(Context& ctx, Token& t)
+	void ParserObject(Context& ctx, Token& t, char* object, const clcpp::Type* type)
 	{
 		if (!Expect(ctx, t, TT_LBRACE).IsValid())
 			return;
-		printf("{ ");
 
 		// Empty object?
 		if (t.type == TT_RBRACE)
 		{
 			t = LexerToken(ctx);
-			printf("} ");
 			return;
 		}
 
-		ParserMembers(ctx, t);
+		ParserMembers(ctx, t, object, type);
 		Expect(ctx, t, TT_RBRACE);
-		printf("} ");
 	}
 }
 
 
 clutl::JSONError clutl::LoadJSON(DataBuffer& in, void* object, const clcpp::Type* type)
 {
+	SetupTypeDispatchLUT();
 	Context ctx(in);
 	Token t = LexerToken(ctx);
-	ParserObject(ctx, t);
+	ParserObject(ctx, t, (char*)object, type);
 	return ctx.GetError();
 }
 
 
 namespace
 {
-	// A save function lookup table for all supported C++ types
-	typedef void (*SaveIntegerFunc)(clutl::DataBuffer&, const char*);
-	static const int g_HashSaveIntegerMod = 47;
-	SaveIntegerFunc g_SaveIntegerLookupTable[g_HashSaveIntegerMod] = { 0 };
-	bool g_SaveIntegerLookupTableReady = false;
-
-
-	// For the given data set of basic type name hashes, this combines to make
-	// a perfect hash function with no collisions, allowing quick indexed lookup.
-	unsigned int GetSaveIntegerFuncIndex(unsigned int hash)
-	{
-		return hash % g_HashSaveIntegerMod;
-	}
-	unsigned int GetSaveIntegerFuncIndex(const char* type_name)
-	{
-		return GetSaveIntegerFuncIndex(clcpp::internal::HashNameString(type_name));
-	}
-
-
-	void AddSaveIntegerFunc(const char* type_name, SaveIntegerFunc func)
-	{
-		// Ensure there are no collisions before adding the function
-		unsigned index = GetSaveIntegerFuncIndex(type_name);
-		clcpp::internal::Assert(g_SaveIntegerLookupTable[index] == 0 && "Lookup table index collision");
-		g_SaveIntegerLookupTable[index] = func;
-	}
-
-
 	void SaveObject(clutl::DataBuffer& out, const char* object, const clcpp::Type* type);
 
 
@@ -769,7 +838,7 @@ namespace
 		// Loop through the value with radix 10
 		do 
 		{
-			__int64 next_integer = integer / 10;
+			unsigned __int64 next_integer = integer / 10;
 			*--tptr = char('0' + (integer - next_integer * 10));
 			integer = next_integer;
 		} while (integer);
@@ -806,26 +875,6 @@ namespace
 		// Prefix with negative sign
 		if (sign)
 			*optr++ = '-';
-
-		/**optr++ = *iptr++;
-		*optr++ = '.';
-
-		char* last_nonzero_digit = optr;
-		while (*iptr)
-		{
-			*optr++ = *iptr++;
-
-			// Keep track of the last non-zero digit
-			if (*iptr && *iptr != '0')
-				last_nonzero_digit = optr;
-		}
-		optr = last_nonzero_digit;
-		*optr++ = 'e';
-		*optr = 0;
-
-		out.Write(decimal_buffer, optr - decimal_buffer);
-
-		SaveInteger(out, dec - 1);*/
 
 		// With a negative decimal position, prefix with 0. and however many
 		// zeroes are needed
@@ -874,38 +923,11 @@ namespace
 	}
 
 
-	void SetupSaveIntegerLookupTable()
-	{
-		if (!g_SaveIntegerLookupTableReady)
-		{
-			// Add all integers
-			AddSaveIntegerFunc("bool", SaveIntegerWithCast<bool>);
-			AddSaveIntegerFunc("char", SaveIntegerWithCast<char>);
-			AddSaveIntegerFunc("wchar_t", SaveUnsignedIntegerWithCast<wchar_t>);
-			AddSaveIntegerFunc("unsigned char", SaveUnsignedIntegerWithCast<unsigned char>);
-			AddSaveIntegerFunc("short", SaveIntegerWithCast<short>);
-			AddSaveIntegerFunc("unsigned short", SaveUnsignedIntegerWithCast<unsigned short>);
-			AddSaveIntegerFunc("int", SaveIntegerWithCast<int>);
-			AddSaveIntegerFunc("unsigned int", SaveUnsignedIntegerWithCast<unsigned int>);
-			AddSaveIntegerFunc("long", SaveIntegerWithCast<long>);
-			AddSaveIntegerFunc("unsigned long", SaveUnsignedIntegerWithCast<unsigned long>);
-			AddSaveIntegerFunc("long long", SaveIntegerWithCast<long long>);
-			AddSaveIntegerFunc("unsigned long long", SaveUnsignedIntegerWithCast<unsigned long long>);
-
-			// Add all decimals
-			AddSaveIntegerFunc("float", SaveFloat);
-			AddSaveIntegerFunc("double", SaveDouble);
-
-			g_SaveIntegerLookupTableReady = true;
-		}
-	}
-
-
 	void SaveType(clutl::DataBuffer& out, const char* object, const clcpp::Type* type)
 	{
-		unsigned int index = GetSaveIntegerFuncIndex(type->name.hash);
-		clcpp::internal::Assert(index < g_HashSaveIntegerMod && "Index is out of range");
-		SaveIntegerFunc func = g_SaveIntegerLookupTable[index];
+		unsigned int index = GetTypeDispatchIndex(type->name.hash);
+		clcpp::internal::Assert(index < g_TypeDispatchMod && "Index is out of range");
+		SaveNumberFunc func = g_TypeDispatchLUT[index].save_number;
 		clcpp::internal::Assert(func && "No save function for type");
 		func(out, object);
 	}
@@ -984,6 +1006,35 @@ namespace
 
 void clutl::SaveJSON(DataBuffer& out, const void* object, const clcpp::Type* type)
 {
-	SetupSaveIntegerLookupTable();
+	SetupTypeDispatchLUT();
 	SaveObject(out, (char*)object, type);
 }
+
+
+static void SetupTypeDispatchLUT()
+{
+	if (!g_TypeDispatchLUTReady)
+	{
+		// Add all integers
+		AddTypeDispatch("bool", SaveIntegerWithCast<bool>, LoadIntegerBool, LoadDecimalBool);
+		AddTypeDispatch("char", SaveIntegerWithCast<char>, LoadIntegerWithCast<char>, LoadDecimalWithCast<char>);
+		AddTypeDispatch("wchar_t", SaveUnsignedIntegerWithCast<wchar_t>, LoadIntegerWithCast<wchar_t>, LoadDecimalWithCast<wchar_t>);
+		AddTypeDispatch("unsigned char", SaveUnsignedIntegerWithCast<unsigned char>, LoadIntegerWithCast<unsigned char>, LoadDecimalWithCast<unsigned char>);
+		AddTypeDispatch("short", SaveIntegerWithCast<short>, LoadIntegerWithCast<short>, LoadDecimalWithCast<short>);
+		AddTypeDispatch("unsigned short", SaveUnsignedIntegerWithCast<unsigned short>, LoadIntegerWithCast<unsigned short>, LoadDecimalWithCast<unsigned short>);
+		AddTypeDispatch("int", SaveIntegerWithCast<int>, LoadIntegerWithCast<int>, LoadDecimalWithCast<int>);
+		AddTypeDispatch("unsigned int", SaveUnsignedIntegerWithCast<unsigned int>, LoadIntegerWithCast<unsigned int>, LoadDecimalWithCast<unsigned int>);
+		AddTypeDispatch("long", SaveIntegerWithCast<long>, LoadIntegerWithCast<long>, LoadDecimalWithCast<long>);
+		AddTypeDispatch("unsigned long", SaveUnsignedIntegerWithCast<unsigned long>, LoadIntegerWithCast<unsigned long>, LoadDecimalWithCast<unsigned long>);
+		AddTypeDispatch("long long", SaveIntegerWithCast<long long>, LoadIntegerWithCast<long long>, LoadDecimalWithCast<long long>);
+		AddTypeDispatch("unsigned long long", SaveUnsignedIntegerWithCast<unsigned long long>, LoadIntegerWithCast<unsigned long long>, LoadDecimalWithCast<unsigned long long>);
+
+		// Add all decimals
+		AddTypeDispatch("float", SaveFloat, LoadIntegerWithCast<float>, LoadDecimalWithCast<float>);
+		AddTypeDispatch("double", SaveDouble, LoadIntegerWithCast<double>, LoadDecimalWithCast<double>);
+
+		g_TypeDispatchLUTReady = true;
+	}
+}
+
+
