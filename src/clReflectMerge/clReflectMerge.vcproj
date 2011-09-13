@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectMerge"
-	ProjectGUID="{F80F28D0-D583-11E0-A0DB-F46D04D48D5F}"
+	ProjectGUID="{00BF0D5E-DD5E-11E0-B0B3-F46D04D48D5F}"
 	RootNamespace="clReflectMerge"
 	Keyword="Win32Proj"
 	>

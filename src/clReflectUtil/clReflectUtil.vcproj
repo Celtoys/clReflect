@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectUtil"
-	ProjectGUID="{F7D74FF0-D583-11E0-9EA3-F46D04D48D5F}"
+	ProjectGUID="{00862312-DD5E-11E0-BB75-F46D04D48D5F}"
 	RootNamespace="clReflectUtil"
 	Keyword="Win32Proj"
 	>
@@ -63,11 +63,11 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{f020fcd0-dabe-11e0-b4f9-f46d04d48d5f}"
+			UniqueIdentifier="{0086712e-dd5e-11e0-8fed-f46d04d48d5f}"
 			>
 			<Filter
 				Name="clutl"
-				UniqueIdentifier="{f020fcd1-dabe-11e0-afe4-f46d04d48d5f}"
+				UniqueIdentifier="{0086712f-dd5e-11e0-8be5-f46d04d48d5f}"
 				>
 				<File
 					RelativePath="..\..\inc\clutl\Containers.h"
@@ -84,10 +84,6 @@
 			</Filter>
 		</Filter>
 		<File
-			RelativePath="clReflectUtil.pibfile"
-			>
-		</File>
-		<File
 			RelativePath="Containers.cpp"
 			>
 		</File>
@@ -97,6 +93,10 @@
 		</File>
 		<File
 			RelativePath="SerialiseVersionedBinary.cpp"
+			>
+		</File>
+		<File
+			RelativePath="clReflectUtil.pibfile"
 			>
 		</File>
 	</Files>

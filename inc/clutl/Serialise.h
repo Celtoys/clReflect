@@ -51,4 +51,5 @@ namespace clutl
 
 
 	JSONError LoadJSON(DataBuffer& in, void* object, const clcpp::Type* type);
+	void SaveJSON(DataBuffer& out, const void* object, const clcpp::Type* type);
 }

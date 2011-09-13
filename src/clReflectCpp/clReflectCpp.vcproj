@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectCpp"
-	ProjectGUID="{F7D35852-D583-11E0-836C-F46D04D48D5F}"
+	ProjectGUID="{00820462-DD5E-11E0-B6BD-F46D04D48D5F}"
 	RootNamespace="clReflectCpp"
 	Keyword="Win32Proj"
 	>
@@ -63,11 +63,11 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{f7d490d0-d583-11e0-b9e4-f46d04d48d5f}"
+			UniqueIdentifier="{008315d2-dd5e-11e0-8b61-f46d04d48d5f}"
 			>
 			<Filter
 				Name="clcpp"
-				UniqueIdentifier="{f7d490d1-d583-11e0-a4f7-f46d04d48d5f}"
+				UniqueIdentifier="{008315d3-dd5e-11e0-9e0a-f46d04d48d5f}"
 				>
 				<File
 					RelativePath="..\..\inc\clcpp\Core.h"

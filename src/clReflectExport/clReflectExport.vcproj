@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectExport"
-	ProjectGUID="{F8178D40-D583-11E0-99B8-F46D04D48D5F}"
+	ProjectGUID="{00C7BFEE-DD5E-11E0-ACE7-F46D04D48D5F}"
 	RootNamespace="clReflectExport"
 	Keyword="Win32Proj"
 	>

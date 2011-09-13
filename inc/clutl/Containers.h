@@ -8,10 +8,11 @@ namespace clutl
 	class DataBuffer
 	{
 	public:
-		DataBuffer(unsigned int size);
+		DataBuffer(unsigned int capacity);
 		~DataBuffer();
 
-		void Reset();
+		void ResetPosition();
+		void ResetPositionAndSize();
 
 		void Write(const void* data, unsigned int length);
 		void WriteAt(const void* data, unsigned int length, unsigned int position);
@@ -29,6 +30,7 @@ namespace clutl
 
 	private:
 		char* m_Data;
+		unsigned int m_Capacity;
 		unsigned int m_Size;
 		unsigned int m_Position;
 	};

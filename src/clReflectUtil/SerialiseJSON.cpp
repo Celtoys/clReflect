@@ -5,13 +5,21 @@
 //    * Allow IEEE754 hex float representation.
 //    * Escape sequences need converting.
 //    * Enums communicated by value.
+//    * Field names need to be in memory for JSON serialising to work.
 //
 
 #include <clutl/Serialise.h>
 #include <clutl/Containers.h>
+#include <clcpp/Database.h>
 
 
+// Explicitly stated dependencies in stdlib.h
 extern "C" double strtod(const char* s00, char** se);
+// This is Microsoft's safer version of the ISO C++ _fcvt which takes the extra buffer and size parameters
+// for overflow checking and thread safety
+extern "C" int _fcvt_s(char* buffer, size_t buffer_size, double val, int count, int* dec, int* sign);
+
+// TODO: REMOVE
 extern "C" int printf(const char* format, ...);
 
 
@@ -65,6 +73,7 @@ namespace
 		TokenType type;
 		int length;
 
+		// All possible token value representations
 		struct
 		{
 			union
@@ -91,14 +100,14 @@ namespace
 
 
 	//
-	// The main lexer/parser context, for keeping tracking of errors and proving a level of
+	// The main lexer/parser context, for keeping tracking of errors and providing a level of
 	// text parsing abstraction above the data buffer.
 	//
 	class Context
 	{
 	public:
-		Context(clutl::DataBuffer& in)
-			: m_DataBuffer(in)
+		Context(clutl::DataBuffer& data_buffer)
+			: m_DataBuffer(data_buffer)
 			, m_Line(1)
 			, m_LinePosition(0)
 		{
@@ -643,6 +652,7 @@ namespace
 			return;
 		printf("{ ");
 
+		// Empty object?
 		if (t.type == TT_RBRACE)
 		{
 			t = LexerToken(ctx);
@@ -663,4 +673,317 @@ clutl::JSONError clutl::LoadJSON(DataBuffer& in, void* object, const clcpp::Type
 	Token t = LexerToken(ctx);
 	ParserObject(ctx, t);
 	return ctx.GetError();
+}
+
+
+namespace
+{
+	// A save function lookup table for all supported C++ types
+	typedef void (*SaveIntegerFunc)(clutl::DataBuffer&, const char*);
+	static const int g_HashSaveIntegerMod = 47;
+	SaveIntegerFunc g_SaveIntegerLookupTable[g_HashSaveIntegerMod] = { 0 };
+	bool g_SaveIntegerLookupTableReady = false;
+
+
+	// For the given data set of basic type name hashes, this combines to make
+	// a perfect hash function with no collisions, allowing quick indexed lookup.
+	unsigned int GetSaveIntegerFuncIndex(unsigned int hash)
+	{
+		return hash % g_HashSaveIntegerMod;
+	}
+	unsigned int GetSaveIntegerFuncIndex(const char* type_name)
+	{
+		return GetSaveIntegerFuncIndex(clcpp::internal::HashNameString(type_name));
+	}
+
+
+	void AddSaveIntegerFunc(const char* type_name, SaveIntegerFunc func)
+	{
+		// Ensure there are no collisions before adding the function
+		unsigned index = GetSaveIntegerFuncIndex(type_name);
+		clcpp::internal::Assert(g_SaveIntegerLookupTable[index] == 0 && "Lookup table index collision");
+		g_SaveIntegerLookupTable[index] = func;
+	}
+
+
+	void SaveObject(clutl::DataBuffer& out, const char* object, const clcpp::Type* type);
+
+
+	void SaveString(clutl::DataBuffer& out, const char* str)
+	{
+		out.Write("\"", 1);
+		const char* start = str;
+		while (*str++)
+			;
+		out.Write(start, str - start - 1);
+		out.Write("\"", 1);
+	}
+
+
+	void SaveInteger(clutl::DataBuffer& out, __int64 integer)
+	{
+		// Enough to store a 64-bit int
+		static const int MAX_SZ = 20;
+		char text[MAX_SZ];
+
+		// Null terminate and start at the end
+		text[MAX_SZ - 1] = 0;
+		char* end = text + MAX_SZ - 1;
+		char* tptr = end;
+
+		// Get the absolute and record if the value is negative
+		bool negative = false;
+		if (integer < 0)
+		{
+			negative = true;
+			integer = -integer;
+		}
+
+		// Loop through the value with radix 10
+		do 
+		{
+			__int64 next_integer = integer / 10;
+			*--tptr = char('0' + (integer - next_integer * 10));
+			integer = next_integer;
+		} while (integer);
+
+		// Add negative prefix
+		if (negative)
+			*--tptr = '-';
+
+		out.Write(tptr, end - tptr);
+	}
+
+
+	void SaveUnsignedInteger(clutl::DataBuffer& out, unsigned __int64 integer)
+	{
+		// Enough to store a 64-bit int + null
+		static const int MAX_SZ = 21;
+		char text[MAX_SZ];
+
+		// Null terminate and start at the end
+		text[MAX_SZ - 1] = 0;
+		char* end = text + MAX_SZ - 1;
+		char* tptr = end;
+
+		// Loop through the value with radix 10
+		do 
+		{
+			__int64 next_integer = integer / 10;
+			*--tptr = char('0' + (integer - next_integer * 10));
+			integer = next_integer;
+		} while (integer);
+
+		out.Write(tptr, end - tptr);
+	}
+
+
+	// Automate the process of de-referencing an object as its exact type so no
+	// extra bytes are read incorrectly and values are correctly zero-extended.
+	template <typename TYPE>
+	void SaveIntegerWithCast(clutl::DataBuffer& out, const char* object)
+	{
+		SaveInteger(out, *(TYPE*)object);
+	}
+	template <typename TYPE>
+	void SaveUnsignedIntegerWithCast(clutl::DataBuffer& out, const char* object)
+	{
+		SaveUnsignedInteger(out, *(TYPE*)object);
+	}
+
+
+	void SaveDecimal(clutl::DataBuffer& out, double decimal)
+	{
+		// Convert the double to a string on the local stack
+		char fcvt_buffer[512] = { 0 };
+		int dec = -1, sign = -1;
+		_fcvt_s(fcvt_buffer, sizeof(fcvt_buffer), decimal, 40, &dec, &sign);
+
+		char decimal_buffer[512];
+		char* iptr = fcvt_buffer;
+		char* optr = decimal_buffer;
+
+		// Prefix with negative sign
+		if (sign)
+			*optr++ = '-';
+
+		/**optr++ = *iptr++;
+		*optr++ = '.';
+
+		char* last_nonzero_digit = optr;
+		while (*iptr)
+		{
+			*optr++ = *iptr++;
+
+			// Keep track of the last non-zero digit
+			if (*iptr && *iptr != '0')
+				last_nonzero_digit = optr;
+		}
+		optr = last_nonzero_digit;
+		*optr++ = 'e';
+		*optr = 0;
+
+		out.Write(decimal_buffer, optr - decimal_buffer);
+
+		SaveInteger(out, dec - 1);*/
+
+		// With a negative decimal position, prefix with 0. and however many
+		// zeroes are needed
+		if (dec <= 0)
+		{
+			*optr++ = '0';
+			*optr++ = '.';
+
+			dec = -dec;
+			while (--dec > 0)
+				*optr++ = '0';
+
+			dec = -1;
+		}
+
+		// Copy between buffers
+		char* last_nonzero_digit = optr;
+		while (*iptr)
+		{
+			// Insert decimal point
+			if (iptr - fcvt_buffer == dec)
+			{
+				*optr++ = '.';
+				last_nonzero_digit = optr;
+			}
+
+			*optr++ = *iptr++;
+
+			// Keep track of the last non-zero digit
+			if (*iptr && *iptr != '0')
+				last_nonzero_digit = optr;
+		}
+
+		*(last_nonzero_digit + 1) = 0;
+		out.Write(decimal_buffer, last_nonzero_digit - decimal_buffer + 1);
+	}
+
+
+	void SaveDouble(clutl::DataBuffer& out, const char* object)
+	{
+		SaveDecimal(out, *(double*)object);
+	}
+	void SaveFloat(clutl::DataBuffer& out, const char* object)
+	{
+		SaveDecimal(out, *(float*)object);
+	}
+
+
+	void SetupSaveIntegerLookupTable()
+	{
+		if (!g_SaveIntegerLookupTableReady)
+		{
+			// Add all integers
+			AddSaveIntegerFunc("bool", SaveIntegerWithCast<bool>);
+			AddSaveIntegerFunc("char", SaveIntegerWithCast<char>);
+			AddSaveIntegerFunc("wchar_t", SaveUnsignedIntegerWithCast<wchar_t>);
+			AddSaveIntegerFunc("unsigned char", SaveUnsignedIntegerWithCast<unsigned char>);
+			AddSaveIntegerFunc("short", SaveIntegerWithCast<short>);
+			AddSaveIntegerFunc("unsigned short", SaveUnsignedIntegerWithCast<unsigned short>);
+			AddSaveIntegerFunc("int", SaveIntegerWithCast<int>);
+			AddSaveIntegerFunc("unsigned int", SaveUnsignedIntegerWithCast<unsigned int>);
+			AddSaveIntegerFunc("long", SaveIntegerWithCast<long>);
+			AddSaveIntegerFunc("unsigned long", SaveUnsignedIntegerWithCast<unsigned long>);
+			AddSaveIntegerFunc("long long", SaveIntegerWithCast<long long>);
+			AddSaveIntegerFunc("unsigned long long", SaveUnsignedIntegerWithCast<unsigned long long>);
+
+			// Add all decimals
+			AddSaveIntegerFunc("float", SaveFloat);
+			AddSaveIntegerFunc("double", SaveDouble);
+
+			g_SaveIntegerLookupTableReady = true;
+		}
+	}
+
+
+	void SaveType(clutl::DataBuffer& out, const char* object, const clcpp::Type* type)
+	{
+		unsigned int index = GetSaveIntegerFuncIndex(type->name.hash);
+		clcpp::internal::Assert(index < g_HashSaveIntegerMod && "Index is out of range");
+		SaveIntegerFunc func = g_SaveIntegerLookupTable[index];
+		clcpp::internal::Assert(func && "No save function for type");
+		func(out, object);
+	}
+
+
+	void SaveEnum(clutl::DataBuffer& out, const char* object, const clcpp::Enum* enum_type)
+	{
+		// Do a linear search for an enum with a matching value
+		int value = *(int*)object;
+		clcpp::Name enum_name;
+		for (int i = 0; i < enum_type->constants.size(); i++)
+		{
+			if (enum_type->constants[i]->value == value)
+			{
+				enum_name = enum_type->constants[i]->name;
+				break;
+			}
+		}
+
+		// TODO: What if a match can't be found?
+
+		// Write the enum name as the value
+		SaveString(out, enum_name.text);
+	}
+
+
+	void SaveClass(clutl::DataBuffer& out, const char* object, const clcpp::Class* class_type)
+	{
+		out.Write("{", 1);
+
+		// Save each field in the class
+		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
+		int nb_fields = fields.size();
+		for (int i = 0; i < nb_fields; i++)
+		{
+			const clcpp::Field* field = fields[i];
+			const char* field_object = object + field->offset;
+			SaveString(out, field->name.text);
+			out.Write(":", 1);
+			SaveObject(out, field_object, field->type);
+
+			// Comma separator for multiple fields
+			if (i < nb_fields - 1)
+				out.Write(",", 1);
+
+			out.Write("\n", 1);
+		}
+
+		out.Write("}", 1);
+	}
+
+
+	void SaveObject(clutl::DataBuffer& out, const char* object, const clcpp::Type* type)
+	{
+		// Dispatch to a save function based on kind
+		switch (type->kind)
+		{
+		case (clcpp::Primitive::KIND_TYPE):
+			SaveType(out, object, type);
+			break;
+
+		case (clcpp::Primitive::KIND_ENUM):
+			SaveEnum(out, object, type->AsEnum());
+			break;
+
+		case (clcpp::Primitive::KIND_CLASS):
+			SaveClass(out, object, type->AsClass());
+			break;
+
+		default:
+			clcpp::internal::Assert(false && "Invalid primitive kind for type");
+		}
+	}
+}
+
+
+void clutl::SaveJSON(DataBuffer& out, const void* object, const clcpp::Type* type)
+{
+	SetupSaveIntegerLookupTable();
+	SaveObject(out, (char*)object, type);
 }

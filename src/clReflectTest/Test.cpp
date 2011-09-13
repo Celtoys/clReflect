@@ -183,6 +183,7 @@ class FieldTypes
 
 	bool Bool;
 	char Char;
+	wchar_t WChar;
 	short Short;
 	int Int;
 	long Long;
@@ -197,6 +198,7 @@ class FieldTypes
 	// --- Pointers
 	bool* BoolPtr;
 	char* CharPtr;
+	wchar_t* WCharPtr;
 	short* ShortPtr;
 	int* IntPtr;
 	long* LongPtr;
@@ -211,6 +213,7 @@ class FieldTypes
 
 	const bool* ConstBoolPtr;
 	const char* ConstCharPtr;
+	const wchar_t* ConstWCharPtr;
 	const short* ConstShortPtr;
 	const int* ConstIntPtr;
 	const long* ConstLongPtr;
@@ -225,6 +228,7 @@ class FieldTypes
 	// --- References
 	bool& BoolRef;
 	char& CharRef;
+	wchar_t& WCharRef;
 	short& ShortRef;
 	int& IntRef;
 	long& LongRef;
@@ -239,6 +243,7 @@ class FieldTypes
 
 	const bool& ConstBoolRef;
 	const char& ConstCharRef;
+	const wchar_t& ConstWCharRef;
 	const short& ConstShortRef;
 	const int& ConstIntRef;
 	const long& ConstLongRef;
@@ -259,11 +264,81 @@ class FieldTypes
 clcpp_reflect(FuncParams)
 namespace FuncParams
 {
-	void FunctionTypes(char a, short b, int c, long d, unsigned char e, unsigned short f, unsigned int g, unsigned long h, float i, double j, __int64 k, unsigned __int64 l) { }
-	void FunctionTypesPtr(char* a, short* b, int* c, long* d, unsigned char* e, unsigned short* f, unsigned int* g, unsigned long* h, float* i, double* j, __int64* k, unsigned __int64* l) { }
-	void FunctionTypesConstPtr(const char* a, const short* b, const int* c, const long* d, const unsigned char* e, const unsigned short* f, const unsigned int* g, const unsigned long* h, const float* i, const double* j, const __int64* k, const unsigned __int64* l) { }
-	void FunctionTypesRef(char& a, short& b, int& c, long& d, unsigned char& e, unsigned short& f, unsigned int& g, unsigned long& h, float& i, double& j, __int64& k, unsigned __int64& l) { }
-	void FunctionTypesConstRef(const char& a, const short& b, const int& c, const long& d, const unsigned char& e, const unsigned short& f, const unsigned int& g, const unsigned long& h, const float& i, const double& j, const __int64& k, const unsigned __int64& l) { }
+	void FunctionTypes(
+		bool a,
+		char b,
+		wchar_t c,
+		short d,
+		int e,
+		long f,
+		unsigned char g,
+		unsigned short h,
+		unsigned int i,
+		unsigned long j,
+		float k,
+		double l,
+		__int64 m,
+		unsigned __int64 n) { }
+	void FunctionTypesPtr(
+		bool* a,
+		char* b,
+		wchar_t* c,
+		short* d,
+		int* e,
+		long* f,
+		unsigned char* g,
+		unsigned short* h,
+		unsigned int* i,
+		unsigned long* j,
+		float* k,
+		double* l,
+		__int64* m,
+		unsigned __int64* n) { }
+	void FunctionTypesConstPtr(
+		const bool* a,
+		const char* b,
+		const wchar_t* c,
+		const short* d,
+		const int* e,
+		const long* f,
+		const unsigned char* g,
+		const unsigned short* h,
+		const unsigned int* i,
+		const unsigned long* j,
+		const float* k,
+		const double* l,
+		const __int64* m,
+		const unsigned __int64* n) { }
+	void FunctionTypesRef(
+		bool& a,
+		char& b,
+		wchar_t& c,
+		short& d,
+		int& e,
+		long& f,
+		unsigned char& g,
+		unsigned short& h,
+		unsigned int& i,
+		unsigned long& j,
+		float& k,
+		double& l,
+		__int64& m,
+		unsigned __int64& n) { }
+	void FunctionTypesConstRef(
+		const bool& a,
+		const char& b,
+		const wchar_t& c,
+		const short& d,
+		const int& e,
+		const long& f,
+		const unsigned char& g,
+		const unsigned short& h,
+		const unsigned int& i,
+		const unsigned long& j,
+		const float& k,
+		const double& l,
+		const __int64& m,
+		const unsigned __int64& n) { }
 }
 
 
@@ -273,7 +348,9 @@ namespace FuncParams
 clcpp_reflect(FuncReturns)
 namespace FuncReturns
 {
+	bool FunctionRetBool() { return 0; }
 	char FunctionRetChar() { return 0; }
+	wchar_t FunctionRetWChar() { return 0; }
 	short FunctionRetShort() { return 0; }
 	int FunctionRetInt() { return 0; }
 	long FunctionRetLong() { return 0; }
@@ -285,8 +362,11 @@ namespace FuncReturns
 	double FunctionRetDouble() { return 0; }
 	__int64 FunctionRetInt64() { return 0; }
 	unsigned __int64 FunctionRetUnsignedInt64() { return 0; }
+
 	// --- Pointers
+	bool* FunctionRetBoolPtr() { return 0; }
 	char* FunctionRetCharPtr() { return 0; }
+	wchar_t* FunctionRetWCharPtr() { return 0; }
 	short* FunctionRetShortPtr() { return 0; }
 	int* FunctionRetIntPtr() { return 0; }
 	long* FunctionRetLongPtr() { return 0; }
@@ -299,7 +379,10 @@ namespace FuncReturns
 	__int64* FunctionRetInt64Ptr() { return 0; }
 	unsigned __int64* FunctionRetUnsignedInt64Ptr() { return 0; }
 
+	// --- Const Pointers
+	const bool* FunctionRetBoolConstPtr() { return 0; }
 	const char* FunctionRetCharConstPtr() { return 0; }
+	const wchar_t* FunctionRetWCharConstPtr() { return 0; }
 	const short* FunctionRetShortConstPtr() { return 0; }
 	const int* FunctionRetIntConstPtr() { return 0; }
 	const long* FunctionRetLongConstPtr() { return 0; }
@@ -311,8 +394,11 @@ namespace FuncReturns
 	const double* FunctionRetDoubleConstPtr() { return 0; }
 	const __int64* FunctionRetConstInt64Ptr() { return 0; }
 	const unsigned __int64* FunctionRetConstUnsignedInt64Ptr() { return 0; }
+
 	// --- References
+	bool& FunctionRetBoolRef() { return *(bool*)0; }
 	char& FunctionRetCharRef() { return *(char*)0; }
+	wchar_t& FunctionRetWCharRef() { return *(wchar_t*)0; }
 	short& FunctionRetShortRef() { return *(short*)0; }
 	int& FunctionRetIntRef() { return *(int*)0; }
 	long& FunctionRetLongRef() { return *(long*)0; }
@@ -325,7 +411,10 @@ namespace FuncReturns
 	__int64& FunctionRetInt64Ref() { return *(__int64*)0; }
 	unsigned __int64& FunctionRetUnsignedInt64Ref() { return *(unsigned __int64*)0; }
 
+	// --- Const References
+	const bool& FunctionRetBoolConstRef() { return *(bool*)0; }
 	const char& FunctionRetCharConstRef() { return *(char*)0; }
+	const wchar_t& FunctionRetWCharConstRef() { return *(wchar_t*)0; }
 	const short& FunctionRetShortConstRef() { return *(short*)0; }
 	const int& FunctionRetIntConstRef() { return *(int*)0; }
 	const long& FunctionRetLongConstRef() { return *(long*)0; }

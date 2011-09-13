@@ -81,6 +81,7 @@ void cldb::Database::AddBaseTypePrimitives()
 	AddPrimitive(Type(GetName("bool"), parent, sizeof(bool)));
 	AddPrimitive(Type(GetName("char"), parent, sizeof(char)));
 	AddPrimitive(Type(GetName("unsigned char"), parent, sizeof(unsigned char)));
+	AddPrimitive(Type(GetName("wchar_t"), parent, sizeof(wchar_t)));
 	AddPrimitive(Type(GetName("short"), parent, sizeof(short)));
 	AddPrimitive(Type(GetName("unsigned short"), parent, sizeof(unsigned short)));
 	AddPrimitive(Type(GetName("int"), parent, sizeof(int)));

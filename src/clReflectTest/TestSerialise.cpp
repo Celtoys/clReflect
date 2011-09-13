@@ -73,7 +73,7 @@ void TestSerialise(clcpp::Database& db)
 
 	Stuff::DerivedStruct src;
 	clutl::SaveVersionedBinary(buffer, &src, clcpp_get_type(db, Stuff::DerivedStruct));
-	buffer.Reset();
+	buffer.ResetPosition();
 	Stuff::DerivedStruct dest(Stuff::NO_INIT);
 	clutl::LoadVersionedBinary(buffer, &dest, clcpp_get_type(db, Stuff::DerivedStruct));
 }
