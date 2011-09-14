@@ -53,8 +53,6 @@ config.LinkOptions.MapFile = True
 cltest = CppBuild(env, [ "." ], "cltest.exe", libs, build = False)
 
 # Inject the clReflect build dependencies
-# TODO: Probably going to have to flatten the graph before visiting
-# test_obj_files is traversed twice below!
 cltest.csv_files = [ clReflect.CppScan(include_paths, file) for file in cltest.obj_files ]
 cltest.db_file = clReflect.Merge("clReflectTest.csv", cltest.csv_files)
 # TODO: I can't read the output files of cltest.exe directly as the current config is only active during Build

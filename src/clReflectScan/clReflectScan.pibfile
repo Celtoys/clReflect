@@ -51,9 +51,13 @@ lib_paths_debug = [
     "../../build/bin/debug",
 ]
 
-
 lib_paths_release = [
     os.path.join(llvm_build, "lib/release"),
+    "../../build/bin/release",
+]
+
+lib_paths_minrelease = [
+	os.path.join(llvm_build, "lib/minsizerel"),
     "../../build/bin/release",
 ]
 
@@ -74,7 +78,7 @@ config.CPPOptions.IncludePaths += include_paths
 config.CPPOptions.Defines += defines
 config.CPPOptions.DisabledWarnings = disabled_warnings
 config.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DLL
-config.LinkOptions.LibPaths += lib_paths_release
+config.LinkOptions.LibPaths += lib_paths_minrelease
 config.LinkOptions.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
 
 # Build the executable

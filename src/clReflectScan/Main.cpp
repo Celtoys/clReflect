@@ -126,7 +126,11 @@ int main(int argc, const char* argv[])
 	// Parse the AST
 	ClangHost clang_host(args);
 	ClangASTParser ast_parser(clang_host);
-	ast_parser.ParseAST(input_filename);
+	if (!ast_parser.ParseAST(input_filename))
+	{
+		LOG(main, ERROR, "Errors parsing the AST\n");
+		return 1;
+	}
 
 	// Gather reflection specs for the translation unit
 	clang::ASTContext& ast_context = ast_parser.GetASTContext();

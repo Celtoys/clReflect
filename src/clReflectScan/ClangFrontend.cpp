@@ -143,7 +143,7 @@ ClangASTParser::ClangASTParser(ClangHost& host)
 }
 
 
-void ClangASTParser::ParseAST(const char* filename)
+bool ClangASTParser::ParseAST(const char* filename)
 {
 	// Get the file  from the file system
 	const clang::FileEntry* file = m_ClangHost.file_manager->getFile(filename);
@@ -155,6 +155,8 @@ void ClangASTParser::ParseAST(const char* filename)
 	client->BeginSourceFile(m_ClangHost.lang_options, m_Preprocessor.get());
 	clang::ParseAST(*m_Preprocessor, &ast_consumer, *m_ASTContext);
 	client->EndSourceFile();
+
+	return client->getNumErrors() == 0;
 }
 
 

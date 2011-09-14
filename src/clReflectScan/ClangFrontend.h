@@ -87,7 +87,7 @@ class ClangASTParser
 public:
 	ClangASTParser(ClangHost& host);
 
-	void ParseAST(const char* filename);
+	bool ParseAST(const char* filename);
 
 	void GetIncludedFiles(std::vector<std::string>& files) const;
 
