@@ -1,11 +1,36 @@
 
 //
+// ===============================================================================
+// clReflect
+// -------------------------------------------------------------------------------
+// Copyright (c) 2011 Don Williamson
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy of
+// this software and associated documentation files (the "Software"), to deal in
+// the Software without restriction, including without limitation the rights to
+// use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+// of the Software, and to permit persons to whom the Software is furnished to do
+// so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+// ===============================================================================
+//
 // TODO:
 //    * Allow names to be specified as CRCs?
 //    * Allow IEEE754 hex float representation.
 //    * Escape sequences need converting.
-//    * Enums communicated by value.
+//    * Enums communicated by value (load integer checks for enum - could have a verify mode to ensure the constant exists).
 //    * Field names need to be in memory for JSON serialising to work.
+//    * Pointers & containers.
 //
 
 #include <clutl/Serialise.h>
@@ -574,13 +599,21 @@ namespace
 	}
 
 
-	void ParserString(const Token& t)
+	void ParserString(const Token& t, char* object, const clcpp::Field* field)
 	{
 		// Was there an error expecting a string?
 		if (!t.IsValid())
 			return;
 
-		//printf("%.*s ", t.length, t.val.string);
+		// With enum fields, lookup the enum constant by name and assign if it exists
+		if (field && field->type->kind == clcpp::Primitive::KIND_ENUM)
+		{
+			const clcpp::Enum* enum_type = field->type->AsEnum();
+			unsigned int constant_hash = clcpp::internal::HashData(t.val.string, t.length);
+			const clcpp::EnumConstant* constant = clcpp::FindPrimitive(enum_type->constants, constant_hash);
+			if (constant)
+				*(int*)(object + field->offset) = constant->value;
+		}
 	}
 
 
@@ -606,12 +639,8 @@ namespace
 	}
 
 
-	void ParserInteger(const Token& t, char* object, const clcpp::Field* field)
+	void LoadInteger(__int64 integer, char* object, const clcpp::Field* field)
 	{
-		// Was there an error expecting an integer
-		if (!t.IsValid())
-			return;
-
 		if (field)
 		{
 			// Dispatch to the correct integer loader based on the field type
@@ -619,8 +648,15 @@ namespace
 			clcpp::internal::Assert(index < g_TypeDispatchMod && "Index is out of range");
 			LoadIntegerFunc func = g_TypeDispatchLUT[index].load_integer;
 			if (func)
-				func(object + field->offset, t.val.integer);
+				func(object + field->offset, integer);
 		}
+	}
+
+
+	void ParserInteger(const Token& t, char* object, const clcpp::Field* field)
+	{
+		if (t.IsValid())
+			LoadInteger(t.val.integer, object, field);
 	}
 
 
@@ -673,13 +709,10 @@ namespace
 	}
 
 
-	void ParserLiteralValue(Token& t, int val)
+	void ParserLiteralValue(Token& t, int integer, char* object, const clcpp::Field* field)
 	{
-		// Was there an error expecting a literal value?
-		if (!t.IsValid())
-			return;
-
-		//printf("%d ", val);
+		if (t.IsValid())
+			LoadInteger(integer, object, field);
 	}
 
 
@@ -687,7 +720,7 @@ namespace
 	{
 		switch (t.type)
 		{
-		case (TT_STRING): return ParserString(Expect(ctx, t, TT_STRING));
+		case (TT_STRING): return ParserString(Expect(ctx, t, TT_STRING), object, field);
 		case (TT_INTEGER): return ParserInteger(Expect(ctx, t, TT_INTEGER), object, field);
 		case (TT_DECIMAL): return ParserDecimal(Expect(ctx, t, TT_DECIMAL), object, field);
 		case (TT_LBRACE):
@@ -697,9 +730,9 @@ namespace
 				return ParserObject(ctx, t, 0, 0);
 			}
 		case (TT_LBRACKET): return ParserArray(ctx, t);
-		case (TT_TRUE): return ParserLiteralValue(Expect(ctx, t, TT_TRUE), 1);
-		case (TT_FALSE): return ParserLiteralValue(Expect(ctx, t, TT_FALSE), 0);
-		case (TT_NULL): return ParserLiteralValue(Expect(ctx, t, TT_NULL), 0);
+		case (TT_TRUE): return ParserLiteralValue(Expect(ctx, t, TT_TRUE), 1, object, field);
+		case (TT_FALSE): return ParserLiteralValue(Expect(ctx, t, TT_FALSE), 0, object, field);
+		case (TT_NULL): return ParserLiteralValue(Expect(ctx, t, TT_NULL), 0, object, field);
 
 		default:
 			ctx.SetError(clutl::JSONError::UNEXPECTED_TOKEN);
@@ -723,6 +756,14 @@ namespace
 			const clcpp::Class* class_type = type->AsClass();
 			unsigned int field_hash = clcpp::internal::HashData(name.val.string, name.length);
 			field = clcpp::FindPrimitive(class_type->fields, field_hash);
+
+			// Search up through the inheritance hierarchy for the field
+			const clcpp::Class* base_class = class_type->base_class;
+			while (field == 0 && base_class)
+			{
+				field = clcpp::FindPrimitive(base_class->fields, field_hash);
+				base_class = base_class->base_class;
+			}
 		}
 
 		if (!Expect(ctx, t, TT_COLON).IsValid())
@@ -884,7 +925,7 @@ namespace
 			*optr++ = '.';
 
 			dec = -dec;
-			while (--dec > 0)
+			while (dec-- > 0)
 				*optr++ = '0';
 
 			dec = -1;
@@ -956,8 +997,6 @@ namespace
 
 	void SaveClass(clutl::DataBuffer& out, const char* object, const clcpp::Class* class_type)
 	{
-		out.Write("{", 1);
-
 		// Save each field in the class
 		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
 		int nb_fields = fields.size();
@@ -976,7 +1015,13 @@ namespace
 			out.Write("\n", 1);
 		}
 
-		out.Write("}", 1);
+		// Recurse into base classes
+		const clcpp::Class* base_class = class_type->base_class;
+		if (base_class && base_class->fields.size())
+		{
+			out.Write(",", 1);
+			SaveClass(out, object, class_type->base_class);
+		}
 	}
 
 
@@ -994,7 +1039,9 @@ namespace
 			break;
 
 		case (clcpp::Primitive::KIND_CLASS):
+			out.Write("{", 1);
 			SaveClass(out, object, type->AsClass());
+			out.Write("}", 1);
 			break;
 
 		default:

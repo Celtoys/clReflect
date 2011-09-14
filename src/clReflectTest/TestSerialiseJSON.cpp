@@ -32,10 +32,7 @@ namespace
 		buffer.Write(test, strlen(test));
 		buffer.ResetPosition();
 
-		printf("OUT: ");
 		clutl::JSONError error = clutl::LoadJSON(buffer, 0, 0);
-		printf("\n");
-
 		if (error.code == clutl::JSONError::NONE)
 		{
 			printf("PASS\n");
@@ -72,7 +69,72 @@ namespace jsontest
 		YUP
 	};
 
-	struct AllFields
+
+	struct BaseStruct
+	{
+		BaseStruct()
+			: a(100)
+			, b(101)
+			, c(102)
+			, d(103)
+		{
+		}
+
+		BaseStruct(NoInit)
+		{
+		}
+
+		bool operator == (const BaseStruct& rhs) const
+		{
+			if (a != rhs.a)
+				return false;
+			if (b != rhs.b)
+				return false;
+			if (c != rhs.c)
+				return false;
+			if (d != rhs.d)
+				return false;
+
+			return true;
+		}
+
+		int a;
+		double b;
+		char c;
+		short d;
+	};
+
+	struct NestedStruct
+	{
+		NestedStruct()
+			: x(1)
+			, y(2)
+			, z(3)
+		{
+		}
+
+		NestedStruct(NoInit)
+		{
+		}
+
+		bool operator == (const NestedStruct& rhs) const
+		{
+			if (x != rhs.x)
+				return false;
+			if (y != rhs.y)
+				return false;
+			if (z != rhs.z)
+				return false;
+
+			return true;
+		}
+
+		float x;
+		double y;
+		char z;
+	};
+
+	struct AllFields : public BaseStruct
 	{
 		AllFields()
 			: f0(1)
@@ -121,6 +183,10 @@ namespace jsontest
 		{
 		}
 		AllFields(NoInit)
+			: BaseStruct(NO_INIT)
+			, nested0(NO_INIT)
+			, nested1(NO_INIT)
+			, nested2(NO_INIT)
 		{
 		}
 
@@ -153,10 +219,14 @@ namespace jsontest
 		float f20;
 		float f21;
 
+		NestedStruct nested0;
+
 		double f22;
 		double f23;
 		double f24;
 		double f25;
+
+		NestedStruct nested1;
 
 		unsigned char f26;
 		unsigned short f27;
@@ -167,6 +237,92 @@ namespace jsontest
 		Value e0;
 		Value e1;
 		Value e2;
+
+		NestedStruct nested2;
+
+		bool operator == (const AllFields& rhs) const
+		{
+			if (!(*(BaseStruct*)this == (BaseStruct&)rhs))
+				return false;
+
+			if (f0 != rhs.f0)
+				return false;
+			if (f1 != rhs.f1)
+				return false;
+			if (f2 != rhs.f2)
+				return false;
+			if (f3 != rhs.f3)
+				return false;
+			if (f4 != rhs.f4)
+				return false;
+			if (f5 != rhs.f5)
+				return false;
+			if (f6 != rhs.f6)
+				return false;
+			if (f7 != rhs.f7)
+				return false;
+			if (f8 != rhs.f8)
+				return false;
+			if (f9 != rhs.f9)
+				return false;
+			if (f10 != rhs.f10)
+				return false;
+			if (f11 != rhs.f11)
+				return false;
+			if (f12 != rhs.f12)
+				return false;
+			if (f13 != rhs.f13)
+				return false;
+			if (f14 != rhs.f14)
+				return false;
+			if (f15 != rhs.f15)
+				return false;
+			if (f16 != rhs.f16)
+				return false;
+			if (f17 != rhs.f17)
+				return false;
+			if (f18 != rhs.f18)
+				return false;
+			if (f19 != rhs.f19)
+				return false;
+			if (f20 != rhs.f20)
+				return false;
+			if (f21 != rhs.f21)
+				return false;
+			if (f22 != rhs.f22)
+				return false;
+			if (f23 != rhs.f23)
+				return false;
+			if (f24 != rhs.f24)
+				return false;
+			if (f25 != rhs.f25)
+				return false;
+			if (f26 != rhs.f26)
+				return false;
+			if (f27 != rhs.f27)
+				return false;
+			if (f28 != rhs.f28)
+				return false;
+			if (f29 != rhs.f29)
+				return false;
+			if (f30 != rhs.f30)
+				return false;
+			if (e0 != rhs.e0)
+				return false;
+			if (e1 != rhs.e1)
+				return false;
+			if (e2 != rhs.e2)
+				return false;
+
+			if (!(nested0 == rhs.nested0))
+				return false;
+			if (!(nested1 == rhs.nested1))
+				return false;
+			if (!(nested2 == rhs.nested2))
+				return false;
+
+			return true;
+		}
 	};
 }
 
@@ -255,10 +411,15 @@ void TestSerialiseJSON(clcpp::Database& db)
 	Test("ErrorFalseInvalidKeyword", "{ \"value\" : fal ");
 	Test("ErrorNullInvalidKeyword", "{ \"value\" : nu ");
 
-	clutl::DataBuffer buffer(2048);
+	clutl::DataBuffer buffer(4192);
 	jsontest::AllFields a;
 	clutl::SaveJSON(buffer, &a, clcpp_get_type(db, jsontest::AllFields));
 	buffer.ResetPosition();
 	jsontest::AllFields b(jsontest::NO_INIT);
 	clutl::LoadJSON(buffer, &b, clcpp_get_type(db, jsontest::AllFields));
+
+	if (a == b)
+		printf("STRUCT PASS!\n");
+	else
+		printf("STRUCT FAIL!\n");
 }
