@@ -55,8 +55,7 @@ cltest = CppBuild(env, [ "." ], "cltest.exe", libs, build = False)
 # Inject the clReflect build dependencies
 cltest.csv_files = [ clReflect.CppScan(include_paths, file) for file in cltest.obj_files ]
 cltest.db_file = clReflect.Merge("clReflectTest.csv", cltest.csv_files)
-# TODO: I can't read the output files of cltest.exe directly as the current config is only active during Build
-map_file = env.Configs[env.ConfigName].IntermediatePath + "/cltest.map"
+map_file = cltest.output.GetOutputFiles(env)[1]
 cltest.cppbin_file = clReflect.CppExport("clReflectTest.cppbin", cltest.db_file, map_file)
 
 env.Build([ cltest.exe, cltest.cppbin_file ], "cltest")
