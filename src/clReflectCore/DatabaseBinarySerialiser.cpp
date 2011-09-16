@@ -440,9 +440,7 @@ bool cldb::IsBinaryDatabase(const char* filename)
 	// Not a database if the file can't be found
 	FILE* fp = fopen(filename, "rb");
 	if (fp == 0)
-	{
-		fclose(fp);
-	}
+		return false;
 
 	// Read the header and check it
 	unsigned int header = Read<unsigned int>(fp);

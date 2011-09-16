@@ -54,7 +54,7 @@ int main(int argc, const char* argv[])
 	{
 		if (!cldb::ReadTextDatabase(input_filename, db))
 		{
-			LOG(main, ERROR, "Couldn't read '%s' as binary or text database - does it exist?", input_filename);
+			LOG(main, ERROR, "Couldn't read '%s' as binary or text database - does it exist?\n", input_filename);
 			return 1;
 		}
 	}

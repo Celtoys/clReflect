@@ -686,9 +686,7 @@ bool cldb::IsTextDatabase(const char* filename)
 	// Not a database if it doesn't exist
 	FILE* fp = fopen(filename, "r");
 	if (fp == 0)
-	{
 		return false;
-	}
 
 	// Parse the first few lines looking for the header
 	int line_index = 0;

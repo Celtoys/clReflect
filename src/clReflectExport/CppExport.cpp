@@ -77,7 +77,7 @@ namespace
 
 		// Build the in-memory name array
 		unsigned int nb_names = cppexp.name_map.size();
-		cppexp.db->names.copy(clcpp::CArray<clcpp::Name>(cppexp.allocator.Alloc<clcpp::Name>(nb_names), nb_names));
+		cppexp.db->names.shallow_copy(clcpp::CArray<clcpp::Name>(cppexp.allocator.Alloc<clcpp::Name>(nb_names), nb_names));
 		unsigned int index = 0;
 		for (CppExport::NameMap::const_iterator i = cppexp.name_map.begin(); i != cppexp.name_map.end(); ++i)
 		{
@@ -159,7 +159,7 @@ namespace
 	{
 		// Allocate enough entries for all primitives
 		const cldb::PrimitiveStore<CLDB_TYPE>& src = db.GetPrimitiveStore<CLDB_TYPE>();
-		dest.copy(clcpp::CArray<CLCPP_TYPE>(cppexp.allocator.Alloc<CLCPP_TYPE>(src.size()), src.size()));
+		dest.shallow_copy(clcpp::CArray<CLCPP_TYPE>(cppexp.allocator.Alloc<CLCPP_TYPE>(src.size()), src.size()));
 
 		// Copy individually
 		int index = 0;
@@ -231,7 +231,7 @@ namespace
 			if (int nb_refs = i->second.second)
 			{
 				PARENT_TYPE& parent = *i->second.first;
-				(parent.*carray).copy(clcpp::CArray<const CHILD_TYPE*>(allocator.Alloc<const CHILD_TYPE*>(nb_refs), nb_refs));
+				(parent.*carray).shallow_copy(clcpp::CArray<const CHILD_TYPE*>(allocator.Alloc<const CHILD_TYPE*>(nb_refs), nb_refs));
 
 				// To save having to do any further lookups, store the count inside the array
 				// at the end
@@ -301,7 +301,7 @@ namespace
 			cppexp.db->text_attributes.size();
 
 		// Create the destination array
-		attributes.copy(clcpp::CArray<clcpp::Attribute*>(cppexp.allocator.Alloc<clcpp::Attribute*>(size), size));
+		attributes.shallow_copy(clcpp::CArray<clcpp::Attribute*>(cppexp.allocator.Alloc<clcpp::Attribute*>(size), size));
 
 		// Collect all attribute pointers
 		int pos = 0;
@@ -458,7 +458,7 @@ namespace
 	{
 		// Allocate enough space for the primitives
 		int nb_global_primitives = CountGlobalPrimitives(src);
-		dest.copy(clcpp::CArray<const TYPE*>(allocator.Alloc<const TYPE*>(nb_global_primitives), nb_global_primitives));
+		dest.shallow_copy(clcpp::CArray<const TYPE*>(allocator.Alloc<const TYPE*>(nb_global_primitives), nb_global_primitives));
 
 		// Gather all unparented primitives
 		int index = 0;
@@ -487,7 +487,7 @@ namespace
 	{
 		// Allocate the array
 		int nb_type_primitives = cppexp.db->types.size() + cppexp.db->classes.size() + cppexp.db->enums.size() + cppexp.db->template_types.size();
-		cppexp.db->type_primitives.copy(clcpp::CArray<const clcpp::Type*>(cppexp.allocator.Alloc<const clcpp::Type*>(nb_type_primitives), nb_type_primitives));
+		cppexp.db->type_primitives.shallow_copy(clcpp::CArray<const clcpp::Type*>(cppexp.allocator.Alloc<const clcpp::Type*>(nb_type_primitives), nb_type_primitives));
 
 		// Generate references to anything that is a type
 		int index = 0;
@@ -1041,7 +1041,9 @@ namespace
 		LOG_APPEND(cppexp, INFO, " %s(", func.name.text);
 
 		// Sort parameters by index for viewing
-		clcpp::CArray<const clcpp::Field*> sorted_parameters = func.parameters;
+		clcpp::CArray<const clcpp::Field*> sorted_parameters;
+		Malloc malloc;
+		sorted_parameters.deep_copy(func.parameters, &malloc);
 		std::sort(sorted_parameters.data(), sorted_parameters.data() + sorted_parameters.size(), SortFieldByOffset);
 
 		for (int i = 0; i < sorted_parameters.size(); i++)
@@ -1070,7 +1072,9 @@ namespace
 		LOG_PUSH_INDENT(cppexp);
 
 		// Sort constants by value for viewing
-		clcpp::CArray<const clcpp::EnumConstant*> sorted_constants = e.constants;
+		clcpp::CArray<const clcpp::EnumConstant*> sorted_constants;
+		Malloc malloc;
+		sorted_constants.deep_copy(e.constants, &malloc);
 		std::sort(sorted_constants.data(), sorted_constants.data() + sorted_constants.size(), SortEnumConstantByValue);
 
 		LogPrimitives(sorted_constants);
@@ -1115,7 +1119,9 @@ namespace
 		LOG_PUSH_INDENT(cppexp);
 
 		// Sort fields by offset for viewing
-		clcpp::CArray<const clcpp::Field*> sorted_fields = cls.fields;
+		clcpp::CArray<const clcpp::Field*> sorted_fields;
+		Malloc malloc;
+		sorted_fields.deep_copy(cls.fields, &malloc);
 		std::sort(sorted_fields.data(), sorted_fields.data() + sorted_fields.size(), SortFieldByOffset);
 
 		LogPrimitives(cls.classes);

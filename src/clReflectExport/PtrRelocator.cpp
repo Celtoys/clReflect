@@ -107,7 +107,7 @@ void PtrRelocator::MakeRelative()
 				if (ptr != 0)
 				{
 					size_t d = distance(m_Start, ptr);
-					assert(d < m_DataSize);
+					assert(d <= m_DataSize);
 					ptr = (char*)d;
 				}
 			}

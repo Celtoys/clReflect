@@ -151,20 +151,6 @@ namespace clcpp
 		{
 		}
 
-		// Copy construct
-		CArray(const CArray& rhs)
-			: m_Size(rhs.size())
-			, m_Data(0)
-			, m_Allocator(rhs.m_Allocator)
-		{
-			// Allocate and copy each entry
-			m_Data = (TYPE*)m_Allocator->Alloc(m_Size * sizeof(TYPE));
-			for (unsigned int i = 0; i < m_Size; i++)
-			{
-				m_Data[i] = rhs.m_Data[i];
-			}
-		}
-
 		~CArray()
 		{
 			if (m_Allocator)
@@ -179,11 +165,25 @@ namespace clcpp
 		}
 
 		// A shallow copy of each member in the array
-		void copy(const CArray<TYPE>& rhs)
+		void shallow_copy(const CArray<TYPE>& rhs)
 		{
 			m_Size = rhs.m_Size;
 			m_Data = rhs.m_Data;
 			m_Allocator = rhs.m_Allocator;
+		}
+
+		void deep_copy(const CArray<TYPE>& rhs, IAllocator* allocator)
+		{
+			m_Allocator = allocator;
+			internal::Assert(m_Allocator != 0);
+
+			// Allocate and copy each entry
+			m_Size = rhs.m_Size;
+			m_Data = (TYPE*)m_Allocator->Alloc(m_Size * sizeof(TYPE));
+			for (unsigned int i = 0; i < m_Size; i++)
+			{
+				m_Data[i] = rhs.m_Data[i];
+			}
 		}
 
 		// Removes an element from the list without reallocating any memory
@@ -226,7 +226,8 @@ namespace clcpp
 		}
 
 	private:
-		// No need to implement if it's not used
+		// No need to implement if it's not used - private to ensure they don't get called by accident
+		CArray(const CArray& rhs);
 		CArray& operator= (const CArray& rhs);
 
 		unsigned int m_Size;
