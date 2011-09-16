@@ -49,8 +49,8 @@ namespace
 
 
 clcpp::internal::DatabaseFileHeader::DatabaseFileHeader()
-	: signature0('pcrc')
-	, signature1('bdp')
+	: signature0('pclc')
+	, signature1('\0bdp')
 	, version(1)
 	, nb_ptr_schemas(0)
 	, nb_ptr_offsets(0)
@@ -127,7 +127,7 @@ clcpp::internal::DatabaseMem* clcpp::internal::LoadMemoryMappedDatabase(IFile* f
 				unsigned int& ptr = (unsigned int&)*(base_data + ptr_offset);
 
 				// Ensure the pointer relocation is within range of the memory map
-				internal::Assert(ptr < file_header.data_size);
+				internal::Assert(ptr <= file_header.data_size);
 
 				// Patch only if non-null - these shouldn't exist in the patch list but there's
 				// no harm in putting an extra check here.
