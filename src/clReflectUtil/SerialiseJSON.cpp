@@ -42,7 +42,7 @@
 extern "C" double strtod(const char* s00, char** se);
 // This is Microsoft's safer version of the ISO C++ _fcvt which takes the extra buffer and size parameters
 // for overflow checking and thread safety
-extern "C" int _fcvt_s(char* buffer, size_t buffer_size, double val, int count, int* dec, int* sign);
+extern "C" int _fcvt_s(char* buffer, unsigned int buffer_size, double val, int count, int* dec, int* sign);
 
 
 static void SetupTypeDispatchLUT();
@@ -709,7 +709,7 @@ namespace
 	}
 
 
-	void ParserLiteralValue(Token& t, int integer, char* object, const clcpp::Field* field)
+	void ParserLiteralValue(const Token& t, int integer, char* object, const clcpp::Field* field)
 	{
 		if (t.IsValid())
 			LoadInteger(integer, object, field);

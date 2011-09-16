@@ -63,7 +63,7 @@ int main(int argc, const char* argv[])
 	std::string map_file = args.GetProperty("-map");
 	if (map_file != "")
 	{
-		LOG(main, INFO, "Parsing map file: %s", map_file.c_str());
+		LOG(main, INFO, "Parsing map file: %s\n", map_file.c_str());
 		MapFileParser parser(db, map_file.c_str());
 	}
 
