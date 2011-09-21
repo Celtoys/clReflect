@@ -107,9 +107,9 @@ namespace
 
 	const char* ParseSymbol(const char* text, std::vector<Token>& tokens)
 	{
-		// Match the pattern [A-Za-z0-9_]*
+		// Match the pattern [A-Za-z0-9_:]*
 		const char* start = text;
-		while (*text && (isalnum(*text) || *text == '_'))
+		while (*text && (isalnum(*text) || *text == '_' || *text == ':'))
 		{
 			text++;
 		}

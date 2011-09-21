@@ -51,7 +51,7 @@ namespace
 clcpp::internal::DatabaseFileHeader::DatabaseFileHeader()
 	: signature0('pclc')
 	, signature1('\0bdp')
-	, version(1)
+	, version(2)
 	, nb_ptr_schemas(0)
 	, nb_ptr_offsets(0)
 	, nb_ptr_relocations(0)

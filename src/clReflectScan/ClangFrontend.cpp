@@ -99,10 +99,15 @@ ClangHost::ClangHost(Arguments& args)
 	{
 		std::string include = args.GetProperty("-i", i);
 		if (include == "")
-		{
 			break;
-		}
 		header_search_options.AddPath(include.c_str(), clang::frontend::Angled, false, false, false);
+	}
+	for (int i = 0; ; i++)
+	{
+		std::string include = args.GetProperty("-isystem", i);
+		if (include == "")
+			break;
+		header_search_options.AddPath(include.c_str(), clang::frontend::System, false, false, false);
 	}
 
 	// Setup target options - ensure record layout calculations use the MSVC C++ ABI

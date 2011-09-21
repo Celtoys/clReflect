@@ -39,9 +39,9 @@ namespace
 	{
 		// Construct the fully-qualified type name and hash that
 		std::string name;
-		name += field.is_const ? "const " : "";
+		name += field.qualifier.is_const ? "const " : "";
 		name += field.type.text;
-		name += field.modifier == cldb::Field::MODIFIER_POINTER ? "*" : field.modifier == cldb::Field::MODIFIER_REFERENCE ? "&" : "";
+		name += field.qualifier.op == cldb::Qualifier::POINTER ? "*" : field.qualifier.op == cldb::Qualifier::REFERENCE ? "&" : "";
 		return clcpp::internal::HashNameString(name.c_str());
 	}
 }

@@ -85,12 +85,48 @@ namespace cldb
 
 
 	//
+	// Rather than create a new Type for "X" vs "const X", bloating the database,
+	// this stores the qualifier separately. Additionally, the concept of whether
+	// a type is a pointer, reference or not is folded in here as well.
+	//
+	struct Qualifier
+	{
+		enum Operator
+		{
+			VALUE,
+			POINTER,
+			REFERENCE
+		};
+
+		Qualifier()
+			: op(VALUE)
+			, is_const(false)
+		{
+		}
+		Qualifier(Operator op, bool is_const)
+			: op(op)
+			, is_const(is_const)
+		{
+		}
+
+		bool operator == (const Qualifier& rhs) const
+		{
+			return op == rhs.op && is_const == rhs.is_const;
+		}
+
+		Operator op;
+		bool is_const;
+	};
+
+
+	//
 	// Base class for all types of C++ primitives that are reflected
 	//
 	struct Primitive
 	{
 		enum Kind
 		{
+			KIND_ATTRIBUTE,
 			KIND_FLAG_ATTRIBUTE,
 			KIND_INT_ATTRIBUTE,
 			KIND_FLOAT_ATTRIBUTE,
@@ -289,27 +325,17 @@ namespace cldb
 	//
 	struct Field : public Primitive
 	{
-		enum Modifier
-		{
-			MODIFIER_VALUE,
-			MODIFIER_POINTER,
-			MODIFIER_REFERENCE
-		};
-
 		// Constructors for default construction and complete construction
 		Field()
 			: Primitive(Primitive::KIND_FIELD)
-			, modifier(MODIFIER_VALUE)
-			, is_const(false)
 			, offset(-1)
 			, parent_unique_id(0)
 		{
 		}
-		Field(Name n, Name p, Name t, Modifier pass, bool c, int o, u32 uid = 0)
+		Field(Name n, Name p, Name t, Qualifier q, int o, u32 uid = 0)
 			: Primitive(Primitive::KIND_FIELD, n, p)
 			, type(t)
-			, modifier(pass)
-			, is_const(c)
+			, qualifier(q)
 			, offset(o)
 			, parent_unique_id(uid)
 		{
@@ -320,15 +346,13 @@ namespace cldb
 			return
 				Primitive::Equals(rhs) &&
 				type == rhs.type &&
-				modifier == rhs.modifier &&
-				is_const == rhs.is_const &&
+				qualifier == rhs.qualifier && 
 				offset == rhs.offset &&
 				parent_unique_id == rhs.parent_unique_id;
 		}
 
 		Name type;
-		Modifier modifier;
-		bool is_const;
+		Qualifier qualifier;
 
 		// Index of the field parameter within its parent function or byte offset within its parent class
 		int offset;

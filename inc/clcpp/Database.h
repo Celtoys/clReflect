@@ -36,6 +36,7 @@ namespace clcpp
 {
 	struct Primitive;
 	struct Enum;
+	struct TemplateType;
 	struct Class;
 	struct IntAttribute;
 	struct FloatAttribute;
@@ -67,6 +68,41 @@ namespace clcpp
 
 
 	//
+	// Rather than create a new Type for "X" vs "const X", bloating the database,
+	// this stores the qualifier separately. Additionally, the concept of whether
+	// a type is a pointer, reference or not is folded in here as well.
+	//
+	struct Qualifier
+	{
+		enum Operator
+		{
+			VALUE,
+			POINTER,
+			REFERENCE
+		};
+
+		Qualifier()
+			: op(VALUE)
+			, is_const(false)
+		{
+		}
+		Qualifier(Operator op, bool is_const)
+			: op(op)
+			, is_const(is_const)
+		{
+		}
+
+		bool operator == (const Qualifier& rhs) const
+		{
+			return op == rhs.op && is_const == rhs.is_const;
+		}
+
+		Operator op;
+		bool is_const;
+	};
+
+
+	//
 	// Base class for all types of C++ primitives that are reflected
 	//
 	struct Primitive
@@ -74,6 +110,7 @@ namespace clcpp
 		enum Kind
 		{
 			KIND_NONE,
+			KIND_ATTRIBUTE,
 			KIND_FLAG_ATTRIBUTE,
 			KIND_INT_ATTRIBUTE,
 			KIND_FLOAT_ATTRIBUTE,
@@ -107,7 +144,7 @@ namespace clcpp
 	//
 	struct Attribute : public Primitive
 	{
-		static const Kind KIND = KIND_NONE;
+		static const Kind KIND = KIND_ATTRIBUTE;
 
 		Attribute()
 			: Primitive(KIND)
@@ -134,6 +171,23 @@ namespace clcpp
 	{
 		static const Kind KIND = KIND_FLAG_ATTRIBUTE;
 		FlagAttribute() : Attribute(KIND) { }
+
+		//
+		// Flag attributes are always stored in an array of Attribute pointers. Checking
+		// to see if an attribute is applied to a primitive involves searching the array
+		// looking for the attribute by hash name.
+		//
+		// For flag attributes that are referenced so often that such a search becomes a
+		// performance issue, they are also stored as bit flags in a 32-bit value.
+		//
+		enum
+		{
+			// "transient" - These primitives are ignored during serialisation
+			TRANSIENT		= 1,
+
+			// "nullstr" - The primitive is a null terminated char* pointer representing a string
+			NULLSTR			= 2,
+		};
 	};
 	struct IntAttribute : public Attribute
 	{
@@ -182,6 +236,7 @@ namespace clcpp
 
 		// Safe utility functions for casting to derived types
 		inline const Enum* AsEnum() const;
+		inline const TemplateType* AsTemplateType() const;
 		inline const Class* AsClass() const;
 
 		unsigned int size;
@@ -214,12 +269,16 @@ namespace clcpp
 
 		Enum()
 			: Type(KIND)
+			, flag_attributes(0)
 		{
 		}
 
 		// All sorted by name
 		CArray<const EnumConstant*> constants;
 		CArray<const Attribute*> attributes;
+
+		// Bits representing some of the flag attributes in the attribute array
+		unsigned int flag_attributes;
 	};
 
 
@@ -230,32 +289,25 @@ namespace clcpp
 	{
 		static const Kind KIND = KIND_FIELD;
 
-		enum Modifier
-		{
-			MODIFIER_NONE,
-			MODIFIER_VALUE,
-			MODIFIER_POINTER,
-			MODIFIER_REFERENCE
-		};
-
 		Field()
 			: Primitive(KIND)
 			, type(0)
-			, modifier(MODIFIER_NONE)
-			, is_const(false)
 			, offset(0)
 			, parent_unique_id(0)
+			, flag_attributes(0)
 		{
 		}
 
 		const Type* type;
-		Modifier modifier;
-		bool is_const;
+		Qualifier qualifier;
 		int offset;
 		unsigned int parent_unique_id;
 
 		// All sorted by name
 		CArray<const Attribute*> attributes;
+
+		// Bits representing some of the flag attributes in the attribute array
+		unsigned int flag_attributes;
 	};
 
 
@@ -272,6 +324,7 @@ namespace clcpp
 			: Primitive(KIND)
 			, return_parameter(0)
 			, unique_id(0)
+			, flag_attributes(0)
 		{
 		}
 
@@ -284,6 +337,9 @@ namespace clcpp
 		// All sorted by name
 		CArray<const Field*> parameters;
 		CArray<const Attribute*> attributes;
+
+		// Bits representing some of the flag attributes in the attribute array
+		unsigned int flag_attributes;
 	};
 
 
@@ -347,6 +403,7 @@ namespace clcpp
 			, base_class(0)
 			, constructor(0)
 			, destructor(0)
+			, flag_attributes(0)
 		{
 		}
 
@@ -362,6 +419,9 @@ namespace clcpp
 		CArray<const Field*> fields;
 		CArray<const Attribute*> attributes;
 		CArray<const Template*> templates;
+
+		// Bits representing some of the flag attributes in the attribute array
+		unsigned int flag_attributes;
 	};
 
 
@@ -394,6 +454,11 @@ namespace clcpp
 	{
 		internal::Assert(kind == Enum::KIND);
 		return (const Enum*)this;
+	}
+	inline const TemplateType* Type::AsTemplateType() const
+	{
+		internal::Assert(kind == TemplateType::KIND);
+		return (const TemplateType*)this;
 	}
 	inline const Class* Type::AsClass() const
 	{
@@ -452,7 +517,7 @@ namespace clcpp
 		// pointing to within the database's allocated name data
 		Name GetName(const char* text) const;
 
-		// Return either a type, enum or class by hash
+		// Return either a type, enum, template type or class by hash
 		const Type* GetType(unsigned int hash) const;
 
 		const Namespace* GetNamespace(unsigned int hash) const;

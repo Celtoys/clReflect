@@ -40,13 +40,9 @@ namespace
 		// This has to be the same class included multiple times in different translation units
 		// Ensure that their descriptions match up as best as possible at this point
 		if (class_a.base_class != class_b.base_class)
-		{
 			LOG(main, WARNING, "Class %s differs in base class specification during merge\n", class_name);
-		}
 		if (class_a.size != class_b.size)
-		{
 			LOG(main, WARNING, "Class %s differs in size during merge\n", class_name);
-		}
 	}
 
 

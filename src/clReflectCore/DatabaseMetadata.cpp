@@ -52,8 +52,7 @@ cldb::meta::DatabaseTypes::DatabaseTypes()
 	DatabaseField field_fields[] =
 	{
 		DatabaseField(&cldb::Field::type),
-		DatabaseField(&cldb::Field::modifier),
-		DatabaseField(&cldb::Field::is_const),
+		DatabaseField(&cldb::Field::qualifier),
 		DatabaseField(&cldb::Field::offset),
 		DatabaseField(&cldb::Field::parent_unique_id),
 	};

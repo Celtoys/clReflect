@@ -61,23 +61,14 @@ namespace
 	void Remove(std::string& str, const std::string& remove_str)
 	{
 		for (size_t i; (i = str.find(remove_str)) != std::string::npos; )
-		{
 			str.replace(i, remove_str.length(), "");
-		}
 	}
 
 
 	struct ParameterInfo
 	{
-		ParameterInfo()
-			: modifier(cldb::Field::MODIFIER_VALUE)
-			, is_const(false)
-		{
-		}
-
 		std::string type_name;
-		cldb::Field::Modifier modifier;
-		bool is_const;
+		cldb::Qualifier qualifer;
 	};
 
 
@@ -87,12 +78,20 @@ namespace
 		clang::SplitQualType sqt = qual_type.split();
 		const clang::Type* type = sqt.first;
 
+		// If this is a typedef, get the aliased type
+		if (type->getTypeClass() == clang::Type::Typedef)
+		{
+			qual_type = qual_type.getCanonicalType();
+			sqt = qual_type.split();
+			type = sqt.first;
+		}
+
 		// Only handle one level of recursion for pointers and references
 
 		// Get pointee type info if this is a pointer
 		if (const clang::PointerType* ptr_type = dyn_cast<clang::PointerType>(type))
 		{
-			info.modifier = cldb::Field::MODIFIER_POINTER;
+			info.qualifer.op = cldb::Qualifier::POINTER;
 			qual_type = ptr_type->getPointeeType();
 			sqt = qual_type.split();
 		}
@@ -100,7 +99,7 @@ namespace
 		// Get pointee type info if this is a reference
 		else if (const clang::LValueReferenceType* ref_type = dyn_cast<clang::LValueReferenceType>(type))
 		{
-			info.modifier = cldb::Field::MODIFIER_REFERENCE;
+			info.qualifer.op = cldb::Qualifier::REFERENCE;
 			qual_type = ref_type->getPointeeType();
 			sqt = qual_type.split();
 		}
@@ -109,7 +108,7 @@ namespace
 		clang::Qualifiers qualifiers = clang::Qualifiers::fromFastMask(sqt.second);
 		qual_type.removeLocalFastQualifiers();
 		info.type_name = qual_type.getAsString(ctx.getLangOptions());
-		info.is_const = qualifiers.hasConst();
+		info.qualifer.is_const = qualifiers.hasConst();
 
 		// Is this a field that can be safely recorded?
 		type = sqt.first;
@@ -126,23 +125,18 @@ namespace
 			return false;
 		}
 
-		if (tc == clang::Type::TemplateSpecialization)
+		// Is this a template specialisation?
+		const clang::CXXRecordDecl* type_decl = type->getAsCXXRecordDecl();
+		if (type_decl && type_decl->getTemplateSpecializationKind() != clang::TSK_Undeclared)
 		{
-			// Get the template being specialised as a template decl
-			const clang::TemplateSpecializationType* template_type = dyn_cast<clang::TemplateSpecializationType>(type);
-			clang::TemplateName template_name = template_type->getTemplateName();
-			clang::TemplateDecl* template_decl = template_name.getAsTemplateDecl();
-			if (template_decl == 0)
-			{
-				return false;
-			}
+			const clang::ClassTemplateSpecializationDecl* cts_decl = dyn_cast<clang::ClassTemplateSpecializationDecl>(type_decl);
+			assert(cts_decl && "Couldn't cast to template specialisation decl");
 
-			// Check to see if the template is marked for reflection
+			// Get the template being specialised and see if it's marked for reflection
+			const clang::ClassTemplateDecl* template_decl = cts_decl->getSpecializedTemplate();
 			info.type_name = template_decl->getQualifiedNameAsString();
 			if (!specs.IsReflected(info.type_name))
-			{
 				return false;
-			}
 
 			// Parent the instance to its declaring template
 			cldb::Name parent_name = db.GetName(info.type_name.c_str());
@@ -150,47 +144,33 @@ namespace
 			// Prepare for adding template arguments to the type name
 			info.type_name += "<";
 
-			// Iterate over template argument
-			int arg_pos = 0;
+			// Get access to the template argument list
 			ParameterInfo template_args[cldb::TemplateType::MAX_NB_ARGS];
-			for (clang::TemplateSpecializationType::iterator i = template_type->begin(); i != template_type->end(); ++i)
+			const clang::TemplateArgumentList& list = cts_decl->getTemplateArgs();
+			if (list.size() >= cldb::TemplateType::MAX_NB_ARGS)
+				return false;
+
+			for (unsigned int i = 0; i < list.size(); i++)
 			{
-				// Check for template argument overflow
-				if (arg_pos == cldb::TemplateType::MAX_NB_ARGS)
-				{
-					return false;
-				}
-
 				// Only support type arguments
-				const clang::TemplateArgument& arg = *i;
+				const clang::TemplateArgument& arg = list[i];
 				if (arg.getKind() != clang::TemplateArgument::Type)
-				{
 					return false;
-				}
 
-				// Recursively parser the template argument to get some parameter info
-				if (!GetParameterInfo(db, specs, ctx, arg.getAsType(), template_args[arg_pos]))
-				{
+				// Recursively parse the template argument to get some parameter info
+				if (!GetParameterInfo(db, specs, ctx, arg.getAsType(), template_args[i]))
 					return false;
-				}
 
 				// References currently not supported
-				if (template_args[arg_pos].modifier == cldb::Field::MODIFIER_REFERENCE)
-				{
+				if (template_args[i].qualifer.op == cldb::Qualifier::REFERENCE)
 					return false;
-				}
 
 				// Concatenate the arguments in the type name
-				if (arg_pos)
-				{
+				if (i)
 					info.type_name += ",";
-				}
-				info.type_name += template_args[arg_pos].type_name;
-				if (template_args[arg_pos].modifier == cldb::Field::MODIFIER_POINTER)
-				{
+				info.type_name += template_args[i].type_name;
+				if (template_args[i].qualifer.op == cldb::Qualifier::POINTER)
 					info.type_name += "*";
-				}
-				arg_pos++;
 			}
 
 			info.type_name += ">";
@@ -202,10 +182,10 @@ namespace
 				cldb::TemplateType type(type_name, parent_name);
 
 				// Populate the template argument list
-				for (int i = 0; i < arg_pos; i++)
+				for (unsigned int i = 0; i < list.size(); i++)
 				{
 					type.parameter_types[i] = db.GetName(template_args[i].type_name.c_str());
-					type.parameter_ptrs[i] = template_args[i].modifier == cldb::Field::MODIFIER_POINTER;
+					type.parameter_ptrs[i] = template_args[i].qualifer.op == cldb::Qualifier::POINTER;
 				}
 
 				db.AddPrimitive(type);
@@ -237,7 +217,7 @@ namespace
 
 		// Construct the field
 		cldb::Name type_name = db.GetName(info.type_name.c_str());
-		field = cldb::Field(db.GetName(param_name), parent_name, type_name, info.modifier, info.is_const, index);
+		field = cldb::Field(db.GetName(param_name), parent_name, type_name, info.qualifer, index);
 		return true;
 	}
 
@@ -311,9 +291,9 @@ namespace
 		if (return_parameter.type.text != "void")
 		{
 			LOG(ast, INFO, "Returns: %s%s%s\n",
-				return_parameter.is_const ? "const " : "",
+				return_parameter.qualifier.is_const ? "const " : "",
 				return_parameter.type.text.c_str(),
-				return_parameter.modifier == cldb::Field::MODIFIER_POINTER ? "*" : return_parameter.modifier == cldb::Field::MODIFIER_REFERENCE ? "&" : "");
+				return_parameter.qualifier.op == cldb::Qualifier::POINTER ? "*" : return_parameter.qualifier.op == cldb::Qualifier::REFERENCE ? "&" : "");
 			db.AddPrimitive(return_parameter);
 		}
 		else
@@ -325,9 +305,9 @@ namespace
 		for (std::vector<cldb::Field>::iterator i = parameters.begin(); i != parameters.end(); ++i)
 		{
 			LOG(ast, INFO, "%s%s%s %s\n",
-				i->is_const ? "const " : "",
+				i->qualifier.is_const ? "const " : "",
 				i->type.text.c_str(),
-				i->modifier == cldb::Field::MODIFIER_POINTER ? "*" : i->modifier == cldb::Field::MODIFIER_REFERENCE ? "&" : "",
+				i->qualifier.op == cldb::Qualifier::POINTER ? "*" : i->qualifier.op == cldb::Qualifier::REFERENCE ? "&" : "",
 				i->name.text.c_str());
 			db.AddPrimitive(*i);
 		}
@@ -674,9 +654,9 @@ void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const cldb::Name& name, c
 	}
 
 	LOG(ast, INFO, "Field: %s%s%s %s\n",
-		field.is_const ? "const " : "",
+		field.qualifier.is_const ? "const " : "",
 		field.type.text.c_str(),
-		field.modifier == cldb::Field::MODIFIER_POINTER ? "*" : field.modifier == cldb::Field::MODIFIER_REFERENCE ? "&" : "",
+		field.qualifier.op == cldb::Qualifier::POINTER ? "*" : field.qualifier.op == cldb::Qualifier::REFERENCE ? "&" : "",
 		field.name.text.c_str());
 	m_DB.AddPrimitive(field);
 }

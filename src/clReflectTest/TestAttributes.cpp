@@ -75,12 +75,15 @@ namespace TestAttributes
 
 	// --------------------------------------------------------------------------------------------
 	// All types of attribute
-	clcpp_attr(prop, val = 1, val2 = 1.5, val3 = symbol, val4 = "string")
+	clcpp_attr(prop, val = 1, val2 = 1.5, val3 = symbol, val4 = "string", val5 = scoped::symbol)
 	void AttrTypes() { }
+
+	clcpp_attr(transient)
+	void CommonFlagAttributes() { }
 
 	// --------------------------------------------------------------------------------------------
 	// Test lexer/parser warnings
-	clcpp_attr(error = 1.5.1)
+	clcpp_attr(error = 1.5.1, load=FuncName)
 	void FloatingPointLexError() { }
 	clcpp_attr(error = $)
 	void InvalidCharLexError() { }
@@ -90,6 +93,12 @@ namespace TestAttributes
 	void EndOfAttrNoValueParseError() { }
 	clcpp_attr(error=,valid)
 	void MissingValueParserError() { }
+
+	typedef const char* NullStr;
+	struct Blah
+	{
+		const char* x;
+	};
 }
 
 void TestAttributesFunc(clcpp::Database& db)
@@ -107,4 +116,8 @@ void TestAttributesFunc(clcpp::Database& db)
 	const clcpp::Namespace* j = db.GetNamespace(db.GetName("TestAttributes").hash);
 	const clcpp::Function* k = FindPrimitive(j->functions, db.GetName("TestAttributes::FunctionAttr").hash);
 	const clcpp::Function* l = FindPrimitive(j->functions, db.GetName("TestAttributes::AttrTypes").hash);
+
+	const clcpp::Function* common = FindPrimitive(j->functions, db.GetName("TestAttributes::CommonFlagAttributes").hash);
+
+	const clcpp::Type* t = clcpp_get_type(db, TestAttributes::NullStr);
 }

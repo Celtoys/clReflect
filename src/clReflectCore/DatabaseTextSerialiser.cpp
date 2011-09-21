@@ -117,22 +117,26 @@ namespace
 	}
 
 
+	void WriteQualifier(FILE* fp, const cldb::Qualifier& qualifier)
+	{
+		switch (qualifier.op)
+		{
+		case (cldb::Qualifier::VALUE): fputs("v", fp); break;
+		case (cldb::Qualifier::POINTER): fputs("p", fp); break;
+		case (cldb::Qualifier::REFERENCE): fputs("r", fp); break;
+		}
+
+		fputs(qualifier.is_const ? "\t1" : "\t0", fp);
+	}
+
+
 	void WriteField(FILE* fp, const cldb::Field& primitive, const cldb::Database& db)
 	{
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
 		fputs(HexStringFromName(primitive.type, db), fp);
 		fputs("\t", fp);
-
-		switch (primitive.modifier)
-		{
-		case (cldb::Field::MODIFIER_VALUE): fputs("v", fp); break;
-		case (cldb::Field::MODIFIER_POINTER): fputs("p", fp); break;
-		case (cldb::Field::MODIFIER_REFERENCE): fputs("r", fp); break;
-		}
-
-		fputs(primitive.is_const ? "\t1" : "\t0", fp);
-
+		WriteQualifier(fp, primitive.qualifier);
 		fputs("\t", fp);
 		fputs(itoa(primitive.offset), fp);
 		fputs("\t\t", fp);
@@ -412,6 +416,24 @@ namespace
 	}
 
 
+	cldb::Qualifier ParseQualifier(StringTokeniser& tok)
+	{
+		const char* mod = tok.Get();
+		cldb::Qualifier qualifier;
+		switch (mod[0])
+		{
+		case ('v'): qualifier.op = cldb::Qualifier::VALUE; break;
+		case ('p'): qualifier.op = cldb::Qualifier::POINTER; break;
+		case ('r'): qualifier.op = cldb::Qualifier::REFERENCE; break;
+		}
+
+		const char* cst = tok.Get();
+		qualifier.is_const = cst[0] != '0';
+
+		return qualifier;
+	}
+
+
 	void ParseField(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
@@ -423,18 +445,7 @@ namespace
 		// Field parsing
 
 		cldb::u32 type = tok.GetHexInt();
-
-		const char* mod = tok.Get();
-		cldb::Field::Modifier modifier;
-		switch (mod[0])
-		{
-		case ('v'): modifier = cldb::Field::MODIFIER_VALUE; break;
-		case ('p'): modifier = cldb::Field::MODIFIER_POINTER; break;
-		case ('r'): modifier = cldb::Field::MODIFIER_REFERENCE; break;
-		}
-
-		const char* cst = tok.Get();
-		bool is_const = cst[0] != '0';
+		cldb::Qualifier qualifier = ParseQualifier(tok);
 
 		const char* idx = tok.Get();
 		int index = atoi(idx);
@@ -446,8 +457,7 @@ namespace
 			db.GetName(name),
 			db.GetName(parent),
 			db.GetName(type),
-			modifier,
-			is_const,
+			qualifier,
 			index,
 			parent_unique_id);
 

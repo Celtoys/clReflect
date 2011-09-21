@@ -764,6 +764,10 @@ namespace
 				field = clcpp::FindPrimitive(base_class->fields, field_hash);
 				base_class = base_class->base_class;
 			}
+
+			// Don't load values for transient fields
+			if (field && (field->flag_attributes & clcpp::FlagAttribute::TRANSIENT))
+				field = 0;
 		}
 
 		if (!Expect(ctx, t, TT_COLON).IsValid())
@@ -1000,18 +1004,27 @@ namespace
 		// Save each field in the class
 		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
 		int nb_fields = fields.size();
+		bool field_written = false;
 		for (int i = 0; i < nb_fields; i++)
 		{
+			// Don't save values for transient fields
 			const clcpp::Field* field = fields[i];
+			if (field->flag_attributes & clcpp::FlagAttribute::TRANSIENT)
+				continue;
+
+			// Comma separator for multiple fields
+			if (field_written)
+				out.Write(",", 1);
+
+			// TODO: Pointers, references
+
 			const char* field_object = object + field->offset;
 			SaveString(out, field->name.text);
 			out.Write(":", 1);
 			SaveObject(out, field_object, field->type);
+			field_written = true;
 
-			// Comma separator for multiple fields
-			if (i < nb_fields - 1)
-				out.Write(",", 1);
-
+			// TODO: Wasteful, just for debug
 			out.Write("\n", 1);
 		}
 

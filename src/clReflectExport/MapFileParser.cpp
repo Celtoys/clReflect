@@ -154,17 +154,17 @@ namespace
 			// Check for modifiers
 			if (token[0] == '&')
 			{
-				parameter.modifier = cldb::Field::MODIFIER_REFERENCE;
+				parameter.qualifier.op = cldb::Qualifier::REFERENCE;
 			}
 			else if (token[0] == '*')
 			{
-				parameter.modifier = cldb::Field::MODIFIER_POINTER;
+				parameter.qualifier.op = cldb::Qualifier::POINTER;
 			}
 
 			// Check for const qualification
 			else if (!strcmp(token, "const"))
 			{
-				parameter.is_const = true;
+				parameter.qualifier.is_const = true;
 			}
 
 			// Mark this calls so that we can add the this parameter first
@@ -269,7 +269,7 @@ namespace
 			// Add the this parameter at the beginning
 			cldb::Field this_parameter;
 			this_parameter.type = db.GetName(type_name);
-			this_parameter.modifier = cldb::Field::MODIFIER_POINTER;
+			this_parameter.qualifier.op = cldb::Qualifier::POINTER;
 			parameters.push_back(this_parameter);
 		}
 
@@ -363,8 +363,7 @@ namespace
 			parameter_name,
 			function_name,
 			parameter_type_name,
-			cldb::Field::MODIFIER_POINTER,
-			false,
+			cldb::Qualifier(cldb::Qualifier::POINTER, false),
 			0);
 
 		// Generate a unique ID that binds the function and parameter together

@@ -62,6 +62,10 @@
 	</References>
 	<Files>
 		<File
+			RelativePath="clReflectTest.pibfile"
+			>
+		</File>
+		<File
 			RelativePath="Main.cpp"
 			>
 		</File>
@@ -102,14 +106,14 @@
 			>
 		</File>
 		<File
-			RelativePath="clReflectTest.pibfile"
+			RelativePath="TestTypedefs.cpp"
 			>
 		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="2IjDD90kD9HlI4tFEWdajw=="
+			Value="HPy_DdeC2jas2zK-Qp253Q=="
 		/>
 	</Globals>
 </VisualStudioProject>

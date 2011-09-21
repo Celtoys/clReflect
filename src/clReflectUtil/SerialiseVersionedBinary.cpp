@@ -112,13 +112,16 @@ namespace
 
 	void SaveClass(clutl::DataBuffer& out, const char* object, const clcpp::Class* class_type)
 	{
-		// Save each field in the class
+		// Save each non-transient field in the class
 		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
 		for (int i = 0; i < fields.size(); i++)
 		{
 			const clcpp::Field* field = fields[i];
-			const char* field_object = object + field->offset;
-			SaveObject(out, field_object, field->type, field->name.hash);
+			if (!(field->flag_attributes & clcpp::FlagAttribute::TRANSIENT))
+			{
+				const char* field_object = object + field->offset;
+				SaveObject(out, field_object, field->type, field->name.hash);
+			}
 		}
 	}
 
@@ -133,9 +136,9 @@ namespace
 			FieldHeader header;
 			header.Read(in);
 
-			// If the field exists in the class, load it
+			// If the field exists in the class and it's non-transient, load it
 			const clcpp::Field* field = clcpp::FindPrimitive(class_type->fields, header.m_Hash);
-			if (field)
+			if (field && !(field->flag_attributes & clcpp::FlagAttribute::TRANSIENT))
 			{
 				char* field_object = object + field->offset;
 				LoadObject(in, field_object, field->type, header.m_DataSize);

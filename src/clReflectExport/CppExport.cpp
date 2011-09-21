@@ -106,14 +106,14 @@ namespace
 	void CopyPrimitive(clcpp::Field& dest, const cldb::Field& src)
 	{
 		dest.type = (clcpp::Type*)src.type.hash;
-		dest.is_const = src.is_const;
+		dest.qualifier.is_const = src.qualifier.is_const;
 		dest.offset = src.offset;
 		dest.parent_unique_id = src.parent_unique_id;
-		switch (src.modifier)
+		switch (src.qualifier.op)
 		{
-		case (cldb::Field::MODIFIER_VALUE): dest.modifier = clcpp::Field::MODIFIER_VALUE; break;
-		case (cldb::Field::MODIFIER_POINTER): dest.modifier = clcpp::Field::MODIFIER_POINTER; break;
-		case (cldb::Field::MODIFIER_REFERENCE): dest.modifier = clcpp::Field::MODIFIER_REFERENCE; break;
+		case (cldb::Qualifier::VALUE): dest.qualifier.op = clcpp::Qualifier::VALUE; break;
+		case (cldb::Qualifier::POINTER): dest.qualifier.op = clcpp::Qualifier::POINTER; break;
+		case (cldb::Qualifier::REFERENCE): dest.qualifier.op = clcpp::Qualifier::REFERENCE; break;
 		default: assert(false && "Case not handled");
 		}
 	}
@@ -492,21 +492,13 @@ namespace
 		// Generate references to anything that is a type
 		int index = 0;
 		for (int i = 0; i < cppexp.db->types.size(); i++)
-		{
 			cppexp.db->type_primitives[index++] = &cppexp.db->types[i];
-		}
 		for (int i = 0; i < cppexp.db->classes.size(); i++)
-		{
 			cppexp.db->type_primitives[index++] = &cppexp.db->classes[i];
-		}
 		for (int i = 0; i < cppexp.db->enums.size(); i++)
-		{
 			cppexp.db->type_primitives[index++] = &cppexp.db->enums[i];
-		}
 		for (int i = 0; i < cppexp.db->template_types.size(); i++)
-		{
 			cppexp.db->type_primitives[index++] = &cppexp.db->template_types[i];
-		}
 	}
 
 
@@ -589,6 +581,36 @@ namespace
 
 			cls.constructor = clcpp::FindPrimitive(cls.methods, construct_hash);
 			cls.destructor = clcpp::FindPrimitive(cls.methods, destruct_hash);
+		}
+	}
+
+
+	void AddAttributeBit(const clcpp::CArray<const clcpp::Attribute*>& attributes, const char* attribute_name, int bit, unsigned int& dest)
+	{
+		unsigned int hash = clcpp::internal::HashNameString(attribute_name);
+		const clcpp::Attribute* attribute = clcpp::FindPrimitive(attributes, hash);
+		if (attribute)
+			dest |= bit;
+	}
+
+
+	unsigned int GetFlagAttributeBits(const clcpp::CArray<const clcpp::Attribute*>& attributes)
+	{
+		// Add all common flags as bit fields
+		unsigned int bits = 0;
+		AddAttributeBit(attributes, "transient", clcpp::FlagAttribute::TRANSIENT, bits);
+		AddAttributeBit(attributes, "nullstr", clcpp::FlagAttribute::NULLSTR, bits);
+		return bits;
+	}
+
+
+	template <typename TYPE>
+	void AddFlagAttributeBits(clcpp::CArray<TYPE>& primitives)
+	{
+		for (int i = 0; i < primitives.size(); i++)
+		{
+			TYPE& primitive = primitives[i];
+			primitive.flag_attributes = GetFlagAttributeBits(primitive.attributes);
 		}
 	}
 
@@ -759,6 +781,13 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	// local searches can take advantage of clcpp::FindPrimitive.
 	FindClassConstructors(cppexp);
 
+	// For each attribute array in a primitive, calculate a 32-bit value that represents all
+	// common flag attributes applied to that primitive.
+	AddFlagAttributeBits(cppexp.db->enums);
+	AddFlagAttributeBits(cppexp.db->fields);
+	AddFlagAttributeBits(cppexp.db->functions);
+	AddFlagAttributeBits(cppexp.db->classes);
+
 	// Primitives reference each other via their names (hash codes). This code first of all copies
 	// hashes into the pointers and then patches them up via lookup. If the input database doesn't
 	// contain primitives that others reference then at this point, certain primitives will contain
@@ -836,8 +865,8 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		(&clcpp::Class::templates, array_data_offset);
 
 	PtrSchema& schema_template_type = relocator.AddSchema<clcpp::TemplateType>(&schema_type)
-		(&clcpp::TemplateType::parameter_types, 0)
-		(&clcpp::TemplateType::parameter_types, sizeof(void*))
+		(&clcpp::TemplateType::parameter_types, sizeof(void*) * 0)
+		(&clcpp::TemplateType::parameter_types, sizeof(void*) * 1)
 		(&clcpp::TemplateType::parameter_types, sizeof(void*) * 2)
 		(&clcpp::TemplateType::parameter_types, sizeof(void*) * 3);
 
@@ -1006,10 +1035,10 @@ namespace
 
 	void LogField(const clcpp::Field& field, bool name = true)
 	{
-		LOG_APPEND(cppexp, INFO, "%s", field.is_const ? "const " : "");
+		LOG_APPEND(cppexp, INFO, "%s", field.qualifier.is_const ? "const " : "");
 		LOG_APPEND(cppexp, INFO, "%s", field.type->name.text);
-		LOG_APPEND(cppexp, INFO, "%s", field.modifier == clcpp::Field::MODIFIER_POINTER ? "*" :
-			field.modifier == clcpp::Field::MODIFIER_REFERENCE ? "&" : "");
+		LOG_APPEND(cppexp, INFO, "%s", field.qualifier.op == clcpp::Qualifier::POINTER ? "*" :
+			field.qualifier.op == clcpp::Qualifier::REFERENCE ? "&" : "");
 
 		if (name)
 		{
@@ -1103,7 +1132,7 @@ namespace
 		LOG(cppexp, INFO, "};");
 	}
 
-	
+
 	void LogPrimitive(const clcpp::Class& cls)
 	{
 		LOG(cppexp, INFO, "class %s", cls.name.text);
