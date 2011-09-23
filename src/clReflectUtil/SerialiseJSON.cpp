@@ -681,7 +681,6 @@ namespace
 	void ParserElements(Context& ctx, Token& t)
 	{
 		// Expect a value first
-		// TODO: Fill in when arrays are supported by clReflect
 		ParserValue(ctx, t, 0, 0);
 
 		if (t.type == TT_COMMA)
@@ -765,8 +764,8 @@ namespace
 				base_class = base_class->base_class;
 			}
 
-			// Don't load values for transient fields
-			if (field && (field->flag_attributes & clcpp::FlagAttribute::TRANSIENT))
+			// Don't load values for transient/nullstr fields
+			if (field && (field->flag_attributes & (clcpp::FlagAttribute::TRANSIENT | clcpp::FlagAttribute::NULLSTR)))
 				field = 0;
 		}
 
@@ -1016,12 +1015,16 @@ namespace
 			if (field_written)
 				out.Write(",", 1);
 
-			// TODO: Pointers, references
-
-			const char* field_object = object + field->offset;
+			// Write the field name
 			SaveString(out, field->name.text);
 			out.Write(":", 1);
-			SaveObject(out, field_object, field->type);
+
+			const char* field_object = object + field->offset;
+			if (field->flag_attributes & clcpp::FlagAttribute::NULLSTR)
+				SaveString(out, *(char**)field_object);
+			else
+				SaveObject(out, field_object, field->type);
+
 			field_written = true;
 
 			// TODO: Wasteful, just for debug

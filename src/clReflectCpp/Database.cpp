@@ -109,29 +109,28 @@ clcpp::Database::~Database()
 }
 
 
+clcpp::Name clcpp::Database::GetName(unsigned int hash) const
+{
+	// Lookup the name by hash
+	int index = BinarySearch<Name, Name, GetNameHash>(m_DatabaseMem->names, hash);
+	if (index == -1)
+		return clcpp::Name();
+	return m_DatabaseMem->names[index];
+}
+
+
 clcpp::Name clcpp::Database::GetName(const char* text) const
 {
 	// Null pointer
 	if (text == 0)
-	{
 		return clcpp::Name();
-	}
 
 	// Hash and exit on no value
 	unsigned int hash = internal::HashNameString(text);
 	if (hash == 0)
-	{
 		return clcpp::Name();
-	}
 
-	// Lookup the name by hash and see
-	int index = BinarySearch<Name, Name, GetNameHash>(m_DatabaseMem->names, hash);
-	if (index == -1)
-	{
-		return clcpp::Name();
-	}
-
-	return m_DatabaseMem->names[index];
+	return GetName(hash);
 }
 
 

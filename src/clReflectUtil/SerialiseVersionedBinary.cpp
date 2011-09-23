@@ -213,6 +213,10 @@ namespace
 		case (clcpp::Primitive::KIND_CLASS):
 			LoadClass(in, object, type->AsClass(), data_size);
 			break;
+
+		default:
+			// Unsupported type
+			clcpp::internal::Assert(false);
 		}
 	}
 }

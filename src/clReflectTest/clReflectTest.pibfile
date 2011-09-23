@@ -53,7 +53,7 @@ config.LinkOptions.MapFile = True
 cltest = CppBuild(env, [ "." ], "cltest.exe", libs, build = False)
 
 # Inject the clReflect build dependencies
-cltest.csv_files = [ clReflect.CppScan(include_paths, file) for file in cltest.obj_files ]
+cltest.csv_files = [ clReflect.CppScan([], include_paths, file) for file in cltest.obj_files ]
 cltest.db_file = clReflect.Merge("clReflectTest.csv", cltest.csv_files)
 map_file = cltest.output.GetOutputFiles(env)[1]
 cltest.cppbin_file = clReflect.CppExport("clReflectTest.cppbin", cltest.db_file, map_file)

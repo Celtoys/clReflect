@@ -515,6 +515,7 @@ namespace clcpp
 
 		// This returns the name as it exists in the name database, with the text pointer
 		// pointing to within the database's allocated name data
+		Name GetName(unsigned int hash) const;
 		Name GetName(const char* text) const;
 
 		// Return either a type, enum, template type or class by hash
@@ -522,6 +523,8 @@ namespace clcpp
 
 		const Namespace* GetNamespace(unsigned int hash) const;
 		const Function* GetFunction(unsigned int hash) const;
+
+		bool IsLoaded() const { return m_DatabaseMem != 0; }
 
 	private:
 		// Disable copying

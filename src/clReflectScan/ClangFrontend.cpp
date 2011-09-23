@@ -65,6 +65,7 @@ ClangHost::ClangHost(Arguments& args)
 	clang::TextDiagnosticPrinter* text_diag_printer = new clang::TextDiagnosticPrinter(output_stream, diag_options);
 	llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diag_id(new clang::DiagnosticIDs());
 	diagnostic.reset(new clang::Diagnostic(diag_id, text_diag_printer));
+	diagnostic->setSuppressSystemWarnings(true);
 
 	// Setup the language parsing options for C++
 	lang_options.CPlusPlus = 1;
