@@ -697,6 +697,7 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 {
 	// Allocate the in-memory database
 	cppexp.db = cppexp.allocator.Alloc<clcpp::internal::DatabaseMem>(1);
+	cppexp.db->function_base_address = cppexp.function_base_address;
 
 	// Build all the name data ready for the client to use and the exporter to debug with
 	BuildNames(db, cppexp);

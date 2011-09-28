@@ -515,6 +515,8 @@ namespace clcpp
 
 		bool Load(IFile* file, IAllocator* allocator);
 
+		void RebaseFunctions(unsigned int base_address);
+
 		// This returns the name as it exists in the name database, with the text pointer
 		// pointing to within the database's allocated name data
 		Name GetName(unsigned int hash) const;
@@ -548,9 +550,13 @@ namespace clcpp
 		struct DatabaseMem
 		{
 			DatabaseMem()
-				: name_text_data(0)
+				: function_base_address(0)
+				, name_text_data(0)
 			{
 			}
+
+			// The address to subtract when rebasing function addresses
+			unsigned int function_base_address;
 
 			// Raw allocation of all null-terminated name strings
 			const char* name_text_data;

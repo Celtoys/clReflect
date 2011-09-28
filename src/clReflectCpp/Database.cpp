@@ -109,6 +109,27 @@ clcpp::Database::~Database()
 }
 
 
+bool clcpp::Database::Load(IFile* file, IAllocator* allocator)
+{
+	internal::Assert(m_DatabaseMem == 0 && "Database already loaded");
+	m_Allocator = allocator;
+	m_DatabaseMem = internal::LoadMemoryMappedDatabase(file, m_Allocator);
+	return m_DatabaseMem != 0;
+}
+
+
+void clcpp::Database::RebaseFunctions(unsigned int base_address)
+{
+	// Move all function addresses from their current location to their new location
+	internal::Assert(m_DatabaseMem != 0);
+	for (int i = 0; i < m_DatabaseMem->functions.size(); i++)
+	{
+		clcpp::Function& f = m_DatabaseMem->functions[i];
+		f.address = f.address - m_DatabaseMem->function_base_address + base_address;
+	}
+}
+
+
 clcpp::Name clcpp::Database::GetName(unsigned int hash) const
 {
 	// Lookup the name by hash
@@ -159,13 +180,4 @@ const clcpp::Function* clcpp::Database::GetFunction(unsigned int hash) const
 		return 0;
 	}
 	return &m_DatabaseMem->functions[index];
-}
-
-
-bool clcpp::Database::Load(IFile* file, IAllocator* allocator)
-{
-	internal::Assert(m_DatabaseMem == 0 && "Database already loaded");
-	m_Allocator = allocator;
-	m_DatabaseMem = internal::LoadMemoryMappedDatabase(file, m_Allocator);
-	return m_DatabaseMem != 0;
 }

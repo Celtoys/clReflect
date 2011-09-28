@@ -36,9 +36,9 @@ namespace cldb
 }
 
 
-class MapFileParser
+struct MapFileParser
 {
 public:
 	MapFileParser(cldb::Database& db, const char* filename);
-private:
+	unsigned int m_PreferredLoadAddress;
 };

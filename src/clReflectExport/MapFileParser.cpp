@@ -401,6 +401,7 @@ namespace
 
 
 MapFileParser::MapFileParser(cldb::Database& db, const char* filename)
+	: m_PreferredLoadAddress(0)
 {
 	static const char* construct_object = "clcpp::internal::ConstructObject";
 	static const char* destruct_object = "clcpp::internal::DestructObject";
@@ -454,10 +455,19 @@ MapFileParser::MapFileParser(cldb::Database& db, const char* filename)
 		}
 
 		// Look for the start of the public symbols descriptors
-		if (strstr(line, "  Address"))
+		else if (strstr(line, "  Address"))
 		{
 			ReadLine(fp);
 			public_symbols = true;
+		}
+
+		// Parse the preferred load address
+		if (m_PreferredLoadAddress == 0 && strstr(line, "Preferred load address is "))
+		{
+			line += sizeof("Preferred load address is ");
+			char token[32];
+			ConsumeToken(line , '\r', token, sizeof(token));
+			m_PreferredLoadAddress = hextoi(token);
 		}
 	}
 
