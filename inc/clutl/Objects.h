@@ -2,18 +2,18 @@
 #pragma once
 
 
-namespace clcpp
-{
-	struct Type;
-	class Database;
-}
+#include <clcpp/clcpp.h>
+
+
+// Only want to reflect the Object class so that derivers will reflect
+// The type parameter is not interesting here
+clcpp_reflect_part(clutl::Object)
 
 
 namespace clutl
 {
 	struct Object
 	{
-		// TODO: is this field to be reflected? Probably not.
 		const clcpp::Type* type;
 	};
 
@@ -22,13 +22,31 @@ namespace clutl
 	class ObjectDatabase
 	{
 	public:
-		ObjectDatabase(clcpp::Database& db);
+		ObjectDatabase();
 		~ObjectDatabase();
 
-		Object* CreateObject(unsigned int type_hash);
-		void DestroyObject(Object* object);
 
-	private:
-		clcpp::Database& m_ReflectionDB;
+		// Create an object of the given type name and assign its type pointer
+		template <typename TYPE> TYPE* CreateObject(const clcpp::Database& reflection_db, unsigned int type_hash)
+		{
+			const clcpp::Type* type = 0;
+			TYPE* object = (TYPE*)CreateObject(reflection_db, type_hash, type);
+			if (object)
+				object->type = type;
+			return object;
+		}
+
+		// Destroy an object, taking its type from the object
+		template <typename TYPE> void DestroyObject(TYPE* object)
+		{
+			clcpp::internal::Assert(object != 0);
+			DestroyObject(object, object->type);
+		}
+
+		// Create an object of the given type name; a pointer to the type is returned
+		void* CreateObject(const clcpp::Database& reflection_db, unsigned int type_hash, const clcpp::Type*& type);
+
+		// Destroy an object of the given type
+		void DestroyObject(void* object, const clcpp::Type* object_type);
 	};
 }

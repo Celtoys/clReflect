@@ -198,6 +198,8 @@ namespace
 		Remove(info.type_name, "class ");
 
 		// Has the type itself been marked for reflection?
+		// TODO: Remove this and offload to clexport - can't know at this point if a type is reflected
+		// as it might be forward-declared!
 		if (tc != clang::Type::Builtin && !specs.IsReflected(info.type_name))
 		{
 			return false;

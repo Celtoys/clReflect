@@ -104,6 +104,8 @@ namespace clcpp
 
 	//
 	// Base class for all types of C++ primitives that are reflected
+	// TODO: Store a pointer to the containing Database? When there are multiple databases
+	// in a program (e.g. DLLs) this may become useful.
 	//
 	struct Primitive
 	{

@@ -166,7 +166,7 @@
 			{															\
 				clcpp_export void ConstructObject(scoped_type* object)	\
 				{														\
-					new (PtrWrapper(object)) scoped_type;				\
+					new (*(PtrWrapper*)object) scoped_type;				\
 				}														\
 				clcpp_export void DestructObject(scoped_type* object)	\
 				{														\
