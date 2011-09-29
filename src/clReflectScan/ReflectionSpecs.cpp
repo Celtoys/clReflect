@@ -184,7 +184,6 @@ void ReflectionSpecs::Gather(clang::TranslationUnitDecl* tu_decl)
 		std::string symbol = reflect_spec.substr(5);
 		if (m_ReflectionSpecs.find(symbol) != m_ReflectionSpecs.end())
 		{
-			LOG(spec, WARNING, "Ignoring duplicate Reflection Spec '%s'\n", symbol.c_str());
 			++i;
 			continue;
 		}

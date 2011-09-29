@@ -133,6 +133,8 @@ namespace
 			assert(cts_decl && "Couldn't cast to template specialisation decl");
 
 			// Get the template being specialised and see if it's marked for reflection
+			// The template definition needs to be in scope for specialisations to occur. This implies
+			// that the reflection spec must also be in scope.
 			const clang::ClassTemplateDecl* template_decl = cts_decl->getSpecializedTemplate();
 			info.type_name = template_decl->getQualifiedNameAsString();
 			if (!specs.IsReflected(info.type_name))
@@ -200,6 +202,9 @@ namespace
 		// Has the type itself been marked for reflection?
 		// TODO: Remove this and offload to clexport - can't know at this point if a type is reflected
 		// as it might be forward-declared!
+		// If this is a field then the definition needs to be in scope if it's not a pointer or reference.
+		// This implies that the reflection spec for the field type should also be in scope so this check is valid
+		// in this case.
 		if (tc != clang::Type::Builtin && !specs.IsReflected(info.type_name))
 		{
 			return false;
