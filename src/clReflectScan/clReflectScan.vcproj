@@ -86,6 +86,10 @@
 			>
 		</File>
 		<File
+			RelativePath="clReflectScan.pibfile"
+			>
+		</File>
+		<File
 			RelativePath="Main.cpp"
 			>
 		</File>
@@ -97,15 +101,11 @@
 			RelativePath="ReflectionSpecs.h"
 			>
 		</File>
-		<File
-			RelativePath="clReflectScan.pibfile"
-			>
-		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="FQSiEy8Aulc4QSK_vODO6Q=="
+			Value="3GH4yQNaq90ZKDAeco2ETw=="
 		/>
 	</Globals>
 </VisualStudioProject>

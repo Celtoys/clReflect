@@ -63,11 +63,11 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{6a42c1a2-e43e-11e0-a08b-f46d04d48d5f}"
+			UniqueIdentifier="{4630f7d3-f002-11e0-bb3d-f46d04d48d5f}"
 			>
 			<Filter
 				Name="clutl"
-				UniqueIdentifier="{6a42c1a3-e43e-11e0-af72-f46d04d48d5f}"
+				UniqueIdentifier="{4630f7d4-f002-11e0-9a14-f46d04d48d5f}"
 				>
 				<File
 					RelativePath="..\..\inc\clutl\Containers.h"
@@ -107,7 +107,7 @@
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="XNS0VjZ0wAY8hYmSoeWTbg=="
+			Value="lMag67saKGGkq7MOqdmV0g=="
 		/>
 	</Globals>
 </VisualStudioProject>

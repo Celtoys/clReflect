@@ -513,9 +513,7 @@ namespace clcpp
 		Database();
 		~Database();
 
-		bool Load(IFile* file, IAllocator* allocator);
-
-		void RebaseFunctions(unsigned int base_address);
+		bool Load(IFile* file, IAllocator* allocator, unsigned int base_address);
 
 		// This returns the name as it exists in the name database, with the text pointer
 		// pointing to within the database's allocated name data
@@ -544,6 +542,18 @@ namespace clcpp
 
 	namespace internal
 	{
+		//
+		// Point to the runtime addresses of the GetType family of functions so that
+		// the values that they return can be patched at runtime.
+		//
+		struct GetTypeFunctions
+		{
+			unsigned int type_hash;
+			unsigned int get_typename_address;
+			unsigned int get_type_address;
+		};
+
+
 		//
 		// Memory-mapped representation of the entire reflection database
 		//
@@ -588,6 +598,9 @@ namespace clcpp
 			// A list of references to all types, enums and classes for potentially quicker
 			// searches during serialisation
 			CArray<const Type*> type_primitives;
+
+			// A list of all GetType function addresses paired to their type
+			CArray<GetTypeFunctions> get_type_functions;
 
 			// The root namespace that allows you to reach every referenced primitive
 			Namespace global_namespace;

@@ -26,6 +26,7 @@
 //
 
 #include <clcpp/clcpp.h>
+#include <cstdio>
 
 
 // --------------------------------------------------------------------------------------------
@@ -603,8 +604,15 @@ void TestGetType(clcpp::Database& db)
 	clcpp::Name nb = db.GetName("Inheritance::DerivedClass");
 	clcpp::Name nc = db.GetName("NamespaceA::NamedNSClassA::EnumWithinNamedClassA");
 
-	const clcpp::Type* e0 = clcpp_get_type(db, ClassGlobalA);
-	const clcpp::Class* e1 = clcpp_get_type(db, Inheritance::DerivedClass)->AsClass();
-	const clcpp::Enum* e2 = clcpp_get_type(db, NamespaceA::NamedNSClassA::EnumWithinNamedClassA)->AsEnum();
+	const clcpp::Type* e0 = clcpp::GetType<ClassGlobalA>();
+	const clcpp::Class* e1 = clcpp::GetType<Inheritance::DerivedClass>()->AsClass();
+	const clcpp::Enum* e2 = clcpp::GetType<NamespaceA::NamedNSClassA::EnumWithinNamedClassA>()->AsEnum();
+
+	printf("%x\n", clcpp::GetTypeNameHash<int>());
+	printf("%x\n", clcpp::GetTypeNameHash<unsigned int>());
+	printf("%x\n", clcpp::GetTypeNameHash<char>());
+	printf("%x\n", clcpp::GetTypeNameHash<ClassGlobalA>());
+	printf("%x\n", clcpp::GetTypeNameHash<Inheritance::DerivedClass>());
+	printf("%x\n", clcpp::GetTypeNameHash<NamespaceA::NamedNSClassA::EnumWithinNamedClassA>());
 }
 

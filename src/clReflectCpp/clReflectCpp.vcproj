@@ -63,12 +63,16 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{008315d2-dd5e-11e0-8b61-f46d04d48d5f}"
+			UniqueIdentifier="{45f0e190-f002-11e0-a2d4-f46d04d48d5f}"
 			>
 			<Filter
 				Name="clcpp"
-				UniqueIdentifier="{008315d3-dd5e-11e0-9e0a-f46d04d48d5f}"
+				UniqueIdentifier="{45f0e191-f002-11e0-a98d-f46d04d48d5f}"
 				>
+				<File
+					RelativePath="..\..\inc\clcpp\clcpp.h"
+					>
+				</File>
 				<File
 					RelativePath="..\..\inc\clcpp\Core.h"
 					>
@@ -81,12 +85,12 @@
 					RelativePath="..\..\inc\clcpp\FunctionCall.h"
 					>
 				</File>
-				<File
-					RelativePath="..\..\inc\clcpp\clcpp.h"
-					>
-				</File>
 			</Filter>
 		</Filter>
+		<File
+			RelativePath="clReflectCpp.pibfile"
+			>
+		</File>
 		<File
 			RelativePath="Core.cpp"
 			>
@@ -103,15 +107,11 @@
 			RelativePath="DatabaseLoader.h"
 			>
 		</File>
-		<File
-			RelativePath="clReflectCpp.pibfile"
-			>
-		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="4RHZkTolhu_oFogzTj-VXQ=="
+			Value="Kk8B3EOf1YL4mIOWUM9DbA=="
 		/>
 	</Globals>
 </VisualStudioProject>

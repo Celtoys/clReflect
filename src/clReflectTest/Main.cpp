@@ -102,7 +102,7 @@ int main()
 
 	Malloc allocator;
 	clcpp::Database db;
-	db.Load(&file, &allocator);
+	db.Load(&file, &allocator, 0);
 	TestGetType(db);
 	TestConstructorDestructor(db);
 	TestAttributesFunc(db);

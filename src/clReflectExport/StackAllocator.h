@@ -82,7 +82,7 @@ public:
 		{
 			for (unsigned int i = 0; i < count; i++)
 			{
-				new (data + i) TYPE();
+				new (data + i) TYPE;
 			}
 		}
 

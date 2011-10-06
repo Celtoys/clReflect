@@ -63,8 +63,8 @@ clcpp_impl_class(TestClassImpl::B, B)
 
 void TestConstructorDestructor(clcpp::Database& db)
 {
-	const clcpp::Class* ca = clcpp_get_type(db, TestClassImpl::A)->AsClass();
-	const clcpp::Class* cb = clcpp_get_type(db, TestClassImpl::B)->AsClass();
+	const clcpp::Class* ca = clcpp::GetType<TestClassImpl::A>()->AsClass();
+	const clcpp::Class* cb = clcpp::GetType<TestClassImpl::B>()->AsClass();
 
 	TestClassImpl::A* a = (TestClassImpl::A*)new char[sizeof(TestClassImpl::A)];
 	TestClassImpl::B* b = (TestClassImpl::B*)new char[sizeof(TestClassImpl::B)];

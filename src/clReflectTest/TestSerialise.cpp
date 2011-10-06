@@ -72,8 +72,8 @@ void TestSerialise(clcpp::Database& db)
 	//      Odd point: sizeof(BaseStruct) is 24!
 
 	Stuff::DerivedStruct src;
-	clutl::SaveVersionedBinary(buffer, &src, clcpp_get_type(db, Stuff::DerivedStruct));
+	clutl::SaveVersionedBinary(buffer, &src, clcpp::GetType<Stuff::DerivedStruct>());
 	buffer.ResetPosition();
 	Stuff::DerivedStruct dest(Stuff::NO_INIT);
-	clutl::LoadVersionedBinary(buffer, &dest, clcpp_get_type(db, Stuff::DerivedStruct));
+	clutl::LoadVersionedBinary(buffer, &dest, clcpp::GetType<Stuff::DerivedStruct>());
 }

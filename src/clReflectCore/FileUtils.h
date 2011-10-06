@@ -48,6 +48,10 @@ const char* itohex(unsigned int value);
 unsigned int hextoi(const char* text);
 
 
+bool startswith(const char* text, const char* cmp);
+bool startswith(const std::string& text, const char* cmp);
+
+
 const char* SkipWhitespace(const char* text);
 
 

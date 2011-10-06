@@ -103,12 +103,12 @@ namespace TestAttributes
 
 void TestAttributesFunc(clcpp::Database& db)
 {
-	const clcpp::Enum* a = clcpp_get_type(db, TestAttributes::GlobalEnumAttr)->AsEnum();
-	const clcpp::Class* b = clcpp_get_type(db, TestAttributes::ClassAttr)->AsClass();
+	const clcpp::Enum* a = clcpp::GetType<TestAttributes::GlobalEnumAttr>()->AsEnum();
+	const clcpp::Class* b = clcpp::GetType<TestAttributes::ClassAttr>()->AsClass();
 	const clcpp::Enum* c = b->enums[0];
 	const clcpp::Field* d = b->fields[0];
 	const clcpp::Function* e = b->methods[0];
-	const clcpp::Class* f = clcpp_get_type(db, TestAttributes::StructAttr)->AsClass();
+	const clcpp::Class* f = clcpp::GetType<TestAttributes::StructAttr>()->AsClass();
 	const clcpp::Enum* g = f->enums[0];
 	const clcpp::Field* h = f->fields[0];
 	const clcpp::Function* i = f->methods[0];
@@ -119,5 +119,5 @@ void TestAttributesFunc(clcpp::Database& db)
 
 	const clcpp::Function* common = FindPrimitive(j->functions, db.GetName("TestAttributes::CommonFlagAttributes").hash);
 
-	const clcpp::Type* t = clcpp_get_type(db, TestAttributes::NullStr);
+	const clcpp::Type* t = clcpp::GetType<TestAttributes::NullStr>();
 }

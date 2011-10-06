@@ -79,6 +79,52 @@ namespace
 
 		return -1;
 	}
+
+
+	void RebaseFunctions(clcpp::internal::DatabaseMem& dbmem, unsigned int base_address)
+	{
+		// Move all function addresses from their current location to their new location
+		for (int i = 0; i < dbmem.functions.size(); i++)
+		{
+			clcpp::Function& f = dbmem.functions[i];
+			f.address = f.address - dbmem.function_base_address + base_address;
+		}
+
+		// Do the same for the GetType family of functions
+		for (int i = 0; i < dbmem.get_type_functions.size(); i++)
+		{
+			clcpp::internal::GetTypeFunctions& f = dbmem.get_type_functions[i];
+			f.get_typename_address = f.get_typename_address - dbmem.function_base_address + base_address;
+			f.get_type_address = f.get_type_address - dbmem.function_base_address + base_address;
+		}
+	}
+
+
+	void PatchGetTypeAddresses(clcpp::Database& db, clcpp::internal::DatabaseMem& dbmem)
+	{
+		for (int i = 0; i < dbmem.get_type_functions.size(); i++)
+		{
+			clcpp::internal::GetTypeFunctions& f = dbmem.get_type_functions[i];
+
+			// Patch up the type name hash static variable
+			if (f.get_typename_address)
+			{
+				unsigned char* mov_instruction = (unsigned char*)f.get_typename_address;
+				clcpp::internal::Assert(*mov_instruction == 0xA1);
+				unsigned int* hash_address = *(unsigned int**)(mov_instruction + 1);
+				*hash_address = db.GetName(f.type_hash).hash;
+			}
+
+			// Patch up the type pointer static variable
+			if (f.get_type_address)
+			{
+				unsigned char* mov_instruction = (unsigned char*)f.get_type_address;
+				clcpp::internal::Assert(*mov_instruction == 0xA1);
+				const clcpp::Type** type_address = *(const clcpp::Type***)(mov_instruction + 1);
+				*type_address = db.GetType(f.type_hash);
+			}
+		}
+	}
 }
 
 
@@ -109,24 +155,23 @@ clcpp::Database::~Database()
 }
 
 
-bool clcpp::Database::Load(IFile* file, IAllocator* allocator)
+bool clcpp::Database::Load(IFile* file, IAllocator* allocator, unsigned int base_address)
 {
+	// Load the database
 	internal::Assert(m_DatabaseMem == 0 && "Database already loaded");
 	m_Allocator = allocator;
 	m_DatabaseMem = internal::LoadMemoryMappedDatabase(file, m_Allocator);
+
+	// If no base address is provided, rebasing will not occur and it is assumed the addresses
+	// loaded are already correct. Rebasing is usually only needed for DLLs that have been moved
+	// by the OS due to another DLL occupying its preferred load address.
+	if (m_DatabaseMem != 0 && base_address != 0)
+		RebaseFunctions(*m_DatabaseMem, base_address);
+
+	if (m_DatabaseMem != 0)
+		PatchGetTypeAddresses(*this, *m_DatabaseMem);
+
 	return m_DatabaseMem != 0;
-}
-
-
-void clcpp::Database::RebaseFunctions(unsigned int base_address)
-{
-	// Move all function addresses from their current location to their new location
-	internal::Assert(m_DatabaseMem != 0);
-	for (int i = 0; i < m_DatabaseMem->functions.size(); i++)
-	{
-		clcpp::Function& f = m_DatabaseMem->functions[i];
-		f.address = f.address - m_DatabaseMem->function_base_address + base_address;
-	}
 }
 
 

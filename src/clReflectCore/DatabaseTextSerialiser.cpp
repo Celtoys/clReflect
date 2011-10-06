@@ -41,12 +41,6 @@ namespace
 	const int CURRENT_VERSION = 1;
 
 
-	bool startswith(const char* text, const char* cmp)
-	{
-		return strstr(text, cmp) == text;
-	}
-
-
 	const char* HexStringFromName(cldb::Name name, const cldb::Database& db)
 	{
 		return itohex(name.hash);

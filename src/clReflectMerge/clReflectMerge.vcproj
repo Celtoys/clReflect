@@ -62,6 +62,10 @@
 	</References>
 	<Files>
 		<File
+			RelativePath="clReflectMerge.pibfile"
+			>
+		</File>
+		<File
 			RelativePath="DatabaseMerge.cpp"
 			>
 		</File>
@@ -73,15 +77,11 @@
 			RelativePath="Main.cpp"
 			>
 		</File>
-		<File
-			RelativePath="clReflectMerge.pibfile"
-			>
-		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="tbEqJlSS_ONCs_M3L-ipzg=="
+			Value="0ID0KWEBYt5wcedeFnQKqA=="
 		/>
 	</Globals>
 </VisualStudioProject>

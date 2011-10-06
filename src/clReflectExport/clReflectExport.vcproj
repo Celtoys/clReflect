@@ -62,6 +62,10 @@
 	</References>
 	<Files>
 		<File
+			RelativePath="clReflectExport.pibfile"
+			>
+		</File>
+		<File
 			RelativePath="CppExport.cpp"
 			>
 		</File>
@@ -93,15 +97,11 @@
 			RelativePath="StackAllocator.h"
 			>
 		</File>
-		<File
-			RelativePath="clReflectExport.pibfile"
-			>
-		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="85OdXkB5qe04-TEKEN0afQ=="
+			Value="ULL1EK8qhG9gAgfZB5UXww=="
 		/>
 	</Globals>
 </VisualStudioProject>

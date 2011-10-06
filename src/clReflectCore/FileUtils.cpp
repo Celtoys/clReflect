@@ -111,6 +111,18 @@ unsigned int hextoi(const char* text)
 }
 
 
+bool startswith(const char* text, const char* cmp)
+{
+	return strstr(text, cmp) == text;
+}
+
+
+bool startswith(const std::string& text, const char* cmp)
+{
+	return startswith(text.c_str(), cmp);
+}
+
+
 const char* SkipWhitespace(const char* text)
 {
 	while (*text == ' ' || *text == '\t')

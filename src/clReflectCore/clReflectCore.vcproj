@@ -66,6 +66,10 @@
 			>
 		</File>
 		<File
+			RelativePath="clReflectCore.pibfile"
+			>
+		</File>
+		<File
 			RelativePath="Database.cpp"
 			>
 		</File>
@@ -113,15 +117,11 @@
 			RelativePath="Logging.h"
 			>
 		</File>
-		<File
-			RelativePath="clReflectCore.pibfile"
-			>
-		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="r534Wf0bz59FdPcvwcniDA=="
+			Value="OqrTnH3HzDTMscF6pH1Lzw=="
 		/>
 	</Globals>
 </VisualStudioProject>

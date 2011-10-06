@@ -525,6 +525,18 @@ namespace cldb
 	};
 
 
+	//
+	// Point to the runtime addresses of the GetType family of functions so that
+	// the values that they return can be patched at runtime.
+	//
+	struct GetTypeFunctions
+	{
+		typedef std::map<u32, GetTypeFunctions> MapType;
+		u32 get_typename_address;
+		u32 get_type_address;
+	};
+
+
 	class Database
 	{
 	public:
@@ -605,5 +617,8 @@ namespace cldb
 		PrimitiveStore<FloatAttribute> m_FloatAttributes;
 		PrimitiveStore<NameAttribute> m_NameAttributes;
 		PrimitiveStore<TextAttribute> m_TextAttributes;
+
+		// All referenced GetType functions per type
+		GetTypeFunctions::MapType m_GetTypeFunctions;
 	};
 }

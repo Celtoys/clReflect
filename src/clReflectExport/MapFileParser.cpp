@@ -214,9 +214,7 @@ namespace
 	void AddFunctionAddress(cldb::Database& db, const std::string& function_name, const std::string& function_signature, unsigned int function_address)
 	{
 		if (function_address == 0)
-		{
 			return;
-		}
 
 		// Find where the return type ends
 		size_t func_pos = function_signature.find(function_name);
@@ -232,9 +230,7 @@ namespace
 		cldb::Field return_parameter = MatchParameter(db, ptr, ptr + func_pos, is_this_call);
 		cldb::Field* return_parameter_ptr = 0;
 		if (return_parameter.type.text != "void")
-		{
 			return_parameter_ptr = &return_parameter;
-		}
 
 		// Isolate the parameters in the signature
 		size_t l_pos = function_signature.find('(', func_pos);
@@ -280,9 +276,7 @@ namespace
 		{
 			cldb::Field parameter = MatchParameter(db, ptr, end, is_this_call);
 			if (parameter.type.text != "void")
-			{
 				parameters.push_back(parameter);
-			}
 		}
 
 		// Calculate the ID of the matching function
@@ -304,12 +298,64 @@ namespace
 	}
 
 
+	size_t SkipTypePrefix(const std::string& text, size_t pos)
+	{
+		if (!strncmp(text.c_str() + pos, "struct ", sizeof("struct")))
+			pos += sizeof("struct");
+		if (!strncmp(text.c_str() + pos, "class ", sizeof("class")))
+			pos += sizeof("class");
+		if (!strncmp(text.c_str() + pos, "enum ", sizeof("enum")))
+			pos += sizeof("enum");
+		return pos;
+	}
+
+
+	void AddGetTypeAddress(cldb::Database& db, const std::string& function_name, unsigned int function_address, bool is_get_type)
+	{
+		if (function_address == 0)
+			return;
+
+		// Isolate the template parameter list
+		size_t pos = function_name.find('<');
+		if (pos == std::string::npos)
+		{
+			LOG(main, ERROR, "Couldn't locate opening angle bracket of the GetType function");
+			return;
+		}
+		pos++;
+
+		// Skip the prefix
+		pos = SkipTypePrefix(function_name, pos);
+
+		// Locate the end of the typename of the template parameter
+		size_t end_pos = function_name.find('>', pos);
+		if (end_pos == std::string::npos)
+		{
+			LOG(main, ERROR, "Couldn't locate closing angle bracket of the GetType function");
+			return;
+		}
+
+		// Generate the name for the type
+		std::string type_name_str = function_name.substr(pos, end_pos - pos);
+		cldb::Name type_name = db.GetName(type_name_str.c_str());
+		if (type_name.hash == 0)
+		{
+			LOG(main, ERROR, "GetType can't be used for unreflected '%s' type", type_name_str.c_str());
+			return;
+		}
+
+		// Add to the database
+		if (is_get_type)
+			db.m_GetTypeFunctions[type_name.hash].get_type_address = function_address;
+		else
+			db.m_GetTypeFunctions[type_name.hash].get_typename_address = function_address;
+	}
+
+
 	void AddClassImplFunction(cldb::Database& db, const std::string& function_signature, unsigned int function_address, bool is_constructor)
 	{
 		if (function_address == 0)
-		{
 			return;
-		}
 
 		// Isolate the parameter list
 		size_t pos = function_signature.find('(');
@@ -321,14 +367,7 @@ namespace
 		pos++;
 
 		// Skip the prefix
-		if (!strncmp(function_signature.c_str() + pos, "struct ", sizeof("struct")))
-		{
-			pos += sizeof("struct");
-		}
-		if (!strncmp(function_signature.c_str() + pos, "class ", sizeof("class")))
-		{
-			pos += sizeof("class");
-		}
+		pos = SkipTypePrefix(function_signature, pos);
 
 		// Locate the end of the typename of the first parameter by checking for its
 		// pointer spec and accounting for whitespace
@@ -349,13 +388,9 @@ namespace
 		// Generate a name for the new function
 		std::string function_name_str = parameter_type_name_str + "::";
 		if (is_constructor)
-		{
 			function_name_str += "ConstructObject";
-		}
 		else
-		{
 			function_name_str += "DestructObject";
-		}
 		cldb::Name function_name = db.GetName(function_name_str.c_str());
 
 		// Create the parameter
@@ -405,6 +440,8 @@ MapFileParser::MapFileParser(cldb::Database& db, const char* filename)
 {
 	static const char* construct_object = "clcpp::internal::ConstructObject";
 	static const char* destruct_object = "clcpp::internal::DestructObject";
+	static const char* get_typename = "clcpp::GetTypeNameHash<";
+	static const char* get_type = "clcpp::GetType<";
 
 	if (!InitialiseSymbolHandler())
 	{
@@ -443,6 +480,16 @@ MapFileParser::MapFileParser(cldb::Database& db, const char* filename)
 				std::string function_signature = UndecorateFunctionSignature(token);
 				unsigned int function_address = ParseAddressField(line, function_name.c_str());
 				AddDestructFunction(db, function_signature, function_address);
+			}
+			else if (startswith(function_name, get_type))
+			{
+				unsigned int function_address = ParseAddressField(line, function_name.c_str());
+				AddGetTypeAddress(db, function_name, function_address, true);
+			}
+			else if (startswith(function_name, get_typename))
+			{
+				unsigned int function_address = ParseAddressField(line, function_name.c_str());
+				AddGetTypeAddress(db, function_name, function_address, false);
 			}
 
 			// Otherwise see if it's a function in the database

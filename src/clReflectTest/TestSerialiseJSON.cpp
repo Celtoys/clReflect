@@ -413,10 +413,10 @@ void TestSerialiseJSON(clcpp::Database& db)
 
 	clutl::DataBuffer buffer(4192);
 	jsontest::AllFields a;
-	clutl::SaveJSON(buffer, &a, clcpp_get_type(db, jsontest::AllFields));
+	clutl::SaveJSON(buffer, &a, clcpp::GetType<jsontest::AllFields>());
 	buffer.ResetPosition();
 	jsontest::AllFields b(jsontest::NO_INIT);
-	clutl::LoadJSON(buffer, &b, clcpp_get_type(db, jsontest::AllFields));
+	clutl::LoadJSON(buffer, &b, clcpp::GetType<jsontest::AllFields>());
 
 	if (a == b)
 		printf("STRUCT PASS!\n");

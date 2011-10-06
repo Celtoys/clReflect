@@ -63,6 +63,7 @@
 #define clcpp_export __declspec(dllexport)
 
 
+
 #ifdef __clang__
 
 
@@ -103,7 +104,6 @@
 	//
 	// Clang does not need to see these
 	//
-	#define clcpp_get_type(db, type) ((const clcpp::Type*)0)
 	#define clcpp_impl_class(scoped_type, type)
 
 
@@ -118,37 +118,6 @@
 	#define clcpp_attr(...)
 	#define clcpp_push_attr(...)
 	#define clcpp_pop_attr(...)
-
-
-	namespace clcpp
-	{
-		namespace internal
-		{
-			template <typename TYPE>
-			inline const Type* GetType(Database& db, const char* name)
-			{
-				// This is independent of the input database so can be cached per type
-				// NOTE: Not thread-safe!
-				static unsigned int hash = 0;
-
-				if (hash == 0)
-				{
-					// Hash the name directly as we don't need to lookup the equivalent
-					// in the names database
-					hash = HashNameString(name);
-					if (hash == 0)
-					{
-						return 0;
-					}
-				}
-
-				return db.GetType(hash);
-			}
-		}
-	}
-
-
-	#define clcpp_get_type(db, type) clcpp::internal::GetType<type>(db, #type)
 
 
 	//
@@ -176,3 +145,59 @@
 		}
 
 #endif
+
+
+namespace clcpp
+{
+	//
+	// GetTypeNameHash and GetType are clReflect's implementation of a constant-time,
+	// string-less typeof operator that would appear no different had it been implemented
+	// as a core feature of the C++ language itself.
+	//
+	// Use is simple:
+	//
+	//    unsigned int type_hash = clcpp::GetTypeNameHash<MyType>();
+	//    const clcpp::Type* type = clcpp::GetType<MyType>();
+	//
+	// The type hash returned is independent of any loaded database, however, the type
+	// pointer returned belongs to the database which was loaded by the module the call
+	// resides in.
+	//
+	// ----- IMPLEMENTATION DETAILS -----
+	//
+	// These functions are specified as no-inline so that they are embedded in your
+	// module where clExport can pickup and store their addresses. These are recorded in
+	// the exported database and are then inspected at runtime when the database is
+	// loaded.
+	//
+	// Each type has its own implementation of the functions and thus the static variables
+	// that they use. The database loader partially disassembles the function implementations,
+	// finds the address of the variables that they use and patches them with whatever
+	// values are stored in the database.
+	//
+	// The functions are specified as naked and implemented in inline asm so that the generated
+	// code is predictable and doesn't vary between builds.
+	//
+
+	template <typename TYPE>
+	__declspec(noinline) __declspec(naked) unsigned int GetTypeNameHash()
+	{
+		static unsigned int hash = 0;
+		__asm
+		{
+			mov eax, dword ptr [hash]
+			ret
+		}
+	}
+
+	template <typename TYPE>
+	__declspec(noinline) __declspec(naked) const Type* GetType()
+	{
+		static const Type* type_ptr = 0;
+		__asm
+		{
+			mov eax, dword ptr [type_ptr]
+			ret
+		}
+	}
+}

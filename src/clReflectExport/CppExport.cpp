@@ -615,6 +615,23 @@ namespace
 	}
 
 
+	void AddGetTypeFunctions(CppExport& cppexp, clcpp::CArray<clcpp::internal::GetTypeFunctions>& dest, const cldb::GetTypeFunctions::MapType& src)
+	{
+		// Allocate enough space in the destination
+		dest.shallow_copy(clcpp::CArray<clcpp::internal::GetTypeFunctions>(cppexp.allocator.Alloc<clcpp::internal::GetTypeFunctions>(src.size()), src.size()));
+
+		// Copy all function addresses
+		int index = 0;
+		for (cldb::GetTypeFunctions::MapType::const_iterator i = src.begin(); i != src.end(); ++i)
+		{
+			clcpp::internal::GetTypeFunctions& d = dest[index++];
+			d.type_hash = i->first;
+			d.get_typename_address = i->second.get_typename_address;
+			d.get_type_address = i->second.get_type_address;
+		}
+	}
+
+
 	template <typename TYPE>
 	bool VerifyPtr(CppExport& cppexp, const TYPE* ptr)
 	{
@@ -789,6 +806,8 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	AddFlagAttributeBits(cppexp.db->functions);
 	AddFlagAttributeBits(cppexp.db->classes);
 
+	AddGetTypeFunctions(cppexp, cppexp.db->get_type_functions, db.m_GetTypeFunctions);
+
 	// Primitives reference each other via their names (hash codes). This code first of all copies
 	// hashes into the pointers and then patches them up via lookup. If the input database doesn't
 	// contain primitives that others reference then at this point, certain primitives will contain
@@ -825,6 +844,7 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		(&clcpp::internal::DatabaseMem::name_attributes, array_data_offset)
 		(&clcpp::internal::DatabaseMem::text_attributes, array_data_offset)
 		(&clcpp::internal::DatabaseMem::type_primitives, array_data_offset)
+		(&clcpp::internal::DatabaseMem::get_type_functions, array_data_offset)
 		(&clcpp::Namespace::namespaces, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace))
 		(&clcpp::Namespace::types, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace))
 		(&clcpp::Namespace::enums, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace))
