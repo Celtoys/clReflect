@@ -510,10 +510,18 @@ namespace clcpp
 	class Database
 	{
 	public:
+		enum
+		{
+			// When a database is loaded, the code assumes that the module doing the loading
+			// is the module that generated the database. It will continue to read the GetType
+			// patching addresses and modify the data if this flag isn't passed in.
+			OPT_DONT_PATCH_GETTYPE = 0x00000001
+		};
+
 		Database();
 		~Database();
 
-		bool Load(IFile* file, IAllocator* allocator, unsigned int base_address);
+		bool Load(IFile* file, IAllocator* allocator, unsigned int base_address, unsigned int options);
 
 		// This returns the name as it exists in the name database, with the text pointer
 		// pointing to within the database's allocated name data

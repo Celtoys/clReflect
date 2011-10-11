@@ -155,7 +155,7 @@ clcpp::Database::~Database()
 }
 
 
-bool clcpp::Database::Load(IFile* file, IAllocator* allocator, unsigned int base_address)
+bool clcpp::Database::Load(IFile* file, IAllocator* allocator, unsigned int base_address, unsigned int options)
 {
 	// Load the database
 	internal::Assert(m_DatabaseMem == 0 && "Database already loaded");
@@ -168,7 +168,7 @@ bool clcpp::Database::Load(IFile* file, IAllocator* allocator, unsigned int base
 	if (m_DatabaseMem != 0 && base_address != 0)
 		RebaseFunctions(*m_DatabaseMem, base_address);
 
-	if (m_DatabaseMem != 0)
+	if (m_DatabaseMem != 0 && (options & OPT_DONT_PATCH_GETTYPE) == 0)
 		PatchGetTypeAddresses(*this, *m_DatabaseMem);
 
 	return m_DatabaseMem != 0;
