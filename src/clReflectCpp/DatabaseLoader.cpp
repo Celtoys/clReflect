@@ -65,46 +65,32 @@ clcpp::internal::DatabaseMem* clcpp::internal::LoadMemoryMappedDatabase(IFile* f
 	// Read the header and verify the version and signature
 	DatabaseFileHeader file_header, cmp_header;
 	if (!file->Read(file_header))
-	{
 		return 0;
-	}
 	if (file_header.version != cmp_header.version)
-	{
 		return 0;
-	}
 	if (file_header.signature0 != cmp_header.signature0 || file_header.signature1 != cmp_header.signature1)
-	{
 		return 0;
-	}
 
 	// Read the memory mapped data
 	char* base_data = (char*)allocator->Alloc(file_header.data_size);
 	DatabaseMem* database_mem = (DatabaseMem*)base_data;
 	if (!file->Read(base_data, file_header.data_size))
-	{
 		return 0;
-	}
 
 	// Read the schema descriptions
 	CArray<PtrSchema> schemas(file_header.nb_ptr_schemas, allocator);
 	if (!file->Read(schemas))
-	{
 		return 0;
-	}
 
 	// Read the pointer offsets for all the schemas
 	CArray<int> ptr_offsets(file_header.nb_ptr_offsets, allocator);
 	if (!file->Read(ptr_offsets))
-	{
 		return 0;
-	}
 
 	// Read the pointer relocation instructions
 	CArray<PtrRelocation> relocations(file_header.nb_ptr_relocations, allocator);
 	if (!file->Read(relocations))
-	{
 		return 0;
-	}
 
 	// Iterate over every relocation instruction
 	for (int i = 0; i < file_header.nb_ptr_relocations; i++)
@@ -126,15 +112,12 @@ clcpp::internal::DatabaseMem* clcpp::internal::LoadMemoryMappedDatabase(IFile* f
 				unsigned int ptr_offset = object_offset + schema_ptr_offsets[k];
 				unsigned int& ptr = (unsigned int&)*(base_data + ptr_offset);
 
-				// Ensure the pointer relocation is within range of the memory map
+				// Ensure the pointer relocation is within range of the memory map before patching
 				internal::Assert(ptr <= file_header.data_size);
 
-				// Patch only if non-null - these shouldn't exist in the patch list but there's
-				// no harm in putting an extra check here.
+				// Only patch non-null
 				if (ptr != 0)
-				{
 					ptr += (unsigned int)base_data;
-				}
 			}
 		}
 	}

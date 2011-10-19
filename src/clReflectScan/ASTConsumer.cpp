@@ -72,7 +72,7 @@ namespace
 	};
 
 
-	bool GetParameterInfo(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, ParameterInfo& info)
+	bool GetParameterInfo(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, ParameterInfo& info, bool check_type_is_reflected)
 	{
 		// Get type info for the parameter
 		clang::SplitQualType sqt = qual_type.split();
@@ -160,7 +160,7 @@ namespace
 					return false;
 
 				// Recursively parse the template argument to get some parameter info
-				if (!GetParameterInfo(db, specs, ctx, arg.getAsType(), template_args[i]))
+				if (!GetParameterInfo(db, specs, ctx, arg.getAsType(), template_args[i], false))
 					return false;
 
 				// References currently not supported
@@ -200,24 +200,22 @@ namespace
 		Remove(info.type_name, "class ");
 
 		// Has the type itself been marked for reflection?
-		// TODO: Remove this and offload to clexport - can't know at this point if a type is reflected
-		// as it might be forward-declared!
-		// If this is a field then the definition needs to be in scope if it's not a pointer or reference.
-		// This implies that the reflection spec for the field type should also be in scope so this check is valid
-		// in this case.
-		if (tc != clang::Type::Builtin && !specs.IsReflected(info.type_name))
-		{
+		// This check is only valid for value type class fields, as in every other
+		// case the type can be forward-declared and not have any reflection spec present.
+		if (check_type_is_reflected &&
+			tc != clang::Type::Builtin &&
+			info.qualifer.op == cldb::Qualifier::VALUE &&
+			!specs.IsReflected(info.type_name))
 			return false;
-		}
 
 		return true;
 	}
 
 
-	bool MakeField(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, const char* param_name, cldb::Name parent_name, int index, cldb::Field& field)
+	bool MakeField(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, const char* param_name, cldb::Name parent_name, int index, cldb::Field& field, bool check_type_is_reflected)
 	{
 		ParameterInfo info;
-		if (!GetParameterInfo(db, specs, ctx, qual_type, info))
+		if (!GetParameterInfo(db, specs, ctx, qual_type, info, check_type_is_reflected))
 		{
 			return false;
 		}
@@ -243,7 +241,7 @@ namespace
 
 		// Parse the return type - named as a reserved keyword so it won't clash with user symbols
 		cldb::Field return_parameter;
-		if (!MakeField(db, specs, ctx, function_decl->getResultType(), "return", function_name, -1, return_parameter))
+		if (!MakeField(db, specs, ctx, function_decl->getResultType(), "return", function_name, -1, return_parameter, false))
 		{
 			LOG(ast, WARNING, "Unsupported/unreflected return type for '%s' - skipping reflection\n", function_name.text.c_str());
 			return;
@@ -264,7 +262,7 @@ namespace
 
 			// Collect a list of constructed parameters in case evaluating one of them fails
 			cldb::Field parameter;
-			if (!MakeField(db, specs, ctx, param_decl->getType(), param_decl->getNameAsString().c_str(), function_name, index++, parameter))
+			if (!MakeField(db, specs, ctx, param_decl->getType(), param_decl->getNameAsString().c_str(), function_name, index++, parameter, false))
 			{
 				LOG(ast, WARNING, "Unsupported/unreflected parameter type for '%s' - skipping reflection of '%s'\n", param_decl->getNameAsString().c_str(), function_name.text.c_str());
 				return;
@@ -631,7 +629,7 @@ void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const cldb::Name& name, 
 	{
 		// Parse the 'this' type, treating it as the first parameter to the method
 		cldb::Field this_param;
-		if (!MakeField(m_DB, m_ReflectionSpecs, m_ASTContext, method_decl->getThisType(m_ASTContext), "this", name, 0, this_param))
+		if (!MakeField(m_DB, m_ReflectionSpecs, m_ASTContext, method_decl->getThisType(m_ASTContext), "this", name, 0, this_param, true))
 		{
 			LOG(ast, WARNING, "Unsupported/unreflected 'this' type for '%s'\n", name.text.c_str());
 			return;
@@ -654,7 +652,7 @@ void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const cldb::Name& name, c
 	cldb::Field field;
 	cldb::u32 offset = layout->getFieldOffset(field_decl->getFieldIndex()) / 8;
 	std::string field_name = field_decl->getQualifiedNameAsString();
-	if (!MakeField(m_DB, m_ReflectionSpecs, m_ASTContext, field_decl->getType(), field_name.c_str(), parent_name, offset, field))
+	if (!MakeField(m_DB, m_ReflectionSpecs, m_ASTContext, field_decl->getType(), field_name.c_str(), parent_name, offset, field, true))
 	{
 		LOG(ast, WARNING, "Unsupported/unreflected type for field '%s' in '%s'\n", field_name.c_str(), parent_name.text.c_str());
 		return;

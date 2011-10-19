@@ -19,8 +19,6 @@ namespace
 	// pair without value
 	// pair without string
 
-	// TODO: test nesting and enums.
-
 
 	void Test(const char* name, const char* test)
 	{
@@ -329,17 +327,6 @@ namespace jsontest
 
 void TestSerialiseJSON(clcpp::Database& db)
 {
-	// Read the file into memory
-	/*FILE* fp = fopen("jsontests/3.txt", "rb");
-	fseek(fp, 0, SEEK_END);
-	int len = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-	clutl::DataBuffer buffer(len);
-	fread((void*)buffer.ReadAt(0), 1, len, fp);
-	fclose(fp);
-
-	clutl::LoadJSON(buffer, 0, 0);*/
-
 	Test("EmptyObject", "{ }");
 	Test("NestedEmptyObjects", "{ \"nested\" : { } }");
 	Test("EmptyArrayObject", "{ \"nested\" : [ ] }");

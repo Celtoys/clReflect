@@ -60,9 +60,7 @@ PtrSchema& PtrRelocator::AddSchema(size_t stride, PtrSchema* base_schema)
 
 	// Copy base schema pointer offsets if a base is specified
 	if (base_schema)
-	{
 		schema.ptr_offsets.insert(schema.ptr_offsets.end(), base_schema->ptr_offsets.begin(), base_schema->ptr_offsets.end());
-	}
 
 	return schema;
 }
@@ -72,9 +70,7 @@ void PtrRelocator::AddPointers(const PtrSchema& schema, const void* data, int nb
 {
 	// No need to add null pointers for patching
 	if (data == 0)
-	{
 		return;
-	}
 
 	PtrRelocation relocation;
 	relocation.schema_handle = schema.handle;

@@ -34,6 +34,7 @@
 
 namespace clcpp
 {
+	class Database;
 	struct Primitive;
 	struct Enum;
 	struct TemplateType;
@@ -53,6 +54,12 @@ namespace clcpp
 		// O(logN) binary search over the array looking for the name you specify.
 		//
 		const Primitive* FindPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash);
+
+		//
+		// Similar to the previous FindPrimitive, except that it returns a range of matching
+		// primitives - useful for searching primitives with names that can be overloaded.
+		//
+		Range FindOverloadedPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash);
 	}
 
 
@@ -104,8 +111,6 @@ namespace clcpp
 
 	//
 	// Base class for all types of C++ primitives that are reflected
-	// TODO: Store a pointer to the containing Database? When there are multiple databases
-	// in a program (e.g. DLLs) this may become useful.
 	//
 	struct Primitive
 	{
@@ -132,12 +137,16 @@ namespace clcpp
 		Primitive(Kind k)
 			: kind(k)
 			, parent(0)
+			, database(0)
 		{
 		}
 
 		Kind kind;
 		Name name;
 		const Primitive* parent;
+
+		// Database this primitive belongs to
+		Database* database;
 	};
 
 
@@ -300,9 +309,19 @@ namespace clcpp
 		{
 		}
 
+		bool IsFunctionParameter() const
+		{
+			return parent_unique_id != 0;
+		}
+
+		// Type info
 		const Type* type;
 		Qualifier qualifier;
+
+		// Index of the field parameter within its parent function or byte offset within its parent class
 		int offset;
+
+		// If this is set then the field is a function parameter
 		unsigned int parent_unique_id;
 
 		// All sorted by name
@@ -333,7 +352,11 @@ namespace clcpp
 		// Callable address
 		unsigned int address;
 
+		// An ID unique to this function among other functions that have the same name
+		// This is not really useful at runtime and exists purely to make the database
+		// exporting code simpler.
 		unsigned int unique_id;
+
 		const Field* return_parameter;
 
 		// All sorted by name
@@ -495,8 +518,9 @@ namespace clcpp
 
 
 	//
-	// Typed wrapper for calling FindPrimitive on arbitrary arrays of primitives. Ensures the
-	// types can be cast to Primitive and aliases the arrays to cut down on generated code.
+	// Typed wrappers for calling FindPrimitive/FindOverloadedPrimitive on arbitrary arrays
+	// of primitives. Ensures the types can be cast to Primitive and aliases the arrays to
+	// cut down on generated code.
 	//
 	template <typename TYPE>
 	inline const TYPE* FindPrimitive(const CArray<const TYPE*>& primitives, unsigned int hash)
@@ -504,6 +528,13 @@ namespace clcpp
 		// This is both a compile-time and runtime assert
 		internal::Assert(TYPE::KIND != Primitive::KIND_NONE);
 		return (TYPE*)internal::FindPrimitive((const CArray<const Primitive*>&)primitives, hash);
+	}
+	template <typename TYPE>
+	inline Range FindOverloadedPrimitive(const CArray<const TYPE*>& primitives, unsigned int hash)
+	{
+		// This is both a compile-time and runtime assert
+		internal::Assert(TYPE::KIND != Primitive::KIND_NONE);
+		return internal::FindOverloadedPrimitive((const CArray<const Primitive*>&)primitives, hash);
 	}
 
 
@@ -531,8 +562,13 @@ namespace clcpp
 		// Return either a type, enum, template type or class by hash
 		const Type* GetType(unsigned int hash) const;
 
+		// Retrieve namespaces using their fully-scoped names
 		const Namespace* GetNamespace(unsigned int hash) const;
+
+		// Retrieve functions by their fully-scoped names, with the option of getting
+		// a range of matching overloaded functions
 		const Function* GetFunction(unsigned int hash) const;
+		Range GetOverloadedFunction(unsigned int hash) const;
 
 		bool IsLoaded() const { return m_DatabaseMem != 0; }
 

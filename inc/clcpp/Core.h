@@ -254,4 +254,18 @@ namespace clcpp
 		// true on success, false otherwise.
 		virtual bool Read(void* dest, int size) = 0;
 	};
+
+
+	//
+	// Represents the range [start, end) for iterating over an array
+	//
+	struct Range
+	{
+		Range() : first(0), last(0)
+		{
+		}
+
+		int first;
+		int last;
+	};
 }

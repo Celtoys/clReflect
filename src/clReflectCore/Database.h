@@ -351,6 +351,12 @@ namespace cldb
 				parent_unique_id == rhs.parent_unique_id;
 		}
 
+		bool IsFunctionParameter() const
+		{
+			return parent_unique_id != 0;
+		}
+
+		//  Type info
 		Name type;
 		Qualifier qualifier;
 

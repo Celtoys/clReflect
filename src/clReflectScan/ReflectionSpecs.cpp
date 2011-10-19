@@ -42,15 +42,11 @@ namespace
 		// Ignore anything that's not a namespace
 		clang::NamespaceDecl* ns_decl = dyn_cast<clang::NamespaceDecl>(*i);
 		if (ns_decl == 0)
-		{
 			return 0;
-		}
 
 		// Looking for internal registration namespaces
 		if (ns_decl->getNameAsString() != "clcpp_internal")
-		{
 			return 0;
-		}
 
 		// Immediately prevent this namespace from being parsed by subsequent passes
 		// NOTE: I tried calling removeDecl from within the translation unit but it was asserting
@@ -95,18 +91,14 @@ namespace
 			{
 				size_t sep_pos = spec.rfind("::");
 				if (sep_pos == spec.npos)
-				{
 					break;
-				}
 
 				// Insert partial reflection requests to ensure their primitives are created
 				// to contain the children
 				spec = spec.substr(0, sep_pos);
 				std::map<std::string, bool>::const_iterator j = specs.find(spec);
 				if (j == specs.end())
-				{
 					specs[spec] = true;
-				}
 			}
 		}
 	}
@@ -122,16 +114,12 @@ namespace
 			{
 				size_t sep_pos = spec.rfind("::");
 				if (sep_pos == spec.npos)
-				{
 					break;
-				}
 
 				spec = spec.substr(0, sep_pos);
 				std::map<std::string, bool>::const_iterator j = specs.find(spec);
 				if (j != specs.end() && j->second == false)
-				{
 					LOG(spec, WARNING, "Reflection Spec for '%s' unnecessary as the parent '%s' has already been marked for full Reflection\n", i->first.c_str(), spec.c_str());
-				}
 			}
 		}
 	}
@@ -145,9 +133,7 @@ ReflectionSpecs::ReflectionSpecs(bool reflect_all, const std::string& spec_log)
 	LOG_TO_STDOUT(spec, ERROR);
 
 	if (spec_log != "")
-	{
 		LOG_TO_FILE(spec, ALL, spec_log.c_str());
-	}
 }
 
 
@@ -168,17 +154,11 @@ void ReflectionSpecs::Gather(clang::TranslationUnitDecl* tu_decl)
 		bool partial_reflect = false;
 		llvm::StringRef reflect_spec = attribute->getAnnotation();
 		if (reflect_spec.startswith("full-"))
-		{
 			partial_reflect = false;
-		}
 		else if (reflect_spec.startswith("part-"))
-		{
 			partial_reflect = true;
-		}
 		else
-		{
 			LOG(spec, WARNING, "Ill-formed Reflection Spec; can't determine if it's full or partial reflection\n");
-		}
 
 		// Build the symbol name and check for existence in the map
 		std::string symbol = reflect_spec.substr(5);
@@ -203,33 +183,25 @@ bool ReflectionSpecs::IsReflected(std::string name) const
 {
 	// Check the optional override first
 	if (m_ReflectAll)
-	{
 		return true;
-	}
 
 	// If the symbol itself has been marked for reflection, it's irrelevant whether it's for partial
 	// or full reflection - just reflect it. It's the contents that vary on this.
 	if (m_ReflectionSpecs.find(name) != m_ReflectionSpecs.end())
-	{
 		return true;
-	}
 
 	// Loop up through the parent scopes looking for the closest reflection spec
 	while (true)
 	{
 		size_t sep_pos = name.rfind("::");
 		if (sep_pos == name.npos)
-		{
 			break;
-		}
 
 		// If a parent has a reflection spec entry, only reflect if it's full reflection
 		name = name.substr(0, sep_pos);
 		std::map<std::string, bool>::const_iterator i = m_ReflectionSpecs.find(name);
 		if (i != m_ReflectionSpecs.end())
-		{
 			return i->second == false;
-		}
 	}
 
 	return false;

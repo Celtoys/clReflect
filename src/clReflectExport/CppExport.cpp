@@ -426,9 +426,7 @@ namespace
 			clcpp::Function& func = cppexp.db->functions[i];
 			int return_index = ReturnParameterIndex(func.parameters);
 			if (return_index == -1)
-			{
 				continue;
-			}
 
 			// Assign the return parameter and remove it from the parameter list
 			func.return_parameter = func.parameters[return_index];
@@ -633,79 +631,100 @@ namespace
 
 
 	template <typename TYPE>
-	bool VerifyPtr(CppExport& cppexp, const TYPE* ptr)
+	const char* VerifyPtr(CppExport& cppexp, const TYPE* const & ptr)
 	{
 		// Cast to a hash value
 		unsigned int hash = (unsigned int)ptr;
 
-		// Report an error if the reference hasn't been patched up
+		// Set the reference to null if it hasn't been resolved
 		CppExport::NameMap::const_iterator i = cppexp.name_map.find(hash);
 		if (i != cppexp.name_map.end())
 		{
-			LOG(main, ERROR, "Couldn't find reference to '%s'\n", i->second);
-			return false;
+			const_cast<const TYPE*&>(ptr) = 0;
+			return i->second;
 		}
 
-		return true;
+		return 0;
 	}
 
 	// Overloads for verifying the pointers of each primitive type
-	bool VerifyPrimitive(CppExport& cppexp, const clcpp::Primitive& primitive)
+	void VerifyPrimitive(CppExport& cppexp, const clcpp::Primitive& primitive)
 	{
-		return VerifyPtr(cppexp, primitive.parent);
+		// Note that the arrays within primitives are only populated if the parents of their
+		// contents are valid so there is no need to check them for validity; only the
+		// individual parent pointers.
+		if (const char* unresolved = VerifyPtr(cppexp, primitive.parent))
+			LOG(main, WARNING, "Primitive '%s' couldn't find parent reference to '%s'\n", primitive.name.text, unresolved);
 	}
-	bool VerifyPrimitive(CppExport& cppexp, const clcpp::Field& primitive)
+	void VerifyPrimitive(CppExport& cppexp, const clcpp::Field& primitive)
 	{
-		return VerifyPrimitive(cppexp, (clcpp::Primitive&)primitive) & VerifyPtr(cppexp, primitive.type);
+		VerifyPrimitive(cppexp, (clcpp::Primitive&)primitive);
+
+		if (const char* unresolved = VerifyPtr(cppexp, primitive.type))
+		{
+			// Try to give as informative a warning message as possible
+			if (primitive.parent)
+			{
+				switch (primitive.parent->kind)
+				{
+				case (clcpp::Primitive::KIND_FUNCTION):
+					LOG(main, WARNING, "Function parameter '%s' within '%s' couldn't find type reference to '%s'\n", primitive.name.text, primitive.parent->name.text, unresolved);
+					break;
+				case (clcpp::Primitive::KIND_CLASS):
+					LOG(main, WARNING, "Class field '%s' within '%s' couldn't find type reference to '%s'\n", primitive.name.text, primitive.parent->name.text, unresolved);
+					break;
+				}
+			}
+			else
+			{
+				LOG(main, WARNING, "Unparented field '%s' couldn't find type reference to '%s'\n", primitive.name.text, unresolved);
+			}
+		}
 	}
-	bool VerifyPrimitive(CppExport& cppexp, const clcpp::Function& primitive)
+	void VerifyPrimitive(CppExport& cppexp, const clcpp::TemplateType& primitive)
 	{
-		return VerifyPrimitive(cppexp, (clcpp::Primitive&)primitive) & VerifyPtr(cppexp, primitive.return_parameter);
-	}
-	bool VerifyPrimitive(CppExport& cppexp, const clcpp::TemplateType& primitive)
-	{
-		bool result = VerifyPrimitive(cppexp, (clcpp::Primitive&)primitive);
+		VerifyPrimitive(cppexp, (clcpp::Primitive&)primitive);
+
 		for (int i = 0; i < clcpp::TemplateType::MAX_NB_ARGS; i++)
 		{
-			result &= VerifyPtr(cppexp, primitive.parameter_types[i]);
+			// Report any warnings with unresolved template parameter types
+			if (const char* unresolved = VerifyPtr(cppexp, primitive.parameter_types[i]))
+				LOG(main, WARNING, "Template parameter within '%s' couldn't find type reference to '%s'\n", primitive.name.text, unresolved);
 		}
-		return result;
 	}
-	bool VerifyPrimitive(CppExport& cppexp, const clcpp::Class& primitive)
+	void VerifyPrimitive(CppExport& cppexp, const clcpp::Class& primitive)
 	{
-		return VerifyPrimitive(cppexp, (clcpp::Type&)primitive) & VerifyPtr(cppexp, primitive.base_class);
+		VerifyPrimitive(cppexp, (clcpp::Type&)primitive);
+
+		// Report any warnings with unresolved base class types
+		if (const char* unresolved = VerifyPtr(cppexp, primitive.base_class))
+			LOG(main, WARNING, "Class '%s' couldn't find base class type reference to '%s'\n", primitive.name.text, unresolved);
 	}
 
 	template <typename TYPE>
-	bool VerifyPrimitives(CppExport& cppexp, const clcpp::CArray<TYPE>& primitives)
+	void VerifyPrimitives(CppExport& cppexp, const clcpp::CArray<TYPE>& primitives)
 	{
 		// Verifies all primitives in an array
-		bool result = true;
 		for (int i = 0; i < primitives.size(); i++)
-		{
-			result &= VerifyPrimitive(cppexp, primitives[i]);
-		}
-		return result;
+			VerifyPrimitive(cppexp, primitives[i]);
 	}
 
-	bool VerifyPrimitives(CppExport& cppexp)
+	void VerifyPrimitives(CppExport& cppexp)
 	{
-		bool result = true;
-		result &= VerifyPrimitives(cppexp, cppexp.db->types);
-		result &= VerifyPrimitives(cppexp, cppexp.db->enum_constants);
-		result &= VerifyPrimitives(cppexp, cppexp.db->enums);
-		result &= VerifyPrimitives(cppexp, cppexp.db->fields);
-		result &= VerifyPrimitives(cppexp, cppexp.db->functions);
-		result &= VerifyPrimitives(cppexp, cppexp.db->classes);
-		result &= VerifyPrimitives(cppexp, cppexp.db->templates);
-		result &= VerifyPrimitives(cppexp, cppexp.db->template_types);
-		result &= VerifyPrimitives(cppexp, cppexp.db->namespaces);
-		result &= VerifyPrimitives(cppexp, cppexp.db->flag_attributes);
-		result &= VerifyPrimitives(cppexp, cppexp.db->int_attributes);
-		result &= VerifyPrimitives(cppexp, cppexp.db->float_attributes);
-		result &= VerifyPrimitives(cppexp, cppexp.db->name_attributes);
-		result &= VerifyPrimitives(cppexp, cppexp.db->text_attributes);
-		return result;
+		VerifyPrimitives(cppexp, cppexp.db->types);
+		VerifyPrimitives(cppexp, cppexp.db->enum_constants);
+		VerifyPrimitives(cppexp, cppexp.db->enums);
+		VerifyPrimitives(cppexp, cppexp.db->fields);
+		VerifyPrimitives(cppexp, cppexp.db->functions);
+		VerifyPrimitives(cppexp, cppexp.db->classes);
+		VerifyPrimitives(cppexp, cppexp.db->templates);
+		VerifyPrimitives(cppexp, cppexp.db->template_types);
+		VerifyPrimitives(cppexp, cppexp.db->namespaces);
+		VerifyPrimitives(cppexp, cppexp.db->flag_attributes);
+		VerifyPrimitives(cppexp, cppexp.db->int_attributes);
+		VerifyPrimitives(cppexp, cppexp.db->float_attributes);
+		VerifyPrimitives(cppexp, cppexp.db->name_attributes);
+		VerifyPrimitives(cppexp, cppexp.db->text_attributes);
 	}
 }
 
@@ -812,7 +831,9 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	// hashes into the pointers and then patches them up via lookup. If the input database doesn't
 	// contain primitives that others reference then at this point, certain primitives will contain
 	// effectively garbage pointers. Do a check here for that.
-	return VerifyPrimitives(cppexp);
+	VerifyPrimitives(cppexp);
+
+	return true;
 }
 
 
@@ -1048,7 +1069,8 @@ namespace
 	{
 		for (int i = 0; i < primitives.size(); i++)
 		{
-			LogPrimitive(*primitives[i]);
+			if (primitives[i] != 0)
+				LogPrimitive(*primitives[i]);
 			LOG_NEWLINE(cppexp);
 		}
 	}
@@ -1057,14 +1079,12 @@ namespace
 	void LogField(const clcpp::Field& field, bool name = true)
 	{
 		LOG_APPEND(cppexp, INFO, "%s", field.qualifier.is_const ? "const " : "");
-		LOG_APPEND(cppexp, INFO, "%s", field.type->name.text);
+		LOG_APPEND(cppexp, INFO, "%s", field.type ? field.type->name.text : "<<UNRESOLVED TYPE>>");
 		LOG_APPEND(cppexp, INFO, "%s", field.qualifier.op == clcpp::Qualifier::POINTER ? "*" :
 			field.qualifier.op == clcpp::Qualifier::REFERENCE ? "&" : "");
 
 		if (name)
-		{
 			LOG_APPEND(cppexp, INFO, " %s", field.name.text);
-		}
 	}
 
 
@@ -1098,10 +1118,11 @@ namespace
 
 		for (int i = 0; i < sorted_parameters.size(); i++)
 		{
-			LogField(*sorted_parameters[i]);
-			if (i != sorted_parameters.size() - 1)
+			if (sorted_parameters[i])
 			{
-				LOG_APPEND(cppexp, INFO, ", ");
+				LogField(*sorted_parameters[i]);
+				if (i != sorted_parameters.size() - 1)
+					LOG_APPEND(cppexp, INFO, ", ");
 			}
 		}
 
