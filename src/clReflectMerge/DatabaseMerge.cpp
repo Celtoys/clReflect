@@ -52,24 +52,20 @@ namespace
 		const cldb::Database& src_db,
 		void (*check_failure)(const TYPE&, const TYPE&) = 0)
 	{
-		cldb::PrimitiveStore<TYPE>& dest_store = dest_db.GetPrimitiveStore<TYPE>();
-		const cldb::PrimitiveStore<TYPE>& src_store = src_db.GetPrimitiveStore<TYPE>();
+		cldb::DBMap<TYPE>& dest_map = dest_db.GetDBMap<TYPE>();
+		const cldb::DBMap<TYPE>& src_store = src_db.GetDBMap<TYPE>();
 
 		// Add primitives that don't already exist for primitives where the symbol name can't be overloaded
-		for (cldb::PrimitiveStore<TYPE>::const_iterator src = src_store.begin();
+		for (cldb::DBMap<TYPE>::const_iterator src = src_store.begin();
 			src != src_store.end();
 			++src)
 		{
-			cldb::PrimitiveStore<TYPE>::const_iterator dest = dest_store.find(src->first);
-			if (dest == dest_store.end())
-			{
+			cldb::DBMap<TYPE>::const_iterator dest = dest_map.find(src->first);
+			if (dest == dest_map.end())
 				dest_db.AddPrimitive(src->second);
-			}
 
 			else if (check_failure != 0)
-			{
 				check_failure(src->second, dest->second);
-			}
 		}
 	}
 
@@ -79,16 +75,16 @@ namespace
 		cldb::Database& dest_db,
 		const cldb::Database& src_db)
 	{
-		cldb::PrimitiveStore<TYPE>& dest_store = dest_db.GetPrimitiveStore<TYPE>();
-		const cldb::PrimitiveStore<TYPE>& src_store = src_db.GetPrimitiveStore<TYPE>();
+		cldb::DBMap<TYPE>& dest_map = dest_db.GetDBMap<TYPE>();
+		const cldb::DBMap<TYPE>& src_map = src_db.GetDBMap<TYPE>();
 
 		// Unconditionally add primitives that don't already exist
-		for (cldb::PrimitiveStore<TYPE>::const_iterator src = src_store.begin();
-			src != src_store.end();
+		for (cldb::DBMap<TYPE>::const_iterator src = src_map.begin();
+			src != src_map.end();
 			++src)
 		{
-			cldb::PrimitiveStore<TYPE>::const_iterator dest = dest_store.find(src->first);
-			if (dest == dest_store.end())
+			cldb::DBMap<TYPE>::const_iterator dest = dest_map.find(src->first);
+			if (dest == dest_map.end())
 			{
 				dest_db.AddPrimitive(src->second);
 			}
@@ -97,8 +93,8 @@ namespace
 			{
 				// A primitive of the same name exists so double-check all existing entries for a matching primitives before adding
 				bool add = true;
-				cldb::PrimitiveStore<TYPE>::const_range dest_range = dest_store.equal_range(src->first);
-				for (cldb::PrimitiveStore<TYPE>::const_iterator i = dest_range.first; i != dest_range.second; ++i)
+				cldb::DBMap<TYPE>::const_range dest_range = dest_map.equal_range(src->first);
+				for (cldb::DBMap<TYPE>::const_iterator i = dest_range.first; i != dest_range.second; ++i)
 				{
 					if (i->second.Equals(src->second))
 					{
@@ -108,9 +104,7 @@ namespace
 				}
 
 				if (add)
-				{
 					dest_db.AddPrimitive(src->second);
-				}
 			}
 		}
 	}
@@ -122,9 +116,7 @@ void MergeDatabases(cldb::Database& dest_db, const cldb::Database& src_db)
 {
 	// Merge name maps
 	for (cldb::NameMap::const_iterator i = src_db.m_Names.begin(); i != src_db.m_Names.end(); ++i)
-	{
 		dest_db.GetName(i->second.text.c_str());
-	}
 
 	// The symbol names for these primitives can't be overloaded
 	MergeUniques<cldb::Namespace>(dest_db, src_db);
@@ -155,4 +147,7 @@ void MergeDatabases(cldb::Database& dest_db, const cldb::Database& src_db)
 	MergeOverloads<cldb::FloatAttribute>(dest_db, src_db);
 	MergeOverloads<cldb::NameAttribute>(dest_db, src_db);
 	MergeOverloads<cldb::TextAttribute>(dest_db, src_db);
+
+	// Merge containers
+	MergeUniques<cldb::ContainerInfo>(dest_db, src_db);
 }

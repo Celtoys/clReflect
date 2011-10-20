@@ -43,6 +43,16 @@ namespace cldb
 }
 
 
+// Info for reflecting a container
+struct ReflectionSpecContainer
+{
+	typedef std::map<std::string, ReflectionSpecContainer> MapType;
+	std::string read_iterator_type;
+	std::string write_iterator_type;
+	bool has_key;
+};
+
+
 // TODO: Optimise the use of strings in this class - it's not really any good
 class ReflectionSpecs
 {
@@ -53,8 +63,14 @@ public:
 
 	bool IsReflected(std::string name) const;
 
+	const ReflectionSpecContainer::MapType& GetContainerSpecs() const { return m_ContainerSpecs; }
+
 private:
+	void AddReflectionSpec(const std::string& symbol, bool partial);
+
 	bool m_ReflectAll;
 
 	std::map<std::string, bool> m_ReflectionSpecs;
+
+	ReflectionSpecContainer::MapType m_ContainerSpecs;
 };

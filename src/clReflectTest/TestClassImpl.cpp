@@ -58,8 +58,8 @@ namespace TestClassImpl
 	};
 }
 
-clcpp_impl_class(TestClassImpl::A, A)
-clcpp_impl_class(TestClassImpl::B, B)
+clcpp_impl_class(TestClassImpl::A)
+clcpp_impl_class(TestClassImpl::B)
 
 void TestConstructorDestructor(clcpp::Database& db)
 {
@@ -74,7 +74,7 @@ void TestConstructorDestructor(clcpp::Database& db)
 
 	CallFunction(ca->destructor, a);
 	CallFunction(cb->destructor, b);
-	
+
 	delete [] (char*) a;
 	delete [] (char*) b;
 }

@@ -284,8 +284,8 @@ namespace
 
 		// Search through all functions of the same name
 		cldb::u32 function_hash = clcpp::internal::HashNameString(function_name.c_str());
-		cldb::PrimitiveStore<cldb::Function>::range functions = db.m_Functions.equal_range(function_hash);
-		for (cldb::PrimitiveStore<cldb::Function>::iterator i = functions.first; i != functions.second; ++i)
+		cldb::DBMap<cldb::Function>::range functions = db.m_Functions.equal_range(function_hash);
+		for (cldb::DBMap<cldb::Function>::iterator i = functions.first; i != functions.second; ++i)
 		{
 			// Assign the function address when the unique IDs match
 			cldb::Function& function = i->second;

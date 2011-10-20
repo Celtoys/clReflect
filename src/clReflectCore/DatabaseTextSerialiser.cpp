@@ -195,6 +195,17 @@ namespace
 	}
 
 
+	void WriteContainerInfo(FILE* fp, const cldb::ContainerInfo& ci, const cldb::Database& db)
+	{
+		fputs(HexStringFromName(ci.name, db), fp);
+		fputs("\t", fp);
+		fputs(HexStringFromName(ci.read_iterator_type, db), fp);
+		fputs("\t", fp);
+		fputs(HexStringFromName(ci.write_iterator_type, db), fp);
+		fputs(ci.has_key ? "\t1" : "\t0", fp);
+	}
+
+
 	void WriteTextAttribute(FILE* fp, const cldb::TextAttribute& primitive, const cldb::Database& db)
 	{
 		WritePrimitive(fp, primitive, db);
@@ -219,7 +230,7 @@ namespace
 	template <typename TYPE, typename PRINT_FUNC>
 	void WritePrimitives(FILE* fp, const cldb::Database& db, PRINT_FUNC print_func, const char* title, const char* headers)
 	{
-		const cldb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>();
+		const cldb::DBMap<TYPE>& store = db.GetDBMap<TYPE>();
 		WriteTable(fp, db, store, print_func, title, headers);
 	}
 
@@ -267,6 +278,8 @@ void cldb::WriteTextDatabase(const char* filename, const Database& db)
 	WritePrimitives<FloatAttribute>(fp, db, WriteFloatAttribute, "Float Attributes", "Name\t\tParent\t\tValue");
 	WritePrimitives<NameAttribute>(fp, db, WriteNameAttribute, "Name Attributes", "Name\t\tParent\t\tValue");
 	WritePrimitives<TextAttribute>(fp, db, WriteTextAttribute, "Text Attributes", "Name\t\tParent\t\tValue");
+
+	WritePrimitives<ContainerInfo>(fp, db, WriteContainerInfo, "Containers", "Name\t\tRead\t\tWrite\t\tKey");
 
 	fclose(fp);
 }
@@ -616,6 +629,27 @@ namespace
 	}
 
 
+	void ParseContainerInfo(char* line, cldb::Database& db)
+	{
+		StringTokeniser tok(line, "\t");
+
+		// Parse the container info
+		cldb::u32 name = tok.GetHexInt();
+		cldb::u32 read_iterator = tok.GetHexInt();
+		cldb::u32 write_iterator = tok.GetHexInt();
+		const char* key = tok.Get();
+		bool has_key = key[0] != '0';
+
+		// Construct and add to the database
+		cldb::ContainerInfo ci;
+		ci.name = db.GetName(name);
+		ci.read_iterator_type = db.GetName(read_iterator);
+		ci.write_iterator_type = db.GetName(write_iterator);
+		ci.has_key = has_key;
+		db.Add(ci.name, ci);
+	}
+
+
 	template <typename PARSE_FUNC>
 	void ParseTable(FILE* fp, char* line, cldb::Database& db, const char* table_name, PARSE_FUNC parse_func)
 	{
@@ -678,6 +712,7 @@ bool cldb::ReadTextDatabase(const char* filename, Database& db)
 		ParseTable(fp, line, db, "Float Attributes", ParseFloatAttribute);
 		ParseTable(fp, line, db, "Name Attributes", ParseNameAttribute);
 		ParseTable(fp, line, db, "Text Attributes", ParseTextAttribute);
+		ParseTable(fp, line, db, "Containers", ParseContainerInfo);
 	}
 
 	fclose(fp);

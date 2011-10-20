@@ -520,11 +520,11 @@ namespace cldb
 
 
 	//
-	// Primitive stores allow multiple primitives of the same type to be stored and
+	// The default DBMap allow multiple primitives of the same type to be stored and
 	// quickly looked up, allowing symbol overloading.
 	//
 	template <typename TYPE>
-	struct PrimitiveStore : public std::multimap<u32, TYPE>
+	struct DBMap : public std::multimap<u32, TYPE>
 	{
 		typedef std::pair<iterator, iterator> range;
 		typedef std::pair<const_iterator, const_iterator> const_range;
@@ -543,6 +543,29 @@ namespace cldb
 	};
 
 
+	//
+	// A container info description that references the container type, its read/write
+	// iterator implementation types and whether or not it uses a key.
+	//
+	struct ContainerInfo
+	{
+		Name name;
+		Name read_iterator_type;
+		Name write_iterator_type;
+		bool has_key;
+	};
+
+
+	//
+	// Container infos are uniquely named - this is a DBMap specialisation to ensure
+	// that requirement.
+	//
+	template <>
+	struct DBMap<ContainerInfo> : public std::map<u32, ContainerInfo>
+	{
+	};
+
+
 	class Database
 	{
 	public:
@@ -550,81 +573,93 @@ namespace cldb
 
 		void AddBaseTypePrimitives();
 
+		void AddContainerInfo(const std::string& container, const std::string& read_iterator, const std::string& write_iterator, bool has_key);
+
 		const Name& GetName(const char* text);
 		const Name& GetName(u32 hash) const;
 
+		template <typename TYPE> void Add(const Name& name, const TYPE& object)
+		{
+			assert(name != Name() && "Unnamed objects not supported");
+			DBMap<TYPE>& store = GetDBMap<TYPE>();
+			store.insert(DBMap<TYPE>::value_type(name.hash, object));
+		}
 		template <typename TYPE> void AddPrimitive(const TYPE& prim)
 		{
-			assert(prim.name != Name() && "Unnamed primitives not supported");
-			PrimitiveStore<TYPE>& store = GetPrimitiveStore<TYPE>();
-			store.insert(PrimitiveStore<TYPE>::value_type(prim.name.hash, prim));
+			Add(prim.name, prim);
 		}
 
 		template <typename TYPE> const TYPE* GetFirstPrimitive(const char* name_string) const
 		{
 			// Get the store associated with this type
-			const PrimitiveStore<TYPE>& store = GetPrimitiveStore<TYPE>();
+			const DBMap<TYPE>& store = GetDBMap<TYPE>();
 
 			// Return the first instance of an object with this name
 			u32 name = clcpp::internal::HashNameString(name_string);
-			PrimitiveStore<TYPE>::const_iterator i = store.find(name);
+			DBMap<TYPE>::const_iterator i = store.find(name);
 			if (i != store.end())
-			{
 				return &i->second;
-			}
 
 			return 0;
 		}
 
 		// A compile-time map to runtime data stores for each primitive type
-		template <typename TYPE> PrimitiveStore<TYPE>& GetPrimitiveStore() { }
-		template <> PrimitiveStore<Namespace>& GetPrimitiveStore() { return m_Namespaces; }
-		template <> PrimitiveStore<Type>& GetPrimitiveStore() { return m_Types; }
-		template <> PrimitiveStore<Template>& GetPrimitiveStore() { return m_Templates; }
-		template <> PrimitiveStore<TemplateType>& GetPrimitiveStore() { return m_TemplateTypes; }
-		template <> PrimitiveStore<Class>& GetPrimitiveStore() { return m_Classes; }
-		template <> PrimitiveStore<Enum>& GetPrimitiveStore() { return m_Enums; }
-		template <> PrimitiveStore<EnumConstant>& GetPrimitiveStore() { return m_EnumConstants; }
-		template <> PrimitiveStore<Function>& GetPrimitiveStore() { return m_Functions; }
-		template <> PrimitiveStore<Field>& GetPrimitiveStore() { return m_Fields; }
+		template <typename TYPE> DBMap<TYPE>& GetDBMap() { }
+		template <> DBMap<Namespace>& GetDBMap() { return m_Namespaces; }
+		template <> DBMap<Type>& GetDBMap() { return m_Types; }
+		template <> DBMap<Template>& GetDBMap() { return m_Templates; }
+		template <> DBMap<TemplateType>& GetDBMap() { return m_TemplateTypes; }
+		template <> DBMap<Class>& GetDBMap() { return m_Classes; }
+		template <> DBMap<Enum>& GetDBMap() { return m_Enums; }
+		template <> DBMap<EnumConstant>& GetDBMap() { return m_EnumConstants; }
+		template <> DBMap<Function>& GetDBMap() { return m_Functions; }
+		template <> DBMap<Field>& GetDBMap() { return m_Fields; }
 		
 		// Attribute maps
-		template <> PrimitiveStore<FlagAttribute>& GetPrimitiveStore() { return m_FlagAttributes; }
-		template <> PrimitiveStore<IntAttribute>& GetPrimitiveStore() { return m_IntAttributes; }
-		template <> PrimitiveStore<FloatAttribute>& GetPrimitiveStore() { return m_FloatAttributes; }
-		template <> PrimitiveStore<NameAttribute>& GetPrimitiveStore() { return m_NameAttributes; }
-		template <> PrimitiveStore<TextAttribute>& GetPrimitiveStore() { return m_TextAttributes; }
+		template <> DBMap<FlagAttribute>& GetDBMap() { return m_FlagAttributes; }
+		template <> DBMap<IntAttribute>& GetDBMap() { return m_IntAttributes; }
+		template <> DBMap<FloatAttribute>& GetDBMap() { return m_FloatAttributes; }
+		template <> DBMap<NameAttribute>& GetDBMap() { return m_NameAttributes; }
+		template <> DBMap<TextAttribute>& GetDBMap() { return m_TextAttributes; }
+
+		// Containers
+		template <> DBMap<ContainerInfo>& GetDBMap() { return m_ContainerInfos; }
 
 		// Single pass-through const retrieval of the primitive stores. This strips the const-ness
 		// of the 'this' pointer to remove the need to copy-paste the GetPrimitiveStore implementations
 		// with const added.
-		template <typename TYPE> const PrimitiveStore<TYPE>& GetPrimitiveStore() const
+		template <typename TYPE> const DBMap<TYPE>& GetDBMap() const
 		{
-			return const_cast<Database*>(this)->GetPrimitiveStore<TYPE>();
+			return const_cast<Database*>(this)->GetDBMap<TYPE>();
 		}
 
 		// All unique, scope-qualified names
 		NameMap m_Names;
 
 		// Primitives are owned by the following maps depending upon their type
-		PrimitiveStore<Namespace> m_Namespaces;
-		PrimitiveStore<Type> m_Types;
-		PrimitiveStore<Template> m_Templates;
-		PrimitiveStore<TemplateType> m_TemplateTypes;
-		PrimitiveStore<Class> m_Classes;
-		PrimitiveStore<Enum> m_Enums;
-		PrimitiveStore<EnumConstant> m_EnumConstants;
-		PrimitiveStore<Function> m_Functions;
-		PrimitiveStore<Field> m_Fields;
+		DBMap<Namespace> m_Namespaces;
+		DBMap<Type> m_Types;
+		DBMap<Template> m_Templates;
+		DBMap<TemplateType> m_TemplateTypes;
+		DBMap<Class> m_Classes;
+		DBMap<Enum> m_Enums;
+		DBMap<EnumConstant> m_EnumConstants;
+		DBMap<Function> m_Functions;
+		DBMap<Field> m_Fields;
 
 		// Storage for all attributes of different types
-		PrimitiveStore<FlagAttribute> m_FlagAttributes;
-		PrimitiveStore<IntAttribute> m_IntAttributes;
-		PrimitiveStore<FloatAttribute> m_FloatAttributes;
-		PrimitiveStore<NameAttribute> m_NameAttributes;
-		PrimitiveStore<TextAttribute> m_TextAttributes;
+		DBMap<FlagAttribute> m_FlagAttributes;
+		DBMap<IntAttribute> m_IntAttributes;
+		DBMap<FloatAttribute> m_FloatAttributes;
+		DBMap<NameAttribute> m_NameAttributes;
+		DBMap<TextAttribute> m_TextAttributes;
+
+		// Store for containers
+		DBMap<ContainerInfo> m_ContainerInfos;
 
 		// All referenced GetType functions per type
+		// This is currently not serialised or merged as it's generated during the export
+		// stage and discarded after export
 		GetTypeFunctions::MapType m_GetTypeFunctions;
 	};
 }

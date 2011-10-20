@@ -36,6 +36,7 @@ namespace clcpp
 {
 	class Database;
 	struct Primitive;
+	struct Type;
 	struct Enum;
 	struct TemplateType;
 	struct Class;
@@ -106,6 +107,25 @@ namespace clcpp
 
 		Operator op;
 		bool is_const;
+	};
+
+
+	//
+	// Description of a reflected container
+	//
+	struct ContainerInfo
+	{
+		ContainerInfo()
+			: read_iterator_type(0)
+			, write_iterator_type(0)
+			, has_key(false)
+		{
+		}
+
+		Name name;
+		const Type* read_iterator_type;
+		const Type* write_iterator_type;
+		bool has_key;
 	};
 
 
@@ -236,12 +256,14 @@ namespace clcpp
 		Type()
 			: Primitive(KIND)
 			, size(0)
+			, ci(0)
 		{
 		}
 
 		Type(Kind k)
 			: Primitive(k)
 			, size(0)
+			, ci(0)
 		{
 		}
 
@@ -251,6 +273,9 @@ namespace clcpp
 		inline const Class* AsClass() const;
 
 		unsigned int size;
+
+		// This is non-null if the type is a registered container
+		ContainerInfo* ci;
 	};
 
 
@@ -565,6 +590,9 @@ namespace clcpp
 		// Retrieve namespaces using their fully-scoped names
 		const Namespace* GetNamespace(unsigned int hash) const;
 
+		// Retrieve templates using their fully-scoped names
+		const Template* GetTemplate(unsigned int hash) const;
+
 		// Retrieve functions by their fully-scoped names, with the option of getting
 		// a range of matching overloaded functions
 		const Function* GetFunction(unsigned int hash) const;
@@ -645,6 +673,9 @@ namespace clcpp
 
 			// A list of all GetType function addresses paired to their type
 			CArray<GetTypeFunctions> get_type_functions;
+
+			// A list of all registered containers
+			CArray<ContainerInfo> container_infos;
 
 			// The root namespace that allows you to reach every referenced primitive
 			Namespace global_namespace;

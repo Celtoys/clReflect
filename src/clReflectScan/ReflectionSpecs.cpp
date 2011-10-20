@@ -45,7 +45,7 @@ namespace
 			return 0;
 
 		// Looking for internal registration namespaces
-		if (ns_decl->getNameAsString() != "clcpp_internal")
+		if (ns_decl->getName() != "clcpp_internal")
 			return 0;
 
 		// Immediately prevent this namespace from being parsed by subsequent passes
@@ -109,7 +109,11 @@ namespace
 		// Loop through the parents of all scoped names
 		for (std::map<std::string, bool>::const_iterator i = specs.begin(); i != specs.end(); ++i)
 		{
+			// Only interested in scanning full reflection specs
 			std::string spec = i->first;
+			if (i->second == true)
+				continue;
+
 			while (true)
 			{
 				size_t sep_pos = spec.rfind("::");
@@ -150,26 +154,61 @@ void ReflectionSpecs::Gather(clang::TranslationUnitDecl* tu_decl)
 			continue;
 		}
 
+		enum Type
+		{
+			FULL_REFLECTION = 1,
+			PARTIAL_REFLECTION = 2,
+			CONTAINER_REFLECTION = 4
+		};
+
 		// Decode the reflection spec type
-		bool partial_reflect = false;
+		Type type;
 		llvm::StringRef reflect_spec = attribute->getAnnotation();
 		if (reflect_spec.startswith("full-"))
-			partial_reflect = false;
+			type = FULL_REFLECTION;
 		else if (reflect_spec.startswith("part-"))
-			partial_reflect = true;
+			type = PARTIAL_REFLECTION;
+		else if (reflect_spec.startswith("container-"))
+			type = CONTAINER_REFLECTION;
 		else
-			LOG(spec, WARNING, "Ill-formed Reflection Spec; can't determine if it's full or partial reflection\n");
+			LOG(spec, WARNING, "Ill-formed Reflection Spec; couldn't figure out what type it is\n");
 
-		// Build the symbol name and check for existence in the map
-		std::string symbol = reflect_spec.substr(5);
-		if (m_ReflectionSpecs.find(symbol) != m_ReflectionSpecs.end())
+		if (type & (FULL_REFLECTION | PARTIAL_REFLECTION))
 		{
-			++i;
-			continue;
+			AddReflectionSpec(reflect_spec.substr(5), type == PARTIAL_REFLECTION);
 		}
 
-		m_ReflectionSpecs[symbol] = partial_reflect;
-		LOG(spec, INFO, "Reflection Spec: %s (%s)\n", symbol.c_str(), partial_reflect ? "partial" : "full");
+		else if (type & CONTAINER_REFLECTION)
+		{
+			// Split the fields of the annotation
+			llvm::SmallVector<llvm::StringRef, 5> info;
+			reflect_spec.split(info, "-");
+			if (info.size() != 5)
+			{
+				LOG(spec, WARNING, "Ill-formed Reflection Spec Container; element count doesn't match expected count\n");
+				++i;
+				continue;
+			}
+
+			// Parse the type info
+			ReflectionSpecContainer rsc;
+			rsc.read_iterator_type = info[2];
+			rsc.write_iterator_type = info[3];
+			rsc.has_key = false;
+
+			// Parse the key info
+			if (info[4] == "haskey")
+				rsc.has_key = true;
+			else if (info[4] != "nokey")
+			{
+				LOG(spec, WARNING, "Ill-formed Reflection Spec Container; expecting 'haskey' or 'nokey' as last parameter\n");
+				++i;
+				continue;
+			}
+
+			m_ContainerSpecs[info[1].str()] = rsc;
+			LOG(spec, INFO, "Reflection Spec Container: %s / %s / %s / %s", info[1].str().c_str(), info[2].str().c_str(), info[3].str().c_str(), info[4].str().c_str());
+		}
 
 		++i;
 	}
@@ -205,4 +244,15 @@ bool ReflectionSpecs::IsReflected(std::string name) const
 	}
 
 	return false;
+}
+
+
+void ReflectionSpecs::AddReflectionSpec(const std::string& symbol, bool partial)
+{
+	// Check for existence in the map before adding
+	if (m_ReflectionSpecs.find(symbol) == m_ReflectionSpecs.end())
+	{
+		m_ReflectionSpecs[symbol] = partial;
+		LOG(spec, INFO, "Reflection Spec: %s (%s)\n", symbol.c_str(), partial ? "partial" : "full");
+	}
 }

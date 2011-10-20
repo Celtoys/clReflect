@@ -97,6 +97,17 @@ void cldb::Database::AddBaseTypePrimitives()
 }
 
 
+void cldb::Database::AddContainerInfo(const std::string& container, const std::string& read_iterator, const std::string& write_iterator, bool has_key)
+{
+	ContainerInfo ci;
+	ci.name = GetName(container.c_str());
+	ci.read_iterator_type = GetName(read_iterator.c_str());
+	ci.write_iterator_type = GetName(write_iterator.c_str());
+	ci.has_key = has_key;
+	m_ContainerInfos[ci.name.hash] = ci;
+}
+
+
 const cldb::Name& cldb::Database::GetName(const char* text)
 {
 	// Check for nullptr and empty string representations of a "noname"

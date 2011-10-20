@@ -145,23 +145,25 @@ int main(int argc, const char* argv[])
 	ASTConsumer ast_consumer(ast_context, db, reflection_specs, ast_log);
 	ast_consumer.WalkTranlationUnit(ast_context.getTranslationUnitDecl());
 
+	// Add all the container specs
+	const ReflectionSpecContainer::MapType& container_specs = reflection_specs.GetContainerSpecs();
+	for (ReflectionSpecContainer::MapType::const_iterator i = container_specs.begin(); i != container_specs.end(); ++i)
+	{
+		const ReflectionSpecContainer& c = i->second;
+		db.AddContainerInfo(i->first, c.read_iterator_type, c.write_iterator_type, c.has_key);
+	}
+
 	// Gather included header files if requested
 	if (args.Have("-output_headers"))
-	{
 		PrintIncludedHeaders(ast_parser, input_filename);
-	}
 
 	// Write to a text/binary database depending upon extension
 	std::string output = args.GetProperty("-output");
 	if (output != "")
-	{
 		WriteDatabase(db, output);
-	}
 
 	if (args.Have("-test_db"))
-	{
 		TestDBReadWrite(db);
-	}
 
 	return 0;
 }

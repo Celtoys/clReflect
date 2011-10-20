@@ -43,6 +43,7 @@
 #include <clcpp/Core.h>
 
 #include <clReflectCore/Logging.h>
+#include <clReflectCore/FileUtils.h>
 
 // clang\ast\decltemplate.h(1484) : warning C4345: behavior change: an object of POD type constructed with an initializer of the form () will be default-initialized
 #pragma warning(disable:4345)
@@ -327,8 +328,8 @@ namespace
 		if (add)
 		{
 			// Only add the attribute if its unique
-			const cldb::PrimitiveStore<TYPE>& store = db.GetPrimitiveStore<TYPE>();
-			cldb::PrimitiveStore<TYPE>::const_iterator i = store.find(attribute->name.hash);
+			const cldb::DBMap<TYPE>& store = db.GetDBMap<TYPE>();
+			cldb::DBMap<TYPE>::const_iterator i = store.find(attribute->name.hash);
 			if (i == store.end() || !i->second.Equals(*attribute))
 			{
 				LOG(ast, INFO, "attribute %s\n", attribute->name.text.c_str());
@@ -458,16 +459,12 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const cldb::Name& parent_name,
 {
 	// Skip decls with errors and those marked by the Reflection Spec pass to ignore
 	if (decl->isInvalidDecl())
-	{
 		return;
-	}
 
 	// Has this decl been marked for reflection?
 	std::string name_str = decl->getQualifiedNameAsString();
 	if (!m_ReflectionSpecs.IsReflected(name_str.c_str()))
-	{
 		return;
-	}
 
 	// Generate a name for the decl
 	cldb::Name name = m_DB.GetName(name_str.c_str());
@@ -593,9 +590,7 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const cldb::Name& name, co
 		// NOTE: May want to revisit this later
 		std::string constant_name = constant_decl->getNameAsString();
 		if (parent_name != cldb::Name())
-		{
 			constant_name = parent_name.text + "::" + constant_name;
-		}
 
 		// Add to the database
 		m_DB.AddPrimitive(cldb::EnumConstant(m_DB.GetName(constant_name.c_str()), name, value_int));

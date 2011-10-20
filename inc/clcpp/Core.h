@@ -134,9 +134,7 @@ namespace clcpp
 			// Allocate and call the constructor for each element
 			m_Data = (TYPE*)m_Allocator->Alloc(m_Size * sizeof(TYPE));
 			for (unsigned int i = 0; i < m_Size; i++)
-			{
 				new (*(internal::PtrWrapper*)(m_Data + i)) TYPE;
-			}
 		}
 
 		// Initialise with pre-allocated data
@@ -153,9 +151,7 @@ namespace clcpp
 			{
 				// Call the destructor on each element and free the allocated memory
 				for (unsigned int i = 0; i < m_Size; i++)
-				{
 					m_Data[i].TYPE::~TYPE();
-				}
 				m_Allocator->Free(m_Data);
 			}
 		}
@@ -177,9 +173,7 @@ namespace clcpp
 			m_Size = rhs.m_Size;
 			m_Data = (TYPE*)m_Allocator->Alloc(m_Size * sizeof(TYPE));
 			for (unsigned int i = 0; i < m_Size; i++)
-			{
 				m_Data[i] = rhs.m_Data[i];
-			}
 		}
 
 		// Removes an element from the list without reallocating any memory

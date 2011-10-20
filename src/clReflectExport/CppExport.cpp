@@ -89,22 +89,26 @@ namespace
 	}
 
 
-	// Overloads for copying between databases
-	// TODO: Rewrite with database metadata?
-	void CopyPrimitive(clcpp::Primitive& dest, const cldb::Primitive& src)
+	// Overloads for copying primitives between databases
+	void CopyPrimitive(clcpp::Primitive& dest, const cldb::Primitive& src, clcpp::Primitive::Kind kind)
 	{
+		dest.kind = kind;
+		dest.parent = (clcpp::Primitive*)src.parent.hash;
 	}
-	void CopyPrimitive(clcpp::EnumConstant& dest, const cldb::EnumConstant& src)
+	void CopyPrimitive(clcpp::EnumConstant& dest, const cldb::EnumConstant& src, clcpp::Primitive::Kind kind)
 	{
+		CopyPrimitive((clcpp::Primitive&)dest, src, kind);
 		dest.value = src.value;
 	}
-	void CopyPrimitive(clcpp::Function& dest, const cldb::Function& src)
+	void CopyPrimitive(clcpp::Function& dest, const cldb::Function& src, clcpp::Primitive::Kind kind)
 	{
+		CopyPrimitive((clcpp::Primitive&)dest, src, kind);
 		dest.address = src.address;
 		dest.unique_id = src.unique_id;
 	}
-	void CopyPrimitive(clcpp::Field& dest, const cldb::Field& src)
+	void CopyPrimitive(clcpp::Field& dest, const cldb::Field& src, clcpp::Primitive::Kind kind)
 	{
+		CopyPrimitive((clcpp::Primitive&)dest, src, kind);
 		dest.type = (clcpp::Type*)src.type.hash;
 		dest.qualifier.is_const = src.qualifier.is_const;
 		dest.offset = src.offset;
@@ -117,40 +121,65 @@ namespace
 		default: assert(false && "Case not handled");
 		}
 	}
-	void CopyPrimitive(clcpp::Type& dest, const cldb::Type& src)
+	void CopyPrimitive(clcpp::Type& dest, const cldb::Type& src, clcpp::Primitive::Kind kind)
 	{
+		CopyPrimitive((clcpp::Primitive&)dest, src, kind);
 		dest.size = src.size;
 	}
-	void CopyPrimitive(clcpp::TemplateType& dest, const cldb::TemplateType& src)
+	void CopyPrimitive(clcpp::TemplateType& dest, const cldb::TemplateType& src, clcpp::Primitive::Kind kind)
 	{
+		CopyPrimitive((clcpp::Type&)dest, src, kind);
 		for (int i = 0; i < cldb::TemplateType::MAX_NB_ARGS; i++)
 		{
 			dest.parameter_types[i] = (clcpp::Type*)src.parameter_types[i].hash;
 			dest.parameter_ptrs[i] = src.parameter_ptrs[i];
 		}
 	}
-	void CopyPrimitive(clcpp::Class& dest, const cldb::Class& src)
+	void CopyPrimitive(clcpp::Class& dest, const cldb::Class& src, clcpp::Primitive::Kind kind)
 	{
-		dest.size = src.size;
+		CopyPrimitive((clcpp::Type&)dest, src, kind);
 		dest.base_class = (clcpp::Class*)src.base_class.hash;
 	}
-	void CopyPrimitive(clcpp::IntAttribute& dest, const cldb::IntAttribute& src)
+	void CopyPrimitive(clcpp::IntAttribute& dest, const cldb::IntAttribute& src, clcpp::Primitive::Kind kind)
 	{
+		CopyPrimitive((clcpp::Primitive&)dest, src, kind);
 		dest.value = src.value;
 	}
-	void CopyPrimitive(clcpp::FloatAttribute& dest, const cldb::FloatAttribute& src)
+	void CopyPrimitive(clcpp::FloatAttribute& dest, const cldb::FloatAttribute& src, clcpp::Primitive::Kind kind)
 	{
+		CopyPrimitive((clcpp::Primitive&)dest, src, kind);
 		dest.value = src.value;
 	}
-	void CopyPrimitive(clcpp::NameAttribute& dest, const cldb::NameAttribute& src)
+	void CopyPrimitive(clcpp::NameAttribute& dest, const cldb::NameAttribute& src, clcpp::Primitive::Kind kind)
 	{
+		CopyPrimitive((clcpp::Primitive&)dest, src, kind);
+
 		// Only copy the hash as the string will be patched up later
 		dest.value.hash = src.value.hash;
 	}
-	void CopyPrimitive(clcpp::TextAttribute& dest, const cldb::TextAttribute& src)
+	void CopyPrimitive(clcpp::TextAttribute& dest, const cldb::TextAttribute& src, clcpp::Primitive::Kind kind)
 	{
+		CopyPrimitive((clcpp::Primitive&)dest, src, kind);
+
 		// Store a pointer to the cldb text allocation that will be replaced later
 		dest.value = src.value.c_str();
+	}
+
+	// Default object copy that assumes it's copying primitives
+	// TODO: I can't think of any better way than doing all this
+	template <typename CLCPP_TYPE, typename CLDB_TYPE>
+	void CopyObject(CLCPP_TYPE& dest, const CLDB_TYPE& src)
+	{
+		CopyPrimitive(dest, src, CLCPP_TYPE::KIND);
+	}
+
+	// CopyObject specialisations
+	template <>
+	void CopyObject(clcpp::ContainerInfo& dest, const cldb::ContainerInfo& src)
+	{
+		dest.read_iterator_type = (clcpp::Type*)src.read_iterator_type.hash;
+		dest.write_iterator_type = (clcpp::Type*)src.write_iterator_type.hash;
+		dest.has_key = src.has_key;
 	}
 
 
@@ -158,25 +187,22 @@ namespace
 	void BuildCArray(CppExport& cppexp, clcpp::CArray<CLCPP_TYPE>& dest, const cldb::Database& db)
 	{
 		// Allocate enough entries for all primitives
-		const cldb::PrimitiveStore<CLDB_TYPE>& src = db.GetPrimitiveStore<CLDB_TYPE>();
+		const cldb::DBMap<CLDB_TYPE>& src = db.GetDBMap<CLDB_TYPE>();
 		dest.shallow_copy(clcpp::CArray<CLCPP_TYPE>(cppexp.allocator.Alloc<CLCPP_TYPE>(src.size()), src.size()));
 
 		// Copy individually
 		int index = 0;
-		for (cldb::PrimitiveStore<CLDB_TYPE>::const_iterator i = src.begin(); i != src.end(); ++i)
+		for (cldb::DBMap<CLDB_TYPE>::const_iterator i = src.begin(); i != src.end(); ++i)
 		{
-			// Copy as a primitive first
 			CLCPP_TYPE& dest_prim = dest[index++];
 			const CLDB_TYPE& src_prim = i->second;
-			dest_prim.kind = CLCPP_TYPE::KIND;
-			dest_prim.name.hash = src_prim.name.hash;
-			dest_prim.parent = (clcpp::Primitive*)src_prim.parent.hash;
 
 			// Early reference the text of the name for easier debugging
+			dest_prim.name.hash = src_prim.name.hash;
 			dest_prim.name.text = cppexp.name_map[src_prim.name.hash];
 
-			// Then custom
-			CopyPrimitive(dest_prim, src_prim);
+			// Copy custom data
+			CopyObject(dest_prim, src_prim);
 		}
 	}
 
@@ -365,9 +391,7 @@ namespace
 			unsigned int hash_id = (unsigned int)(parent.*field);
 			ChildMap::iterator j = child_map.find(hash_id);
 			if (j != child_map.end())
-			{
 				(parent.*field) = (FIELD_TYPE*)j->second;
-			}
 		}
 	}
 
@@ -395,8 +419,64 @@ namespace
 				unsigned int hash_id = (unsigned int)(parent.*field)[j];
 				ChildMap::iterator k = child_map.find(hash_id);
 				if (k != child_map.end())
-				{
 					(parent.*field)[j] = (FIELD_TYPE*)k->second;
+			}
+		}
+	}
+
+
+	const clcpp::Type* LinkContainerIterator(CppExport& cppexp, const char* container_name, const clcpp::Type* iterator_type)
+	{
+		// Alias the type pointer as its hash and lookup the name
+		CppExport::NameMap::iterator name = cppexp.name_map.find((unsigned int)iterator_type);
+		if (name == cppexp.name_map.end())
+		{
+			LOG(main, WARNING, "Couldn't find read iterator name for '%s'\n", container_name);
+			return 0;
+		}
+
+		// Lookup the iterator type
+		iterator_type = clcpp::FindPrimitive(cppexp.db->type_primitives, name->first);
+		if (iterator_type == 0)
+			LOG(main, WARNING, "Couldn't find read iterator type '%s' for '%s'\n", name->second, container_name);
+
+		return iterator_type;
+	}
+
+
+	void LinkContainerInfos(CppExport& cppexp)
+	{
+		// Build a template map
+		typedef std::map<unsigned int, const clcpp::Template*> TemplateMap;
+		TemplateMap templates;
+		for (int i = 0; i < cppexp.db->templates.size(); i++)
+		{
+			const clcpp::Template& t = cppexp.db->templates[i];
+			templates[t.name.hash] = &t;
+		}
+
+		for (int i = 0; i < cppexp.db->container_infos.size(); i++)
+		{
+			clcpp::ContainerInfo& ci = cppexp.db->container_infos[i];
+
+			// Patch iterator type pointers
+			ci.read_iterator_type = LinkContainerIterator(cppexp, ci.name.text, ci.read_iterator_type);
+			ci.write_iterator_type = LinkContainerIterator(cppexp, ci.name.text, ci.write_iterator_type);
+
+			// Parent the container info to any types
+			const clcpp::Type* parent_type = clcpp::FindPrimitive(cppexp.db->type_primitives, ci.name.hash);
+			if (parent_type)
+				const_cast<clcpp::Type*>(parent_type)->ci = &ci;
+
+			if (parent_type == 0)
+			{
+				// Parent the container to all instances of the template it references
+				TemplateMap::const_iterator parent_templates = templates.find(ci.name.hash);
+				if (parent_templates != templates.end())
+				{
+					const clcpp::CArray<const clcpp::TemplateType*>& instances = parent_templates->second->instances;
+					for (int j = 0; j < instances.size(); j++)
+						const_cast<clcpp::TemplateType*>(instances[j])->ci = &ci;
 				}
 			}
 		}
@@ -410,9 +490,7 @@ namespace
 		for (int i = 0; i < parameters.size(); i++)
 		{
 			if (parameters[i]->name.hash == return_hash)
-			{
 				return i;
-			}
 		}
 		return -1;
 	}
@@ -755,6 +833,7 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	BuildCArray<cldb::FloatAttribute>(cppexp, cppexp.db->float_attributes, db);
 	BuildCArray<cldb::NameAttribute>(cppexp, cppexp.db->name_attributes, db);
 	BuildCArray<cldb::TextAttribute>(cppexp, cppexp.db->text_attributes, db);
+	BuildCArray<cldb::ContainerInfo>(cppexp, cppexp.db->container_infos, db);
 
 	// Now ensure all name and text data are pointing into the data to be memory mapped
 	AssignAttributeNamesAndText(cppexp);
@@ -794,6 +873,10 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	Link(cppexp.db->fields, &clcpp::Field::type, cppexp.db->type_primitives);
 	Link(cppexp.db->classes, &clcpp::Class::base_class, cppexp.db->type_primitives);
 	Link(cppexp.db->template_types, &clcpp::TemplateType::parameter_types, cppexp.db->type_primitives);
+
+	// Container infos need to be parented to their owners and their read/writer iterator
+	// pointers need to be linked to their reflected types
+	LinkContainerInfos(cppexp);
 
 	// Return parameters are parented to their functions as parameters. Move them from
 	// wherever they are in the list and into the return parameter data member.
@@ -866,6 +949,7 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		(&clcpp::internal::DatabaseMem::text_attributes, array_data_offset)
 		(&clcpp::internal::DatabaseMem::type_primitives, array_data_offset)
 		(&clcpp::internal::DatabaseMem::get_type_functions, array_data_offset)
+		(&clcpp::internal::DatabaseMem::container_infos, array_data_offset)
 		(&clcpp::Namespace::namespaces, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace))
 		(&clcpp::Namespace::types, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace))
 		(&clcpp::Namespace::enums, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace))
@@ -879,7 +963,9 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		(&clcpp::Name::text, offsetof(clcpp::Primitive, name))
 		(&clcpp::Primitive::parent);
 
-	PtrSchema& schema_type = relocator.AddSchema<clcpp::Type>(&schema_primitive);
+	PtrSchema& schema_type = relocator.AddSchema<clcpp::Type>(&schema_primitive)
+		(&clcpp::Type::ci);
+
 	PtrSchema& schema_enum_constant = relocator.AddSchema<clcpp::EnumConstant>(&schema_primitive);
 
 	PtrSchema& schema_enum = relocator.AddSchema<clcpp::Enum>(&schema_type)
@@ -934,6 +1020,11 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 
 	PtrSchema& schema_ptr = relocator.AddSchema<void*>()(0);
 
+	PtrSchema& schema_container_info = relocator.AddSchema<clcpp::ContainerInfo>()
+		(&clcpp::Name::text, offsetof(clcpp::ContainerInfo, name))
+		(&clcpp::ContainerInfo::read_iterator_type)
+		(&clcpp::ContainerInfo::write_iterator_type);
+
 	// Add pointers from the base database object
 	relocator.AddPointers(schema_database, cppexp.db);
 	relocator.AddPointers(schema_name, cppexp.db->names);
@@ -952,6 +1043,7 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 	relocator.AddPointers(schema_name_attribute, cppexp.db->name_attributes);
 	relocator.AddPointers(schema_text_attribute, cppexp.db->text_attributes);
 	relocator.AddPointers(schema_ptr, cppexp.db->type_primitives);
+	relocator.AddPointers(schema_container_info, cppexp.db->container_infos);
 
 	// Add pointers for the array objects within each primitive
 	// Note that currently these are expressed as general pointer relocation instructions

@@ -93,6 +93,14 @@ cldb::meta::DatabaseTypes::DatabaseTypes()
 		DatabaseField(&cldb::TextAttribute::value),
 	};
 
+	DatabaseField container_info_fields[] =
+	{
+		DatabaseField(&cldb::ContainerInfo::name),
+		DatabaseField(&cldb::ContainerInfo::read_iterator_type),
+		DatabaseField(&cldb::ContainerInfo::write_iterator_type),
+		DatabaseField(&cldb::ContainerInfo::has_key),
+	};
+
 	// Create the descriptions of each type
 	m_PrimitiveType.Type<cldb::Primitive>().Fields(primitive_fields);
 	m_TypeType.Type<cldb::Type>().Base(&m_PrimitiveType).Fields(type_fields);
@@ -111,4 +119,7 @@ cldb::meta::DatabaseTypes::DatabaseTypes()
 	m_FloatAttributeType.Type<cldb::FloatAttribute>().Base(&m_PrimitiveType).Fields(float_attribute_fields);
 	m_NameAttributeType.Type<cldb::NameAttribute>().Base(&m_PrimitiveType).Fields(name_attribute_fields);
 	m_TextAttributeType.Type<cldb::TextAttribute>().Base(&m_PrimitiveType).Fields(text_attribute_fields);
+
+	// Create descriptions of the container type
+	m_ContainerInfoType.Type<cldb::ContainerInfo>().Fields(container_info_fields);
 }

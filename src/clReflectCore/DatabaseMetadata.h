@@ -190,6 +190,7 @@ namespace cldb
 			template <> const DatabaseType& GetType<FloatAttribute>() const { return m_FloatAttributeType; }
 			template <> const DatabaseType& GetType<NameAttribute>() const { return m_NameAttributeType; }
 			template <> const DatabaseType& GetType<TextAttribute>() const { return m_TextAttributeType; }
+			template <> const DatabaseType& GetType<ContainerInfo>() const { return m_ContainerInfoType; }
 
 			// All type descriptions
 			DatabaseType m_PrimitiveType;
@@ -209,6 +210,9 @@ namespace cldb
 			DatabaseType m_FloatAttributeType;
 			DatabaseType m_NameAttributeType;
 			DatabaseType m_TextAttributeType;
+
+			// Container type description
+			DatabaseType m_ContainerInfoType;
 		};
 	}
 }

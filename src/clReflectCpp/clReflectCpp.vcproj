@@ -63,14 +63,18 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{45f0e190-f002-11e0-a2d4-f46d04d48d5f}"
+			UniqueIdentifier="{544e6ad0-fa5e-11e0-b144-f46d04d48d5f}"
 			>
 			<Filter
 				Name="clcpp"
-				UniqueIdentifier="{45f0e191-f002-11e0-a98d-f46d04d48d5f}"
+				UniqueIdentifier="{544e6ad1-fa5e-11e0-92f8-f46d04d48d5f}"
 				>
 				<File
 					RelativePath="..\..\inc\clcpp\clcpp.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\inc\clcpp\Containers.h"
 					>
 				</File>
 				<File
@@ -111,7 +115,7 @@
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="Kk8B3EOf1YL4mIOWUM9DbA=="
+			Value="dygyS77gW5PmxvYegsCU8w=="
 		/>
 	</Globals>
 </VisualStudioProject>

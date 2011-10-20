@@ -149,17 +149,14 @@ namespace
 	}
 
 
-	template <typename TYPE>
-	void CopyPrimitiveStoreToTable(const cldb::PrimitiveStore<TYPE>& store, std::vector<TYPE>& table)
+	template <typename MAP_TYPE, typename TYPE>
+	void CopyMapToTable(const MAP_TYPE& store, std::vector<TYPE>& table)
 	{
-		int dest_index = 0;
-
 		// Make a local copy of all entries in the table
+		int dest_index = 0;
 		table.resize(store.size());
-		for (cldb::PrimitiveStore<TYPE>::const_iterator i = store.begin(); i != store.end(); ++i)
-		{
+		for (typename MAP_TYPE::const_iterator i = store.begin(); i != store.end(); ++i)
 			table[dest_index++] = i->second;
-		}
 	}
 
 
@@ -168,7 +165,7 @@ namespace
 	{
 		// Generate a memory-contiguous table
 		std::vector<TYPE> table;
-		CopyPrimitiveStoreToTable(db.GetPrimitiveStore<TYPE>(), table);
+		CopyMapToTable(db.GetDBMap<TYPE>(), table);
 
 		// Record the table size
 		int table_size = table.size();
@@ -214,7 +211,7 @@ namespace
 
 		// Populate the hash map
 		g_TextAttributeMap.clear();
-		for (cldb::PrimitiveStore<cldb::TextAttribute>::const_iterator i = db.m_TextAttributes.begin(); i != db.m_TextAttributes.end(); ++i)
+		for (cldb::DBMap<cldb::TextAttribute>::const_iterator i = db.m_TextAttributes.begin(); i != db.m_TextAttributes.end(); ++i)
 		{
 			const std::string& text = i->second.value;
 			cldb::u32 hash = clcpp::internal::HashNameString(text.c_str());
@@ -259,6 +256,8 @@ void cldb::WriteBinaryDatabase(const char* filename, const Database& db)
 	WriteTable<cldb::FloatAttribute>(fp, db, dbtypes);
 	WriteTable<cldb::NameAttribute>(fp, db, dbtypes);
 	WriteTable<cldb::TextAttribute>(fp, db, dbtypes);
+
+	WriteTable<cldb::ContainerInfo>(fp, db, dbtypes);
 
 	fclose(fp);
 }
@@ -356,9 +355,7 @@ namespace
 
 			// Add to the database
 			for (size_t i = 0; i < table.size(); i++)
-			{
-				db.AddPrimitive(table[i]);
-			}
+				db.Add(table[i].name, table[i]);
 		}
 	}
 
@@ -428,6 +425,8 @@ bool cldb::ReadBinaryDatabase(const char* filename, Database& db)
 	ReadTable<cldb::FloatAttribute>(fp, db, dbtypes);
 	ReadTable<cldb::NameAttribute>(fp, db, dbtypes);
 	ReadTable<cldb::TextAttribute>(fp, db, dbtypes);
+
+	ReadTable<cldb::ContainerInfo>(fp, db, dbtypes);
 
 	fclose(fp);
 

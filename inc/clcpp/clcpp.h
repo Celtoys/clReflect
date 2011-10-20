@@ -96,6 +96,21 @@
 		}
 
 
+	//
+	// A container must have iterators if you want to use reflection to inspect it. Call this from
+	// the global namespace in the neighbourhood of any iterator implementations and it will
+	// partially reflect the iterators and allow the parent container to be used with reflection.
+	//
+	#define clcpp_container_iterators(container, read_iterator, write_iterator, keyinfo)							\
+		clcpp_reflect_part(read_iterator)																			\
+		clcpp_reflect_part(write_iterator)																			\
+		namespace clcpp_internal																					\
+		{																											\
+			__attribute__((annotate("container-" #container "-" #read_iterator "-" #write_iterator "-" #keyinfo)))	\
+			struct clcpp_unique(container_info) { };																\
+		}
+
+
 	#define clcpp_attr(...) __attribute__((annotate("attr:" #__VA_ARGS__)))
 	#define clcpp_push_attr(...) struct clcpp_unique(push_attr) { } __attribute__((annotate(#__VA_ARGS__)));
 	#define clcpp_pop_attr(...) struct clcpp_unique(pop_attr) { } __attribute__((annotate(#__VA_ARGS__)));
@@ -104,7 +119,7 @@
 	//
 	// Clang does not need to see these
 	//
-	#define clcpp_impl_class(scoped_type, type)
+	#define clcpp_impl_class(scoped_type)
 
 
 #else
@@ -115,34 +130,57 @@
 	//
 	#define clcpp_reflect(name)
 	#define clcpp_reflect_part(name)
+	#define clcpp_container(container, read_iterator, write_iterator, keyinfo)
 	#define clcpp_attr(...)
 	#define clcpp_push_attr(...)
 	#define clcpp_pop_attr(...)
 
 
+	namespace clcpp
+	{
+		namespace internal
+		{
+			//
+			// Functions to abstract the calling of an object's constructor and destructor, for
+			// debugging and letting the compiler do the type deduction.
+			//
+			template <typename TYPE>
+			inline void CallConstructor(TYPE* object)
+			{
+				new (*(PtrWrapper*)object) TYPE;
+			}
+			template <typename TYPE>
+			inline void CallDestructor(TYPE* object)
+			{
+				object->~TYPE();
+			}
+		}
+	}
+
+
 	//
 	// Introduces overloaded construction and destruction functions into the clcpp::internal
-	// namespace for the type you specify. These functions end up in the list of method
+	// namespace for the type you specify. These functions end up in the list of methods
 	// in the specified type for easy access.
-	// This can only be used from global namespace and you need to specify the type twice,
-	// with and without scope.
+	// This can only be used from global namespace.
 	//
-	#define clcpp_impl_class(scoped_type, type)							\
-																		\
-		namespace clcpp													\
-		{																\
-			namespace internal											\
-			{															\
-				clcpp_export void ConstructObject(scoped_type* object)	\
-				{														\
-					new (*(PtrWrapper*)object) scoped_type;				\
-				}														\
-				clcpp_export void DestructObject(scoped_type* object)	\
-				{														\
-					((scoped_type*)object)->type::~type();				\
-				}														\
-			}															\
+	#define clcpp_impl_class(type)								\
+																\
+		namespace clcpp											\
+		{														\
+			namespace internal									\
+			{													\
+				clcpp_export void ConstructObject(type* object)	\
+				{												\
+					CallConstructor(object);					\
+				}												\
+				clcpp_export void DestructObject(type* object)	\
+				{												\
+					CallDestructor(object);						\
+				}												\
+			}													\
 		}
+
 
 #endif
 
