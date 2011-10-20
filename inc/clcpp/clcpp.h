@@ -130,7 +130,7 @@
 	//
 	#define clcpp_reflect(name)
 	#define clcpp_reflect_part(name)
-	#define clcpp_container(container, read_iterator, write_iterator, keyinfo)
+	#define clcpp_container_iterators(container, read_iterator, write_iterator, keyinfo)
 	#define clcpp_attr(...)
 	#define clcpp_push_attr(...)
 	#define clcpp_pop_attr(...)
