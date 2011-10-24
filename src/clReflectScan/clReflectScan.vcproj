@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
-	ProjectType="Visual C++"
-	Version="8.00"
-	Name="clReflectScan"
-	ProjectGUID="{00AC48B0-DD5E-11E0-B111-F46D04D48D5F}"
-	RootNamespace="clReflectScan"
-	Keyword="Win32Proj"
-	>
-	<Platforms>
-		<Platform
-			Name="Win32"
-		/>
-	</Platforms>
-	<ToolFiles>
-	</ToolFiles>
+    ProjectType="Visual C++"
+    Version="8.00"
+    Name="clReflectScan"
+    ProjectGUID="{15EAE8F0-FE45-11E0-8EB8-F46D04D48D5F}"
+    RootNamespace="clReflectScan"
+    Keyword="Win32Proj"
+    >
+    <Platforms>
+        <Platform
+            Name="Win32"
+        />
+    </Platforms>
+    <ToolFiles>
+    </ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
@@ -86,10 +86,6 @@
 			>
 		</File>
 		<File
-			RelativePath="clReflectScan.pibfile"
-			>
-		</File>
-		<File
 			RelativePath="Main.cpp"
 			>
 		</File>
@@ -99,6 +95,10 @@
 		</File>
 		<File
 			RelativePath="ReflectionSpecs.h"
+			>
+		</File>
+		<File
+			RelativePath="clReflectScan.pibfile"
 			>
 		</File>
 	</Files>

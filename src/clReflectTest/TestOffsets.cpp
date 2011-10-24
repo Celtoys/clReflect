@@ -80,27 +80,21 @@ struct Tester
 	template <typename CLASS_TYPE, typename FIELD_TYPE>
 	void Test(const char* field_name, FIELD_TYPE (CLASS_TYPE::*field_data))
 	{
-		// Construct the fully scoped field name
-		char full_field_name[512];
-		strcpy(full_field_name, m_ClassName);
-		strcat(full_field_name, "::");
-		strcat(full_field_name, field_name);
-
 		//int native_offset = (int)&(((CLASS_TYPE*)0)->*field_data);
 		int native_offset = offsetof(field_data);
 		if (m_Class)
 		{
 			// Compare offsets and print the results
-			const clcpp::Field* field = clcpp::FindPrimitive(m_Class->fields, m_DB.GetName(full_field_name).hash);
+			const clcpp::Field* field = clcpp::FindPrimitive(m_Class->fields, m_DB.GetName(field_name).hash);
 			if (field)
 			{
 				int clang_offset = field->offset;
-				printf("%-40s %5d %5d %s\n", full_field_name, native_offset, clang_offset, native_offset != clang_offset ? "FAILED" : "");
+				printf("%-40s %5d %5d %s\n", field_name, native_offset, clang_offset, native_offset != clang_offset ? "FAILED" : "");
 			}
 		}
 		else
 		{
-			printf("%-40s %5d\n", full_field_name, native_offset);
+			printf("%-40s %5d\n", field_name, native_offset);
 		}
 	}
 

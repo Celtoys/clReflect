@@ -49,15 +49,15 @@ public:
 	void WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl);
 
 private:
-	void AddDecl(clang::NamedDecl* decl, const cldb::Name& parent_name, const clang::ASTRecordLayout* layout);
-	void AddNamespaceDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name);
-	void AddClassDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name);
-	void AddEnumDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name);
-	void AddFunctionDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name);
-	void AddMethodDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name);
-	void AddFieldDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name, const clang::ASTRecordLayout* layout);
-	void AddClassTemplateDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name);
-	void AddContainedDecls(clang::NamedDecl* decl, const cldb::Name& parent_name, const clang::ASTRecordLayout* layout);
+	void AddDecl(clang::NamedDecl* decl, const std::string& parent_name, const clang::ASTRecordLayout* layout);
+	void AddNamespaceDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
+	void AddClassDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
+	void AddEnumDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
+	void AddFunctionDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
+	void AddMethodDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
+	void AddFieldDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name, const clang::ASTRecordLayout* layout);
+	void AddClassTemplateDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
+	void AddContainedDecls(clang::NamedDecl* decl, const std::string& parent_name, const clang::ASTRecordLayout* layout);
 
 	cldb::Database& m_DB;
 

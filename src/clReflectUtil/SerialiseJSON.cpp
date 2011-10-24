@@ -36,6 +36,7 @@
 #include <clutl/Serialise.h>
 #include <clutl/Containers.h>
 #include <clcpp/Database.h>
+#include <clcpp/Containers.h>
 
 
 // Explicitly stated dependencies in stdlib.h
@@ -1041,6 +1042,27 @@ namespace
 	}
 
 
+	void SaveTemplateType(clutl::DataBuffer& out, const char* object, const clcpp::TemplateType* template_type)
+	{
+		// TODO: If the iterator has a key, save a dictionary instead
+
+		out.Write("[", 1);
+
+		clcpp::ReadIterator reader(template_type, object);
+		for (unsigned int i = 0; i < reader.m_Count; i++)
+		{
+			if (i)
+				out.Write(",", 1);
+
+			clcpp::ContainerKeyValue kv = reader.GetKeyValue();
+			//SaveObject(out, kv.value, instance.value_type);
+			reader.MoveNext();
+		}
+
+		out.Write("]", 1);
+	}
+
+
 	void SaveObject(clutl::DataBuffer& out, const char* object, const clcpp::Type* type)
 	{
 		// Dispatch to a save function based on kind
@@ -1058,6 +1080,10 @@ namespace
 			out.Write("{", 1);
 			SaveClass(out, object, type->AsClass());
 			out.Write("}", 1);
+			break;
+
+		case (clcpp::Primitive::KIND_TEMPLATE_TYPE):
+			SaveTemplateType(out, object, type->AsTemplateType());
 			break;
 
 		default:

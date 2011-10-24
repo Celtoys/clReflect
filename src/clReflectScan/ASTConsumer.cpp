@@ -25,17 +25,6 @@
 // ===============================================================================
 //
 
-// TODO: Parameter names no longer need to be unique
-//
-// Primitives that require full names:
-//
-//    * Functions: No. Nothing references functions in code that we are going to reflect.
-//    * Namespaces: No. Nothing references namespaces.
-//    * Enums: Yes. These are types and can be used as fields.
-//    * Classes: Yes. They can be used as fields.
-//    * Fields: No. Nothing references fields.
-//
-
 #include "ASTConsumer.h"
 #include "ReflectionSpecs.h"
 #include "AttributeParser.h"
@@ -213,22 +202,23 @@ namespace
 	}
 
 
-	bool MakeField(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, const char* param_name, cldb::Name parent_name, int index, cldb::Field& field, bool check_type_is_reflected)
+	bool MakeField(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, const char* param_name, const std::string& parent_name, int index, cldb::Field& field, bool check_type_is_reflected)
 	{
 		ParameterInfo info;
 		if (!GetParameterInfo(db, specs, ctx, qual_type, info, check_type_is_reflected))
-		{
 			return false;
-		}
 
 		// Construct the field
 		cldb::Name type_name = db.GetName(info.type_name.c_str());
-		field = cldb::Field(db.GetName(param_name), parent_name, type_name, info.qualifer, index);
+		field = cldb::Field(
+			db.GetName(param_name),
+			db.GetName(parent_name.c_str()),
+			type_name, info.qualifer, index);
 		return true;
 	}
 
 
-	void MakeFunction(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::NamedDecl* decl, cldb::Name function_name, cldb::Name parent_name, std::vector<cldb::Field>& parameters)
+	void MakeFunction(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::NamedDecl* decl, const std::string& function_name, const std::string& parent_name, std::vector<cldb::Field>& parameters)
 	{
 		// Cast to a function
 		clang::FunctionDecl* function_decl = dyn_cast<clang::FunctionDecl>(decl);
@@ -236,15 +226,13 @@ namespace
 
 		// Only add the function once
 		if (!function_decl->isFirstDeclaration())
-		{
 			return;
-		}
 
 		// Parse the return type - named as a reserved keyword so it won't clash with user symbols
 		cldb::Field return_parameter;
 		if (!MakeField(db, specs, ctx, function_decl->getResultType(), "return", function_name, -1, return_parameter, false))
 		{
-			LOG(ast, WARNING, "Unsupported/unreflected return type for '%s' - skipping reflection\n", function_name.text.c_str());
+			LOG(ast, WARNING, "Unsupported/unreflected return type for '%s' - skipping reflection\n", function_name.c_str());
 			return;
 		}
 
@@ -257,7 +245,7 @@ namespace
 			// Check for unnamed parameters
 			if (param_decl->getNameAsString() == "")
 			{
-				LOG(ast, WARNING, "Unnamed function parameters not supported - skipping reflection of '%s'\n", function_name.text.c_str());
+				LOG(ast, WARNING, "Unnamed function parameters not supported - skipping reflection of '%s'\n", function_name.c_str());
 				return;
 			}
 
@@ -265,7 +253,7 @@ namespace
 			cldb::Field parameter;
 			if (!MakeField(db, specs, ctx, param_decl->getType(), param_decl->getNameAsString().c_str(), function_name, index++, parameter, false))
 			{
-				LOG(ast, WARNING, "Unsupported/unreflected parameter type for '%s' - skipping reflection of '%s'\n", param_decl->getNameAsString().c_str(), function_name.text.c_str());
+				LOG(ast, WARNING, "Unsupported/unreflected parameter type for '%s' - skipping reflection of '%s'\n", param_decl->getNameAsString().c_str(), function_name.c_str());
 				return;
 			}
 			parameters.push_back(parameter);
@@ -275,21 +263,20 @@ namespace
 		// This is so that its parameters/return code can re-parent themselves correctly
 		cldb::Field* return_parameter_ptr = 0;
 		if (return_parameter.type.text != "void")
-		{
 			return_parameter_ptr = &return_parameter;
-		}
 		cldb::u32 unique_id = cldb::CalculateFunctionUniqueID(return_parameter_ptr, parameters);
 
 		// Parent each parameter to the function
 		return_parameter.parent_unique_id = unique_id;
 		for (size_t i = 0; i < parameters.size(); i++)
-		{
 			parameters[i].parent_unique_id = unique_id;
-		}
 
 		// Add the function
-		LOG(ast, INFO, "function %s\n", function_name.text.c_str());
-		db.AddPrimitive(cldb::Function(function_name, parent_name, unique_id));
+		LOG(ast, INFO, "function %s\n", function_name.c_str());
+		db.AddPrimitive(cldb::Function(
+			db.GetName(function_name.c_str()),
+			db.GetName(parent_name.c_str()),
+			unique_id));
 
 		LOG_PUSH_INDENT(ast);
 
@@ -342,14 +329,12 @@ namespace
 	}
 
 
-	bool ParseAttributes(cldb::Database& db, clang::SourceManager& srcmgr, clang::NamedDecl* decl, cldb::Name parent)
+	bool ParseAttributes(cldb::Database& db, clang::SourceManager& srcmgr, clang::NamedDecl* decl, const std::string& parent)
 	{
 		// Reflection attributes are stored as clang annotation attributes
 		clang::specific_attr_iterator<clang::AnnotateAttr> i = decl->specific_attr_begin<clang::AnnotateAttr>();
 		if (i == decl->specific_attr_end<clang::AnnotateAttr>())
-		{
 			return true;
-		}
 
 		// Get the annotation text
 		clang::AnnotateAttr* attribute = *i;
@@ -357,9 +342,7 @@ namespace
 
 		// Figure out what operations to apply to the attributes
 		if (attribute_text.startswith("attr:"))
-		{
 			attribute_text = attribute_text.substr(sizeof("attr"));
-		}
 
 		// Decipher the source location of the attribute for error reporting
 		clang::SourceLocation location = attribute->getLocation();
@@ -386,7 +369,7 @@ namespace
 				LOG(ast, WARNING, "'noreflect' attribute unexpected and ignored");
 
 			// Add the attributes to the database, parented to the calling declaration
-			attribute->parent = parent;
+			attribute->parent = db.GetName(parent.c_str());
 			switch (attribute->kind)
 			{
 			case (cldb::Primitive::KIND_FLAG_ATTRIBUTE):
@@ -421,9 +404,7 @@ ASTConsumer::ASTConsumer(clang::ASTContext& context, cldb::Database& db, const R
 	LOG_TO_STDOUT(ast, ERROR);
 
 	if (ast_log != "")
-	{
 		LOG_TO_FILE(ast, ALL, ast_log.c_str());
-	}
 }
 
 
@@ -437,9 +418,7 @@ void ASTConsumer::WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl)
 	{
 		clang::NamedDecl* named_decl = dyn_cast<clang::NamedDecl>(*i);
 		if (named_decl == 0)
-		{
 			continue;
-		}
 
 		// Filter out unsupported decls at the global namespace level
 		clang::Decl::Kind kind = named_decl->getKind();
@@ -449,25 +428,25 @@ void ASTConsumer::WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl)
 		case (clang::Decl::CXXRecord):
 		case (clang::Decl::Function):
 		case (clang::Decl::Enum):
-			AddDecl(named_decl, parent_name, 0);
+			AddDecl(named_decl, "", 0);
 		}
 	}
 }
 
 
-void ASTConsumer::AddDecl(clang::NamedDecl* decl, const cldb::Name& parent_name, const clang::ASTRecordLayout* layout)
+void ASTConsumer::AddDecl(clang::NamedDecl* decl, const std::string& parent_name, const clang::ASTRecordLayout* layout)
 {
 	// Skip decls with errors and those marked by the Reflection Spec pass to ignore
 	if (decl->isInvalidDecl())
 		return;
 
 	// Has this decl been marked for reflection?
-	std::string name_str = decl->getQualifiedNameAsString();
-	if (!m_ReflectionSpecs.IsReflected(name_str.c_str()))
+	std::string name = decl->getQualifiedNameAsString();
+	if (!m_ReflectionSpecs.IsReflected(name.c_str()))
 		return;
 
 	// Generate a name for the decl
-	cldb::Name name = m_DB.GetName(name_str.c_str());
+	//cldb::Name name = m_DB.GetName(name_str.c_str());
 
 	// Gather all attributes associated with this primitive
 	if (!ParseAttributes(m_DB, m_ASTContext.getSourceManager(), decl, name))
@@ -487,13 +466,13 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const cldb::Name& parent_name,
 }
 
 
-void ASTConsumer::AddNamespaceDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name)
+void ASTConsumer::AddNamespaceDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name)
 {
 	// Only add the namespace if it doesn't exist yet
-	if (m_DB.GetFirstPrimitive<cldb::Namespace>(name.text.c_str()) == 0)
+	if (m_DB.GetFirstPrimitive<cldb::Namespace>(name.c_str()) == 0)
 	{
-		m_DB.AddPrimitive(cldb::Namespace(name, parent_name));
-		LOG(ast, INFO, "namespace %s\n", name.text.c_str());
+		m_DB.AddPrimitive(cldb::Namespace(m_DB.GetName(name.c_str()), m_DB.GetName(parent_name.c_str())));
+		LOG(ast, INFO, "namespace %s\n", name.c_str());
 	}
 
 	// Add everything within the namespace
@@ -501,7 +480,7 @@ void ASTConsumer::AddNamespaceDecl(clang::NamedDecl* decl, const cldb::Name& nam
 }
 
 
-void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name)
+void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name)
 {
 	// Cast to a record (NOTE: CXXRecord is a temporary clang type and will change in future revisions)
 	clang::CXXRecordDecl* record_decl = dyn_cast<clang::CXXRecordDecl>(decl);
@@ -509,14 +488,12 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const cldb::Name& name, c
 
 	// Ignore forward declarations
 	if (record_decl->isDefinition() == false)
-	{
 		return;
-	}
 
 	// Can only inherit from one base class for now - offsets change based on derived type
 	if (record_decl->getNumBases() > 1)
 	{
-		LOG(ast, WARNING, "Class '%s' has too many bases\n", name.text.c_str());
+		LOG(ast, WARNING, "Class '%s' has too many bases\n", name.c_str());
 		return;
 	}
 
@@ -528,7 +505,7 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const cldb::Name& name, c
 		clang::CXXBaseSpecifier& base = *record_decl->bases_begin();
 		if (base.isVirtual())
 		{
-			LOG(ast, WARNING, "Class '%s' has an unsupported virtual base class\n", name.text.c_str());
+			LOG(ast, WARNING, "Class '%s' has an unsupported virtual base class\n", name.c_str());
 			return;
 		}
 
@@ -541,27 +518,37 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const cldb::Name& name, c
 		// Check it's valid
 		if (!m_ReflectionSpecs.IsReflected(type_name_str))
 		{
-			LOG(ast, WARNING, "Base class '%s' of '%s' is not reflected so skipping\n", type_name_str.c_str(), name.text.c_str());
+			LOG(ast, WARNING, "Base class '%s' of '%s' is not reflected so skipping\n", type_name_str.c_str(), name.c_str());
 			return;
 		}
 		base_name = m_DB.GetName(type_name_str.c_str());
 	}
 
-	// Add to the database
-	LOG(ast, INFO, "class %s", name.text.c_str());
-	if (base_name != cldb::Name())
+	if (record_decl->isAnonymousStructOrUnion())
 	{
-		LOG(ast, INFO, " : %s", base_name.text.c_str());
+		// Add declarations to the parent
+		const clang::ASTRecordLayout& layout = m_ASTContext.getASTRecordLayout(record_decl);
+		AddContainedDecls(decl, parent_name, &layout);
 	}
-	LOG_NEWLINE(ast);
-	const clang::ASTRecordLayout& layout = m_ASTContext.getASTRecordLayout(record_decl);
-	cldb::u32 size = layout.getSize().getQuantity();
-	m_DB.AddPrimitive(cldb::Class(name, parent_name, base_name, size));
-	AddContainedDecls(decl, name, &layout);
+	else
+	{
+		// Add to the database
+		LOG(ast, INFO, "class %s", name.c_str());
+		if (base_name != cldb::Name())
+			LOG(ast, INFO, " : %s", base_name.text.c_str());
+		LOG_NEWLINE(ast);
+		const clang::ASTRecordLayout& layout = m_ASTContext.getASTRecordLayout(record_decl);
+		cldb::u32 size = layout.getSize().getQuantity();
+		m_DB.AddPrimitive(cldb::Class(
+			m_DB.GetName(name.c_str()),
+			m_DB.GetName(parent_name.c_str()),
+			base_name, size));
+		AddContainedDecls(decl, name, &layout);
+	}
 }
 
 
-void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name)
+void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name)
 {
 	// Note that by unnamed enums are not explicitly discarded here. This is because they don't generally
 	// get this far because you can't can't reference them in reflection specs.
@@ -571,8 +558,8 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const cldb::Name& name, co
 	assert(enum_decl != 0 && "Failed to cast to enum declaration");
 
 	// Add to the database
-	LOG(ast, INFO, "enum %s\n", name.text.c_str());
-	m_DB.AddPrimitive(cldb::Enum(name, parent_name));
+	LOG(ast, INFO, "enum %s\n", name.c_str());
+	m_DB.AddPrimitive(cldb::Enum(m_DB.GetName(name.c_str()), m_DB.GetName(parent_name.c_str())));
 
 	LOG_PUSH_INDENT(ast);
 
@@ -589,11 +576,13 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const cldb::Name& name, co
 		// Clang doesn't construct the enum name as a C++ compiler would see it so do that first
 		// NOTE: May want to revisit this later
 		std::string constant_name = constant_decl->getNameAsString();
-		if (parent_name != cldb::Name())
-			constant_name = parent_name.text + "::" + constant_name;
+		if (parent_name != "")
+			constant_name = parent_name + "::" + constant_name;
 
 		// Add to the database
-		m_DB.AddPrimitive(cldb::EnumConstant(m_DB.GetName(constant_name.c_str()), name, value_int));
+		m_DB.AddPrimitive(cldb::EnumConstant(
+			m_DB.GetName(constant_name.c_str()),
+			m_DB.GetName(name.c_str()), value_int));
 		LOG(ast, INFO, "   %s = 0x%x\n", constant_name.c_str(), value_int);
 	}
 
@@ -601,7 +590,7 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const cldb::Name& name, co
 }
 
 
-void ASTConsumer::AddFunctionDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name)
+void ASTConsumer::AddFunctionDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name)
 {
 	// Parse and add the function
 	std::vector<cldb::Field> parameters;
@@ -609,7 +598,7 @@ void ASTConsumer::AddFunctionDecl(clang::NamedDecl* decl, const cldb::Name& name
 }
 
 
-void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name)
+void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name)
 {
 	// Cast to a method
 	clang::CXXMethodDecl* method_decl = dyn_cast<clang::CXXMethodDecl>(decl);
@@ -626,7 +615,7 @@ void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const cldb::Name& name, 
 		cldb::Field this_param;
 		if (!MakeField(m_DB, m_ReflectionSpecs, m_ASTContext, method_decl->getThisType(m_ASTContext), "this", name, 0, this_param, true))
 		{
-			LOG(ast, WARNING, "Unsupported/unreflected 'this' type for '%s'\n", name.text.c_str());
+			LOG(ast, WARNING, "Unsupported/unreflected 'this' type for '%s'\n", name.c_str());
 			return;
 		}
 		parameters.push_back(this_param);
@@ -637,19 +626,23 @@ void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const cldb::Name& name, 
 }
 
 
-void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name, const clang::ASTRecordLayout* layout)
+void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name, const clang::ASTRecordLayout* layout)
 {
 	// Cast to a field
 	clang::FieldDecl* field_decl = dyn_cast<clang::FieldDecl>(decl);
 	assert(field_decl != 0 && "Failed to cast to field declaration");
 
+	// These are implicitly generated by clang so skip them
+	if (field_decl->isAnonymousStructOrUnion())
+		return;
+
 	// Parse and add the field
 	cldb::Field field;
 	cldb::u32 offset = layout->getFieldOffset(field_decl->getFieldIndex()) / 8;
-	std::string field_name = field_decl->getQualifiedNameAsString();
+	std::string field_name = field_decl->getName().str();
 	if (!MakeField(m_DB, m_ReflectionSpecs, m_ASTContext, field_decl->getType(), field_name.c_str(), parent_name, offset, field, true))
 	{
-		LOG(ast, WARNING, "Unsupported/unreflected type for field '%s' in '%s'\n", field_name.c_str(), parent_name.text.c_str());
+		LOG(ast, WARNING, "Unsupported/unreflected type for field '%s' in '%s'\n", field_name.c_str(), parent_name.c_str());
 		return;
 	}
 
@@ -662,20 +655,20 @@ void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const cldb::Name& name, c
 }
 
 
-void ASTConsumer::AddClassTemplateDecl(clang::NamedDecl* decl, const cldb::Name& name, const cldb::Name& parent_name)
+void ASTConsumer::AddClassTemplateDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name)
 {
 	// Cast to class template decl
 	clang::ClassTemplateDecl* template_decl = dyn_cast<clang::ClassTemplateDecl>(decl);
 	assert(template_decl != 0 && "Failed to cast template declaration");
 
 	// Only add the template if it doesn't exist yet
-	if (m_DB.GetFirstPrimitive<cldb::Template>(name.text.c_str()) == 0)
+	if (m_DB.GetFirstPrimitive<cldb::Template>(name.c_str()) == 0)
 	{
 		// First check that the argument count is valid
 		const clang::TemplateParameterList* parameters = template_decl->getTemplateParameters();
 		if (parameters->size() > cldb::TemplateType::MAX_NB_ARGS)
 		{
-			LOG(ast, WARNING, "Too many template arguments for '%s'\n", name.text.c_str());
+			LOG(ast, WARNING, "Too many template arguments for '%s'\n", name.c_str());
 			return;
 		}
 
@@ -684,18 +677,20 @@ void ASTConsumer::AddClassTemplateDecl(clang::NamedDecl* decl, const cldb::Name&
 		{
 			if (dyn_cast<clang::TemplateTypeParmDecl>(*i) == 0)
 			{
-				LOG(ast, WARNING, "Unsupported template argument type for '%s'\n", name.text.c_str());
+				LOG(ast, WARNING, "Unsupported template argument type for '%s'\n", name.c_str());
 				return;
 			}
 		}
 
-		m_DB.AddPrimitive(cldb::Template(name, parent_name));
-		LOG(ast, INFO, "template %s\n", name.text.c_str());
+		m_DB.AddPrimitive(cldb::Template(
+			m_DB.GetName(name.c_str()),
+			m_DB.GetName(parent_name.c_str())));
+		LOG(ast, INFO, "template %s\n", name.c_str());
 	}
 }
 
 
-void ASTConsumer::AddContainedDecls(clang::NamedDecl* decl, const cldb::Name& parent_name, const clang::ASTRecordLayout* layout)
+void ASTConsumer::AddContainedDecls(clang::NamedDecl* decl, const std::string& parent_name, const clang::ASTRecordLayout* layout)
 {
 	LOG_PUSH_INDENT(ast)
 
@@ -705,9 +700,7 @@ void ASTConsumer::AddContainedDecls(clang::NamedDecl* decl, const cldb::Name& pa
 	{
 		clang::NamedDecl* named_decl = dyn_cast<clang::NamedDecl>(*i);
 		if (named_decl != 0)
-		{
 			AddDecl(named_decl, parent_name, layout);
-		}
 	}
 
 	LOG_POP_INDENT(ast)

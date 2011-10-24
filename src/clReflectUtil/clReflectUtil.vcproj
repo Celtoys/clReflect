@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
-	ProjectType="Visual C++"
-	Version="8.00"
-	Name="clReflectUtil"
-	ProjectGUID="{00862312-DD5E-11E0-BB75-F46D04D48D5F}"
-	RootNamespace="clReflectUtil"
-	Keyword="Win32Proj"
-	>
-	<Platforms>
-		<Platform
-			Name="Win32"
-		/>
-	</Platforms>
-	<ToolFiles>
-	</ToolFiles>
+    ProjectType="Visual C++"
+    Version="8.00"
+    Name="clReflectUtil"
+    ProjectGUID="{14805C70-FE45-11E0-AB9C-F46D04D48D5F}"
+    RootNamespace="clReflectUtil"
+    Keyword="Win32Proj"
+    >
+    <Platforms>
+        <Platform
+            Name="Win32"
+        />
+    </Platforms>
+    <ToolFiles>
+    </ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
@@ -63,11 +63,11 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{4630f7d3-f002-11e0-bb3d-f46d04d48d5f}"
+			UniqueIdentifier="{1480aa90-fe45-11e0-9478-f46d04d48d5f}"
 			>
 			<Filter
 				Name="clutl"
-				UniqueIdentifier="{4630f7d4-f002-11e0-9a14-f46d04d48d5f}"
+				UniqueIdentifier="{1480aa91-fe45-11e0-be2c-f46d04d48d5f}"
 				>
 				<File
 					RelativePath="..\..\inc\clutl\Containers.h"
@@ -84,10 +84,6 @@
 			</Filter>
 		</Filter>
 		<File
-			RelativePath="clReflectUtil.pibfile"
-			>
-		</File>
-		<File
 			RelativePath="Containers.cpp"
 			>
 		</File>
@@ -101,6 +97,10 @@
 		</File>
 		<File
 			RelativePath="SerialiseVersionedBinary.cpp"
+			>
+		</File>
+		<File
+			RelativePath="clReflectUtil.pibfile"
 			>
 		</File>
 	</Files>

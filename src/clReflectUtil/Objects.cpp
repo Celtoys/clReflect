@@ -4,14 +4,46 @@
 #include <clutl/Objects.h>
 #include <clcpp/FunctionCall.h>
 
+#include <string.h>
 
-clutl::ObjectDatabase::ObjectDatabase()
+
+namespace
 {
+	// Table of primes, each around twice the size of those prior and as far as possible from the nearest two pow2 numbers
+	unsigned int g_HashTableSizes[] =
+	{
+		53, 97, 193, 389, 769, 1543, 3079, 6151, 12289, 24593, 49167, 98317, 196613, 393241, 786433, 1572869
+	};
+}
+
+
+clutl::ObjectDatabase::ObjectDatabase(unsigned int max_nb_objects)
+	: m_MaxNbObjects(0)
+	, m_NamedObjects(0)
+{
+	// Round the max number of objects up to the nearest prime number in the table
+	unsigned int prev_size = 0;
+	for (unsigned int i = 0; i < sizeof(g_HashTableSizes) / sizeof(g_HashTableSizes[0]); i++)
+	{
+		if (max_nb_objects > prev_size && max_nb_objects <= g_HashTableSizes[i])
+		{
+			max_nb_objects = g_HashTableSizes[i];
+			break;
+		}
+		prev_size = g_HashTableSizes[i];
+	}
+
+	// Allocate the hash table
+	m_MaxNbObjects = max_nb_objects;
+	m_NamedObjects = new HashEntry[m_MaxNbObjects];
+	memset(m_NamedObjects, 0, m_MaxNbObjects * sizeof(HashEntry));
 }
 
 
 clutl::ObjectDatabase::~ObjectDatabase()
 {
+	if (m_NamedObjects != 0)
+		delete [] m_NamedObjects;
 }
 
 
@@ -49,4 +81,66 @@ void clutl::ObjectDatabase::DestroyObject(void* object, const clcpp::Type* objec
 	clcpp::internal::Assert(class_type->destructor != 0);
 	CallFunction(class_type->destructor, object);
 	delete [] (char*)object;
+}
+
+
+void* clutl::ObjectDatabase::CreateNamedObject(const clcpp::Database& reflection_db, unsigned int type_hash, const char* name_text, const clcpp::Type*& type, clcpp::Name& name)
+{
+	// Create the object
+	void* object = CreateObject(reflection_db, type_hash, type);
+	if (object == 0)
+		return 0;
+
+	// Construct the name
+	int name_length = strlen(name_text);
+	name.text = new char[name_length + 1];
+	memcpy((void*)name.text, name_text, name_length + 1);
+	name.hash = clcpp::internal::HashData(name.text, name_length);
+
+	// Find the first empty slot in the hash table
+	// TODO: Grow based on load-factor?
+	HashEntry* he = FindHashEntry(name.hash % m_MaxNbObjects, 0);
+	clcpp::internal::Assert(he != 0);
+	he->name = name;
+	he->object = object;
+
+	return object;
+}
+
+
+void clutl::ObjectDatabase::DestroyNamedObject(void* object, const clcpp::Type* object_type, unsigned int name_hash)
+{
+	// Locate the hash table entry and check that the object pointers match
+	HashEntry* he = FindHashEntry(name_hash % m_MaxNbObjects, name_hash);
+	clcpp::internal::Assert(he != 0);
+	clcpp::internal::Assert(he->object == object);
+
+	// Clear out this slot in the has table
+	he->name.hash = 0;
+	if (he->name.text != 0)
+		delete [] he->name.text;
+	he->name.text = 0;
+	he->object = 0;
+
+	DestroyObject(object, object_type);
+}
+
+
+clutl::ObjectDatabase::HashEntry* clutl::ObjectDatabase::FindHashEntry(unsigned int hash_index, unsigned int hash)
+{
+	// Linear probe for an empty slot (search upper half/lower half to save a divide)
+	for (unsigned int i = hash_index; i < m_MaxNbObjects; i++)
+	{
+		HashEntry& he = m_NamedObjects[i];
+		if (he.name.hash == hash)
+			return &he;
+	}
+	for (unsigned int i = 0; i < hash_index; i++)
+	{
+		HashEntry& he = m_NamedObjects[i];
+		if (he.name.hash == hash)
+			return &he;
+	}
+
+	return 0;
 }

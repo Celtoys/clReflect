@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
-	ProjectType="Visual C++"
-	Version="8.00"
-	Name="clReflectCpp"
-	ProjectGUID="{00820462-DD5E-11E0-B6BD-F46D04D48D5F}"
-	RootNamespace="clReflectCpp"
-	Keyword="Win32Proj"
-	>
-	<Platforms>
-		<Platform
-			Name="Win32"
-		/>
-	</Platforms>
-	<ToolFiles>
-	</ToolFiles>
+    ProjectType="Visual C++"
+    Version="8.00"
+    Name="clReflectCpp"
+    ProjectGUID="{147DEB70-FE45-11E0-B763-F46D04D48D5F}"
+    RootNamespace="clReflectCpp"
+    Keyword="Win32Proj"
+    >
+    <Platforms>
+        <Platform
+            Name="Win32"
+        />
+    </Platforms>
+    <ToolFiles>
+    </ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
@@ -63,16 +63,12 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{544e6ad0-fa5e-11e0-b144-f46d04d48d5f}"
+			UniqueIdentifier="{147f4b00-fe45-11e0-8645-f46d04d48d5f}"
 			>
 			<Filter
 				Name="clcpp"
-				UniqueIdentifier="{544e6ad1-fa5e-11e0-92f8-f46d04d48d5f}"
+				UniqueIdentifier="{147f4b01-fe45-11e0-b414-f46d04d48d5f}"
 				>
-				<File
-					RelativePath="..\..\inc\clcpp\clcpp.h"
-					>
-				</File>
 				<File
 					RelativePath="..\..\inc\clcpp\Containers.h"
 					>
@@ -89,10 +85,14 @@
 					RelativePath="..\..\inc\clcpp\FunctionCall.h"
 					>
 				</File>
+				<File
+					RelativePath="..\..\inc\clcpp\clcpp.h"
+					>
+				</File>
 			</Filter>
 		</Filter>
 		<File
-			RelativePath="clReflectCpp.pibfile"
+			RelativePath="Containers.cpp"
 			>
 		</File>
 		<File
@@ -111,11 +111,15 @@
 			RelativePath="DatabaseLoader.h"
 			>
 		</File>
+		<File
+			RelativePath="clReflectCpp.pibfile"
+			>
+		</File>
 	</Files>
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="dygyS77gW5PmxvYegsCU8w=="
+			Value="fFh8mHkISHyabxfuSxup3w=="
 		/>
 	</Globals>
 </VisualStudioProject>

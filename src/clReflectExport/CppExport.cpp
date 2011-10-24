@@ -207,6 +207,65 @@ namespace
 	}
 
 
+	template <typename PARENT_TYPE>
+	struct ParentMap
+	{
+		// Parent and ref-count
+		typedef std::pair<PARENT_TYPE*, int> EntryType;
+
+		// Hash to parent and ref-count
+		typedef std::multimap<unsigned int, EntryType> MapType;
+
+		// A range within the map
+		typedef typename MapType::iterator Iterator;
+		typedef std::pair<Iterator, Iterator> Range;
+
+		template <typename TYPE>
+		ParentMap(clcpp::CArray<TYPE>& parents)
+		{
+			// Create a lookup table from hash ID to parent and the number of references the parent has
+			for (int i = 0; i < parents.size(); i++)
+			{
+				PARENT_TYPE& parent = parents[i];
+				map.insert(MapType::value_type(parent.name.hash, EntryType(&parent, 0)));
+			}
+
+			src_start = parents.data();
+			src_end = parents.data() + parents.size();
+		}
+
+		template <>
+		ParentMap(clcpp::CArray<clcpp::Field>& parents)
+		{
+			// This specialisation creates a lookup table specific to fields. Given that field names are
+			// not fully-scoped, this makes it impossible to parent them unless their names are combined
+			// with their parent's.
+			for (int i = 0; i < parents.size(); i++)
+			{
+				clcpp::Field& field = parents[i];
+				std::string field_name = std::string(field.parent->name.text) + "::" + std::string(field.name.text);
+				unsigned int field_hash = clcpp::internal::HashNameString(field_name.c_str());
+				map.insert(MapType::value_type(field_hash, EntryType(&field, 0)));
+			}
+
+			src_start = parents.data();
+			src_end = parents.data() + parents.size();
+		}
+
+		void ResetRefCount()
+		{
+			for (MapType::iterator i = map.begin(); i != map.end(); ++i)
+				i->second.second = 0;
+		}
+
+		MapType map;
+
+		// Record of the source array
+		const PARENT_TYPE* src_start;
+		const PARENT_TYPE* src_end;
+	};
+
+
 	bool ParentAndChildMatch(const clcpp::Primitive&, const clcpp::Primitive&)
 	{
 		return true;
@@ -218,18 +277,9 @@ namespace
 
 
 	template <typename PARENT_TYPE, typename CHILD_TYPE>
-	void Parent(clcpp::CArray<PARENT_TYPE>& parents, clcpp::CArray<const CHILD_TYPE*> (PARENT_TYPE::*carray), clcpp::CArray<CHILD_TYPE*>& children, StackAllocator& allocator)
+	void Parent(ParentMap<PARENT_TYPE>& parents, clcpp::CArray<const CHILD_TYPE*> (PARENT_TYPE::*carray), clcpp::CArray<CHILD_TYPE*>& children, StackAllocator& allocator)
 	{
-		// Create a lookup table from hash ID to parent and the number of references the parent has
-		typedef std::pair<PARENT_TYPE*, int> ParentAndRefCount;
-		typedef std::multimap<unsigned int, ParentAndRefCount> ParentMap;
-		typedef std::pair<ParentMap::iterator, ParentMap::iterator> ParentMapRange;
-		ParentMap parent_map;
-		for (int i = 0; i < parents.size(); i++)
-		{
-			PARENT_TYPE& parent = parents[i];
-			parent_map.insert(ParentMap::value_type(parent.name.hash, ParentAndRefCount(&parent, 0)));
-		}
+		parents.ResetRefCount();
 
 		// Assign parents and count the references
 		for (int i = 0; i < children.size(); i++)
@@ -238,10 +288,10 @@ namespace
 
 			// Iterate over all matches
 			unsigned int hash = (unsigned int)child->parent;
-			ParentMapRange range = parent_map.equal_range(hash);
-			for (ParentMap::iterator j = range.first; j != range.second; ++j)
+			ParentMap<PARENT_TYPE>::Range range = parents.map.equal_range(hash);
+			for (ParentMap<PARENT_TYPE>::Iterator j = range.first; j != range.second; ++j)
 			{
-				ParentAndRefCount& parc = j->second;
+				ParentMap<PARENT_TYPE>::EntryType& parc = j->second;
 				if (ParentAndChildMatch(*parc.first, *child))
 				{
 					child->parent = parc.first;
@@ -252,7 +302,7 @@ namespace
 		}
 
 		// Allocate the arrays in the parent
-		for (ParentMap::iterator i = parent_map.begin(); i != parent_map.end(); ++i)
+		for (ParentMap<PARENT_TYPE>::Iterator i = parents.map.begin(); i != parents.map.end(); ++i)
 		{
 			if (int nb_refs = i->second.second)
 			{
@@ -272,7 +322,7 @@ namespace
 			PARENT_TYPE* parent = (PARENT_TYPE*)child->parent;
 
 			// Only process if the parent has been correctly assigned
-			if (parent >= parents.data() && parent < parents.data() + parents.size())
+			if (parent >= parents.src_start && parent < parents.src_end)
 			{
 				// Locate the current constant count at the end of the array and add this constant
 				// to its parent
@@ -283,24 +333,20 @@ namespace
 				// When the last constant gets written, the constant count gets overwritten with
 				// the constant pointer and should no longer be updated
 				if (cur_count != nb_constants)
-				{
 					(parent->*carray)[nb_constants - 1] = (CHILD_TYPE*)cur_count;
-				}
 			}
 		}
 	}
 
 	template <typename PARENT_TYPE, typename CHILD_TYPE>
-	void Parent(clcpp::CArray<PARENT_TYPE>& parents, clcpp::CArray<const CHILD_TYPE*> (PARENT_TYPE::*carray), clcpp::CArray<CHILD_TYPE>& children, StackAllocator& allocator)
+	void Parent(ParentMap<PARENT_TYPE>& parents, clcpp::CArray<const CHILD_TYPE*> (PARENT_TYPE::*carray), clcpp::CArray<CHILD_TYPE>& children, StackAllocator& allocator)
 	{
 		// Create an array of pointers to the children and forward that to the Parent function
 		// that acts on arrays of pointers
 		Malloc malloc_allocator;
 		clcpp::CArray<CHILD_TYPE*> children_ptrs(children.size(), &malloc_allocator);
 		for (int i = 0; i < children_ptrs.size(); i++)
-		{
 			children_ptrs[i] = &children[i];
-		}
 
 		Parent(parents, carray, children_ptrs, allocator);
 	}
@@ -310,9 +356,7 @@ namespace
 	void BuildAttributePtrArray(clcpp::CArray<clcpp::Attribute*>& dest, clcpp::CArray<TYPE>& src, int& pos)
 	{
 		for (int i = 0; i < src.size(); i++)
-		{
 			dest[pos++] = &src[i];
-		}
 	}
 
 
@@ -634,9 +678,7 @@ namespace
 	void SortPrimitives(clcpp::CArray<TYPE>& primitives)
 	{
 		for (int i = 0; i < primitives.size(); i++)
-		{
 			SortPrimitives(primitives[i]);
-		}
 	}
 
 
@@ -842,32 +884,42 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	// can quickly look them up.
 	GatherTypePrimitives(cppexp);
 
+	// Create a set of parent maps
+	ParentMap<clcpp::Enum> enum_parents(cppexp.db->enums);
+	ParentMap<clcpp::Function> function_parents(cppexp.db->functions);
+	ParentMap<clcpp::Class> class_parents(cppexp.db->classes);
+	ParentMap<clcpp::Namespace> namespace_parents(cppexp.db->namespaces);
+	ParentMap<clcpp::Template> template_parents(cppexp.db->templates);
+
 	// Construct the primitive scope hierarchy, pointing primitives at their parents
 	// and adding them to the arrays within their parents.
-	// TODO: Pull multimap construction out of the functions so that they're not repeatedly generated
-	Parent(cppexp.db->enums, &clcpp::Enum::constants, cppexp.db->enum_constants, cppexp.allocator);
-	Parent(cppexp.db->functions, &clcpp::Function::parameters, cppexp.db->fields, cppexp.allocator);
-	Parent(cppexp.db->classes, &clcpp::Class::enums, cppexp.db->enums, cppexp.allocator);
-	Parent(cppexp.db->classes, &clcpp::Class::classes, cppexp.db->classes, cppexp.allocator);
-	Parent(cppexp.db->classes, &clcpp::Class::methods, cppexp.db->functions, cppexp.allocator);
-	Parent(cppexp.db->classes, &clcpp::Class::fields, cppexp.db->fields, cppexp.allocator);
-	Parent(cppexp.db->classes, &clcpp::Class::templates, cppexp.db->templates, cppexp.allocator);
-	Parent(cppexp.db->namespaces, &clcpp::Namespace::namespaces, cppexp.db->namespaces, cppexp.allocator);
-	Parent(cppexp.db->namespaces, &clcpp::Namespace::types, cppexp.db->types, cppexp.allocator);
-	Parent(cppexp.db->namespaces, &clcpp::Namespace::enums, cppexp.db->enums, cppexp.allocator);
-	Parent(cppexp.db->namespaces, &clcpp::Namespace::classes, cppexp.db->classes, cppexp.allocator);
-	Parent(cppexp.db->namespaces, &clcpp::Namespace::functions, cppexp.db->functions, cppexp.allocator);
-	Parent(cppexp.db->namespaces, &clcpp::Namespace::templates, cppexp.db->templates, cppexp.allocator);
-	Parent(cppexp.db->templates, &clcpp::Template::instances, cppexp.db->template_types, cppexp.allocator);
+	Parent(enum_parents, &clcpp::Enum::constants, cppexp.db->enum_constants, cppexp.allocator);
+	Parent(function_parents, &clcpp::Function::parameters, cppexp.db->fields, cppexp.allocator);
+	Parent(class_parents, &clcpp::Class::enums, cppexp.db->enums, cppexp.allocator);
+	Parent(class_parents, &clcpp::Class::classes, cppexp.db->classes, cppexp.allocator);
+	Parent(class_parents, &clcpp::Class::methods, cppexp.db->functions, cppexp.allocator);
+	Parent(class_parents, &clcpp::Class::fields, cppexp.db->fields, cppexp.allocator);
+	Parent(class_parents, &clcpp::Class::templates, cppexp.db->templates, cppexp.allocator);
+	Parent(namespace_parents, &clcpp::Namespace::namespaces, cppexp.db->namespaces, cppexp.allocator);
+	Parent(namespace_parents, &clcpp::Namespace::types, cppexp.db->types, cppexp.allocator);
+	Parent(namespace_parents, &clcpp::Namespace::enums, cppexp.db->enums, cppexp.allocator);
+	Parent(namespace_parents, &clcpp::Namespace::classes, cppexp.db->classes, cppexp.allocator);
+	Parent(namespace_parents, &clcpp::Namespace::functions, cppexp.db->functions, cppexp.allocator);
+	Parent(namespace_parents, &clcpp::Namespace::templates, cppexp.db->templates, cppexp.allocator);
+	Parent(template_parents, &clcpp::Template::instances, cppexp.db->template_types, cppexp.allocator);
+
+	// Construct field parents after the fields themselves have been parented so that
+	// their parents can be used to construct their fully-scoped names
+	ParentMap<clcpp::Field> field_parents(cppexp.db->fields);
 
 	// Construct the primitive hierarchy for attributes by first collecting all attributes into
 	// a single pointer array
 	clcpp::CArray<clcpp::Attribute*> attributes;
 	BuildAttributePtrArray(cppexp, attributes);
-	Parent(cppexp.db->enums, &clcpp::Enum::attributes, attributes, cppexp.allocator);
-	Parent(cppexp.db->fields, &clcpp::Field::attributes, attributes, cppexp.allocator);
-	Parent(cppexp.db->functions, &clcpp::Function::attributes, attributes, cppexp.allocator);
-	Parent(cppexp.db->classes, &clcpp::Class::attributes, attributes, cppexp.allocator);
+	Parent(enum_parents, &clcpp::Enum::attributes, attributes, cppexp.allocator);
+	Parent(field_parents, &clcpp::Field::attributes, attributes, cppexp.allocator);
+	Parent(function_parents, &clcpp::Function::attributes, attributes, cppexp.allocator);
+	Parent(class_parents, &clcpp::Class::attributes, attributes, cppexp.allocator);
 
 	// Link up any references between primitives
 	Link(cppexp.db->fields, &clcpp::Field::type, cppexp.db->type_primitives);

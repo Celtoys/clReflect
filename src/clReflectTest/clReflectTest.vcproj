@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
-	ProjectType="Visual C++"
-	Version="8.00"
-	Name="clReflectTest"
-	ProjectGUID="{00E38550-DD5E-11E0-8CF1-F46D04D48D5F}"
-	RootNamespace="clReflectTest"
-	Keyword="Win32Proj"
-	>
-	<Platforms>
-		<Platform
-			Name="Win32"
-		/>
-	</Platforms>
-	<ToolFiles>
-	</ToolFiles>
+    ProjectType="Visual C++"
+    Version="8.00"
+    Name="clReflectTest"
+    ProjectGUID="{1655B8B0-FE45-11E0-B01E-F46D04D48D5F}"
+    RootNamespace="clReflectTest"
+    Keyword="Win32Proj"
+    >
+    <Platforms>
+        <Platform
+            Name="Win32"
+        />
+    </Platforms>
+    <ToolFiles>
+    </ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
@@ -62,10 +62,6 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="clReflectTest.pibfile"
-			>
-		</File>
-		<File
 			RelativePath="Main.cpp"
 			>
 		</File>
@@ -107,6 +103,10 @@
 		</File>
 		<File
 			RelativePath="TestTypedefs.cpp"
+			>
+		</File>
+		<File
+			RelativePath="clReflectTest.pibfile"
 			>
 		</File>
 	</Files>

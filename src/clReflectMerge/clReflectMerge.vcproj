@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
-	ProjectType="Visual C++"
-	Version="8.00"
-	Name="clReflectMerge"
-	ProjectGUID="{00BF0D5E-DD5E-11E0-B0B3-F46D04D48D5F}"
-	RootNamespace="clReflectMerge"
-	Keyword="Win32Proj"
-	>
-	<Platforms>
-		<Platform
-			Name="Win32"
-		/>
-	</Platforms>
-	<ToolFiles>
-	</ToolFiles>
+    ProjectType="Visual C++"
+    Version="8.00"
+    Name="clReflectMerge"
+    ProjectGUID="{16172910-FE45-11E0-B0D4-F46D04D48D5F}"
+    RootNamespace="clReflectMerge"
+    Keyword="Win32Proj"
+    >
+    <Platforms>
+        <Platform
+            Name="Win32"
+        />
+    </Platforms>
+    <ToolFiles>
+    </ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
@@ -62,10 +62,6 @@
 	</References>
 	<Files>
 		<File
-			RelativePath="clReflectMerge.pibfile"
-			>
-		</File>
-		<File
 			RelativePath="DatabaseMerge.cpp"
 			>
 		</File>
@@ -75,6 +71,10 @@
 		</File>
 		<File
 			RelativePath="Main.cpp"
+			>
+		</File>
+		<File
+			RelativePath="clReflectMerge.pibfile"
 			>
 		</File>
 	</Files>

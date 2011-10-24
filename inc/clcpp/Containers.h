@@ -12,6 +12,22 @@ clcpp_reflect_part(clcpp::IWriteIterator)
 
 namespace clcpp
 {
+	class ReadIterator;
+
+
+	struct ContainerKeyValue
+	{
+		ContainerKeyValue()
+			: key(0)
+			, value(0)
+		{
+		}
+
+		const void* key;
+		const void* value;
+	};
+
+
 	//
 	// Read-only iteration over a container
 	//
@@ -20,10 +36,8 @@ namespace clcpp
 		virtual ~IReadIterator() { }
 
 		// Reading interface
-		virtual void Initialise(const void* container_object, const Type* value_type, const Type* key_type) = 0;
-		virtual const void* GetKey() const = 0;
-		virtual const void* GetValue() const = 0;
-		virtual unsigned int GetCount() const = 0;
+		virtual void Initialise(const void* container_object, const TemplateType* template_type, ReadIterator& storage) = 0;
+		virtual ContainerKeyValue GetKeyValue() const = 0;
 		virtual void MoveNext() = 0;
 	};
 
@@ -42,5 +56,35 @@ namespace clcpp
 		virtual void SetCount(unsigned int count) = 0;
 		virtual void* AddEmpty() = 0;
 		virtual void* AddEmpty(void* key) = 0;
+	};
+
+
+	class ReadIterator
+	{
+	public:
+		unsigned int m_Count;
+		const Type* m_KeyType;
+		const Type* m_ValueType;
+		bool m_KeyIsPtr;
+		bool m_ValueIsPtr;
+
+		ReadIterator(const TemplateType* type, const void* container_object);
+		~ReadIterator();
+
+		ContainerKeyValue GetKeyValue() const
+		{
+			internal::Assert(m_ReaderType != 0);
+			return ((IReadIterator*)m_ImplData)->GetKeyValue();
+		}
+
+		void MoveNext()
+		{
+			internal::Assert(m_ReaderType != 0);
+			((IReadIterator*)m_ImplData)->MoveNext();
+		}
+
+	private:
+		char m_ImplData[128];
+		const Class* m_ReaderType;
 	};
 }
