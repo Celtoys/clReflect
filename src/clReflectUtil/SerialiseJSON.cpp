@@ -35,8 +35,15 @@
 
 #include <clutl/Serialise.h>
 #include <clutl/Containers.h>
+#include <clutl/Objects.h>
 #include <clcpp/Database.h>
 #include <clcpp/Containers.h>
+
+
+// Pointers are serialised in hash values in hexadecimal format, which isn't compliant with
+// the JSON format. In fact, without the 0x prefix it isn't even Javascript compliant.
+// Undef this if you want pointers to be serialised as base 10 unsigned integers, instead.
+#define SAVE_POINTER_HASH_AS_HEX
 
 
 // Explicitly stated dependencies in stdlib.h
@@ -892,6 +899,29 @@ namespace
 	}
 
 
+	void SaveHexInteger(clutl::DataBuffer& out, unsigned __int64 integer)
+	{
+		// Enough to store a 64-bit int + null
+		static const int MAX_SZ = 21;
+		char text[MAX_SZ];
+
+		// Null terminate and start at the end
+		text[MAX_SZ - 1] = 0;
+		char* end = text + MAX_SZ - 1;
+		char* tptr = end;
+
+		// Loop through the value with radix 16
+		do 
+		{
+			unsigned __int64 next_integer = integer / 16;
+			*--tptr = "0123456789ABCDEF"[integer - next_integer * 16];
+			integer = next_integer;
+		} while (integer);
+
+		out.Write(tptr, end - tptr);
+	}
+
+
 	// Automate the process of de-referencing an object as its exact type so no
 	// extra bytes are read incorrectly and values are correctly zero-extended.
 	template <typename TYPE>
@@ -999,6 +1029,29 @@ namespace
 	}
 
 
+	void SavePtr(clutl::DataBuffer& out, const void* object)
+	{
+		clutl::NamedObject* named_object = *((clutl::NamedObject**)object);
+	#ifdef SAVE_POINTER_HASH_AS_HEX
+		SaveHexInteger(out, named_object->name.hash);
+	#else
+		SaveUnsignedInteger(out, named_object->name.hash);
+	#endif
+	}
+
+
+	void SavePtr(clutl::DataBuffer& out, const void* object, const clcpp::Type* type)
+	{
+		// Only save pointer types that derive from NamedObject
+		if (type->kind == clcpp::Primitive::KIND_CLASS)
+		{
+			const clcpp::Class* class_type = type->AsClass();
+			if (class_type->DerivesFrom(clcpp::GetTypeNameHash<clutl::NamedObject>()))
+				SavePtr(out, object);
+		}
+	}
+
+
 	void SaveClass(clutl::DataBuffer& out, const char* object, const clcpp::Class* class_type)
 	{
 		// Save each field in the class
@@ -1023,6 +1076,8 @@ namespace
 			const char* field_object = object + field->offset;
 			if (field->flag_attributes & clcpp::FlagAttribute::NULLSTR)
 				SaveString(out, *(char**)field_object);
+			else if (field->qualifier.op == clcpp::Qualifier::POINTER)
+				SavePtr(out, field_object, field->type);
 			else
 				SaveObject(out, field_object, field->type);
 
@@ -1048,15 +1103,52 @@ namespace
 
 		out.Write("[", 1);
 
+		// Construct a read iterator and leave early if there are no elements
 		clcpp::ReadIterator reader(template_type, object);
-		for (unsigned int i = 0; i < reader.m_Count; i++)
+		if (reader.m_Count == 0)
 		{
-			if (i)
-				out.Write(",", 1);
+			out.Write("]", 1);
+			return;
+		}
 
+		// Figure out if this an iterator over named object pointers
+		if (reader.m_ValueIsPtr)
+		{
+			if (reader.m_ValueType->kind == clcpp::Primitive::KIND_CLASS)
+			{
+				const clcpp::Class* class_type = reader.m_ValueType->AsClass();
+				if (class_type->DerivesFrom(clcpp::GetTypeNameHash<clutl::NamedObject>()))
+				{
+					// Save comma-separated pointers
+					for (unsigned int i = 0; i < reader.m_Count - 1; i++)
+					{
+						clcpp::ContainerKeyValue kv = reader.GetKeyValue();
+						SavePtr(out, kv.value);
+						out.Write(",", 1);
+						reader.MoveNext();
+					}
+
+					// Add the last one without a comma
+					clcpp::ContainerKeyValue kv = reader.GetKeyValue();
+					SavePtr(out, kv.value);
+				}
+			}
+		}
+
+		else
+		{
+			// Save comma-separated objects
+			for (unsigned int i = 0; i < reader.m_Count - 1; i++)
+			{
+				clcpp::ContainerKeyValue kv = reader.GetKeyValue();
+				SaveObject(out, (char*)kv.value, reader.m_ValueType);
+				out.Write(",", 1);
+				reader.MoveNext();
+			}
+
+			// Save the final object without a comma
 			clcpp::ContainerKeyValue kv = reader.GetKeyValue();
-			//SaveObject(out, kv.value, instance.value_type);
-			reader.MoveNext();
+			SaveObject(out, (char*)kv.value, reader.m_ValueType);
 		}
 
 		out.Write("]", 1);

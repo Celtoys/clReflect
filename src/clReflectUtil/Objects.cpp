@@ -126,6 +126,15 @@ void clutl::ObjectDatabase::DestroyNamedObject(void* object, const clcpp::Type* 
 }
 
 
+void* clutl::ObjectDatabase::FindNamedObject(unsigned int name_hash)
+{
+	const HashEntry* he = FindHashEntry(name_hash % m_MaxNbObjects, name_hash);
+	if (he)
+		return he->object;
+	return 0;
+}
+
+
 clutl::ObjectDatabase::HashEntry* clutl::ObjectDatabase::FindHashEntry(unsigned int hash_index, unsigned int hash)
 {
 	// Linear probe for an empty slot (search upper half/lower half to save a divide)

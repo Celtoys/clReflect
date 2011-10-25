@@ -457,6 +457,17 @@ namespace clcpp
 		{
 		}
 
+		bool DerivesFrom(unsigned int class_name_hash) const
+		{
+			for (const Class* test_class = base_class; test_class; test_class = test_class->base_class)
+			{
+				if (test_class->name.hash == class_name_hash)
+					return true;
+			}
+
+			return false;
+		}
+
 		const Class* base_class;
 
 		const Function* constructor;

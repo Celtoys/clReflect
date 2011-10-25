@@ -5,9 +5,10 @@
 #include <clcpp/clcpp.h>
 
 
-// Only want to reflect the Object class so that derivers will reflect
+// Only want to reflect the Object/NamedObject classes so that derivers will reflect
 // The type parameter is not interesting here
 clcpp_reflect_part(clutl::Object)
+clcpp_reflect_part(clutl::NamedObject)
 
 
 namespace clutl
@@ -67,7 +68,7 @@ namespace clutl
 
 		template <typename TYPE> TYPE* CreateNamedObject(const clcpp::Database& reflection_db, const char* name_text)
 		{
-			return CreateObject(reflection_db, clcpp::GetTypeNameHash<TYPE>(), name_text);
+			return CreateNamedObject<TYPE>(reflection_db, clcpp::GetTypeNameHash<TYPE>(), name_text);
 		}
 
 		template <typename TYPE> void DestroyNamedObject(TYPE* object)
@@ -86,6 +87,8 @@ namespace clutl
 		// Create an object of the given type name and object name; a pointer to the type is returned
 		void* CreateNamedObject(const clcpp::Database& reflection_db, unsigned int type_hash, const char* name_text, const clcpp::Type*& type, clcpp::Name& name);
 		void DestroyNamedObject(void* object, const clcpp::Type* object_type, unsigned int name_hash);
+
+		void* FindNamedObject(unsigned int name_hash);
 
 	private:
 		struct HashEntry

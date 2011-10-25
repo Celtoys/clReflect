@@ -38,6 +38,7 @@ namespace clcpp
 namespace clutl
 {
 	class DataBuffer;
+	class ObjectDatabase;
 
 	void SaveVersionedBinary(DataBuffer& out, const void* object, const clcpp::Type* type);
 	void LoadVersionedBinary(DataBuffer& in, void* object, const clcpp::Type* type);
