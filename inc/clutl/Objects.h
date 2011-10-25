@@ -31,7 +31,11 @@ namespace clutl
 		ObjectDatabase(unsigned int max_nb_objects);
 		~ObjectDatabase();
 
-		// Create an object of a type that derives from clutl::Object and assign its type pointer
+		//
+		// Template helpers for CreateObject/DestroyObject for types that derive from clutl::Object. After
+		// successful object creation, the type pointer is correctly assigned and is used later to
+		// destroy any created objects.
+		//
 		template <typename TYPE> TYPE* CreateObject(const clcpp::Database& reflection_db, unsigned int type_hash)
 		{
 			const clcpp::Type* type = 0;
@@ -40,19 +44,22 @@ namespace clutl
 				object->type = type;
 			return object;
 		}
-		
 		template <typename TYPE> TYPE* CreateObject(const clcpp::Database& reflection_db)
 		{
 			return CreateObject<TYPE>(reflection_db, clcpp::GetTypeNameHash<TYPE>());
 		}
-
-		// Destroy an object of a type that derives from clutl::Object, taking its type from the object
 		template <typename TYPE> void DestroyObject(TYPE* object)
 		{
+			clcpp::internal::Assert(object != 0);
 			DestroyObject(object, object->type);
 		}
 
 
+		//
+		// Template helpers for CreateNamedObject/DestroyNamedObject for types that derive from
+		// clutl::NamedObject. After successful object creation, the type pointer and name is correctly
+		// assigned and is used later to destroy any created objects.
+		//
 		template <typename TYPE> TYPE* CreateNamedObject(const clcpp::Database& reflection_db, unsigned int type_hash, const char* name_text)
 		{
 			const clcpp::Type* type = 0;
@@ -65,14 +72,13 @@ namespace clutl
 			}
 			return object;
 		}
-
 		template <typename TYPE> TYPE* CreateNamedObject(const clcpp::Database& reflection_db, const char* name_text)
 		{
 			return CreateNamedObject<TYPE>(reflection_db, clcpp::GetTypeNameHash<TYPE>(), name_text);
 		}
-
 		template <typename TYPE> void DestroyNamedObject(TYPE* object)
 		{
+			clcpp::internal::Assert(object != 0);
 			DestroyNamedObject(object, object->type, object->name.hash);
 		}
 
@@ -84,11 +90,15 @@ namespace clutl
 		void* CreateObject(const clcpp::Database& reflection_db, unsigned int type_hash, const clcpp::Type*& type);
 		void DestroyObject(void* object, const clcpp::Type* object_type);
 
-		// Create an object of the given type name and object name; a pointer to the type is returned
+		//
+		// Create and destroy objects of the given type name and object name. After successful creation, the type
+		// pointer and persistent name is returned. These must be used later to destroy the object. The object
+		// database tracks all named objects created this way.
+		//
 		void* CreateNamedObject(const clcpp::Database& reflection_db, unsigned int type_hash, const char* name_text, const clcpp::Type*& type, clcpp::Name& name);
 		void DestroyNamedObject(void* object, const clcpp::Type* object_type, unsigned int name_hash);
 
-		void* FindNamedObject(unsigned int name_hash);
+		void* FindNamedObject(unsigned int name_hash) const;
 
 	private:
 		struct HashEntry
@@ -98,11 +108,40 @@ namespace clutl
 			void* object;
 		};
 
-		HashEntry* FindHashEntry(unsigned int hash_index, unsigned int hash);
+		const HashEntry* FindHashEntry(unsigned int hash_index, unsigned int hash) const;
 
 		// An open-addressed hash table with linear probing - good cache behaviour for storing
 		// hashes of pointers that may suffer from clustering.
 		unsigned int m_MaxNbObjects;
 		HashEntry* m_NamedObjects;
+
+		friend class ObjectIterator;
+	};
+
+
+	//
+	// Iterator for visiting all created objects in an object database.
+	//
+	class ObjectIterator
+	{
+	public:
+		ObjectIterator(const ObjectDatabase& object_db);
+
+		// Get the current object or object name under iteration
+		void* GetObject() const;
+		clcpp::Name GetObjectName() const;
+
+		// Move onto the next object in the database
+		void MoveNext();
+
+		// Is the iterator still valid? Returns false after there are no more objects
+		// left to iterate.
+		bool IsValid() const;
+
+	private:
+		void ScanForEntry();
+
+		const ObjectDatabase& m_ObjectDB;
+		unsigned int m_Position;
 	};
 }

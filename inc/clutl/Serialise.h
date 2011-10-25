@@ -78,9 +78,21 @@ namespace clutl
 	};
 
 
+	struct JSONFlags
+	{
+		enum
+		{
+			FORMAT_OUTPUT = 1
+		};
+	};
+
+
 	// Cannot load nullstr fields
 	JSONError LoadJSON(DataBuffer& in, void* object, const clcpp::Type* type);
 
 	// Can save nullstr fields
-	void SaveJSON(DataBuffer& out, const void* object, const clcpp::Type* type);
+	void SaveJSON(DataBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags = 0);
+
+	// Saves the entire object database
+	void SaveJSON(DataBuffer& out, const ObjectDatabase& object_db, unsigned int flags = 0);
 }

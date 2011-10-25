@@ -827,7 +827,16 @@ clutl::JSONError clutl::LoadJSON(DataBuffer& in, void* object, const clcpp::Type
 
 namespace
 {
-	void SaveObject(clutl::DataBuffer& out, const char* object, const clcpp::Type* type);
+	void SaveObject(clutl::DataBuffer& out, const char* object, const clcpp::Type* type, unsigned int flags);
+
+
+	void SaveStringNoQuotes(clutl::DataBuffer& out, const char* str)
+	{
+		const char* start = str;
+		while (*str++)
+			;
+		out.Write(start, str - start - 1);
+	}
 
 
 	void SaveString(clutl::DataBuffer& out, const char* str)
@@ -941,7 +950,7 @@ namespace
 		// Convert the double to a string on the local stack
 		char fcvt_buffer[512] = { 0 };
 		int dec = -1, sign = -1;
-		_fcvt_s(fcvt_buffer, sizeof(fcvt_buffer), decimal, 40, &dec, &sign);
+		_fcvt_s(fcvt_buffer, sizeof(fcvt_buffer), decimal, 48, &dec, &sign);
 
 		char decimal_buffer[512];
 		char* iptr = fcvt_buffer;
@@ -1052,7 +1061,7 @@ namespace
 	}
 
 
-	void SaveClass(clutl::DataBuffer& out, const char* object, const clcpp::Class* class_type)
+	void SaveClass(clutl::DataBuffer& out, const char* object, const clcpp::Class* class_type, unsigned int flags)
 	{
 		// Save each field in the class
 		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
@@ -1067,7 +1076,11 @@ namespace
 
 			// Comma separator for multiple fields
 			if (field_written)
+			{
 				out.Write(",", 1);
+				if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
+					out.Write("\n", 1);
+			}
 
 			// Write the field name
 			SaveString(out, field->name.text);
@@ -1079,12 +1092,9 @@ namespace
 			else if (field->qualifier.op == clcpp::Qualifier::POINTER)
 				SavePtr(out, field_object, field->type);
 			else
-				SaveObject(out, field_object, field->type);
+				SaveObject(out, field_object, field->type, flags);
 
 			field_written = true;
-
-			// TODO: Wasteful, just for debug
-			out.Write("\n", 1);
 		}
 
 		// Recurse into base classes
@@ -1092,24 +1102,21 @@ namespace
 		if (base_class && base_class->fields.size())
 		{
 			out.Write(",", 1);
-			SaveClass(out, object, class_type->base_class);
+			if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
+				out.Write("\n", 1);
+			SaveClass(out, object, class_type->base_class, flags);
 		}
 	}
 
 
-	void SaveTemplateType(clutl::DataBuffer& out, const char* object, const clcpp::TemplateType* template_type)
+	void SaveTemplateType(clutl::DataBuffer& out, const char* object, const clcpp::TemplateType* template_type, unsigned int flags)
 	{
 		// TODO: If the iterator has a key, save a dictionary instead
-
-		out.Write("[", 1);
 
 		// Construct a read iterator and leave early if there are no elements
 		clcpp::ReadIterator reader(template_type, object);
 		if (reader.m_Count == 0)
-		{
-			out.Write("]", 1);
 			return;
-		}
 
 		// Figure out if this an iterator over named object pointers
 		if (reader.m_ValueIsPtr)
@@ -1141,21 +1148,19 @@ namespace
 			for (unsigned int i = 0; i < reader.m_Count - 1; i++)
 			{
 				clcpp::ContainerKeyValue kv = reader.GetKeyValue();
-				SaveObject(out, (char*)kv.value, reader.m_ValueType);
+				SaveObject(out, (char*)kv.value, reader.m_ValueType, flags);
 				out.Write(",", 1);
 				reader.MoveNext();
 			}
 
 			// Save the final object without a comma
 			clcpp::ContainerKeyValue kv = reader.GetKeyValue();
-			SaveObject(out, (char*)kv.value, reader.m_ValueType);
+			SaveObject(out, (char*)kv.value, reader.m_ValueType, flags);
 		}
-
-		out.Write("]", 1);
 	}
 
 
-	void SaveObject(clutl::DataBuffer& out, const char* object, const clcpp::Type* type)
+	void SaveObject(clutl::DataBuffer& out, const char* object, const clcpp::Type* type, unsigned int flags)
 	{
 		// Dispatch to a save function based on kind
 		switch (type->kind)
@@ -1170,12 +1175,18 @@ namespace
 
 		case (clcpp::Primitive::KIND_CLASS):
 			out.Write("{", 1);
-			SaveClass(out, object, type->AsClass());
+			if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
+				out.Write("\n", 1);
+			SaveClass(out, object, type->AsClass(), flags);
+			if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
+				out.Write("\n", 1);
 			out.Write("}", 1);
 			break;
 
 		case (clcpp::Primitive::KIND_TEMPLATE_TYPE):
-			SaveTemplateType(out, object, type->AsTemplateType());
+			out.Write("[", 1);
+			SaveTemplateType(out, object, type->AsTemplateType(), flags);
+			out.Write("]", 1);
 			break;
 
 		default:
@@ -1185,10 +1196,28 @@ namespace
 }
 
 
-void clutl::SaveJSON(DataBuffer& out, const void* object, const clcpp::Type* type)
+void clutl::SaveJSON(DataBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags)
 {
 	SetupTypeDispatchLUT();
-	SaveObject(out, (char*)object, type);
+	SaveObject(out, (char*)object, type, flags);
+}
+
+
+void clutl::SaveJSON(DataBuffer& out, const ObjectDatabase& object_db, unsigned int flags)
+{
+	// Walk over each object in the database
+	for (ObjectIterator i(object_db); i.IsValid(); i.MoveNext())
+	{
+		const clutl::NamedObject* object = (clutl::NamedObject*)i.GetObject();
+
+		// Output a non-JSON compliant Javascript assignment
+		SaveStringNoQuotes(out, object->name.text);
+		out.Write("=", 1);
+		SaveJSON(out, object, object->type, flags);
+
+		if (flags & JSONFlags::FORMAT_OUTPUT)
+			out.Write("\n", 1);
+	}
 }
 
 
