@@ -202,7 +202,10 @@ namespace
 		fputs(HexStringFromName(ci.read_iterator_type, db), fp);
 		fputs("\t", fp);
 		fputs(HexStringFromName(ci.write_iterator_type, db), fp);
-		fputs(ci.has_key ? "\t1" : "\t0", fp);
+		fputs("\t", fp);
+		fputs(itohex(ci.flags), fp);
+		fputs("\t", fp);
+		fputs(itohex(ci.count), fp);
 	}
 
 
@@ -279,7 +282,7 @@ void cldb::WriteTextDatabase(const char* filename, const Database& db)
 	WritePrimitives<NameAttribute>(fp, db, WriteNameAttribute, "Name Attributes", "Name\t\tParent\t\tValue");
 	WritePrimitives<TextAttribute>(fp, db, WriteTextAttribute, "Text Attributes", "Name\t\tParent\t\tValue");
 
-	WritePrimitives<ContainerInfo>(fp, db, WriteContainerInfo, "Containers", "Name\t\tRead\t\tWrite\t\tKey");
+	WritePrimitives<ContainerInfo>(fp, db, WriteContainerInfo, "Containers", "Name\t\tRead\t\tWrite\t\tFlags\t\tCount");
 
 	fclose(fp);
 }
@@ -637,15 +640,16 @@ namespace
 		cldb::u32 name = tok.GetHexInt();
 		cldb::u32 read_iterator = tok.GetHexInt();
 		cldb::u32 write_iterator = tok.GetHexInt();
-		const char* key = tok.Get();
-		bool has_key = key[0] != '0';
+		cldb::u32 flags = tok.GetHexInt();
+		cldb::u32 count = tok.GetHexInt();
 
 		// Construct and add to the database
 		cldb::ContainerInfo ci;
 		ci.name = db.GetName(name);
 		ci.read_iterator_type = db.GetName(read_iterator);
 		ci.write_iterator_type = db.GetName(write_iterator);
-		ci.has_key = has_key;
+		ci.flags = flags;
+		ci.count = count;
 		db.Add(ci.name, ci);
 	}
 

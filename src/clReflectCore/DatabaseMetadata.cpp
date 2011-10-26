@@ -98,7 +98,8 @@ cldb::meta::DatabaseTypes::DatabaseTypes()
 		DatabaseField(&cldb::ContainerInfo::name),
 		DatabaseField(&cldb::ContainerInfo::read_iterator_type),
 		DatabaseField(&cldb::ContainerInfo::write_iterator_type),
-		DatabaseField(&cldb::ContainerInfo::has_key),
+		DatabaseField(&cldb::ContainerInfo::flags),
+		DatabaseField(&cldb::ContainerInfo::count),
 	};
 
 	// Create the descriptions of each type

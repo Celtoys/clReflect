@@ -544,15 +544,33 @@ namespace cldb
 
 
 	//
-	// A container info description that references the container type, its read/write
-	// iterator implementation types and whether or not it uses a key.
+	// Description of a reflected container
 	//
 	struct ContainerInfo
 	{
+		enum
+		{
+			HAS_KEY = 1,
+			IS_C_ARRAY = 2
+		};
+
+		ContainerInfo()
+			: flags(0)
+			, count(0)
+		{
+		}
+
+		// Name of the parent type or field
 		Name name;
+
+		// Names of the iterator types responsible for reading and writing elements of the container
 		Name read_iterator_type;
 		Name write_iterator_type;
-		bool has_key;
+
+		u32 flags;
+
+		// In the case of a C-Array, the number of elements in the array
+		u32 count;
 	};
 
 

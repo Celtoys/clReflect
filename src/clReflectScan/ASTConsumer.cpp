@@ -48,6 +48,13 @@
 
 namespace
 {
+	// Untyped flags for the MakeField function, as opposed to a few bools
+	enum
+	{
+		MF_CHECK_TYPE_IS_REFLECTED = 1,
+	};
+
+
 	void Remove(std::string& str, const std::string& remove_str)
 	{
 		for (size_t i; (i = str.find(remove_str)) != std::string::npos; )
@@ -57,16 +64,30 @@ namespace
 
 	struct ParameterInfo
 	{
+		ParameterInfo() : array_count(0) { }
 		std::string type_name;
 		cldb::Qualifier qualifer;
+		cldb::u32 array_count;
 	};
 
 
-	bool GetParameterInfo(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, ParameterInfo& info, bool check_type_is_reflected)
+	bool GetParameterInfo(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, ParameterInfo& info, int flags)
 	{
 		// Get type info for the parameter
 		clang::SplitQualType sqt = qual_type.split();
 		const clang::Type* type = sqt.first;
+
+		// If this is an array of constant size, strip the size from the type and store it in the parameter info
+		if (const clang::ConstantArrayType* array_type = dyn_cast<clang::ConstantArrayType>(type))
+		{
+			uint64_t size = *array_type->getSize().getRawData();
+			if (size > UINT_MAX)
+				return false;
+			info.array_count = (cldb::u32)size;
+			qual_type = array_type->getElementType();
+			sqt = qual_type.split();
+			type = sqt.first;
+		}
 
 		// If this is a typedef, get the aliased type
 		if (type->getTypeClass() == clang::Type::Typedef)
@@ -157,6 +178,10 @@ namespace
 				if (template_args[i].qualifer.op == cldb::Qualifier::REFERENCE)
 					return false;
 
+				// Can't reflect array template parameters
+				if (template_args[i].array_count)
+					return false;
+
 				// Concatenate the arguments in the type name
 				if (i)
 					info.type_name += ",";
@@ -192,120 +217,13 @@ namespace
 		// Has the type itself been marked for reflection?
 		// This check is only valid for value type class fields, as in every other
 		// case the type can be forward-declared and not have any reflection spec present.
-		if (check_type_is_reflected &&
+		if ((flags & MF_CHECK_TYPE_IS_REFLECTED) != 0 &&
 			tc != clang::Type::Builtin &&
 			info.qualifer.op == cldb::Qualifier::VALUE &&
 			!specs.IsReflected(info.type_name))
 			return false;
 
 		return true;
-	}
-
-
-	bool MakeField(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, const char* param_name, const std::string& parent_name, int index, cldb::Field& field, bool check_type_is_reflected)
-	{
-		ParameterInfo info;
-		if (!GetParameterInfo(db, specs, ctx, qual_type, info, check_type_is_reflected))
-			return false;
-
-		// Construct the field
-		cldb::Name type_name = db.GetName(info.type_name.c_str());
-		field = cldb::Field(
-			db.GetName(param_name),
-			db.GetName(parent_name.c_str()),
-			type_name, info.qualifer, index);
-		return true;
-	}
-
-
-	void MakeFunction(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::NamedDecl* decl, const std::string& function_name, const std::string& parent_name, std::vector<cldb::Field>& parameters)
-	{
-		// Cast to a function
-		clang::FunctionDecl* function_decl = dyn_cast<clang::FunctionDecl>(decl);
-		assert(function_decl != 0 && "Failed to cast to function declaration");
-
-		// Only add the function once
-		if (!function_decl->isFirstDeclaration())
-			return;
-
-		// Parse the return type - named as a reserved keyword so it won't clash with user symbols
-		cldb::Field return_parameter;
-		if (!MakeField(db, specs, ctx, function_decl->getResultType(), "return", function_name, -1, return_parameter, false))
-		{
-			LOG(ast, WARNING, "Unsupported/unreflected return type for '%s' - skipping reflection\n", function_name.c_str());
-			return;
-		}
-
-		// Try to gather every parameter successfully before adding the function
-		int index = parameters.size();
-		for (clang::FunctionDecl::param_iterator i = function_decl->param_begin(); i != function_decl->param_end(); ++i)
-		{
-			clang::ParmVarDecl* param_decl = *i;
-
-			// Check for unnamed parameters
-			if (param_decl->getNameAsString() == "")
-			{
-				LOG(ast, WARNING, "Unnamed function parameters not supported - skipping reflection of '%s'\n", function_name.c_str());
-				return;
-			}
-
-			// Collect a list of constructed parameters in case evaluating one of them fails
-			cldb::Field parameter;
-			if (!MakeField(db, specs, ctx, param_decl->getType(), param_decl->getNameAsString().c_str(), function_name, index++, parameter, false))
-			{
-				LOG(ast, WARNING, "Unsupported/unreflected parameter type for '%s' - skipping reflection of '%s'\n", param_decl->getNameAsString().c_str(), function_name.c_str());
-				return;
-			}
-			parameters.push_back(parameter);
-		}
-
-		// Generate a hash unique to this function among other functions of the same name
-		// This is so that its parameters/return code can re-parent themselves correctly
-		cldb::Field* return_parameter_ptr = 0;
-		if (return_parameter.type.text != "void")
-			return_parameter_ptr = &return_parameter;
-		cldb::u32 unique_id = cldb::CalculateFunctionUniqueID(return_parameter_ptr, parameters);
-
-		// Parent each parameter to the function
-		return_parameter.parent_unique_id = unique_id;
-		for (size_t i = 0; i < parameters.size(); i++)
-			parameters[i].parent_unique_id = unique_id;
-
-		// Add the function
-		LOG(ast, INFO, "function %s\n", function_name.c_str());
-		db.AddPrimitive(cldb::Function(
-			db.GetName(function_name.c_str()),
-			db.GetName(parent_name.c_str()),
-			unique_id));
-
-		LOG_PUSH_INDENT(ast);
-
-		// Only add the return parameter if it's non-void
-		if (return_parameter.type.text != "void")
-		{
-			LOG(ast, INFO, "Returns: %s%s%s\n",
-				return_parameter.qualifier.is_const ? "const " : "",
-				return_parameter.type.text.c_str(),
-				return_parameter.qualifier.op == cldb::Qualifier::POINTER ? "*" : return_parameter.qualifier.op == cldb::Qualifier::REFERENCE ? "&" : "");
-			db.AddPrimitive(return_parameter);
-		}
-		else
-		{
-			LOG(ast, INFO, "Returns: void (not added)\n");
-		}
-
-		// Add the parameters
-		for (std::vector<cldb::Field>::iterator i = parameters.begin(); i != parameters.end(); ++i)
-		{
-			LOG(ast, INFO, "%s%s%s %s\n",
-				i->qualifier.is_const ? "const " : "",
-				i->type.text.c_str(),
-				i->qualifier.op == cldb::Qualifier::POINTER ? "*" : i->qualifier.op == cldb::Qualifier::REFERENCE ? "&" : "",
-				i->name.text.c_str());
-			db.AddPrimitive(*i);
-		}
-
-		LOG_POP_INDENT(ast);
 	}
 
 
@@ -594,7 +512,7 @@ void ASTConsumer::AddFunctionDecl(clang::NamedDecl* decl, const std::string& nam
 {
 	// Parse and add the function
 	std::vector<cldb::Field> parameters;
-	MakeFunction(m_DB, m_ReflectionSpecs, m_ASTContext, decl, name, parent_name, parameters);
+	MakeFunction(decl, name, parent_name, parameters);
 }
 
 
@@ -613,7 +531,7 @@ void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const std::string& name,
 	{
 		// Parse the 'this' type, treating it as the first parameter to the method
 		cldb::Field this_param;
-		if (!MakeField(m_DB, m_ReflectionSpecs, m_ASTContext, method_decl->getThisType(m_ASTContext), "this", name, 0, this_param, true))
+		if (!MakeField(method_decl->getThisType(m_ASTContext), "this", name, 0, this_param, MF_CHECK_TYPE_IS_REFLECTED))
 		{
 			LOG(ast, WARNING, "Unsupported/unreflected 'this' type for '%s'\n", name.c_str());
 			return;
@@ -622,7 +540,7 @@ void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const std::string& name,
 	}
 
 	// Parse and add the method
-	MakeFunction(m_DB, m_ReflectionSpecs, m_ASTContext, decl, name, parent_name, parameters);
+	MakeFunction(decl, name, parent_name, parameters);
 }
 
 
@@ -640,7 +558,7 @@ void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const std::string& name, 
 	cldb::Field field;
 	cldb::u32 offset = layout->getFieldOffset(field_decl->getFieldIndex()) / 8;
 	std::string field_name = field_decl->getName().str();
-	if (!MakeField(m_DB, m_ReflectionSpecs, m_ASTContext, field_decl->getType(), field_name.c_str(), parent_name, offset, field, true))
+	if (!MakeField(field_decl->getType(), field_name.c_str(), parent_name, offset, field, MF_CHECK_TYPE_IS_REFLECTED))
 	{
 		LOG(ast, WARNING, "Unsupported/unreflected type for field '%s' in '%s'\n", field_name.c_str(), parent_name.c_str());
 		return;
@@ -704,4 +622,125 @@ void ASTConsumer::AddContainedDecls(clang::NamedDecl* decl, const std::string& p
 	}
 
 	LOG_POP_INDENT(ast)
+}
+
+
+bool ASTConsumer::MakeField(clang::QualType qual_type, const char* param_name, const std::string& parent_name, int index, cldb::Field& field, int flags)
+{
+	ParameterInfo info;
+	if (!GetParameterInfo(m_DB, m_ReflectionSpecs, m_ASTContext, qual_type, info, flags))
+		return false;
+
+	// Construct the field
+	cldb::Name type_name = m_DB.GetName(info.type_name.c_str());
+	field = cldb::Field(
+		m_DB.GetName(param_name),
+		m_DB.GetName(parent_name.c_str()),
+		type_name, info.qualifer, index);
+
+	// Add a container info for this field if it's a constant array
+	if (info.array_count)
+	{
+		std::string full_name = parent_name + "::" + param_name;
+		cldb::ContainerInfo ci;
+		ci.name = m_DB.GetName(full_name.c_str());
+		ci.flags = cldb::ContainerInfo::IS_C_ARRAY;
+		ci.count = info.array_count;
+		m_DB.AddPrimitive(ci);
+	}
+
+	return true;
+}
+
+
+void ASTConsumer::MakeFunction(clang::NamedDecl* decl, const std::string& function_name, const std::string& parent_name, std::vector<cldb::Field>& parameters)
+{
+	// Cast to a function
+	clang::FunctionDecl* function_decl = dyn_cast<clang::FunctionDecl>(decl);
+	assert(function_decl != 0 && "Failed to cast to function declaration");
+
+	// Only add the function once
+	if (!function_decl->isFirstDeclaration())
+		return;
+
+	// Parse the return type - named as a reserved keyword so it won't clash with user symbols
+	cldb::Field return_parameter;
+	if (!MakeField(function_decl->getResultType(), "return", function_name, -1, return_parameter, 0))
+	{
+		LOG(ast, WARNING, "Unsupported/unreflected return type for '%s' - skipping reflection\n", function_name.c_str());
+		return;
+	}
+
+	// Try to gather every parameter successfully before adding the function
+	int index = parameters.size();
+	for (clang::FunctionDecl::param_iterator i = function_decl->param_begin(); i != function_decl->param_end(); ++i)
+	{
+		clang::ParmVarDecl* param_decl = *i;
+
+		// Check for unnamed parameters
+		llvm::StringRef param_name = param_decl->getName();
+		if (param_name.empty())
+		{
+			LOG(ast, WARNING, "Unnamed function parameters not supported - skipping reflection of '%s'\n", function_name.c_str());
+			return;
+		}
+
+		// Collect a list of constructed parameters in case evaluating one of them fails
+		cldb::Field parameter;
+		std::string param_name_str = param_name.str();
+		if (!MakeField(param_decl->getType(), param_name_str.c_str(), function_name, index++, parameter, 0))
+		{
+			LOG(ast, WARNING, "Unsupported/unreflected parameter type for '%s' - skipping reflection of '%s'\n", param_name_str.c_str(), function_name.c_str());
+			return;
+		}
+		parameters.push_back(parameter);
+	}
+
+	// Generate a hash unique to this function among other functions of the same name
+	// This is so that its parameters/return code can re-parent themselves correctly
+	cldb::Field* return_parameter_ptr = 0;
+	if (return_parameter.type.text != "void")
+		return_parameter_ptr = &return_parameter;
+	cldb::u32 unique_id = cldb::CalculateFunctionUniqueID(return_parameter_ptr, parameters);
+
+	// Parent each parameter to the function
+	return_parameter.parent_unique_id = unique_id;
+	for (size_t i = 0; i < parameters.size(); i++)
+		parameters[i].parent_unique_id = unique_id;
+
+	// Add the function
+	LOG(ast, INFO, "function %s\n", function_name.c_str());
+	m_DB.AddPrimitive(cldb::Function(
+		m_DB.GetName(function_name.c_str()),
+		m_DB.GetName(parent_name.c_str()),
+		unique_id));
+
+	LOG_PUSH_INDENT(ast);
+
+	// Only add the return parameter if it's non-void
+	if (return_parameter.type.text != "void")
+	{
+		LOG(ast, INFO, "Returns: %s%s%s\n",
+			return_parameter.qualifier.is_const ? "const " : "",
+			return_parameter.type.text.c_str(),
+			return_parameter.qualifier.op == cldb::Qualifier::POINTER ? "*" : return_parameter.qualifier.op == cldb::Qualifier::REFERENCE ? "&" : "");
+		m_DB.AddPrimitive(return_parameter);
+	}
+	else
+	{
+		LOG(ast, INFO, "Returns: void (not added)\n");
+	}
+
+	// Add the parameters
+	for (std::vector<cldb::Field>::iterator i = parameters.begin(); i != parameters.end(); ++i)
+	{
+		LOG(ast, INFO, "%s%s%s %s\n",
+			i->qualifier.is_const ? "const " : "",
+			i->type.text.c_str(),
+			i->qualifier.op == cldb::Qualifier::POINTER ? "*" : i->qualifier.op == cldb::Qualifier::REFERENCE ? "&" : "",
+			i->name.text.c_str());
+		m_DB.AddPrimitive(*i);
+	}
+
+	LOG_POP_INDENT(ast);
 }

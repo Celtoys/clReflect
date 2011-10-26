@@ -179,7 +179,8 @@ namespace
 	{
 		dest.read_iterator_type = (clcpp::Type*)src.read_iterator_type.hash;
 		dest.write_iterator_type = (clcpp::Type*)src.write_iterator_type.hash;
-		dest.has_key = src.has_key;
+		dest.flags = src.flags;
+		dest.count = src.count;
 	}
 
 
@@ -471,24 +472,27 @@ namespace
 
 	const clcpp::Type* LinkContainerIterator(CppExport& cppexp, const char* container_name, const clcpp::Type* iterator_type)
 	{
+		if (iterator_type == 0)
+			return 0;
+
 		// Alias the type pointer as its hash and lookup the name
 		CppExport::NameMap::iterator name = cppexp.name_map.find((unsigned int)iterator_type);
 		if (name == cppexp.name_map.end())
 		{
-			LOG(main, WARNING, "Couldn't find read iterator name for '%s'\n", container_name);
+			LOG(main, WARNING, "Couldn't find iterator name for '%s'\n", container_name);
 			return 0;
 		}
 
 		// Lookup the iterator type
 		iterator_type = clcpp::FindPrimitive(cppexp.db->type_primitives, name->first);
 		if (iterator_type == 0)
-			LOG(main, WARNING, "Couldn't find read iterator type '%s' for '%s'\n", name->second, container_name);
+			LOG(main, WARNING, "Couldn't find iterator type '%s' for '%s'\n", name->second, container_name);
 
 		return iterator_type;
 	}
 
 
-	void LinkContainerInfos(CppExport& cppexp)
+	void LinkContainerInfos(CppExport& cppexp, ParentMap<clcpp::Field>& field_parents)
 	{
 		// Build a template map
 		typedef std::map<unsigned int, const clcpp::Template*> TemplateMap;
@@ -512,7 +516,7 @@ namespace
 			if (parent_type)
 				const_cast<clcpp::Type*>(parent_type)->ci = &ci;
 
-			if (parent_type == 0)
+			else
 			{
 				// Parent the container to all instances of the template it references
 				TemplateMap::const_iterator parent_templates = templates.find(ci.name.hash);
@@ -521,6 +525,14 @@ namespace
 					const clcpp::CArray<const clcpp::TemplateType*>& instances = parent_templates->second->instances;
 					for (int j = 0; j < instances.size(); j++)
 						const_cast<clcpp::TemplateType*>(instances[j])->ci = &ci;
+				}
+
+				else
+				{
+					// Parent the container to any fields
+					ParentMap<clcpp::Field>::Iterator parent_field = field_parents.map.find(ci.name.hash);
+					if (parent_field != field_parents.map.end())
+						const_cast<clcpp::Field*>(parent_field->second.first)->ci = &ci;
 				}
 			}
 		}
@@ -926,10 +938,6 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	Link(cppexp.db->classes, &clcpp::Class::base_class, cppexp.db->type_primitives);
 	Link(cppexp.db->template_types, &clcpp::TemplateType::parameter_types, cppexp.db->type_primitives);
 
-	// Container infos need to be parented to their owners and their read/writer iterator
-	// pointers need to be linked to their reflected types
-	LinkContainerInfos(cppexp);
-
 	// Return parameters are parented to their functions as parameters. Move them from
 	// wherever they are in the list and into the return parameter data member.
 	AssignReturnParameters(cppexp);
@@ -947,6 +955,10 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	SortPrimitives(cppexp.db->templates);
 	SortPrimitives(cppexp.db->namespaces);
 	SortPrimitives(cppexp.db->type_primitives);
+
+	// Container infos need to be parented to their owners and their read/writer iterator
+	// pointers need to be linked to their reflected types
+	LinkContainerInfos(cppexp, field_parents);
 
 	// Each class may have constructor/destructor methods in their method list. Run through
 	// each class and make pointers to these in the class. This is done after sorting so that
@@ -1026,7 +1038,8 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 
 	PtrSchema& schema_field = relocator.AddSchema<clcpp::Field>(&schema_primitive)
 		(&clcpp::Field::type)
-		(&clcpp::Field::attributes, array_data_offset);
+		(&clcpp::Field::attributes, array_data_offset)
+		(&clcpp::Field::ci);
 
 	PtrSchema& schema_function = relocator.AddSchema<clcpp::Function>(&schema_primitive)
 		(&clcpp::Function::return_parameter)

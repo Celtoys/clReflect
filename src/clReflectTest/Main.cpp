@@ -80,6 +80,7 @@ class Malloc : public clcpp::IAllocator
 
 
 extern void TestGetType(clcpp::Database& db);
+extern void TestArraysFunc(clcpp::Database& db);
 extern void TestConstructorDestructor(clcpp::Database& db);
 extern void TestAttributesFunc(clcpp::Database& db);
 extern void TestSerialise(clcpp::Database& db);
@@ -105,6 +106,7 @@ int main()
 	db.Load(&file, &allocator, 0, 0);
 	TestGetType(db);
 	TestConstructorDestructor(db);
+	TestArraysFunc(db);
 	TestAttributesFunc(db);
 	TestSerialise(db);
 	TestOffsets(db);

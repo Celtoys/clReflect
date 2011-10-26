@@ -115,17 +115,30 @@ namespace clcpp
 	//
 	struct ContainerInfo
 	{
+		enum
+		{
+			HAS_KEY = 1,
+			IS_C_ARRAY = 2
+		};
+
 		ContainerInfo()
 			: read_iterator_type(0)
 			, write_iterator_type(0)
-			, has_key(false)
+			, flags(0)
 		{
 		}
 
+		// Name of the parent type or field
 		Name name;
+
+		// Pointers to the iterator types responsible for reading and writing elements of the container
 		const Type* read_iterator_type;
 		const Type* write_iterator_type;
-		bool has_key;
+
+		unsigned int flags;
+
+		// In the case of a C-Array, the number of elements in the array
+		unsigned int count;
 	};
 
 
@@ -331,6 +344,7 @@ namespace clcpp
 			, offset(0)
 			, parent_unique_id(0)
 			, flag_attributes(0)
+			, ci(0)
 		{
 		}
 
@@ -354,6 +368,9 @@ namespace clcpp
 
 		// Bits representing some of the flag attributes in the attribute array
 		unsigned int flag_attributes;
+
+		// This is non-null if the field is a C-Array of constant size
+		ContainerInfo* ci;
 	};
 
 

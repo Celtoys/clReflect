@@ -1125,62 +1125,11 @@ namespace
 	}
 
 
-	void SaveClass(clutl::DataBuffer& out, const char* object, const clcpp::Class* class_type, unsigned int flags)
-	{
-		// Save each field in the class
-		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
-		int nb_fields = fields.size();
-		bool field_written = false;
-		for (int i = 0; i < nb_fields; i++)
-		{
-			// Don't save values for transient fields
-			const clcpp::Field* field = fields[i];
-			if (field->flag_attributes & clcpp::FlagAttribute::TRANSIENT)
-				continue;
-
-			// Comma separator for multiple fields
-			if (field_written)
-			{
-				out.Write(",", 1);
-				if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
-					out.Write("\n", 1);
-			}
-
-			// Write the field name
-			SaveString(out, field->name.text);
-			out.Write(":", 1);
-
-			const char* field_object = object + field->offset;
-			if (field->flag_attributes & clcpp::FlagAttribute::NULLSTR)
-				SaveString(out, *(char**)field_object);
-			else if (field->qualifier.op == clcpp::Qualifier::POINTER)
-				SavePtr(out, field_object, field->type);
-			else
-				SaveObject(out, field_object, field->type, flags);
-
-			field_written = true;
-		}
-
-		// Recurse into base classes
-		const clcpp::Class* base_class = class_type->base_class;
-		if (base_class && base_class->fields.size())
-		{
-			out.Write(",", 1);
-			if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
-				out.Write("\n", 1);
-			SaveClass(out, object, class_type->base_class, flags);
-		}
-	}
-
-
-	void SaveTemplateType(clutl::DataBuffer& out, const char* object, const clcpp::TemplateType* template_type, unsigned int flags)
+	void SaveContainer(clutl::DataBuffer& out, clcpp::ReadIterator& reader, unsigned int flags)
 	{
 		// TODO: If the iterator has a key, save a dictionary instead
 
-		// Construct a read iterator and leave early if there are no elements
-		clcpp::ReadIterator reader(template_type, object);
-		if (reader.m_Count == 0)
-			return;
+		out.Write("[", 1);
 
 		// Figure out if this an iterator over named object pointers
 		if (reader.m_ValueIsPtr)
@@ -1221,6 +1170,86 @@ namespace
 			clcpp::ContainerKeyValue kv = reader.GetKeyValue();
 			SaveObject(out, (char*)kv.value, reader.m_ValueType, flags);
 		}
+
+		out.Write("]", 1);
+	}
+
+
+	void SaveFieldArray(clutl::DataBuffer& out, const char* object, const clcpp::Field* field, unsigned int flags)
+	{
+		// Construct a read iterator and leave early if there are no elements
+		clcpp::ReadIterator reader(field, object);
+		if (reader.m_Count == 0)
+		{
+			out.Write("[]", 2);
+			return;
+		}
+
+		SaveContainer(out, reader, flags);
+	}
+
+
+	void SaveClass(clutl::DataBuffer& out, const char* object, const clcpp::Class* class_type, unsigned int flags)
+	{
+		// Save each field in the class
+		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
+		int nb_fields = fields.size();
+		bool field_written = false;
+		for (int i = 0; i < nb_fields; i++)
+		{
+			// Don't save values for transient fields
+			const clcpp::Field* field = fields[i];
+			if (field->flag_attributes & clcpp::FlagAttribute::TRANSIENT)
+				continue;
+
+			// Comma separator for multiple fields
+			if (field_written)
+			{
+				out.Write(",", 1);
+				if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
+					out.Write("\n", 1);
+			}
+
+			// Write the field name
+			SaveString(out, field->name.text);
+			out.Write(":", 1);
+
+			const char* field_object = object + field->offset;
+			if (field->flag_attributes & clcpp::FlagAttribute::NULLSTR)
+				SaveString(out, *(char**)field_object);
+			else if (field->ci != 0)
+				SaveFieldArray(out, field_object, field, flags);
+			else if (field->qualifier.op == clcpp::Qualifier::POINTER)
+				SavePtr(out, field_object, field->type);
+			else
+				SaveObject(out, field_object, field->type, flags);
+
+			field_written = true;
+		}
+
+		// Recurse into base classes
+		const clcpp::Class* base_class = class_type->base_class;
+		if (base_class && base_class->fields.size())
+		{
+			out.Write(",", 1);
+			if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
+				out.Write("\n", 1);
+			SaveClass(out, object, class_type->base_class, flags);
+		}
+	}
+
+
+	void SaveTemplateType(clutl::DataBuffer& out, const char* object, const clcpp::TemplateType* template_type, unsigned int flags)
+	{
+		// Construct a read iterator and leave early if there are no elements
+		clcpp::ReadIterator reader(template_type, object);
+		if (reader.m_Count == 0)
+		{
+			out.Write("[]", 2);
+			return;
+		}
+
+		SaveContainer(out, reader, flags);
 	}
 
 
@@ -1248,9 +1277,7 @@ namespace
 			break;
 
 		case (clcpp::Primitive::KIND_TEMPLATE_TYPE):
-			out.Write("[", 1);
 			SaveTemplateType(out, object, type->AsTemplateType(), flags);
-			out.Write("]", 1);
 			break;
 
 		default:

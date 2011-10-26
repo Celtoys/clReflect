@@ -38,6 +38,7 @@ namespace clang
 	class ASTRecordLayout;
 	class NamedDecl;
 	class TranslationUnitDecl;
+	class QualType;
 }
 
 
@@ -58,6 +59,9 @@ private:
 	void AddFieldDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name, const clang::ASTRecordLayout* layout);
 	void AddClassTemplateDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
 	void AddContainedDecls(clang::NamedDecl* decl, const std::string& parent_name, const clang::ASTRecordLayout* layout);
+
+	bool MakeField(clang::QualType qual_type, const char* param_name, const std::string& parent_name, int index, cldb::Field& field, int flags);
+	void MakeFunction(clang::NamedDecl* decl, const std::string& function_name, const std::string& parent_name, std::vector<cldb::Field>& parameters);
 
 	cldb::Database& m_DB;
 
