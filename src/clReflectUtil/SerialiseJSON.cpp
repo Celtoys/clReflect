@@ -26,7 +26,6 @@
 //
 // TODO:
 //    * Allow names to be specified as CRCs?
-//    * Allow IEEE754 hex float representation.
 //    * Escape sequences need converting.
 //    * Enums communicated by value (load integer checks for enum - could have a verify mode to ensure the constant exists).
 //    * Field names need to be in memory for JSON serialising to work.
@@ -41,7 +40,7 @@
 
 
 // Pointers are serialised in hash values in hexadecimal format, which isn't compliant with
-// the JSON format. In fact, without the 0x prefix it isn't even Javascript compliant.
+// the JSON format.
 // Undef this if you want pointers to be serialised as base 10 unsigned integers, instead.
 #define SAVE_POINTER_HASH_AS_HEX
 
@@ -352,6 +351,40 @@ namespace
 	}
 
 
+	bool LexerHexInteger(Context& ctx, unsigned __int64& uintval)
+	{
+		// Consume the first digit
+		if (ctx.ReadOverflows(0))
+			return false;
+		char c = ctx.PeekChar();
+		if (!ishexdigit(c))
+		{
+			ctx.SetError(clutl::JSONError::EXPECTING_HEX_DIGIT);
+			return false;
+		}
+
+		uintval = 0;
+		do
+		{
+			// Consume and accumulate the digit
+			ctx.ConsumeChar();
+			unsigned __int64 digit = 0;
+			if (c < 'A')
+				digit = c - '0';
+			else
+				digit = (c | 0x20) - 'a' + 10;
+			uintval = (uintval * 16) + digit;
+
+			// Peek at the next character and leave if it's not a hex digit
+			if (ctx.ReadOverflows(0))
+				return false;
+			c = ctx.PeekChar();
+		} while (ishexdigit(c));
+
+		return true;
+	}
+
+
 	const char* VerifyDigits(Context& ctx, const char* decimal, const char* end)
 	{
 		do
@@ -414,10 +447,32 @@ namespace
 			ctx.ConsumeChar();
 		}
 
-		// Parse the integer digits
 		unsigned __int64 uintval;
-		if (!LexerInteger(ctx, uintval))
-			return Token::Null;
+		if (ctx.PeekChar() == 'x')
+		{
+			// Parse integer digits as hex
+			ctx.ConsumeChar();
+			if (!LexerHexInteger(ctx, uintval))
+				return Token::Null;
+		}
+		else if (ctx.PeekChar() == 'd')
+		{
+			// Parse integer digits as hex
+			ctx.ConsumeChar();
+			if (!LexerHexInteger(ctx, uintval))
+				return Token::Null;
+
+			// Alias directly as a decimal
+			token.type = TT_DECIMAL;
+			token.val.decimal = (double&)uintval;
+			return token;
+		}
+		else
+		{
+			// Parse integer digits
+			if (!LexerInteger(ctx, uintval))
+				return Token::Null;
+		}
 
 		// Convert to signed integer
 		if (is_negative)
@@ -537,7 +592,7 @@ namespace
 	}
 
 
-	typedef void (*SaveNumberFunc)(clutl::DataBuffer&, const char*);
+	typedef void (*SaveNumberFunc)(clutl::DataBuffer&, const char*, unsigned int flags);
 	typedef void (*LoadIntegerFunc)(char*, __int64);
 	typedef void (*LoadDecimalFunc)(char*, double);
 
@@ -934,19 +989,27 @@ namespace
 	// Automate the process of de-referencing an object as its exact type so no
 	// extra bytes are read incorrectly and values are correctly zero-extended.
 	template <typename TYPE>
-	void SaveIntegerWithCast(clutl::DataBuffer& out, const char* object)
+	void SaveIntegerWithCast(clutl::DataBuffer& out, const char* object, unsigned int)
 	{
 		SaveInteger(out, *(TYPE*)object);
 	}
 	template <typename TYPE>
-	void SaveUnsignedIntegerWithCast(clutl::DataBuffer& out, const char* object)
+	void SaveUnsignedIntegerWithCast(clutl::DataBuffer& out, const char* object, unsigned int)
 	{
 		SaveUnsignedInteger(out, *(TYPE*)object);
 	}
 
 
-	void SaveDecimal(clutl::DataBuffer& out, double decimal)
+	void SaveDecimal(clutl::DataBuffer& out, double decimal, unsigned int flags)
 	{
+		if (flags & clutl::JSONFlags::OUTPUT_HEX_FLOATS)
+		{
+			// Use a specific prefix to inform the lexer to alias as a decimal
+			out.Write("0d", 2);
+			SaveHexInteger(out, (unsigned __int64&)decimal);
+			return;
+		}
+
 		// Convert the double to a string on the local stack
 		char fcvt_buffer[512] = { 0 };
 		int dec = -1, sign = -1;
@@ -997,23 +1060,23 @@ namespace
 	}
 
 
-	void SaveDouble(clutl::DataBuffer& out, const char* object)
+	void SaveDouble(clutl::DataBuffer& out, const char* object, unsigned int flags)
 	{
-		SaveDecimal(out, *(double*)object);
+		SaveDecimal(out, *(double*)object, flags);
 	}
-	void SaveFloat(clutl::DataBuffer& out, const char* object)
+	void SaveFloat(clutl::DataBuffer& out, const char* object, unsigned int flags)
 	{
-		SaveDecimal(out, *(float*)object);
+		SaveDecimal(out, *(float*)object, flags);
 	}
 
 
-	void SaveType(clutl::DataBuffer& out, const char* object, const clcpp::Type* type)
+	void SaveType(clutl::DataBuffer& out, const char* object, const clcpp::Type* type, unsigned int flags)
 	{
 		unsigned int index = GetTypeDispatchIndex(type->name.hash);
 		clcpp::internal::Assert(index < g_TypeDispatchMod && "Index is out of range");
 		SaveNumberFunc func = g_TypeDispatchLUT[index].save_number;
 		clcpp::internal::Assert(func && "No save function for type");
-		func(out, object);
+		func(out, object, flags);
 	}
 
 
@@ -1042,6 +1105,7 @@ namespace
 	{
 		clutl::NamedObject* named_object = *((clutl::NamedObject**)object);
 	#ifdef SAVE_POINTER_HASH_AS_HEX
+		out.Write("0x", 2);
 		SaveHexInteger(out, named_object->name.hash);
 	#else
 		SaveUnsignedInteger(out, named_object->name.hash);
@@ -1166,7 +1230,7 @@ namespace
 		switch (type->kind)
 		{
 		case (clcpp::Primitive::KIND_TYPE):
-			SaveType(out, object, type);
+			SaveType(out, object, type, flags);
 			break;
 
 		case (clcpp::Primitive::KIND_ENUM):
