@@ -82,8 +82,9 @@ namespace clutl
 	{
 		enum
 		{
-			FORMAT_OUTPUT = 1,
-			OUTPUT_HEX_FLOATS = 2
+			INDENT_MASK = 0x0F,
+			FORMAT_OUTPUT = 0x10,
+			OUTPUT_HEX_FLOATS = 0x20,
 		};
 	};
 

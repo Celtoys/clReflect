@@ -1189,6 +1189,60 @@ namespace
 	}
 
 
+	inline void NewLine(clutl::DataBuffer& out, unsigned int flags)
+	{
+		if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
+		{
+			out.Write("\n", 1);
+
+			// Open the next new line with tabs
+			for (unsigned int i = 0; i < (flags & clutl::JSONFlags::INDENT_MASK); i++)
+				out.Write("\t", 1);
+		}
+	}
+
+
+	inline void OpenScope(clutl::DataBuffer& out, unsigned int& flags)
+	{
+		if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
+		{
+			NewLine(out, flags);
+			out.Write("{", 1);
+			
+			// Increment indent level
+			int indent_level = flags & clutl::JSONFlags::INDENT_MASK;
+			flags &= ~clutl::JSONFlags::INDENT_MASK;
+			flags |= ((indent_level + 1) & clutl::JSONFlags::INDENT_MASK);
+
+			NewLine(out, flags);
+		}
+		else
+		{
+			out.Write("{", 1);
+		}
+	}
+
+
+	inline void CloseScope(clutl::DataBuffer& out, unsigned int& flags)
+	{
+		if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
+		{
+			// Decrement indent level
+			int indent_level = flags & clutl::JSONFlags::INDENT_MASK;
+			flags &= ~clutl::JSONFlags::INDENT_MASK;
+			flags |= ((indent_level - 1) & clutl::JSONFlags::INDENT_MASK);
+
+			NewLine(out, flags);
+			out.Write("}", 1);
+			NewLine(out, flags);
+		}
+		else
+		{
+			out.Write("}", 1);
+		}
+	}
+
+
 	void SaveClass(clutl::DataBuffer& out, const char* object, const clcpp::Class* class_type, unsigned int flags)
 	{
 		// Save each field in the class
@@ -1206,8 +1260,7 @@ namespace
 			if (field_written)
 			{
 				out.Write(",", 1);
-				if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
-					out.Write("\n", 1);
+				NewLine(out, flags);
 			}
 
 			// Write the field name
@@ -1232,8 +1285,7 @@ namespace
 		if (base_class && base_class->fields.size())
 		{
 			out.Write(",", 1);
-			if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
-				out.Write("\n", 1);
+			NewLine(out, flags);
 			SaveClass(out, object, class_type->base_class, flags);
 		}
 	}
@@ -1267,13 +1319,9 @@ namespace
 			break;
 
 		case (clcpp::Primitive::KIND_CLASS):
-			out.Write("{", 1);
-			if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
-				out.Write("\n", 1);
+			OpenScope(out, flags);
 			SaveClass(out, object, type->AsClass(), flags);
-			if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
-				out.Write("\n", 1);
-			out.Write("}", 1);
+			CloseScope(out, flags);
 			break;
 
 		case (clcpp::Primitive::KIND_TEMPLATE_TYPE):
