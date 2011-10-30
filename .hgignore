@@ -5,3 +5,4 @@ build/*
 *.pib
 *.user
 .svn/*
+extern/llvm-build/*
