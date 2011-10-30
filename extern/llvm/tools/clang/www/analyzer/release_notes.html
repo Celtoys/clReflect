@@ -1,0 +1,124 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+          "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <title>Release notes for checker-XXX builds</title>
+  <link type="text/css" rel="stylesheet" href="menu.css" />
+  <link type="text/css" rel="stylesheet" href="content.css" />
+  <script type="text/javascript" src="scripts/menu.js"></script>
+</head>
+<body>
+
+<div id="page">
+<!--#include virtual="menu.html.incl"-->
+<div id="content">
+
+<h1>Release notes for <tt>checker-XXX</tt> builds</h1>
+
+<h4 id="checker_258">checker-258</h4>
+
+<p><b>built:</b>October 13, 2011<br>
+<b>download:</b> <a href="/checker/checker-258.tar.bz2">checker-258.tar.bz2</a></p>
+<p><b>highlights:</b></p>
+
+<ul>
+  <li>Contains a newer version of the analyzer than the one shipped in Xcode 4.2.</li>
+  <li>Adds a new security checker for looking at correct uses of the Mac OS KeyChain API.</li>
+  <li>Supports ARC (please file bugs where you see issues)</li>
+  <li>Major under-the-cover changes.  This should result in more precise results in some cases, but this is laying the groundwork for major improvements.  Please file bugs where you see regressions or issues.</li>
+</ul>
+    
+<h4 id="checker_257">checker-257</h4>
+
+<p><b>built:</b>May 25, 2011<br>
+<b>download:</b> <a href="/checker/checker-257.tar.bz2">checker-257.tar.bz2</a></p>
+<p><b>highlights:</b></p>
+
+<ul>
+  <li>The analyzer is now far more aggressive with checking conformance with Core Foundation conventions.  Any function that returns a CF type must now obey the Core Foundation naming conventions, or use the <a href="/annotations.html#attr_cf_returns_retained">cf_returns_retained</a> or <a href="/annotations.html#attr_cf_returns_not_retained">cf_returns_not_retained</a> annotations.</li>
+  <li>Fixed a serious regression where the analyzer would not analyze Objective-C methods in class extensions.</li>
+  <li>Misc. bug fixes to improve analyzer precision.
+  </li>
+</ul>
+
+<h4 id="checker_256">checker-256</h4>
+
+<p><b>built:</b>April 13, 2011<br>
+<b>download:</b> <a href="/checker/checker-256.tar.bz2">checker-256.tar.bz2</a></p>
+<p><b>highlights:</b></p>
+
+<ul>
+  <li>Lots of bug fixes and improvements to analyzer precision (fewer false positives, possibly more bugs found).
+  <li>Introductory analysis support for C++ and Objective-C++.
+</ul>
+
+<p>This build contains basic support for C++ and Objective-C++ that is ready to be tried out
+  by general users.  It is still in its infancy, but establishes a baseline for things to come.  The main hope is that it can find some
+  issues and have a reasonable false positive rate.</p>
+  
+<p><b>Please</b> <a href="/filing_bugs.html">file bugs</a> when you see issues of any kind so we can assess
+  where development on C++ analysis support needs to be focused.</p>
+  
+<p>To try out C++ analysis support, it should work out of the box using <tt>scan-build</tt>.  If you are using this checker build
+  as a replacement to the analyzer bundled with Xcode, first use the <tt>set-xcode-analyzer</tt> script to <a href="/xcode.html">change Xcode to use
+  your version of the analyzer</a>.  You will then need to modify one configuration file in Xcode to enable C++ analysis support.  This can
+  be done with the following steps:</p>
+  
+<ol>
+  <li>Find the clang .xcspec file:
+<pre>$ cd /Developer/Library
+$ find . | grep xcspec | grep Clang
+./Xcode/<b>&lt;SNIP&gt;</b>/Clang LLVM 1.0.xcplugin/Contents/Resources/Clang LLVM 1.0.xcspec
+</pre></li>
+  <li>The exact location of the file may vary depending on your installation of Xcode.  Edit that file, and look for the string &quot;--analyze&quot;:
+<pre>
+  SourceFileOption = "--analyze";
+  FileTypes = (
+      "sourcecode.c.c",
+      "sourcecode.c.objc",
+  );
+  ...
+</pre>
+  Change the &quot;FileTypes&quot; entry to:
+<pre>
+  FileTypes = (
+      "sourcecode.c.c",
+      "sourcecode.c.objc",
+      "sourcecode.cpp.cpp",
+      "sourcecode.cpp.objcpp",
+  );
+</pre></li>
+<li>Restart Xcode.</li>
+</ol>
+
+<h4 id="checker_255">checker-255</h4>
+
+<p><b>built:</b> February 11, 2011<br>
+<b>download:</b> <a href="/checker/checker-255.tar.bz2">checker-255.tar.bz2</a></p>
+<p><b>highlights:</b></p>
+
+<ul>
+<li>Mac OS X builds are now Intel <tt>i386</tt> and <tt>x86_64</tt> only (no <tt>ppc</tt> support)</li>
+<li>Turns on new <tt>-init</tt> method checker by default</li>
+<li>Reduces memory usage of analyzer by 10%</li>
+<li>Misc. fixes to reduce false positives on dead stores and idempotent operations.</li>
+</ul>
+
+<h4 id="checker_254">checker-254</h4>
+
+<p><b>built:</b> January 27, 2011<br>
+<b>download:</b> <a href="/checker/checker-254.tar.bz2">checker-254.tar.bz2</a></p>
+<p><b>highlights:</b></p>
+
+<ul>
+<li>Introduces new <tt>-init</tt> method checker to check if a super class's init method is properly called.</li>
+<li>Objective-C retain/release checker now reasons about calls to property accessor methods (setter/getter).</li>
+<li>Introduces new attribute <a href="annotations.html#attr_ns_consumes_self">ns_consumes_self</a> to educate the Objective-C retain/release checker about custom &quot;init-like&quot; methods that do not follow the standard Cocoa naming conventions.</li>
+<li>Introduces new attributes <a href="annotations.html#attr_ns_consumed">ns_consumed</a> and <a href="annotations.html#attr_cf_consumed">cf_consumed</a> to educate the Objective-C retain/release checker about methods/functions that decrement the reference count of a parameter.</li>
+</ul>
+
+</div>
+</div>
+</body>
+</html>
+
