@@ -71,7 +71,7 @@ struct ClangHost
 	clang::LangOptions lang_options;
 	clang::HeaderSearchOptions header_search_options;
 
-	llvm::OwningPtr<clang::Diagnostic> diagnostic;
+	llvm::OwningPtr<clang::DiagnosticsEngine> diagnostic;
 	llvm::OwningPtr<clang::FileManager> file_manager;
 	llvm::OwningPtr<clang::HeaderSearch> header_search;
 	llvm::OwningPtr<clang::TargetInfo> target_info;

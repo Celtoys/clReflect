@@ -61,16 +61,18 @@ ClangHost::ClangHost(Arguments& args)
 	// Error reporting format for Visual Studio clicking
 	diag_options.Format = diag_options.Msvc;
 
+	//diagnostics = clang::CompilerInstance::createDiagnostics(diag_options
+
 	// Create a diagnostic object for reporting warnings and errors to the user
 	clang::TextDiagnosticPrinter* text_diag_printer = new clang::TextDiagnosticPrinter(output_stream, diag_options);
 	llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diag_id(new clang::DiagnosticIDs());
-	diagnostic.reset(new clang::Diagnostic(diag_id, text_diag_printer));
+	diagnostic.reset(new clang::DiagnosticsEngine(diag_id, text_diag_printer));
 	diagnostic->setSuppressSystemWarnings(true);
 
 	// Setup the language parsing options for C++
 	lang_options.CPlusPlus = 1;
 	lang_options.Bool = 1;
-	lang_options.Microsoft = 1;
+	lang_options.MicrosoftMode = 1;
 	lang_options.MSBitfields = 1;
 	lang_options.RTTI = 0;
 
@@ -126,7 +128,7 @@ ClangASTParser::ClangASTParser(ClangHost& host)
 	: m_ClangHost(host)
 	, m_SourceManager(*host.diagnostic, *host.file_manager)
 	, m_IDTable(host.lang_options)
-	, m_BuiltinContext(*host.target_info)
+	//, m_BuiltinContext(*host.target_info)
 {
 	// Initialise the pre-processor
 	m_Preprocessor.reset(new clang::Preprocessor(
@@ -141,7 +143,7 @@ ClangASTParser::ClangASTParser(ClangHost& host)
 	m_ASTContext.reset(new clang::ASTContext(
 		m_ClangHost.lang_options,
 		m_SourceManager,
-		*m_ClangHost.target_info,
+		m_ClangHost.target_info.get(),
 		m_IDTable,
 		m_SelectorTable,
 		m_BuiltinContext,
@@ -157,7 +159,7 @@ bool ClangASTParser::ParseAST(const char* filename)
 
 	// Parse the AST
 	EmptyASTConsumer ast_consumer;
-	clang::DiagnosticClient* client = m_ClangHost.diagnostic->getClient();
+	clang::DiagnosticConsumer* client = m_ClangHost.diagnostic->getClient();
 	client->BeginSourceFile(m_ClangHost.lang_options, m_Preprocessor.get());
 	clang::ParseAST(*m_Preprocessor, &ast_consumer, *m_ASTContext);
 	client->EndSourceFile();
