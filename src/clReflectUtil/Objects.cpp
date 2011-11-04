@@ -47,10 +47,10 @@ clutl::ObjectDatabase::~ObjectDatabase()
 }
 
 
-void* clutl::ObjectDatabase::CreateObject(const clcpp::Database& reflection_db, unsigned int type_hash, const clcpp::Type*& type)
+clutl::Object* clutl::ObjectDatabase::CreateObject(const clcpp::Database& reflection_db, unsigned int type_hash)
 {
 	// Can the type be located?
-	type = reflection_db.GetType(type_hash);
+	const clcpp::Type* type = reflection_db.GetType(type_hash);
 	if (type == 0)
 		return 0;
 
@@ -64,53 +64,55 @@ void* clutl::ObjectDatabase::CreateObject(const clcpp::Database& reflection_db, 
 		return 0;
 
 	// Allocate and construct the object
-	void* object = new char[type->size];
+	Object* object = (Object*)new char[type->size];
 	CallFunction(class_type->constructor, object);
+	object->type = type;
 	return object;
 }
 
 
-void clutl::ObjectDatabase::DestroyObject(void* object, const clcpp::Type* object_type)
+void clutl::ObjectDatabase::DestroyObject(Object* object)
 {
 	// These represent fatal code errors
 	clcpp::internal::Assert(object != 0);
-	clcpp::internal::Assert(object_type != 0);
+	clcpp::internal::Assert(object->type != 0);
 
 	// Call the destructor and release the memory
-	const clcpp::Class* class_type = object_type->AsClass();
+	const clcpp::Class* class_type = object->type->AsClass();
 	clcpp::internal::Assert(class_type->destructor != 0);
 	CallFunction(class_type->destructor, object);
 	delete [] (char*)object;
 }
 
 
-void* clutl::ObjectDatabase::CreateNamedObject(const clcpp::Database& reflection_db, unsigned int type_hash, const char* name_text, const clcpp::Type*& type, clcpp::Name& name)
+clutl::NamedObject* clutl::ObjectDatabase::CreateNamedObject(const clcpp::Database& reflection_db, unsigned int type_hash, const char* name_text)
 {
 	// Create the object
-	void* object = CreateObject(reflection_db, type_hash, type);
+	NamedObject* object = (NamedObject*)CreateObject(reflection_db, type_hash);
 	if (object == 0)
 		return 0;
 
 	// Construct the name
 	int name_length = strlen(name_text);
-	name.text = new char[name_length + 1];
-	memcpy((void*)name.text, name_text, name_length + 1);
-	name.hash = clcpp::internal::HashData(name.text, name_length);
+	object->name.text = new char[name_length + 1];
+	memcpy((void*)object->name.text, name_text, name_length + 1);
+	object->name.hash = clcpp::internal::HashData(object->name.text, name_length);
 
 	// Find the first empty slot in the hash table
 	// TODO: Grow based on load-factor?
-	HashEntry* he = const_cast<HashEntry*>(FindHashEntry(name.hash % m_MaxNbObjects, 0));
+	HashEntry* he = const_cast<HashEntry*>(FindHashEntry(object->name.hash % m_MaxNbObjects, 0));
 	clcpp::internal::Assert(he != 0);
-	he->name = name;
+	he->name = object->name;
 	he->object = object;
 
 	return object;
 }
 
 
-void clutl::ObjectDatabase::DestroyNamedObject(void* object, const clcpp::Type* object_type, unsigned int name_hash)
+void clutl::ObjectDatabase::DestroyNamedObject(NamedObject* object)
 {
 	// Locate the hash table entry and check that the object pointers match
+	unsigned int name_hash = object->name.hash;
 	HashEntry* he = const_cast<HashEntry*>(FindHashEntry(name_hash % m_MaxNbObjects, name_hash));
 	clcpp::internal::Assert(he != 0);
 	clcpp::internal::Assert(he->object == object);
@@ -122,11 +124,11 @@ void clutl::ObjectDatabase::DestroyNamedObject(void* object, const clcpp::Type* 
 	he->name.text = 0;
 	he->object = 0;
 
-	DestroyObject(object, object_type);
+	DestroyObject(object);
 }
 
 
-void* clutl::ObjectDatabase::FindNamedObject(unsigned int name_hash) const
+clutl::NamedObject* clutl::ObjectDatabase::FindNamedObject(unsigned int name_hash) const
 {
 	const HashEntry* he = FindHashEntry(name_hash % m_MaxNbObjects, name_hash);
 	if (he)
