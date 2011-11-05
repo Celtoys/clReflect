@@ -75,7 +75,7 @@ public:
 	{
 	}
 
-	void Initialise(const clcpp::Primitive* primitive, void* container_object, unsigned int count, clcpp::WriteIterator& storage)
+	void Initialise(const clcpp::Primitive* primitive, void* container_object, clcpp::WriteIterator& storage)
 	{
 		clcpp::internal::Assert(primitive != 0);
 		clcpp:: internal::Assert(container_object != 0);
@@ -96,7 +96,7 @@ public:
 
 		// Prepare for iteration
 		m_Position = 0;
-		storage.m_Count = count;
+		storage.m_Count = field->ci->count;
 		m_Size = storage.m_Count * m_ElementSize;
 	}
 
@@ -168,7 +168,7 @@ clcpp::ReadIterator::~ReadIterator()
 }
 
 
-clcpp::WriteIterator::WriteIterator(const TemplateType* type, void* container_object, unsigned int count)
+clcpp::WriteIterator::WriteIterator(const TemplateType* type, void* container_object)
 {
 	// Can't make a write iterator if there's no container interface
 	if (type->ci == 0)
@@ -184,7 +184,7 @@ clcpp::WriteIterator::WriteIterator(const TemplateType* type, void* container_ob
 	CallFunction(m_IteratorImplType->constructor, (IWriteIterator*)m_ImplData);
 
 	// Complete implementation-specific initialisation
-	((IWriteIterator*)m_ImplData)->Initialise(type, container_object, count, *this);
+	((IWriteIterator*)m_ImplData)->Initialise(type, container_object, *this);
 }
 
 
@@ -198,7 +198,7 @@ clcpp::WriteIterator::WriteIterator(const Field* field, void* container_object)
 	new (*(internal::PtrWrapper*)m_ImplData) ArrayWriteIterator;
 
 	// Complete implementation-specific initialisation
-	((IWriteIterator*)m_ImplData)->Initialise(field, container_object, field->ci->count, *this);
+	((IWriteIterator*)m_ImplData)->Initialise(field, container_object, *this);
 }
 
 
