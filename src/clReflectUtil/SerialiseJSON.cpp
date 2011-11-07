@@ -1103,12 +1103,17 @@ namespace
 
 	void SavePtr(clutl::DataBuffer& out, const void* object)
 	{
+		// Only use the hash if the pointer is non-null
 		clutl::NamedObject* named_object = *((clutl::NamedObject**)object);
+		unsigned int hash = 0;
+		if (named_object != 0)
+			hash = named_object->name.hash;
+
 	#ifdef SAVE_POINTER_HASH_AS_HEX
 		out.Write("0x", 2);
-		SaveHexInteger(out, named_object->name.hash);
+		SaveHexInteger(out, hash);
 	#else
-		SaveUnsignedInteger(out, named_object->name.hash);
+		SaveUnsignedInteger(out, hash);
 	#endif
 	}
 
@@ -1352,6 +1357,7 @@ void clutl::SaveJSON(DataBuffer& out, const ObjectDatabase& object_db, unsigned 
 		// Output a non-JSON compliant Javascript assignment
 		SaveStringNoQuotes(out, object->name.text);
 		out.Write("=", 1);
+		SaveStringNoQuotes(out, object->type->name.text);
 		SaveJSON(out, object, object->type, flags);
 
 		if (flags & JSONFlags::FORMAT_OUTPUT)
