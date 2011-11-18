@@ -115,7 +115,7 @@ ClangParser::ClangParser(Arguments& args)
 	target_options.Triple = llvm::sys::getHostTriple();
 	target_options.CXXABI = "microsoft";
 	m_TargetInfo.reset(clang::TargetInfo::CreateTargetInfo(m_CompilerInstance.getDiagnostics(), target_options));
-	m_CompilerInstance.setTarget(m_TargetInfo.get());
+	m_CompilerInstance.setTarget(m_TargetInfo.take());
 
 	// Set the invokation on the instance
 	m_CompilerInstance.createFileManager();
