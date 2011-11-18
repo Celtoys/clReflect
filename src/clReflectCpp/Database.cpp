@@ -103,15 +103,18 @@ namespace
 		for (int i = 0; i < dbmem.functions.size(); i++)
 		{
 			clcpp::Function& f = dbmem.functions[i];
-			f.address = f.address - dbmem.function_base_address + base_address;
+			if (f.address)
+				f.address = f.address - dbmem.function_base_address + base_address;
 		}
 
 		// Do the same for the GetType family of functions
 		for (int i = 0; i < dbmem.get_type_functions.size(); i++)
 		{
 			clcpp::internal::GetTypeFunctions& f = dbmem.get_type_functions[i];
-			f.get_typename_address = f.get_typename_address - dbmem.function_base_address + base_address;
-			f.get_type_address = f.get_type_address - dbmem.function_base_address + base_address;
+			if (f.get_typename_address)
+				f.get_typename_address = f.get_typename_address - dbmem.function_base_address + base_address;
+			if (f.get_type_address)
+				f.get_type_address = f.get_type_address - dbmem.function_base_address + base_address;
 		}
 	}
 

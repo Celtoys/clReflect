@@ -66,10 +66,8 @@ namespace clcpp
 		virtual ~IWriteIterator() { }
 
 		// One-time initialisation of the iterator that should initialise its own internal
-		// values and write back what it knows of the container to WriteIterator. The total
-		// count of values you expect to write to the container needs to be passed as a
-		// parameter.
-		virtual void Initialise(const Primitive* primitive, void* container_object, unsigned int count, WriteIterator& storage) = 0;
+		// values and write back what it knows of the container to WriteIterator.
+		virtual void Initialise(const Primitive* primitive, void* container_object, WriteIterator& storage) = 0;
 
 		// Allocate an empty value in the container at the current iterator position and return
 		// a pointer to that value so that it can be written to. Moves onto the next value after
@@ -148,7 +146,7 @@ namespace clcpp
 	{
 	public:
 		// Construct from a template type
-		WriteIterator(const TemplateType* type, void* container_object, unsigned int count);
+		WriteIterator(const TemplateType* type, void* container_object);
 
 		// Construct from a field; can only be used to construct write iterators for
 		// C-Array fields.

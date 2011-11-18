@@ -11,13 +11,40 @@ clcpp_reflect_part(clutl::Object)
 clcpp_reflect_part(clutl::NamedObject)
 
 
+//
+// This is an example object management API that you can use, ignore or base your own
+// designs upon. It is required by the serialisation API in this library which would need
+// to be branched/copied should you want to use your own object management API.
+//
 namespace clutl
 {
+	//
+	// Base object class for objects that require runtime knowledge of their type
+	//
 	struct Object
 	{
+		//
+		// Make all deriving types carry a virtual function table. Since many use-cases may require
+		// the use of virtual functions, this ensures safety and convenience.
+		//
+		// If Object did not carry a vftable and you derived from it with a type, X, that did carry
+		// a vftable, casting a pointer between the two types would result in different pointer
+		// addresses.
+		//
+		// If Object has a vftable then the address will always be consistent between casts. This
+		// allows the Object Database to create objects by type name, cast them to an Object and
+		// automatically assign the type pointer, without the use of templates and in the general
+		// case.
+		//
+		virtual ~Object() { }
+
 		const clcpp::Type* type;
 	};
 
+
+	//
+	// Base object class for objects that are to be the root of any serialisation network
+	//
 	struct NamedObject : public Object
 	{
 		// TODO: Is it wise to use the same name type?
@@ -31,81 +58,33 @@ namespace clutl
 		ObjectDatabase(unsigned int max_nb_objects);
 		~ObjectDatabase();
 
-		//
-		// Template helpers for CreateObject/DestroyObject for types that derive from clutl::Object. After
-		// successful object creation, the type pointer is correctly assigned and is used later to
-		// destroy any created objects.
-		//
-		template <typename TYPE> TYPE* CreateObject(const clcpp::Database& reflection_db, unsigned int type_hash)
-		{
-			const clcpp::Type* type = 0;
-			TYPE* object = (TYPE*)CreateObject(reflection_db, type_hash, type);
-			if (object)
-				object->type = type;
-			return object;
-		}
+		// Template helpers for acquring the required typename and correctly casting during creation
 		template <typename TYPE> TYPE* CreateObject(const clcpp::Database& reflection_db)
 		{
-			return CreateObject<TYPE>(reflection_db, clcpp::GetTypeNameHash<TYPE>());
-		}
-		template <typename TYPE> void DestroyObject(TYPE* object)
-		{
-			clcpp::internal::Assert(object != 0);
-			DestroyObject(object, object->type);
-		}
-
-
-		//
-		// Template helpers for CreateNamedObject/DestroyNamedObject for types that derive from
-		// clutl::NamedObject. After successful object creation, the type pointer and name is correctly
-		// assigned and is used later to destroy any created objects.
-		//
-		template <typename TYPE> TYPE* CreateNamedObject(const clcpp::Database& reflection_db, unsigned int type_hash, const char* name_text)
-		{
-			const clcpp::Type* type = 0;
-			clcpp::Name name;
-			TYPE* object = (TYPE*)CreateNamedObject(reflection_db, type_hash, name_text, type, name);
-			if (object)
-			{
-				object->type = type;
-				object->name = name;
-			}
-			return object;
+			return (TYPE*)CreateObject(reflection_db, clcpp::GetTypeNameHash<TYPE>());
 		}
 		template <typename TYPE> TYPE* CreateNamedObject(const clcpp::Database& reflection_db, const char* name_text)
 		{
-			return CreateNamedObject<TYPE>(reflection_db, clcpp::GetTypeNameHash<TYPE>(), name_text);
-		}
-		template <typename TYPE> void DestroyNamedObject(TYPE* object)
-		{
-			clcpp::internal::Assert(object != 0);
-			DestroyNamedObject(object, object->type, object->name.hash);
+			return (TYPE*)CreateNamedObject(reflection_db, clcpp::GetTypeNameHash<TYPE>(), name_text);
 		}
 
-		//
-		// Create and destroy objects of a given type name. After successful creation, the type pointer is returned
-		// and can be stored in the object or used in another fashion. It must be used at a later date to destroy
-		// the object.
-		//
-		void* CreateObject(const clcpp::Database& reflection_db, unsigned int type_hash, const clcpp::Type*& type);
-		void DestroyObject(void* object, const clcpp::Type* object_type);
+		// Create and destroy objects of a given type name
+		Object* CreateObject(const clcpp::Database& reflection_db, unsigned int type_hash);
+		void DestroyObject(Object* object);
 
-		//
-		// Create and destroy objects of the given type name and object name. After successful creation, the type
-		// pointer and persistent name is returned. These must be used later to destroy the object. The object
-		// database tracks all named objects created this way.
-		//
-		void* CreateNamedObject(const clcpp::Database& reflection_db, unsigned int type_hash, const char* name_text, const clcpp::Type*& type, clcpp::Name& name);
-		void DestroyNamedObject(void* object, const clcpp::Type* object_type, unsigned int name_hash);
+		// Create and destroy objects of the given type name and object name. Objects created with this method
+		// are internally tracked and can be requested by name at a later point.
+		NamedObject* CreateNamedObject(const clcpp::Database& reflection_db, unsigned int type_hash, const char* name_text);
+		void DestroyNamedObject(NamedObject* object);
 
-		void* FindNamedObject(unsigned int name_hash) const;
+		NamedObject* FindNamedObject(unsigned int name_hash) const;
 
 	private:
 		struct HashEntry
 		{
 			HashEntry() : object(0) { }
 			clcpp::Name name;
-			void* object;
+			NamedObject* object;
 		};
 
 		const HashEntry* FindHashEntry(unsigned int hash_index, unsigned int hash) const;
