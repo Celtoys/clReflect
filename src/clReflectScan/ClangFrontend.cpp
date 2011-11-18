@@ -32,10 +32,12 @@
 #include "llvm/Support/Host.h"
 
 #include "clang/AST/ASTConsumer.h"
-#include "clang/Basic/TargetOptions.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"	
-#include "clang/Frontend/Utils.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Parse/ParseAST.h"
+#include "clang/Sema/Sema.h"
 
 
 namespace
@@ -53,25 +55,18 @@ namespace
 }
 
 
-ClangHost::ClangHost(Arguments& args)
+ClangParser::ClangParser(Arguments& args)
 	// VC2005: If shouldClose is set to true, this forces an assert in the CRT on program
 	// shutdown as stdout hasn't been opened by the app in the first place.
-	: output_stream(1, false)
+	: m_OutputStream(1, false)
 {
-	// Error reporting format for Visual Studio clicking
-	diag_options.Format = diag_options.Msvc;
-
-	//diagnostics = clang::CompilerInstance::createDiagnostics(diag_options
-
-	// Create a diagnostic object for reporting warnings and errors to the user
-	clang::TextDiagnosticPrinter* text_diag_printer = new clang::TextDiagnosticPrinter(output_stream, diag_options);
-	llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diag_id(new clang::DiagnosticIDs());
-	diagnostic.reset(new clang::DiagnosticsEngine(diag_id, text_diag_printer));
-	diagnostic->setSuppressSystemWarnings(true);
+	m_CompilerInvocation.reset(new clang::CompilerInvocation);
 
 	// Setup the language parsing options for C++
+	clang::LangOptions& lang_options = m_CompilerInvocation->getLangOpts();
 	lang_options.CPlusPlus = 1;
 	lang_options.Bool = 1;
+	lang_options.MicrosoftExt = 1;
 	lang_options.MicrosoftMode = 1;
 	lang_options.MSBitfields = 1;
 	lang_options.RTTI = 0;
@@ -92,12 +87,8 @@ ClangHost::ClangHost(Arguments& args)
 	//
 	lang_options.DelayedTemplateParsing = 1;
 
-	// Setup access to the filesystem
-	clang::FileSystemOptions fs_options;
-	file_manager.reset(new clang::FileManager(fs_options));
-
 	// Gather C++ header searches from the command-line
-	header_search.reset(new clang::HeaderSearch(*file_manager));
+	clang::HeaderSearchOptions& header_search_options = m_CompilerInvocation->getHeaderSearchOpts();
 	for (int i = 0; ; i++)
 	{
 		std::string include = args.GetProperty("-i", i);
@@ -113,70 +104,58 @@ ClangHost::ClangHost(Arguments& args)
 		header_search_options.AddPath(include.c_str(), clang::frontend::System, false, false, false);
 	}
 
+	// Setup diagnostics output; MSVC line-clicking and suppress warnings from system headers
+	m_DiagnosticOptions.Format = m_DiagnosticOptions.Msvc;
+	clang::TextDiagnosticPrinter *client = new clang::TextDiagnosticPrinter(m_OutputStream, m_DiagnosticOptions);
+	m_CompilerInstance.createDiagnostics(0, NULL, client);
+	m_CompilerInstance.getDiagnostics().setSuppressSystemWarnings(true);
+
 	// Setup target options - ensure record layout calculations use the MSVC C++ ABI
-	clang::TargetOptions target_options;
+	clang::TargetOptions& target_options = m_CompilerInvocation->getTargetOpts();
 	target_options.Triple = llvm::sys::getHostTriple();
 	target_options.CXXABI = "microsoft";
-	target_info.reset(clang::TargetInfo::CreateTargetInfo(*diagnostic, target_options));
+	m_TargetInfo.reset(clang::TargetInfo::CreateTargetInfo(m_CompilerInstance.getDiagnostics(), target_options));
+	m_CompilerInstance.setTarget(m_TargetInfo.get());
 
-	// This will commit the header search options to the header search object
-	clang::ApplyHeaderSearchOptions(*header_search, header_search_options, lang_options, target_info->getTriple());
+	// Set the invokation on the instance
+	m_CompilerInstance.createFileManager();
+	m_CompilerInstance.createSourceManager(m_CompilerInstance.getFileManager());
+	m_CompilerInstance.setInvocation(m_CompilerInvocation.take());
 }
 
 
-ClangASTParser::ClangASTParser(ClangHost& host)
-	: m_ClangHost(host)
-	, m_SourceManager(*host.diagnostic, *host.file_manager)
-	, m_IDTable(host.lang_options)
-	//, m_BuiltinContext(*host.target_info)
+bool ClangParser::ParseAST(const char* filename)
 {
-	// Initialise the pre-processor
-	m_Preprocessor.reset(new clang::Preprocessor(
-		*m_ClangHost.diagnostic,
-		m_ClangHost.lang_options,
-		*m_ClangHost.target_info,
-		m_SourceManager,
-		*m_ClangHost.header_search));
-	clang::InitializePreprocessor(*m_Preprocessor, m_PPOptions, m_ClangHost.header_search_options, m_FEOptions);
+	// Recreate preprocessor and AST context
+	m_CompilerInstance.createPreprocessor();
+	m_CompilerInstance.createASTContext();
 
-	// Initialise the AST context
-	m_ASTContext.reset(new clang::ASTContext(
-		m_ClangHost.lang_options,
-		m_SourceManager,
-		m_ClangHost.target_info.get(),
-		m_IDTable,
-		m_SelectorTable,
-		m_BuiltinContext,
-		0));
-}
-
-
-bool ClangASTParser::ParseAST(const char* filename)
-{
 	// Get the file  from the file system
-	const clang::FileEntry* file = m_ClangHost.file_manager->getFile(filename);
-	m_SourceManager.createMainFileID(file);
+	const clang::FileEntry* file = m_CompilerInstance.getFileManager().getFile(filename);
+	m_CompilerInstance.getSourceManager().createMainFileID(file);
 
 	// Parse the AST
 	EmptyASTConsumer ast_consumer;
-	clang::DiagnosticConsumer* client = m_ClangHost.diagnostic->getClient();
-	client->BeginSourceFile(m_ClangHost.lang_options, m_Preprocessor.get());
-	clang::ParseAST(*m_Preprocessor, &ast_consumer, *m_ASTContext);
+	clang::DiagnosticConsumer* client = m_CompilerInstance.getDiagnostics().getClient();
+	client->BeginSourceFile(m_CompilerInstance.getLangOpts(), &m_CompilerInstance.getPreprocessor());
+	clang::ParseAST(m_CompilerInstance.getPreprocessor(), &ast_consumer, m_CompilerInstance.getASTContext());
 	client->EndSourceFile();
 
 	return client->getNumErrors() == 0;
 }
 
 
-void ClangASTParser::GetIncludedFiles(std::vector<std::string>& files) const
+
+void ClangParser::GetIncludedFiles(std::vector<std::string>& files) const
 {
 	// First need a mapping from unique file ID to the File Entry
 	llvm::SmallVector<const clang::FileEntry*, 0> uid_to_files;
-	m_ClangHost.file_manager->GetUniqueIDMapping(uid_to_files);
+	m_CompilerInstance.getFileManager().GetUniqueIDMapping(uid_to_files);
 
 	// Now iterate over every included header file info
-	clang::HeaderSearch::header_file_iterator begin = m_ClangHost.header_search->header_file_begin();
-	clang::HeaderSearch::header_file_iterator end = m_ClangHost.header_search->header_file_end();
+	clang::HeaderSearch& header_search = m_CompilerInstance.getPreprocessor().getHeaderSearchInfo();
+	clang::HeaderSearch::header_file_iterator begin = header_search.header_file_begin();
+	clang::HeaderSearch::header_file_iterator end = header_search.header_file_end();
 	for (clang::HeaderSearch::header_file_iterator i = begin; i != end; ++i)
 	{
 		// Map from header file info to file entry and add to the filename list

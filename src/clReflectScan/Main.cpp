@@ -35,6 +35,8 @@
 #include "clReflectCore/DatabaseTextSerialiser.h"
 #include "clReflectCore/DatabaseBinarySerialiser.h"
 
+#include "clang/AST/ASTContext.h"
+
 
 namespace
 {
@@ -57,7 +59,7 @@ namespace
 	}
 
 
-	void PrintIncludedHeaders(const ClangASTParser& ast_parser, const char* input_filename)
+	void PrintIncludedHeaders(const ClangParser& ast_parser, const char* input_filename)
 	{
 		std::vector<std::string> header_files;
 		ast_parser.GetIncludedFiles(header_files);
@@ -124,16 +126,15 @@ int main(int argc, const char* argv[])
 	}
 
 	// Parse the AST
-	ClangHost clang_host(args);
-	ClangASTParser ast_parser(clang_host);
-	if (!ast_parser.ParseAST(input_filename))
+	ClangParser parser(args);
+	if (!parser.ParseAST(input_filename))
 	{
 		LOG(main, ERROR, "Errors parsing the AST\n");
 		return 1;
 	}
 
 	// Gather reflection specs for the translation unit
-	clang::ASTContext& ast_context = ast_parser.GetASTContext();
+	clang::ASTContext& ast_context = parser.GetASTContext();
 	std::string spec_log = args.GetProperty("-spec_log");
 	ReflectionSpecs reflection_specs(args.Have("-reflect_specs_all"), spec_log);
 	reflection_specs.Gather(ast_context.getTranslationUnitDecl());
@@ -155,7 +156,7 @@ int main(int argc, const char* argv[])
 
 	// Gather included header files if requested
 	if (args.Have("-output_headers"))
-		PrintIncludedHeaders(ast_parser, input_filename);
+		PrintIncludedHeaders(parser, input_filename);
 
 	// Write to a text/binary database depending upon extension
 	std::string output = args.GetProperty("-output");

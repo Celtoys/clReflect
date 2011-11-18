@@ -40,7 +40,7 @@ namespace
 	clang::AnnotateAttr* GetReflectionSpec(clang::DeclContext::decl_iterator i)
 	{
 		// Ignore anything that's not a namespace
-		clang::NamespaceDecl* ns_decl = dyn_cast<clang::NamespaceDecl>(*i);
+		clang::NamespaceDecl* ns_decl = llvm::dyn_cast<clang::NamespaceDecl>(*i);
 		if (ns_decl == 0)
 			return 0;
 
@@ -62,7 +62,7 @@ namespace
 		}
 
 		// Cast to a C++ record
-		clang::CXXRecordDecl* record_decl = dyn_cast<clang::CXXRecordDecl>(*j);
+		clang::CXXRecordDecl* record_decl = llvm::dyn_cast<clang::CXXRecordDecl>(*j);
 		if (record_decl == 0)
 		{
 			LOG(spec, WARNING, "Ill-formed Reflection Spec; first declaration must be a reflection structure\n");

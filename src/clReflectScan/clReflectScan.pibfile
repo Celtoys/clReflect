@@ -2,8 +2,8 @@
 
 import os
 
-llvm_source = "../../../../sdk/llvm/llvm"
-llvm_build = "../../../../sdk/llvm/build"
+llvm_source = "../../extern/llvm"
+llvm_build = "../../extern/llvm-build"
 
 include_paths = [
     os.path.join(llvm_source, "include"),
@@ -37,6 +37,8 @@ libs = [
     "clangFrontend.lib",
     "clangLex.lib",
     "clangBasic.lib",
+    "clangSerialization.lib",
+    "clangDriver.lib",
     "LLVMSupport.lib",
     "LLVMCore.lib",
     "LLVMMC.lib",

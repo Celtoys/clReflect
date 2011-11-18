@@ -2,5 +2,5 @@
 pushd .
 md llvm-build
 cd llvm-build
-cmake -G "Visual Studio 9 2008" ..\llvm
+cmake -G "Visual Studio 8 2005" ..\llvm
 popd

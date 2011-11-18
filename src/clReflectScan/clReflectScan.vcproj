@@ -3,7 +3,7 @@
     ProjectType="Visual C++"
     Version="8.00"
     Name="clReflectScan"
-    ProjectGUID="{15EAE8F0-FE45-11E0-8EB8-F46D04D48D5F}"
+    ProjectGUID="{C674BA50-0A22-11E1-87DE-F46D04D48D5F}"
     RootNamespace="clReflectScan"
     Keyword="Win32Proj"
     >

@@ -3,7 +3,7 @@
     ProjectType="Visual C++"
     Version="8.00"
     Name="clReflectUtil"
-    ProjectGUID="{14805C70-FE45-11E0-AB9C-F46D04D48D5F}"
+    ProjectGUID="{C61C6122-0A22-11E1-85BF-F46D04D48D5F}"
     RootNamespace="clReflectUtil"
     Keyword="Win32Proj"
     >
@@ -63,11 +63,11 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{1480aa90-fe45-11e0-9478-f46d04d48d5f}"
+			UniqueIdentifier="{c61caf40-0a22-11e1-b57d-f46d04d48d5f}"
 			>
 			<Filter
 				Name="clutl"
-				UniqueIdentifier="{1480aa91-fe45-11e0-be2c-f46d04d48d5f}"
+				UniqueIdentifier="{c61caf41-0a22-11e1-9f87-f46d04d48d5f}"
 				>
 				<File
 					RelativePath="..\..\inc\clutl\Containers.h"
