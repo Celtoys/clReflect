@@ -780,7 +780,10 @@ RecordLayoutBuilder::SelectPrimaryVBase(const CXXRecordDecl *RD) {
 
 CharUnits
 RecordLayoutBuilder::GetVirtualPointersSize(const CXXRecordDecl *RD) const {
-  return Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerWidth(0));
+	CharUnits PointerWidth = Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerWidth(0));
+	if (Context.getTargetInfo().getCXXABI() == CXXABI_Microsoft && !Alignment.isZero())
+		return PointerWidth.RoundUpToAlignment(Alignment);
+	return PointerWidth;
 }
 
 /// DeterminePrimaryBase - Determine the primary base of the given class.
