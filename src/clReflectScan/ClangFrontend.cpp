@@ -34,6 +34,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"	
+#include "clang/Frontend/LangStandard.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Parse/ParseAST.h"
@@ -64,6 +65,7 @@ ClangParser::ClangParser(Arguments& args)
 
 	// Setup the language parsing options for C++
 	clang::LangOptions& lang_options = m_CompilerInvocation->getLangOpts();
+	m_CompilerInvocation->setLangDefaults(lang_options, clang::IK_CXX, clang::LangStandard::lang_cxx03);
 	lang_options.CPlusPlus = 1;
 	lang_options.Bool = 1;
 	lang_options.MicrosoftExt = 1;
