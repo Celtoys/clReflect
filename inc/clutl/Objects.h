@@ -61,11 +61,11 @@ namespace clutl
 		// Template helpers for acquring the required typename and correctly casting during creation
 		template <typename TYPE> TYPE* CreateObject(const clcpp::Database& reflection_db)
 		{
-			return (TYPE*)CreateObject(reflection_db, clcpp::GetTypeNameHash<TYPE>());
+			return static_cast<TYPE*>(CreateObject(reflection_db, clcpp::GetTypeNameHash<TYPE>()));
 		}
 		template <typename TYPE> TYPE* CreateNamedObject(const clcpp::Database& reflection_db, const char* name_text)
 		{
-			return (TYPE*)CreateNamedObject(reflection_db, clcpp::GetTypeNameHash<TYPE>(), name_text);
+			return static_cast<TYPE*>(CreateNamedObject(reflection_db, clcpp::GetTypeNameHash<TYPE>(), name_text));
 		}
 
 		// Create and destroy objects of a given type name
