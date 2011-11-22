@@ -14,6 +14,47 @@ namespace
 	{
 		53, 97, 193, 389, 769, 1543, 3079, 6151, 12289, 24593, 49167, 98317, 196613, 393241, 786433, 1572869
 	};
+
+
+	template <typename OBJECT_TYPE>
+	OBJECT_TYPE* AllocateAndConstructObject(const clcpp::Database* reflection_db, clutl::ObjectDatabase* object_db, unsigned int type_hash)
+	{
+		// Can the type be located?
+		const clcpp::Type* type = reflection_db->GetType(type_hash);
+		if (type == 0)
+			return 0;
+
+		// Can only create class objects
+		if (type->kind != clcpp::Primitive::KIND_CLASS)
+			return 0;
+		const clcpp::Class* class_type = type->AsClass();
+
+		// Need a constructor to new and a destructor to delete at a later point
+		if (class_type->constructor == 0 || class_type->destructor == 0)
+			return 0;
+
+		// Allocate and construct the object
+		OBJECT_TYPE* object = (OBJECT_TYPE*)new char[type->size];
+		CallFunction(class_type->constructor, object);
+		object->object_db = object_db;
+		object->type = type;
+		return object;
+	}
+
+
+	template <typename OBJECT_TYPE>
+	void DestructAndFreeObject(OBJECT_TYPE* object)
+	{
+		// These represent fatal code errors
+		clcpp::internal::Assert(object != 0);
+		clcpp::internal::Assert(object->type != 0);
+
+		// Call the destructor and release the memory
+		const clcpp::Class* class_type = object->type->AsClass();
+		clcpp::internal::Assert(class_type->destructor != 0);
+		CallFunction(class_type->destructor, object);
+		delete [] (char*)object;
+	}
 }
 
 
@@ -52,46 +93,20 @@ clutl::ObjectDatabase::~ObjectDatabase()
 
 clutl::Object* clutl::ObjectDatabase::CreateObject(unsigned int type_hash)
 {
-	// Can the type be located?
-	const clcpp::Type* type = m_ReflectionDB->GetType(type_hash);
-	if (type == 0)
-		return 0;
-
-	// Can only create class objects
-	if (type->kind != clcpp::Primitive::KIND_CLASS)
-		return 0;
-	const clcpp::Class* class_type = type->AsClass();
-
-	// Need a constructor to new and a destructor to delete at a later point
-	if (class_type->constructor == 0 || class_type->destructor == 0)
-		return 0;
-
-	// Allocate and construct the object
-	Object* object = (Object*)new char[type->size];
-	CallFunction(class_type->constructor, object);
-	object->type = type;
-	return object;
+	return AllocateAndConstructObject<Object>(m_ReflectionDB, this, type_hash);
 }
 
 
 void clutl::ObjectDatabase::DestroyObject(Object* object)
 {
-	// These represent fatal code errors
-	clcpp::internal::Assert(object != 0);
-	clcpp::internal::Assert(object->type != 0);
-
-	// Call the destructor and release the memory
-	const clcpp::Class* class_type = object->type->AsClass();
-	clcpp::internal::Assert(class_type->destructor != 0);
-	CallFunction(class_type->destructor, object);
-	delete [] (char*)object;
+	DestructAndFreeObject<Object>(object);
 }
 
 
 clutl::NamedObject* clutl::ObjectDatabase::CreateNamedObject(unsigned int type_hash, const char* name_text)
 {
 	// Create the object
-	NamedObject* object = (NamedObject*)CreateObject(type_hash);
+	NamedObject* object = AllocateAndConstructObject<NamedObject>(m_ReflectionDB, this, type_hash);
 	if (object == 0)
 		return 0;
 
@@ -127,11 +142,7 @@ void clutl::ObjectDatabase::DestroyNamedObject(NamedObject* object)
 	he->name.text = 0;
 	he->object = 0;
 
-	// Call the destructor and release the memory
-	const clcpp::Class* class_type = object->type->AsClass();
-	clcpp::internal::Assert(class_type->destructor != 0);
-	CallFunction(class_type->destructor, object);
-	delete [] (char*)object;
+	DestructAndFreeObject<NamedObject>(object);
 }
 
 

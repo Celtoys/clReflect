@@ -18,11 +18,21 @@ clcpp_reflect_part(clutl::NamedObject)
 //
 namespace clutl
 {
+	class ObjectDatabase;
+
+
 	//
 	// Base object class for objects that require runtime knowledge of their type
 	//
 	struct Object
 	{
+		// Default constructor
+		Object()
+			: object_db(0)
+			, type(0)
+		{
+		}
+
 		//
 		// Make all deriving types carry a virtual function table. Since many use-cases may require
 		// the use of virtual functions, this ensures safety and convenience.
@@ -38,6 +48,10 @@ namespace clutl
 		//
 		virtual ~Object() { }
 
+		// Object database that owns this object
+		ObjectDatabase* object_db;
+
+		// Type of the object
 		const clcpp::Type* type;
 	};
 
@@ -49,9 +63,20 @@ namespace clutl
 	//
 	struct NamedObject
 	{
+		// Default constructor
+		NamedObject()
+			: object_db(0)
+			, type(0)
+		{
+		}
+
 		// Carry a virtual function table, as described for Object
 		virtual ~NamedObject() { }
 
+		// Object database that owns this object
+		ObjectDatabase* object_db;
+
+		// Type of the object
 		const clcpp::Type* type;
 
 		// TODO: Is it wise to use the same name type?
