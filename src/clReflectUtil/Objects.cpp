@@ -127,7 +127,11 @@ void clutl::ObjectDatabase::DestroyNamedObject(NamedObject* object)
 	he->name.text = 0;
 	he->object = 0;
 
-	DestroyObject(object);
+	// Call the destructor and release the memory
+	const clcpp::Class* class_type = object->type->AsClass();
+	clcpp::internal::Assert(class_type->destructor != 0);
+	CallFunction(class_type->destructor, object);
+	delete [] (char*)object;
 }
 
 

@@ -44,9 +44,16 @@ namespace clutl
 
 	//
 	// Base object class for objects that are to be the root of any serialisation network
+	// Doesn't inherit from Object so that it's impossible to mistakenly treat a NamedObject
+	// as an Object.
 	//
-	struct NamedObject : public Object
+	struct NamedObject
 	{
+		// Carry a virtual function table, as described for Object
+		virtual ~NamedObject() { }
+
+		const clcpp::Type* type;
+
 		// TODO: Is it wise to use the same name type?
 		clcpp::Name name;
 	};
