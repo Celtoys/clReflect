@@ -17,10 +17,13 @@ namespace
 }
 
 
-clutl::ObjectDatabase::ObjectDatabase(unsigned int max_nb_objects)
-	: m_MaxNbObjects(0)
+clutl::ObjectDatabase::ObjectDatabase(const clcpp::Database* reflection_db, unsigned int max_nb_objects)
+	: m_ReflectionDB(reflection_db)
+	, m_MaxNbObjects(0)
 	, m_NamedObjects(0)
 {
+	clcpp::internal::Assert(reflection_db != 0);
+
 	// Round the max number of objects up to the nearest prime number in the table
 	unsigned int prev_size = 0;
 	for (unsigned int i = 0; i < sizeof(g_HashTableSizes) / sizeof(g_HashTableSizes[0]); i++)
@@ -47,10 +50,10 @@ clutl::ObjectDatabase::~ObjectDatabase()
 }
 
 
-clutl::Object* clutl::ObjectDatabase::CreateObject(const clcpp::Database& reflection_db, unsigned int type_hash)
+clutl::Object* clutl::ObjectDatabase::CreateObject(unsigned int type_hash)
 {
 	// Can the type be located?
-	const clcpp::Type* type = reflection_db.GetType(type_hash);
+	const clcpp::Type* type = m_ReflectionDB->GetType(type_hash);
 	if (type == 0)
 		return 0;
 
@@ -85,10 +88,10 @@ void clutl::ObjectDatabase::DestroyObject(Object* object)
 }
 
 
-clutl::NamedObject* clutl::ObjectDatabase::CreateNamedObject(const clcpp::Database& reflection_db, unsigned int type_hash, const char* name_text)
+clutl::NamedObject* clutl::ObjectDatabase::CreateNamedObject(unsigned int type_hash, const char* name_text)
 {
 	// Create the object
-	NamedObject* object = (NamedObject*)CreateObject(reflection_db, type_hash);
+	NamedObject* object = (NamedObject*)CreateObject(type_hash);
 	if (object == 0)
 		return 0;
 

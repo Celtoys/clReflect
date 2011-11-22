@@ -55,26 +55,26 @@ namespace clutl
 	class ObjectDatabase
 	{
 	public:
-		ObjectDatabase(unsigned int max_nb_objects);
+		ObjectDatabase(const clcpp::Database* reflection_db, unsigned int max_nb_objects);
 		~ObjectDatabase();
 
 		// Template helpers for acquring the required typename and correctly casting during creation
-		template <typename TYPE> TYPE* CreateObject(const clcpp::Database& reflection_db)
+		template <typename TYPE> TYPE* CreateObject()
 		{
-			return static_cast<TYPE*>(CreateObject(reflection_db, clcpp::GetTypeNameHash<TYPE>()));
+			return static_cast<TYPE*>(CreateObject(clcpp::GetTypeNameHash<TYPE>()));
 		}
-		template <typename TYPE> TYPE* CreateNamedObject(const clcpp::Database& reflection_db, const char* name_text)
+		template <typename TYPE> TYPE* CreateNamedObject(const char* name_text)
 		{
-			return static_cast<TYPE*>(CreateNamedObject(reflection_db, clcpp::GetTypeNameHash<TYPE>(), name_text));
+			return static_cast<TYPE*>(CreateNamedObject(clcpp::GetTypeNameHash<TYPE>(), name_text));
 		}
 
 		// Create and destroy objects of a given type name
-		Object* CreateObject(const clcpp::Database& reflection_db, unsigned int type_hash);
+		Object* CreateObject(unsigned int type_hash);
 		void DestroyObject(Object* object);
 
 		// Create and destroy objects of the given type name and object name. Objects created with this method
 		// are internally tracked and can be requested by name at a later point.
-		NamedObject* CreateNamedObject(const clcpp::Database& reflection_db, unsigned int type_hash, const char* name_text);
+		NamedObject* CreateNamedObject(unsigned int type_hash, const char* name_text);
 		void DestroyNamedObject(NamedObject* object);
 
 		NamedObject* FindNamedObject(unsigned int name_hash) const;
@@ -88,6 +88,8 @@ namespace clutl
 		};
 
 		const HashEntry* FindHashEntry(unsigned int hash_index, unsigned int hash) const;
+
+		const clcpp::Database* m_ReflectionDB;
 
 		// An open-addressed hash table with linear probing - good cache behaviour for storing
 		// hashes of pointers that may suffer from clustering.
