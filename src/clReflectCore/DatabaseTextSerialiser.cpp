@@ -100,6 +100,8 @@ namespace
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
 		fputs(itohex(primitive.size), fp);
+		fputs("\t", fp);
+		fputs(HexStringFromName(primitive.base_type, db), fp);
 	}
 
 
@@ -148,7 +150,7 @@ namespace
 
 	void WriteTemplateType(FILE* fp, const cldb::TemplateType& primitive, const cldb::Database& db)
 	{
-		WritePrimitive(fp, primitive, db);
+		WriteType(fp, primitive, db);
 		fputs("\t", fp);
 
 		for (int i = 0; i < cldb::TemplateType::MAX_NB_ARGS; i++)
@@ -160,14 +162,6 @@ namespace
 				fputs("\t", fp);
 			}
 		}
-	}
-
-
-	void WriteClass(FILE* fp, const cldb::Class& primitive, const cldb::Database& db)
-	{
-		WriteType(fp, primitive, db);
-		fputs("\t", fp);
-		fputs(HexStringFromName(primitive.base_class, db), fp);
 	}
 
 
@@ -270,7 +264,7 @@ void cldb::WriteTextDatabase(const char* filename, const Database& db)
 	WritePrimitives<Enum>(fp, db, WriteType, "Enums", "Name\t\tParent\t\tSize");
 	WritePrimitives<Field>(fp, db, WriteField, "Fields", "Name\t\tParent\t\tType\t\tMod\tCst\tOffs\tUID");
 	WritePrimitives<Function>(fp, db, WriteFunction, "Functions", "Name\t\tParent\t\tUID");
-	WritePrimitives<Class>(fp, db, WriteClass, "Classes", "Name\t\tParent\t\tSize\t\tBase");
+	WritePrimitives<Class>(fp, db, WriteType, "Classes", "Name\t\tParent\t\tSize\t\tBase");
 	WritePrimitives<Template>(fp, db, WritePrimitive, "Templates", "Name\t\tParent");
 	WritePrimitives<TemplateType>(fp, db, WriteTemplateType, "Template Types", "Name\t\tParent\t\tArgument type and pointer pairs");
 	WritePrimitives<Namespace>(fp, db, WritePrimitive, "Namespaces", "Name\t\tParent");
@@ -379,7 +373,8 @@ namespace
 		cldb::Type primitive(
 			db.GetName(name),
 			db.GetName(parent),
-			size);
+			size,
+			cldb::Name());
 
 		db.AddPrimitive(primitive);
 	}
@@ -414,7 +409,8 @@ namespace
 		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
-		// Type parsing - discard the size
+		// Type parsing - discard the size and base type
+		tok.GetHexInt();
 		tok.GetHexInt();
 
 		// Add a new class to the database
@@ -506,8 +502,6 @@ namespace
 
 		// Type parsing
 		cldb::u32 size = tok.GetHexInt();
-
-		// Class parsing
 		cldb::u32 base = tok.GetHexInt();
 
 		// Add a new class to the database
@@ -529,8 +523,12 @@ namespace
 		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
+		// Type parsing - discard size
+		tok.GetHexInt();
+		cldb::u32 base = tok.GetHexInt();
+
 		// Template type argument parsing
-		cldb::TemplateType primitive(db.GetName(name), db.GetName(parent));
+		cldb::TemplateType primitive(db.GetName(name), db.GetName(parent), db.GetName(base));
 		for (int i = 0; i < cldb::TemplateType::MAX_NB_ARGS; i++)
 		{
 			cldb::u32 type = tok.GetHexInt();

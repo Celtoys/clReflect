@@ -261,6 +261,7 @@ namespace clcpp
 
 	//
 	// A basic built-in type that classes/structs can also inherit from
+	// Only one base type is supported until it becomes necessary to do otherwise.
 	//
 	struct Type : public Primitive
 	{
@@ -269,6 +270,7 @@ namespace clcpp
 		Type()
 			: Primitive(KIND)
 			, size(0)
+			, base_type(0)
 			, ci(0)
 		{
 		}
@@ -276,8 +278,21 @@ namespace clcpp
 		Type(Kind k)
 			: Primitive(k)
 			, size(0)
+			, base_type(0)
 			, ci(0)
 		{
+		}
+
+		// Does this type derive from the specified type, by hash?
+		bool DerivesFrom(unsigned int type_name_hash) const
+		{
+			for (const Type* type = base_type; type; type = type->base_type)
+			{
+				if (type->name.hash == type_name_hash)
+					return true;
+			}
+
+			return false;
 		}
 
 		// Safe utility functions for casting to derived types
@@ -285,7 +300,11 @@ namespace clcpp
 		inline const TemplateType* AsTemplateType() const;
 		inline const Class* AsClass() const;
 
+		// Size of the type in bytes
 		unsigned int size;
+
+		// Single type this one derives from. Can be either a Class or TemplateType.
+		const Type* base_type;
 
 		// This is non-null if the type is a registered container
 		ContainerInfo* ci;
@@ -459,7 +478,6 @@ namespace clcpp
 
 	//
 	// Description of a C++ struct or class with containing fields, functions, classes, etc.
-	// Only one base class is supported until it becomes necessary to do otherwise.
 	//
 	struct Class : public Type
 	{
@@ -467,25 +485,11 @@ namespace clcpp
 
 		Class()
 			: Type(KIND)
-			, base_class(0)
 			, constructor(0)
 			, destructor(0)
 			, flag_attributes(0)
 		{
 		}
-
-		bool DerivesFrom(unsigned int class_name_hash) const
-		{
-			for (const Class* test_class = base_class; test_class; test_class = test_class->base_class)
-			{
-				if (test_class->name.hash == class_name_hash)
-					return true;
-			}
-
-			return false;
-		}
-
-		const Class* base_class;
 
 		const Function* constructor;
 		const Function* destructor;

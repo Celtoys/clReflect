@@ -244,6 +244,7 @@ namespace cldb
 
 	//
 	// A basic built-in type that classes/structs can also inherit from
+	// Only one base type is supported until it becomes necessary to do otherwise.
 	//
 	struct Type : public Primitive
 	{
@@ -253,9 +254,10 @@ namespace cldb
 			, size(0)
 		{
 		}
-		Type(Name n, Name p, u32 s)
+		Type(Name n, Name p, u32 s, Name b)
 			: Primitive(Primitive::KIND_TYPE, n, p)
 			, size(s)
+			, base_type(b)
 		{
 		}
 		Type(Kind k)
@@ -263,15 +265,18 @@ namespace cldb
 			, size(0)
 		{
 		}
-		Type(Kind k, Name n, Name p, u32 s) : Primitive(k, n, p), size(s) { }
+		Type(Kind k, Name n, Name p, u32 s, Name b) : Primitive(k, n, p), size(s), base_type(b) { }
 
 		bool Equals(const Type& rhs) const
 		{
-			return Primitive::Equals(rhs) && size == rhs.size;
+			return Primitive::Equals(rhs) && size == rhs.size && base_type == rhs.base_type;
 		}
 
 		// Total size of the type, including alignment
 		u32 size;
+
+		// Single type this one derives from. Can be either a Class or TemplateType.
+		Name base_type;
 	};
 
 
@@ -314,7 +319,7 @@ namespace cldb
 		{
 		}
 		Enum(Name n, Name p)
-			: Type(Primitive::KIND_ENUM, n, p, sizeof(int))
+			: Type(Primitive::KIND_ENUM, n, p, sizeof(int), cldb::Name())
 		{
 		}
 	};
@@ -425,8 +430,8 @@ namespace cldb
 			for (int i = 0; i < MAX_NB_ARGS; i++)
 				parameter_ptrs[i] = false;
 		}
-		TemplateType(Name n, Name p)
-			: Type(KIND_TEMPLATE_TYPE, n, p, 0)
+		TemplateType(Name n, Name p, Name b)
+			: Type(KIND_TEMPLATE_TYPE, n, p, 0, b)
 		{
 			for (int i = 0; i < MAX_NB_ARGS; i++)
 				parameter_ptrs[i] = false;
@@ -477,7 +482,6 @@ namespace cldb
 
 	//
 	// Description of a C++ struct or class with containing fields, functions, classes, etc.
-	// Only one base class is supported until it becomes necessary to do otherwise.
 	//
 	struct Class : public Type
 	{
@@ -487,18 +491,14 @@ namespace cldb
 		{
 		}
 		Class(Name n, Name p, Name b, u32 s)
-			: Type(Primitive::KIND_CLASS, n, p, s)
-			, base_class(b)
+			: Type(Primitive::KIND_CLASS, n, p, s, b)
 		{
 		}
 
 		bool Equals(const Class& rhs) const
 		{
-			return Type::Equals(rhs) && base_class == rhs.base_class;
+			return Type::Equals(rhs);
 		}
-
-		// Single base class
-		Name base_class;
 	};
 
 

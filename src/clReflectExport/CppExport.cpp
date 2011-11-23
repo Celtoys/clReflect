@@ -125,6 +125,7 @@ namespace
 	{
 		CopyPrimitive((clcpp::Primitive&)dest, src, kind);
 		dest.size = src.size;
+		dest.base_type = (clcpp::Type*)src.base_type.hash;
 	}
 	void CopyPrimitive(clcpp::TemplateType& dest, const cldb::TemplateType& src, clcpp::Primitive::Kind kind)
 	{
@@ -138,7 +139,6 @@ namespace
 	void CopyPrimitive(clcpp::Class& dest, const cldb::Class& src, clcpp::Primitive::Kind kind)
 	{
 		CopyPrimitive((clcpp::Type&)dest, src, kind);
-		dest.base_class = (clcpp::Class*)src.base_class.hash;
 	}
 	void CopyPrimitive(clcpp::IntAttribute& dest, const cldb::IntAttribute& src, clcpp::Primitive::Kind kind)
 	{
@@ -416,8 +416,8 @@ namespace
 	}
 
 
-	template <typename PARENT_TYPE, typename FIELD_TYPE, typename CHILD_TYPE>
-	void Link(clcpp::CArray<PARENT_TYPE>& parents, const FIELD_TYPE* (PARENT_TYPE::*field), clcpp::CArray<const CHILD_TYPE*>& children)
+	template <typename PARENT_TYPE, typename FIELD_TYPE, typename FIELD_OBJECT_TYPE, typename CHILD_TYPE>
+	void Link(clcpp::CArray<PARENT_TYPE>& parents, const FIELD_TYPE* (FIELD_OBJECT_TYPE::*field), clcpp::CArray<const CHILD_TYPE*>& children)
 	{
 		// Create a lookup table from hash ID to child
 		typedef std::multimap<unsigned int, const CHILD_TYPE*> ChildMap;
@@ -442,8 +442,8 @@ namespace
 
 
 	// Link for array sources
-	template <typename PARENT_TYPE, typename FIELD_TYPE, typename CHILD_TYPE, int N>
-	void Link(clcpp::CArray<PARENT_TYPE>& parents, const FIELD_TYPE* (PARENT_TYPE::*field)[N], clcpp::CArray<const CHILD_TYPE*>& children)
+	template <typename PARENT_TYPE, typename FIELD_TYPE, typename FIELD_OBJECT_TYPE, typename CHILD_TYPE, int N>
+	void Link(clcpp::CArray<PARENT_TYPE>& parents, const FIELD_TYPE* (FIELD_OBJECT_TYPE::*field)[N], clcpp::CArray<const CHILD_TYPE*>& children)
 	{
 		// Create a lookup table from hash ID to child
 		typedef std::multimap<unsigned int, const CHILD_TYPE*> ChildMap;
@@ -813,9 +813,15 @@ namespace
 			}
 		}
 	}
+	void VerifyPrimitive(CppExport& cppexp, const clcpp::Type& primitive)
+	{
+		// Report any warnings with unresolved base class types
+		if (const char* unresolved = VerifyPtr(cppexp, primitive.base_type))
+			LOG(main, WARNING, "Type '%s' couldn't find base type reference to '%s'\n", primitive.name.text, unresolved);
+	}
 	void VerifyPrimitive(CppExport& cppexp, const clcpp::TemplateType& primitive)
 	{
-		VerifyPrimitive(cppexp, (clcpp::Primitive&)primitive);
+		VerifyPrimitive(cppexp, (clcpp::Type&)primitive);
 
 		for (int i = 0; i < clcpp::TemplateType::MAX_NB_ARGS; i++)
 		{
@@ -823,14 +829,6 @@ namespace
 			if (const char* unresolved = VerifyPtr(cppexp, primitive.parameter_types[i]))
 				LOG(main, WARNING, "Template parameter within '%s' couldn't find type reference to '%s'\n", primitive.name.text, unresolved);
 		}
-	}
-	void VerifyPrimitive(CppExport& cppexp, const clcpp::Class& primitive)
-	{
-		VerifyPrimitive(cppexp, (clcpp::Type&)primitive);
-
-		// Report any warnings with unresolved base class types
-		if (const char* unresolved = VerifyPtr(cppexp, primitive.base_class))
-			LOG(main, WARNING, "Class '%s' couldn't find base class type reference to '%s'\n", primitive.name.text, unresolved);
 	}
 
 	template <typename TYPE>
@@ -935,7 +933,8 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 
 	// Link up any references between primitives
 	Link(cppexp.db->fields, &clcpp::Field::type, cppexp.db->type_primitives);
-	Link(cppexp.db->classes, &clcpp::Class::base_class, cppexp.db->type_primitives);
+	Link(cppexp.db->classes, &clcpp::Type::base_type, cppexp.db->type_primitives);
+	Link(cppexp.db->template_types, &clcpp::TemplateType::base_type, cppexp.db->type_primitives);
 	Link(cppexp.db->template_types, &clcpp::TemplateType::parameter_types, cppexp.db->type_primitives);
 
 	// Return parameters are parented to their functions as parameters. Move them from
@@ -1028,6 +1027,7 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		(&clcpp::Primitive::parent);
 
 	PtrSchema& schema_type = relocator.AddSchema<clcpp::Type>(&schema_primitive)
+		(&clcpp::Class::base_type)
 		(&clcpp::Type::ci);
 
 	PtrSchema& schema_enum_constant = relocator.AddSchema<clcpp::EnumConstant>(&schema_primitive);
@@ -1047,7 +1047,6 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		(&clcpp::Function::attributes, array_data_offset);
 
 	PtrSchema& schema_class = relocator.AddSchema<clcpp::Class>(&schema_type)
-		(&clcpp::Class::base_class)
 		(&clcpp::Class::constructor)
 		(&clcpp::Class::destructor)
 		(&clcpp::Class::enums, array_data_offset)
@@ -1314,7 +1313,15 @@ namespace
 
 	void LogPrimitive(const clcpp::TemplateType& tt)
 	{
-		LOG(cppexp, INFO, "%s\n", tt.name.text);
+		LOG(cppexp, INFO, "class %s", tt.name.text);
+		if (tt.base_type)
+		{
+			LOG_APPEND(cppexp, INFO, " : public %s\n", tt.base_type->name.text);
+		}
+		else
+		{
+			LOG_APPEND(cppexp, INFO, "\n");
+		}
 	}
 
 
@@ -1335,9 +1342,9 @@ namespace
 	void LogPrimitive(const clcpp::Class& cls)
 	{
 		LOG(cppexp, INFO, "class %s", cls.name.text);
-		if (cls.base_class)
+		if (cls.base_type)
 		{
-			LOG_APPEND(cppexp, INFO, " : public %s\n", cls.base_class->name.text);
+			LOG_APPEND(cppexp, INFO, " : public %s\n", cls.base_type->name.text);
 		}
 		else
 		{

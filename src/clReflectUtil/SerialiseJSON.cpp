@@ -820,11 +820,13 @@ namespace
 			field = clcpp::FindPrimitive(class_type->fields, field_hash);
 
 			// Search up through the inheritance hierarchy for the field
-			const clcpp::Class* base_class = class_type->base_class;
-			while (field == 0 && base_class)
+			const clcpp::Type* base_type = class_type->base_type;
+			while (field == 0 && base_type)
 			{
-				field = clcpp::FindPrimitive(base_class->fields, field_hash);
-				base_class = base_class->base_class;
+				// Only classes have fields that can be inspected
+				if (base_type->kind == clcpp::Primitive::KIND_CLASS)
+					field = clcpp::FindPrimitive(base_type->AsClass()->fields, field_hash);
+				base_type = base_type->base_type;
 			}
 
 			// Don't load values for transient/nullstr fields
@@ -1248,12 +1250,11 @@ namespace
 	}
 
 
-	void SaveClass(clutl::DataBuffer& out, const char* object, const clcpp::Class* class_type, unsigned int flags)
+	void SaveClass(clutl::DataBuffer& out, const char* object, const clcpp::Class* class_type, unsigned int flags, bool& field_written)
 	{
 		// Save each field in the class
 		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
 		int nb_fields = fields.size();
-		bool field_written = false;
 		for (int i = 0; i < nb_fields; i++)
 		{
 			// Don't save values for transient fields
@@ -1285,13 +1286,17 @@ namespace
 			field_written = true;
 		}
 
-		// Recurse into base classes
-		const clcpp::Class* base_class = class_type->base_class;
-		if (base_class && base_class->fields.size())
+		// Locate the most immediate base class (skipping template types, for example)
+		const clcpp::Type* base_type = class_type->base_type;
+		while (base_type && base_type->kind != clcpp::Primitive::KIND_CLASS)
+			base_type = base_type->base_type;
+
+		// Recurse into base class
+		if (base_type)
 		{
-			out.Write(",", 1);
+			const clcpp::Class* base_class = base_type->AsClass();
 			NewLine(out, flags);
-			SaveClass(out, object, class_type->base_class, flags);
+			SaveClass(out, object, base_class, flags, field_written);
 		}
 	}
 
@@ -1312,6 +1317,8 @@ namespace
 
 	void SaveObject(clutl::DataBuffer& out, const char* object, const clcpp::Type* type, unsigned int flags)
 	{
+		bool field_written = false;
+
 		// Dispatch to a save function based on kind
 		switch (type->kind)
 		{
@@ -1325,7 +1332,7 @@ namespace
 
 		case (clcpp::Primitive::KIND_CLASS):
 			OpenScope(out, flags);
-			SaveClass(out, object, type->AsClass(), flags);
+			SaveClass(out, object, type->AsClass(), flags, field_written);
 			CloseScope(out, flags);
 			break;
 

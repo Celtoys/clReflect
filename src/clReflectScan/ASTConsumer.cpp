@@ -71,6 +71,150 @@ namespace
 	};
 
 
+	bool GetParameterInfo(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, ParameterInfo& info, int flags);
+	const clang::ClassTemplateSpecializationDecl* GetTemplateSpecialisation(const clang::Type* type);
+	bool ParseTemplateSpecialisation(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, const clang::ClassTemplateSpecializationDecl* cts_decl, std::string& type_name_str);
+
+
+	cldb::Name ParseBaseClass(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, const std::string& name, const clang::CXXRecordDecl* record_decl)
+	{
+		if (record_decl->getNumBases() == 0)
+			return cldb::Name();
+
+		// Can't support virtual base classes - offsets change at runtime
+		const clang::CXXBaseSpecifier& base = *record_decl->bases_begin();
+		if (base.isVirtual())
+		{
+			LOG(ast, WARNING, "Class '%s' has an unsupported virtual base class\n", name.c_str());
+			return cldb::Name();
+		}
+
+		// Parse the type name
+		clang::QualType base_type = base.getType();
+		std::string type_name_str = base_type.getAsString(ctx.getLangOptions());
+		Remove(type_name_str, "struct ");
+		Remove(type_name_str, "class ");
+
+		// First see if the base class is a template specialisation and try to parse it
+		if (const clang::ClassTemplateSpecializationDecl* cts_decl = GetTemplateSpecialisation(base_type.split().first))
+		{
+			if (!ParseTemplateSpecialisation(db, specs, ctx, cts_decl, type_name_str))
+			{
+				LOG(ast, WARNING, "Base class '%s' of '%s' is templated and could not be parsed so skipping", type_name_str.c_str(), name.c_str());
+				return cldb::Name();
+			}
+		}
+
+		// Check the type is reflected
+		else if (!specs.IsReflected(type_name_str))
+		{
+			LOG(ast, WARNING, "Base class '%s' of '%s' is not reflected so skipping\n", type_name_str.c_str(), name.c_str());
+			return cldb::Name();
+		}
+
+		return db.GetName(type_name_str.c_str());
+	}
+
+
+	const clang::ClassTemplateSpecializationDecl* GetTemplateSpecialisation(const clang::Type* type)
+	{
+		// Is this a template specialisation?
+		const clang::CXXRecordDecl* type_decl = type->getAsCXXRecordDecl();
+		if (type_decl == 0 || type_decl->getTemplateSpecializationKind() == clang::TSK_Undeclared)
+			return 0;
+
+		const clang::ClassTemplateSpecializationDecl* cts_decl = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(type_decl);
+		assert(cts_decl && "Couldn't cast to template specialisation decl");
+		return cts_decl;
+	}
+
+
+	bool ParseTemplateSpecialisation(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, const clang::ClassTemplateSpecializationDecl* cts_decl, std::string& type_name_str)
+	{
+		// Get the template being specialised and see if it's marked for reflection
+		// The template definition needs to be in scope for specialisations to occur. This implies
+		// that the reflection spec must also be in scope.
+		const clang::ClassTemplateDecl* template_decl = cts_decl->getSpecializedTemplate();
+		type_name_str = template_decl->getQualifiedNameAsString();
+		if (!specs.IsReflected(type_name_str))
+			return false;
+
+		// Parent the instance to its declaring template
+		cldb::Name parent_name = db.GetName(type_name_str.c_str());
+
+		// Prepare for adding template arguments to the type name
+		type_name_str += "<";
+
+		// Get access to the template argument list
+		ParameterInfo template_args[cldb::TemplateType::MAX_NB_ARGS];
+		const clang::TemplateArgumentList& list = cts_decl->getTemplateArgs();
+		if (list.size() >= cldb::TemplateType::MAX_NB_ARGS)
+			return false;
+
+		for (unsigned int i = 0; i < list.size(); i++)
+		{
+			// Only support type arguments
+			const clang::TemplateArgument& arg = list[i];
+			if (arg.getKind() != clang::TemplateArgument::Type)
+				return false;
+
+			// Recursively parse the template argument to get some parameter info
+			if (!GetParameterInfo(db, specs, ctx, arg.getAsType(), template_args[i], false))
+				return false;
+
+			// References currently not supported
+			if (template_args[i].qualifer.op == cldb::Qualifier::REFERENCE)
+				return false;
+
+			// Can't reflect array template parameters
+			if (template_args[i].array_count)
+				return false;
+
+			// Concatenate the arguments in the type name
+			if (i)
+				type_name_str += ",";
+			type_name_str += template_args[i].type_name;
+			if (template_args[i].qualifer.op == cldb::Qualifier::POINTER)
+				type_name_str += "*";
+		}
+
+		type_name_str += ">";
+
+		// Create the referenced template type on demand if it doesn't exist
+		if (db.GetFirstPrimitive<cldb::TemplateType>(type_name_str.c_str()) == 0)
+		{
+			// Try to parse the base class
+			cldb::Name base_name;
+			if (cts_decl->getNumBases())
+			{
+				base_name = ParseBaseClass(db, specs, ctx, type_name_str, llvm::dyn_cast<clang::CXXRecordDecl>(cts_decl));
+				if (base_name == cldb::Name())
+					return false;
+			}
+
+			cldb::Name type_name = db.GetName(type_name_str.c_str());
+			cldb::TemplateType type(type_name, parent_name, base_name);
+
+			// Populate the template argument list
+			for (unsigned int i = 0; i < list.size(); i++)
+			{
+				type.parameter_types[i] = db.GetName(template_args[i].type_name.c_str());
+				type.parameter_ptrs[i] = template_args[i].qualifer.op == cldb::Qualifier::POINTER;
+			}
+
+			// Log the creation of this new instance
+			LOG(ast, INFO, "class %s", type_name_str.c_str());
+			if (base_name != cldb::Name())
+				LOG_APPEND(ast, INFO, " : %s", base_name.text.c_str());
+			LOG_NEWLINE(ast);
+
+			db.AddPrimitive(type);
+		}
+
+		return true;
+	}
+
+
 	bool GetParameterInfo(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, ParameterInfo& info, int flags)
 	{
 		// Get type info for the parameter
@@ -136,77 +280,11 @@ namespace
 			return false;
 		}
 
-		// Is this a template specialisation?
-		const clang::CXXRecordDecl* type_decl = type->getAsCXXRecordDecl();
-		if (type_decl && type_decl->getTemplateSpecializationKind() != clang::TSK_Undeclared)
+		// Parse template specialisation parameters
+		if (const clang::ClassTemplateSpecializationDecl* cts_decl = GetTemplateSpecialisation(type))
 		{
-			const clang::ClassTemplateSpecializationDecl* cts_decl = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(type_decl);
-			assert(cts_decl && "Couldn't cast to template specialisation decl");
-
-			// Get the template being specialised and see if it's marked for reflection
-			// The template definition needs to be in scope for specialisations to occur. This implies
-			// that the reflection spec must also be in scope.
-			const clang::ClassTemplateDecl* template_decl = cts_decl->getSpecializedTemplate();
-			info.type_name = template_decl->getQualifiedNameAsString();
-			if (!specs.IsReflected(info.type_name))
+			if (!ParseTemplateSpecialisation(db, specs, ctx, cts_decl, info.type_name))
 				return false;
-
-			// Parent the instance to its declaring template
-			cldb::Name parent_name = db.GetName(info.type_name.c_str());
-
-			// Prepare for adding template arguments to the type name
-			info.type_name += "<";
-
-			// Get access to the template argument list
-			ParameterInfo template_args[cldb::TemplateType::MAX_NB_ARGS];
-			const clang::TemplateArgumentList& list = cts_decl->getTemplateArgs();
-			if (list.size() >= cldb::TemplateType::MAX_NB_ARGS)
-				return false;
-
-			for (unsigned int i = 0; i < list.size(); i++)
-			{
-				// Only support type arguments
-				const clang::TemplateArgument& arg = list[i];
-				if (arg.getKind() != clang::TemplateArgument::Type)
-					return false;
-
-				// Recursively parse the template argument to get some parameter info
-				if (!GetParameterInfo(db, specs, ctx, arg.getAsType(), template_args[i], false))
-					return false;
-
-				// References currently not supported
-				if (template_args[i].qualifer.op == cldb::Qualifier::REFERENCE)
-					return false;
-
-				// Can't reflect array template parameters
-				if (template_args[i].array_count)
-					return false;
-
-				// Concatenate the arguments in the type name
-				if (i)
-					info.type_name += ",";
-				info.type_name += template_args[i].type_name;
-				if (template_args[i].qualifer.op == cldb::Qualifier::POINTER)
-					info.type_name += "*";
-			}
-
-			info.type_name += ">";
-
-			// Create the referenced template type on demand if it doesn't exist
-			if (db.GetFirstPrimitive<cldb::TemplateType>(info.type_name.c_str()) == 0)
-			{
-				cldb::Name type_name = db.GetName(info.type_name.c_str());
-				cldb::TemplateType type(type_name, parent_name);
-
-				// Populate the template argument list
-				for (unsigned int i = 0; i < list.size(); i++)
-				{
-					type.parameter_types[i] = db.GetName(template_args[i].type_name.c_str());
-					type.parameter_ptrs[i] = template_args[i].qualifer.op == cldb::Qualifier::POINTER;
-				}
-
-				db.AddPrimitive(type);
-			}
 		}
 
 		// Pull the class descriptions from the type name
@@ -363,9 +441,6 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const std::string& parent_name
 	if (!m_ReflectionSpecs.IsReflected(name.c_str()))
 		return;
 
-	// Generate a name for the decl
-	//cldb::Name name = m_DB.GetName(name_str.c_str());
-
 	// Gather all attributes associated with this primitive
 	if (!ParseAttributes(m_DB, m_ASTContext.getSourceManager(), decl, name))
 		return;
@@ -417,29 +492,11 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, 
 
 	// Parse any base classes
 	cldb::Name base_name;
-	if (record_decl->getNumBases() > 0)
+	if (record_decl->getNumBases())
 	{
-		// Can't support virtual base classes - offsets change at runtime
-		clang::CXXBaseSpecifier& base = *record_decl->bases_begin();
-		if (base.isVirtual())
-		{
-			LOG(ast, WARNING, "Class '%s' has an unsupported virtual base class\n", name.c_str());
+		base_name = ParseBaseClass(m_DB, m_ReflectionSpecs, m_ASTContext, name, record_decl);
+		if (base_name == cldb::Name())
 			return;
-		}
-
-		// Parse the type name
-		clang::QualType base_type = base.getType();
-		std::string type_name_str = base_type.getAsString(m_ASTContext.getLangOptions());
-		Remove(type_name_str, "struct ");
-		Remove(type_name_str, "class ");
-
-		// Check it's valid
-		if (!m_ReflectionSpecs.IsReflected(type_name_str))
-		{
-			LOG(ast, WARNING, "Base class '%s' of '%s' is not reflected so skipping\n", type_name_str.c_str(), name.c_str());
-			return;
-		}
-		base_name = m_DB.GetName(type_name_str.c_str());
 	}
 
 	if (record_decl->isAnonymousStructOrUnion())
@@ -453,7 +510,7 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, 
 		// Add to the database
 		LOG(ast, INFO, "class %s", name.c_str());
 		if (base_name != cldb::Name())
-			LOG(ast, INFO, " : %s", base_name.text.c_str());
+			LOG_APPEND(ast, INFO, " : %s", base_name.text.c_str());
 		LOG_NEWLINE(ast);
 		const clang::ASTRecordLayout& layout = m_ASTContext.getASTRecordLayout(record_decl);
 		cldb::u32 size = layout.getSize().getQuantity();

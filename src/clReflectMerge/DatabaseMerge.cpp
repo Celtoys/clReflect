@@ -33,14 +33,25 @@
 
 namespace
 {
+	void CheckTemplateTypeMergeFailure(const cldb::TemplateType& a, const cldb::TemplateType& b)
+	{
+		const char* name = a.name.text.c_str();
+
+		// This has to be the same template type generated multiple times in different translation units
+		// Ensure that their descriptions match up as best as possible at this point
+		if (a.base_type != b.base_type)
+			LOG(main, WARNING, "Template Type %s differs in base type specification during merge\n", name);
+	}
+
+
 	void CheckClassMergeFailure(const cldb::Class& class_a, const cldb::Class& class_b)
 	{
 		const char* class_name = class_a.name.text.c_str();
 
 		// This has to be the same class included multiple times in different translation units
 		// Ensure that their descriptions match up as best as possible at this point
-		if (class_a.base_class != class_b.base_class)
-			LOG(main, WARNING, "Class %s differs in base class specification during merge\n", class_name);
+		if (class_a.base_type != class_b.base_type)
+			LOG(main, WARNING, "Class %s differs in base type specification during merge\n", class_name);
 		if (class_a.size != class_b.size)
 			LOG(main, WARNING, "Class %s differs in size during merge\n", class_name);
 	}
@@ -123,10 +134,10 @@ void MergeDatabases(cldb::Database& dest_db, const cldb::Database& src_db)
 	MergeUniques<cldb::Type>(dest_db, src_db);
 	MergeUniques<cldb::Enum>(dest_db, src_db);
 	MergeUniques<cldb::Template>(dest_db, src_db);
-	MergeUniques<cldb::TemplateType>(dest_db, src_db);
 
-	// Class symbol names can't be overloaded but extra checks can be used to make sure
-	// the same class isn't violating the One Definition Rule
+	// Class/template type symbol names can't be overloaded but extra checks can be used to make sure
+	// the same primitive isn't violating the One Definition Rule
+	MergeUniques<cldb::TemplateType>(dest_db, src_db, CheckTemplateTypeMergeFailure);
 	MergeUniques<cldb::Class>(dest_db, src_db, CheckClassMergeFailure);
 
 	// Add enum constants as if they are overloadable
