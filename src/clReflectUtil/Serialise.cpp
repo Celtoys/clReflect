@@ -109,6 +109,13 @@ void clutl::WriteBuffer::Write(const void* data, unsigned int length)
 }
 
 
+void clutl::WriteBuffer::SeekRel(int offset)
+{
+	clcpp::internal::Assert(m_DataWrite + offset <= m_DataEnd && "Seek overflow");
+	m_DataWrite += offset;
+}
+
+
 clutl::ReadBuffer::ReadBuffer(const WriteBuffer& write_buffer)
 	: m_Data(write_buffer.GetData())
 	, m_DataEnd(write_buffer.GetData() + write_buffer.GetBytesWritten())
@@ -137,4 +144,45 @@ void clutl::ReadBuffer::SeekRel(int offset)
 {
 	clcpp::internal::Assert(m_DataRead + offset <= m_DataEnd && "Seek overflow");
 	m_DataRead += offset;
+}
+
+
+clutl::PointerMap::PointerMap()
+{
+}
+
+
+clutl::PointerMap::PointerMap(int nb_pointers)
+	: m_PointerData(nb_pointers * sizeof(NamedObject*))
+{
+}
+
+
+void clutl::PointerMap::AddPointer(NamedObject** ptr)
+{
+	// Use the internal write buffer to maintain a dynamic list of object pointers
+	NamedObject*** dest = (NamedObject***)m_PointerData.Alloc(sizeof(NamedObject**));
+	*dest = ptr;
+}
+
+
+unsigned int clutl::PointerMap::GetPointerHash(int pointer_index) const
+{
+	NamedObject*** ptr = GetPointerEntry(pointer_index);
+	return (unsigned int)**ptr;
+}
+
+
+void clutl::PointerMap::SetPointerAddress(int pointer_index, NamedObject* ptr)
+{
+	NamedObject*** dest = GetPointerEntry(pointer_index);
+	**dest = ptr;
+}
+
+
+clutl::NamedObject*** clutl::PointerMap::GetPointerEntry(int pointer_index) const
+{
+	// Use the pointer ID as an index into the write buffer data
+	clcpp::internal::Assert(pointer_index < GetNbPointers() && "Pointer index too big");
+	return (NamedObject***)m_PointerData.GetData() + pointer_index;
 }

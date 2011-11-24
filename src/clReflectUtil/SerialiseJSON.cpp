@@ -56,6 +56,11 @@ static void SetupTypeDispatchLUT();
 
 namespace
 {
+	// ----------------------------------------------------------------------------------------------------
+	// JSON Lexer
+	// ----------------------------------------------------------------------------------------------------
+
+
 	enum TokenType
 	{
 		TT_NONE,
@@ -591,9 +596,15 @@ namespace
 	}
 
 
+	// ----------------------------------------------------------------------------------------------------
+	// Perfect hash based load/save function dispatching
+	// ----------------------------------------------------------------------------------------------------
+
+
 	typedef void (*SaveNumberFunc)(clutl::WriteBuffer&, const char*, unsigned int flags);
 	typedef void (*LoadIntegerFunc)(char*, __int64);
 	typedef void (*LoadDecimalFunc)(char*, double);
+
 
 	struct TypeDispatch
 	{
@@ -610,6 +621,7 @@ namespace
 		LoadIntegerFunc load_integer;
 		LoadDecimalFunc load_decimal;
 	};
+
 
 	// A save function lookup table for all supported C++ types
 	static const int g_TypeDispatchMod = 47;
@@ -639,6 +651,11 @@ namespace
 		g_TypeDispatchLUT[index].load_integer = loadi_func;
 		g_TypeDispatchLUT[index].load_decimal = loadd_func;
 	}
+
+
+	// ----------------------------------------------------------------------------------------------------
+	// JSON Parser & reflection-based object construction
+	// ----------------------------------------------------------------------------------------------------
 
 
 	void ParserValue(Context& ctx, Token& t, char* object, const clcpp::Field* field);
@@ -881,18 +898,92 @@ clutl::JSONError clutl::LoadJSON(ReadBuffer& in, void* object, const clcpp::Type
 }
 
 
+clutl::JSONError clutl::LoadJSON(ReadBuffer& in, ObjectDatabase* object_db)
+{
+	SetupTypeDispatchLUT();
+
+	Token object_name, type_name;
+
+	// Loop reading every creation request
+	Context ctx(in);
+	while (ctx.GetError().code == JSONError::NONE && ctx.Remaining())
+	{
+		// Read the current character and break at stream end
+		if (ctx.ReadOverflows(0, clutl::JSONError::NONE))
+			break;
+		char c = ctx.PeekChar();
+
+		switch (c)
+		{
+			// Skip white-space, keeping track of line numbers
+		case ('\n'):
+			ctx.IncLine();
+		case (' '):
+		case ('\t'):
+		case ('\v'):
+		case ('\f'):
+		case ('\r'):
+			ctx.ConsumeChar();
+			continue;
+
+			// Skip the equality
+		case ('='):
+			ctx.ConsumeChar();
+			continue;
+		}
+
+		// On the first pass, get the object name
+		if (!object_name.IsValid())
+		{
+			object_name = LexerString(ctx);
+			if (!object_name.IsValid())
+				break;
+		}
+
+		// Parse the type name and get its hash on the second pass
+		else if (!type_name.IsValid())
+		{
+			type_name = LexerString(ctx);
+			if (!type_name.IsValid())
+				break;
+			unsigned int type_hash = clcpp::internal::HashData(type_name.val.string, type_name.length);
+
+			// Copy the object name locally and null-terminate it (don't want to modify the source data)
+			char object_name_sz[256];
+			char* on_ptr = object_name_sz;
+			while (true)
+			{
+				int len = on_ptr - object_name_sz;
+				if (len > object_name.length ||
+					len >= sizeof(object_name_sz) - 1)
+					break;
+				*on_ptr++ = *object_name.val.string++;
+			}
+			*on_ptr++ = 0;
+
+			// Create the object and load its contets
+			clutl::NamedObject* object = object_db->CreateNamedObject(type_hash, object_name_sz);
+			Token t = LexerToken(ctx);
+			ParserObject(ctx, t, (char*)object, object->type);
+
+			// Clear the name tokens for the next object
+			object_name = Token();
+			type_name = Token();
+		}
+	}
+
+	return ctx.GetError();
+}
+
+
 namespace
 {
+	// ----------------------------------------------------------------------------------------------------
+	// JSON text writer using reflected objects
+	// ----------------------------------------------------------------------------------------------------
+
+
 	void SaveObject(clutl::WriteBuffer& out, const char* object, const clcpp::Type* type, unsigned int flags);
-
-
-	void SaveStringNoQuotes(clutl::WriteBuffer& out, const char* str)
-	{
-		const char* start = str;
-		while (*str++)
-			;
-		out.Write(start, str - start - 1);
-	}
 
 
 	void SaveString(clutl::WriteBuffer& out, const char* str)
@@ -1102,7 +1193,7 @@ namespace
 	}
 
 
-	void SavePtr(clutl::WriteBuffer& out, const void* object)
+	bool SavePtr(clutl::WriteBuffer& out, const void* object)
 	{
 		// Only use the hash if the pointer is non-null
 		clutl::NamedObject* named_object = *((clutl::NamedObject**)object);
@@ -1116,18 +1207,25 @@ namespace
 	#else
 		SaveUnsignedInteger(out, hash);
 	#endif
+
+		return true;
 	}
 
 
-	void SavePtr(clutl::WriteBuffer& out, const void* object, const clcpp::Type* type)
+	bool SavePtr(clutl::WriteBuffer& out, const void* object, const clcpp::Type* type, int backtrack_on_failure)
 	{
 		// Only save pointer types that derive from NamedObject
+		bool success = false;
 		if (type->kind == clcpp::Primitive::KIND_CLASS)
 		{
 			const clcpp::Class* class_type = type->AsClass();
 			if (class_type->DerivesFrom(clcpp::GetTypeNameHash<clutl::NamedObject>()))
-				SavePtr(out, object);
+				success = SavePtr(out, object);
+			if (!success)
+				out.SeekRel(-backtrack_on_failure);
 		}
+
+		return success;
 	}
 
 
@@ -1262,6 +1360,7 @@ namespace
 				continue;
 
 			// Comma separator for multiple fields
+			int field_start_pos = out.GetBytesWritten();
 			if (field_written)
 			{
 				out.Write(",", 1);
@@ -1272,17 +1371,20 @@ namespace
 			SaveString(out, field->name.text);
 			out.Write(":", 1);
 
+			// Dispatch to save function that can handle the field type
+			bool success = true;
 			const char* field_object = object + field->offset;
 			if (field->flag_attributes & clcpp::FlagAttribute::NULLSTR)
 				SaveString(out, *(char**)field_object);
 			else if (field->ci != 0)
 				SaveFieldArray(out, field_object, field, flags);
 			else if (field->qualifier.op == clcpp::Qualifier::POINTER)
-				SavePtr(out, field_object, field->type);
+				success = SavePtr(out, field_object, field->type, out.GetBytesWritten() - field_start_pos);
 			else
 				SaveObject(out, field_object, field->type, flags);
 
-			field_written = true;
+			if (success)
+				field_written = true;
 		}
 
 		// Locate the most immediate base class (skipping template types, for example)
@@ -1361,9 +1463,9 @@ void clutl::SaveJSON(WriteBuffer& out, const ObjectDatabase& object_db, unsigned
 		const clutl::NamedObject* object = (clutl::NamedObject*)i.GetObject();
 
 		// Output a non-JSON compliant Javascript assignment
-		SaveStringNoQuotes(out, object->name.text);
+		SaveString(out, object->name.text);
 		out.Write("=", 1);
-		SaveStringNoQuotes(out, object->type->name.text);
+		SaveString(out, object->type->name.text);
 		SaveJSON(out, object, object->type, flags);
 
 		if (flags & JSONFlags::FORMAT_OUTPUT)

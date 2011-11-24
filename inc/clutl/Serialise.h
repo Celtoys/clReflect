@@ -38,6 +38,7 @@ namespace clcpp
 namespace clutl
 {
 	class ObjectDatabase;
+	struct NamedObject;
 
 
 	//
@@ -60,6 +61,8 @@ namespace clutl
 		// Copy data into the write buffer
 		// Grows the capacity on demand
 		void Write(const void* data, unsigned int length);
+
+		void SeekRel(int offset);
 
 		const char* GetData() const { return m_Data; }
 		unsigned int GetBytesWritten() const { return m_DataWrite - m_Data; }
@@ -93,6 +96,27 @@ namespace clutl
 		const char* m_Data;
 		const char* m_DataEnd;
 		const char* m_DataRead;
+	};
+
+
+	class PointerMap
+	{
+	public:
+		PointerMap();
+
+		PointerMap(int nb_pointers);
+
+		void AddPointer(NamedObject** ptr);
+
+		unsigned int GetPointerHash(int pointer_index) const;
+		void SetPointerAddress(int pointer_index, NamedObject* ptr);
+
+		int GetNbPointers() const { return m_PointerData.GetBytesWritten() / sizeof(NamedObject**); }
+
+	private:
+		NamedObject*** GetPointerEntry(int pointer_index) const;
+
+		WriteBuffer m_PointerData;
 	};
 
 
@@ -148,6 +172,8 @@ namespace clutl
 
 	// Cannot load nullstr fields
 	JSONError LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type);
+
+	JSONError LoadJSON(ReadBuffer& in, ObjectDatabase* object_db);
 
 	// Can save nullstr fields
 	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags = 0);
