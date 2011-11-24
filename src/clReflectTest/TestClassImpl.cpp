@@ -26,6 +26,7 @@
 //
 
 #include <clcpp/clcpp.h>
+#include <clcpp/FunctionCall.h>
 
 
 // Reflect the entire namespace and implement each class

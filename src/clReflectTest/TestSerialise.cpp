@@ -1,6 +1,5 @@
 
 #include <clcpp/clcpp.h>
-#include <clutl/Containers.h>
 #include <clutl/Serialise.h>
 
 
@@ -65,15 +64,11 @@ namespace Stuff
 
 void TestSerialise(clcpp::Database& db)
 {
-	clutl::DataBuffer buffer(1024);
-
-	// BUG: sizeof(BaseStruct) match with both MSVC and Clang. However:
-	//      DerivedStruct::x is at 24 in MSVC and 20 in Clang.
-	//      Odd point: sizeof(BaseStruct) is 24!
+	clutl::WriteBuffer write_buffer;
 
 	Stuff::DerivedStruct src;
-	clutl::SaveVersionedBinary(buffer, &src, clcpp::GetType<Stuff::DerivedStruct>());
-	buffer.ResetPosition();
+	clutl::SaveVersionedBinary(write_buffer, &src, clcpp::GetType<Stuff::DerivedStruct>());
+	clutl::ReadBuffer read_buffer(write_buffer);
 	Stuff::DerivedStruct dest(Stuff::NO_INIT);
-	clutl::LoadVersionedBinary(buffer, &dest, clcpp::GetType<Stuff::DerivedStruct>());
+	clutl::LoadVersionedBinary(read_buffer, &dest, clcpp::GetType<Stuff::DerivedStruct>());
 }

@@ -1,7 +1,6 @@
 
 #include <clcpp/clcpp.h>
 #include <clutl/Serialise.h>
-#include <clutl/Containers.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -26,11 +25,11 @@ namespace
 		printf("NAME: %s\n", name);
 		printf("INP: %s\n", test);
 
-		clutl::DataBuffer buffer(strlen(test));
-		buffer.Write(test, strlen(test));
-		buffer.ResetPosition();
+		clutl::WriteBuffer write_buffer;
+		write_buffer.Write(test, strlen(test));
+		clutl::ReadBuffer read_buffer(write_buffer);
 
-		clutl::JSONError error = clutl::LoadJSON(buffer, 0, 0);
+		clutl::JSONError error = clutl::LoadJSON(read_buffer, 0, 0);
 		if (error.code == clutl::JSONError::NONE)
 		{
 			printf("PASS\n");
@@ -398,12 +397,12 @@ void TestSerialiseJSON(clcpp::Database& db)
 	Test("ErrorFalseInvalidKeyword", "{ \"value\" : fal ");
 	Test("ErrorNullInvalidKeyword", "{ \"value\" : nu ");
 
-	clutl::DataBuffer buffer(4192);
+	clutl::WriteBuffer write_buffer;
 	jsontest::AllFields a;
-	clutl::SaveJSON(buffer, &a, clcpp::GetType<jsontest::AllFields>());
-	buffer.ResetPosition();
+	clutl::SaveJSON(write_buffer, &a, clcpp::GetType<jsontest::AllFields>());
+	clutl::ReadBuffer read_buffer(write_buffer);
 	jsontest::AllFields b(jsontest::NO_INIT);
-	clutl::LoadJSON(buffer, &b, clcpp::GetType<jsontest::AllFields>());
+	clutl::LoadJSON(read_buffer, &b, clcpp::GetType<jsontest::AllFields>());
 
 	if (a == b)
 		printf("STRUCT PASS!\n");

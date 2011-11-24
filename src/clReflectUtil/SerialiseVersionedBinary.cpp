@@ -26,7 +26,6 @@
 //
 
 #include <clutl/Serialise.h>
-#include <clutl/Containers.h>
 #include <clcpp/Database.h>
 
 
@@ -50,25 +49,26 @@ namespace
 		{
 		}
 
-		void Write(clutl::DataBuffer& out)
+		void Write(clutl::WriteBuffer& out)
 		{
 			// Only commit the hash and data size, marking the data size location for future patching
 			out.Write(&m_Hash, sizeof(m_Hash));
-			m_WritePosition = out.GetPosition();
+			m_WritePosition = out.GetBytesWritten();
 			out.Write(&m_DataSize, sizeof(m_DataSize));
 		}
 
-		void Read(clutl::DataBuffer& in)
+		void Read(clutl::ReadBuffer& in)
 		{
 			in.Read(&m_Hash, sizeof(m_Hash));
 			in.Read(&m_DataSize, sizeof(m_DataSize));
 		}
 
-		void PatchDataSize(clutl::DataBuffer& out)
+		void PatchDataSize(clutl::WriteBuffer& out)
 		{
 			// Calculate size of the data written since the header write and write to the data size field in the header
-			m_DataSize = out.GetPosition() - (m_WritePosition + sizeof(unsigned int));
-			out.WriteAt(&m_DataSize, sizeof(m_DataSize), m_WritePosition);
+			m_DataSize = out.GetBytesWritten() - (m_WritePosition + sizeof(unsigned int));
+			unsigned int* patch_size = (unsigned int*)(out.GetData() + m_WritePosition);
+			*patch_size = m_DataSize;
 		}
 
 		unsigned int m_Hash;
@@ -77,17 +77,17 @@ namespace
 	};
 
 
-	void SaveObject(clutl::DataBuffer& out, const char* object, const clcpp::Type* type, unsigned int hash);
-	void LoadObject(clutl::DataBuffer& in, char* object, const clcpp::Type* type, unsigned int data_size);
+	void SaveObject(clutl::WriteBuffer& out, const char* object, const clcpp::Type* type, unsigned int hash);
+	void LoadObject(clutl::ReadBuffer& in, char* object, const clcpp::Type* type, unsigned int data_size);
 
 
-	void SaveType(clutl::DataBuffer& out, const char* object, const clcpp::Type* type)
+	void SaveType(clutl::WriteBuffer& out, const char* object, const clcpp::Type* type)
 	{
 		out.Write(object, type->size);
 	}
 
 	
-	void SaveEnum(clutl::DataBuffer& out, const char* object, const clcpp::Enum* enum_type)
+	void SaveEnum(clutl::WriteBuffer& out, const char* object, const clcpp::Enum* enum_type)
 	{
 		// Do a linear search for an enum with a matching value
 		// TODO: Optimise this to a binary search by storing sorted enum values?
@@ -110,7 +110,7 @@ namespace
 	}
 
 
-	void SaveClass(clutl::DataBuffer& out, const char* object, const clcpp::Class* class_type)
+	void SaveClass(clutl::WriteBuffer& out, const char* object, const clcpp::Class* class_type)
 	{
 		// Save each non-transient field in the class
 		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
@@ -126,11 +126,11 @@ namespace
 	}
 
 
-	void LoadClass(clutl::DataBuffer& in, char* object, const clcpp::Class* class_type, unsigned int data_size)
+	void LoadClass(clutl::ReadBuffer& in, char* object, const clcpp::Class* class_type, unsigned int data_size)
 	{
 		// Loop until all the data for this class has been read
-		unsigned int end_pos = in.GetPosition() + data_size;
-		while (in.GetPosition() < end_pos)
+		unsigned int end_pos = in.GetBytesRead() + data_size;
+		while (in.GetBytesRead() < end_pos)
 		{
 			// Read the header for this field
 			FieldHeader header;
@@ -149,7 +149,7 @@ namespace
 	}
 
 
-	void SaveObject(clutl::DataBuffer& out, const char* object, const clcpp::Type* type, unsigned int hash)
+	void SaveObject(clutl::WriteBuffer& out, const char* object, const clcpp::Type* type, unsigned int hash)
 	{
 		// Write the header
 		FieldHeader header(hash);
@@ -179,13 +179,13 @@ namespace
 	}
 
 
-	void LoadType(clutl::DataBuffer& in, char* object, const clcpp::Type* type)
+	void LoadType(clutl::ReadBuffer& in, char* object, const clcpp::Type* type)
 	{
 		in.Read(object, type->size);
 	}
 
 
-	void LoadEnum(clutl::DataBuffer& in, char* object, const clcpp::Enum* enum_type)
+	void LoadEnum(clutl::ReadBuffer& in, char* object, const clcpp::Enum* enum_type)
 	{
 		// Read the enum name hash and do a search for it int he constant list
 		unsigned int enum_name_hash;
@@ -198,7 +198,7 @@ namespace
 	}
 
 
-	void LoadObject(clutl::DataBuffer& in, char* object, const clcpp::Type* type, unsigned int data_size)
+	void LoadObject(clutl::ReadBuffer& in, char* object, const clcpp::Type* type, unsigned int data_size)
 	{
 		switch (type->kind)
 		{
@@ -221,13 +221,13 @@ namespace
 	}
 }
 
-void clutl::SaveVersionedBinary(DataBuffer& out, const void* object, const clcpp::Type* type)
+void clutl::SaveVersionedBinary(WriteBuffer& out, const void* object, const clcpp::Type* type)
 {
 	SaveObject(out, (const char*)object, type, type->name.hash);
 }
 
 
-void clutl::LoadVersionedBinary(DataBuffer& in, void* object, const clcpp::Type* type)
+void clutl::LoadVersionedBinary(ReadBuffer& in, void* object, const clcpp::Type* type)
 {
 	// Read the header
 	FieldHeader header;

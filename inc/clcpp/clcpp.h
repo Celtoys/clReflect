@@ -34,7 +34,6 @@
 // These can be included independently if you want quicker compiles
 #include "Core.h"
 #include "Database.h"
-#include "FunctionCall.h"
 
 
 //
@@ -134,28 +133,6 @@
 	#define clcpp_attr(...)
 	#define clcpp_push_attr(...)
 	#define clcpp_pop_attr(...)
-
-
-	namespace clcpp
-	{
-		namespace internal
-		{
-			//
-			// Functions to abstract the calling of an object's constructor and destructor, for
-			// debugging and letting the compiler do the type deduction.
-			//
-			template <typename TYPE>
-			inline void CallConstructor(TYPE* object)
-			{
-				new (*(PtrWrapper*)object) TYPE;
-			}
-			template <typename TYPE>
-			inline void CallDestructor(TYPE* object)
-			{
-				object->~TYPE();
-			}
-		}
-	}
 
 
 	//

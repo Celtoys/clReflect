@@ -1,5 +1,6 @@
 
 #include <clcpp/Containers.h>
+#include <clcpp/FunctionCall.h>
 
 
 // Read iterator implementation for C-Arrays
@@ -151,7 +152,7 @@ clcpp::ReadIterator::ReadIterator(const Field* field, const void* container_obje
 		return;
 
 	// Assume it's a C-Array
-	new (*(internal::PtrWrapper*)m_ImplData) ArrayReadIterator;
+	clcpp::internal::CallConstructor((ArrayReadIterator*)m_ImplData);
 
 	// Complete implementation-specific initialisation
 	((IReadIterator*)m_ImplData)->Initialise(field, container_object, *this);
@@ -164,7 +165,7 @@ clcpp::ReadIterator::~ReadIterator()
 	if (m_IteratorImplType != 0)
 		CallFunction(m_IteratorImplType->destructor, (IReadIterator*)m_ImplData);
 	else
-		((ArrayReadIterator*)m_ImplData)->~ArrayReadIterator();
+		clcpp::internal::CallDestructor((ArrayReadIterator*)m_ImplData);
 }
 
 
@@ -195,7 +196,7 @@ clcpp::WriteIterator::WriteIterator(const Field* field, void* container_object)
 		return;
 
 	// Assume it's a C-Array
-	new (*(internal::PtrWrapper*)m_ImplData) ArrayWriteIterator;
+	clcpp::internal::CallConstructor((ArrayWriteIterator*)m_ImplData);
 
 	// Complete implementation-specific initialisation
 	((IWriteIterator*)m_ImplData)->Initialise(field, container_object, *this);
@@ -208,5 +209,5 @@ clcpp::WriteIterator::~WriteIterator()
 	if (m_IteratorImplType != 0)
 		CallFunction(m_IteratorImplType->destructor, (IWriteIterator*)m_ImplData);
 	else
-		((ArrayWriteIterator*)m_ImplData)->~ArrayWriteIterator();
+		clcpp::internal::CallDestructor((ArrayWriteIterator*)m_ImplData);
 }

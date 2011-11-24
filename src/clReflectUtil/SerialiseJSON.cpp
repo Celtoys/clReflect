@@ -33,7 +33,6 @@
 //
 
 #include <clutl/Serialise.h>
-#include <clutl/Containers.h>
 #include <clutl/Objects.h>
 #include <clcpp/Database.h>
 #include <clcpp/Containers.h>
@@ -138,8 +137,8 @@ namespace
 	class Context
 	{
 	public:
-		Context(clutl::DataBuffer& data_buffer)
-			: m_DataBuffer(data_buffer)
+		Context(clutl::ReadBuffer& read_buffer)
+			: m_ReadBuffer(read_buffer)
 			, m_Line(1)
 			, m_LinePosition(0)
 		{
@@ -150,8 +149,8 @@ namespace
 		// consume operation is returned.
 		unsigned int ConsumeChars(int size)
 		{
-			unsigned int pos = m_DataBuffer.GetPosition();
-			m_DataBuffer.SeekRel(size);
+			unsigned int pos = m_ReadBuffer.GetBytesRead();
+			m_ReadBuffer.SeekRel(size);
 			return pos;
 		}
 		unsigned int ConsumeChar()
@@ -162,7 +161,7 @@ namespace
 		// Take a peek at the next N characters in the data buffer
 		const char* PeekChars()
 		{
-			return m_DataBuffer.ReadAt(m_DataBuffer.GetPosition());
+			return m_ReadBuffer.ReadAt(m_ReadBuffer.GetBytesRead());
 		}
 		char PeekChar()
 		{
@@ -173,7 +172,7 @@ namespace
 		// data buffer. Automatically sets the error code as a result.
 		bool ReadOverflows(int size, clutl::JSONError::Code code = clutl::JSONError::UNEXPECTED_END_OF_DATA)
 		{
-			if (m_DataBuffer.GetPosition() + size >= m_DataBuffer.GetSize())
+			if (m_ReadBuffer.GetBytesRead() + size >= m_ReadBuffer.GetTotalBytes())
 			{
 				SetError(code);
 				return true;
@@ -184,7 +183,7 @@ namespace
 		// How many bytes are left to parse?
 		unsigned int Remaining() const
 		{
-			return m_DataBuffer.GetSize() - m_DataBuffer.GetPosition();
+			return m_ReadBuffer.GetTotalBytes() - m_ReadBuffer.GetBytesRead();
 		}
 
 		// Record the first error only, along with its position
@@ -193,7 +192,7 @@ namespace
 			if (m_Error.code == clutl::JSONError::NONE)
 			{
 				m_Error.code = code;
-				m_Error.position = m_DataBuffer.GetPosition();
+				m_Error.position = m_ReadBuffer.GetBytesRead();
 				m_Error.line = m_Line;
 				m_Error.column = m_Error.position - m_LinePosition;
 			}
@@ -203,7 +202,7 @@ namespace
 		void IncLine()
 		{
 			m_Line++;
-			m_LinePosition = m_DataBuffer.GetPosition();
+			m_LinePosition = m_ReadBuffer.GetBytesRead();
 		}
 
 		clutl::JSONError GetError() const
@@ -212,7 +211,7 @@ namespace
 		}
 
 	private:
-		clutl::DataBuffer& m_DataBuffer;
+		clutl::ReadBuffer& m_ReadBuffer;
 		clutl::JSONError m_Error;
 		unsigned int m_Line;
 		unsigned int m_LinePosition;
@@ -592,7 +591,7 @@ namespace
 	}
 
 
-	typedef void (*SaveNumberFunc)(clutl::DataBuffer&, const char*, unsigned int flags);
+	typedef void (*SaveNumberFunc)(clutl::WriteBuffer&, const char*, unsigned int flags);
 	typedef void (*LoadIntegerFunc)(char*, __int64);
 	typedef void (*LoadDecimalFunc)(char*, double);
 
@@ -872,7 +871,7 @@ namespace
 }
 
 
-clutl::JSONError clutl::LoadJSON(DataBuffer& in, void* object, const clcpp::Type* type)
+clutl::JSONError clutl::LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type)
 {
 	SetupTypeDispatchLUT();
 	Context ctx(in);
@@ -884,10 +883,10 @@ clutl::JSONError clutl::LoadJSON(DataBuffer& in, void* object, const clcpp::Type
 
 namespace
 {
-	void SaveObject(clutl::DataBuffer& out, const char* object, const clcpp::Type* type, unsigned int flags);
+	void SaveObject(clutl::WriteBuffer& out, const char* object, const clcpp::Type* type, unsigned int flags);
 
 
-	void SaveStringNoQuotes(clutl::DataBuffer& out, const char* str)
+	void SaveStringNoQuotes(clutl::WriteBuffer& out, const char* str)
 	{
 		const char* start = str;
 		while (*str++)
@@ -896,7 +895,7 @@ namespace
 	}
 
 
-	void SaveString(clutl::DataBuffer& out, const char* str)
+	void SaveString(clutl::WriteBuffer& out, const char* str)
 	{
 		out.Write("\"", 1);
 		const char* start = str;
@@ -907,7 +906,7 @@ namespace
 	}
 
 
-	void SaveInteger(clutl::DataBuffer& out, __int64 integer)
+	void SaveInteger(clutl::WriteBuffer& out, __int64 integer)
 	{
 		// Enough to store a 64-bit int
 		static const int MAX_SZ = 20;
@@ -942,7 +941,7 @@ namespace
 	}
 
 
-	void SaveUnsignedInteger(clutl::DataBuffer& out, unsigned __int64 integer)
+	void SaveUnsignedInteger(clutl::WriteBuffer& out, unsigned __int64 integer)
 	{
 		// Enough to store a 64-bit int + null
 		static const int MAX_SZ = 21;
@@ -965,7 +964,7 @@ namespace
 	}
 
 
-	void SaveHexInteger(clutl::DataBuffer& out, unsigned __int64 integer)
+	void SaveHexInteger(clutl::WriteBuffer& out, unsigned __int64 integer)
 	{
 		// Enough to store a 64-bit int + null
 		static const int MAX_SZ = 21;
@@ -991,18 +990,18 @@ namespace
 	// Automate the process of de-referencing an object as its exact type so no
 	// extra bytes are read incorrectly and values are correctly zero-extended.
 	template <typename TYPE>
-	void SaveIntegerWithCast(clutl::DataBuffer& out, const char* object, unsigned int)
+	void SaveIntegerWithCast(clutl::WriteBuffer& out, const char* object, unsigned int)
 	{
 		SaveInteger(out, *(TYPE*)object);
 	}
 	template <typename TYPE>
-	void SaveUnsignedIntegerWithCast(clutl::DataBuffer& out, const char* object, unsigned int)
+	void SaveUnsignedIntegerWithCast(clutl::WriteBuffer& out, const char* object, unsigned int)
 	{
 		SaveUnsignedInteger(out, *(TYPE*)object);
 	}
 
 
-	void SaveDecimal(clutl::DataBuffer& out, double decimal, unsigned int flags)
+	void SaveDecimal(clutl::WriteBuffer& out, double decimal, unsigned int flags)
 	{
 		if (flags & clutl::JSONFlags::OUTPUT_HEX_FLOATS)
 		{
@@ -1062,17 +1061,17 @@ namespace
 	}
 
 
-	void SaveDouble(clutl::DataBuffer& out, const char* object, unsigned int flags)
+	void SaveDouble(clutl::WriteBuffer& out, const char* object, unsigned int flags)
 	{
 		SaveDecimal(out, *(double*)object, flags);
 	}
-	void SaveFloat(clutl::DataBuffer& out, const char* object, unsigned int flags)
+	void SaveFloat(clutl::WriteBuffer& out, const char* object, unsigned int flags)
 	{
 		SaveDecimal(out, *(float*)object, flags);
 	}
 
 
-	void SaveType(clutl::DataBuffer& out, const char* object, const clcpp::Type* type, unsigned int flags)
+	void SaveType(clutl::WriteBuffer& out, const char* object, const clcpp::Type* type, unsigned int flags)
 	{
 		unsigned int index = GetTypeDispatchIndex(type->name.hash);
 		clcpp::internal::Assert(index < g_TypeDispatchMod && "Index is out of range");
@@ -1082,7 +1081,7 @@ namespace
 	}
 
 
-	void SaveEnum(clutl::DataBuffer& out, const char* object, const clcpp::Enum* enum_type)
+	void SaveEnum(clutl::WriteBuffer& out, const char* object, const clcpp::Enum* enum_type)
 	{
 		// Do a linear search for an enum with a matching value
 		int value = *(int*)object;
@@ -1103,7 +1102,7 @@ namespace
 	}
 
 
-	void SavePtr(clutl::DataBuffer& out, const void* object)
+	void SavePtr(clutl::WriteBuffer& out, const void* object)
 	{
 		// Only use the hash if the pointer is non-null
 		clutl::NamedObject* named_object = *((clutl::NamedObject**)object);
@@ -1120,7 +1119,7 @@ namespace
 	}
 
 
-	void SavePtr(clutl::DataBuffer& out, const void* object, const clcpp::Type* type)
+	void SavePtr(clutl::WriteBuffer& out, const void* object, const clcpp::Type* type)
 	{
 		// Only save pointer types that derive from NamedObject
 		if (type->kind == clcpp::Primitive::KIND_CLASS)
@@ -1132,7 +1131,7 @@ namespace
 	}
 
 
-	void SaveContainer(clutl::DataBuffer& out, clcpp::ReadIterator& reader, unsigned int flags)
+	void SaveContainer(clutl::WriteBuffer& out, clcpp::ReadIterator& reader, unsigned int flags)
 	{
 		// TODO: If the iterator has a key, save a dictionary instead
 
@@ -1182,7 +1181,7 @@ namespace
 	}
 
 
-	void SaveFieldArray(clutl::DataBuffer& out, const char* object, const clcpp::Field* field, unsigned int flags)
+	void SaveFieldArray(clutl::WriteBuffer& out, const char* object, const clcpp::Field* field, unsigned int flags)
 	{
 		// Construct a read iterator and leave early if there are no elements
 		clcpp::ReadIterator reader(field, object);
@@ -1196,7 +1195,7 @@ namespace
 	}
 
 
-	inline void NewLine(clutl::DataBuffer& out, unsigned int flags)
+	inline void NewLine(clutl::WriteBuffer& out, unsigned int flags)
 	{
 		if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
 		{
@@ -1209,7 +1208,7 @@ namespace
 	}
 
 
-	inline void OpenScope(clutl::DataBuffer& out, unsigned int& flags)
+	inline void OpenScope(clutl::WriteBuffer& out, unsigned int& flags)
 	{
 		if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
 		{
@@ -1230,7 +1229,7 @@ namespace
 	}
 
 
-	inline void CloseScope(clutl::DataBuffer& out, unsigned int& flags)
+	inline void CloseScope(clutl::WriteBuffer& out, unsigned int& flags)
 	{
 		if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
 		{
@@ -1250,7 +1249,7 @@ namespace
 	}
 
 
-	void SaveClass(clutl::DataBuffer& out, const char* object, const clcpp::Class* class_type, unsigned int flags, bool& field_written)
+	void SaveClass(clutl::WriteBuffer& out, const char* object, const clcpp::Class* class_type, unsigned int flags, bool& field_written)
 	{
 		// Save each field in the class
 		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
@@ -1301,7 +1300,7 @@ namespace
 	}
 
 
-	void SaveTemplateType(clutl::DataBuffer& out, const char* object, const clcpp::TemplateType* template_type, unsigned int flags)
+	void SaveTemplateType(clutl::WriteBuffer& out, const char* object, const clcpp::TemplateType* template_type, unsigned int flags)
 	{
 		// Construct a read iterator and leave early if there are no elements
 		clcpp::ReadIterator reader(template_type, object);
@@ -1315,7 +1314,7 @@ namespace
 	}
 
 
-	void SaveObject(clutl::DataBuffer& out, const char* object, const clcpp::Type* type, unsigned int flags)
+	void SaveObject(clutl::WriteBuffer& out, const char* object, const clcpp::Type* type, unsigned int flags)
 	{
 		bool field_written = false;
 
@@ -1347,14 +1346,14 @@ namespace
 }
 
 
-void clutl::SaveJSON(DataBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags)
+void clutl::SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags)
 {
 	SetupTypeDispatchLUT();
 	SaveObject(out, (char*)object, type, flags);
 }
 
 
-void clutl::SaveJSON(DataBuffer& out, const ObjectDatabase& object_db, unsigned int flags)
+void clutl::SaveJSON(WriteBuffer& out, const ObjectDatabase& object_db, unsigned int flags)
 {
 	// Walk over each object in the database
 	for (ObjectIterator i(object_db); i.IsValid(); i.MoveNext())

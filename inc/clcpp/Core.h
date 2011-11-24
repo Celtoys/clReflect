@@ -82,6 +82,23 @@ namespace clcpp
 
 
 		//
+		// Functions to abstract the calling of an object's constructor and destructor, for
+		// debugging and letting the compiler do the type deduction. Makes it a little easier
+		// to use the PtrWrapper abstraction.
+		//
+		template <typename TYPE>
+		inline void CallConstructor(TYPE* object)
+		{
+			new (*(PtrWrapper*)object) TYPE;
+		}
+		template <typename TYPE>
+		inline void CallDestructor(TYPE* object)
+		{
+			object->~TYPE();
+		}
+
+
+		//
 		// Hashes the specified data into a 32-bit value
 		//
 		unsigned HashData(const void* data, int length);
@@ -134,7 +151,7 @@ namespace clcpp
 			// Allocate and call the constructor for each element
 			m_Data = (TYPE*)m_Allocator->Alloc(m_Size * sizeof(TYPE));
 			for (unsigned int i = 0; i < m_Size; i++)
-				new (*(internal::PtrWrapper*)(m_Data + i)) TYPE;
+				internal::CallConstructor(m_Data + i);
 		}
 
 		// Initialise with pre-allocated data
@@ -151,7 +168,7 @@ namespace clcpp
 			{
 				// Call the destructor on each element and free the allocated memory
 				for (unsigned int i = 0; i < m_Size; i++)
-					m_Data[i].TYPE::~TYPE();
+					internal::CallDestructor(m_Data + i);
 				m_Allocator->Free(m_Data);
 			}
 		}

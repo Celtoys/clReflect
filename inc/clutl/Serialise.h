@@ -37,11 +37,68 @@ namespace clcpp
 
 namespace clutl
 {
-	class DataBuffer;
 	class ObjectDatabase;
 
-	void SaveVersionedBinary(DataBuffer& out, const void* object, const clcpp::Type* type);
-	void LoadVersionedBinary(DataBuffer& in, void* object, const clcpp::Type* type);
+
+	//
+	// Growable write byte buffer
+	//
+	class WriteBuffer
+	{
+	public:
+		WriteBuffer();
+		WriteBuffer(unsigned int initial_capacity);
+		~WriteBuffer();
+
+		// Resets only the write position, ensuring none of the capacity already allocated is released
+		void Reset();
+
+		// Allocate space in the buffer, shifting the write position and returning a pointer to that space
+		// Grows the capacity on demand
+		void* Alloc(unsigned int length);
+
+		// Copy data into the write buffer
+		// Grows the capacity on demand
+		void Write(const void* data, unsigned int length);
+
+		const char* GetData() const { return m_Data; }
+		unsigned int GetBytesWritten() const { return m_DataWrite - m_Data; }
+
+	private:
+		char* m_Data;
+		char* m_DataEnd;
+		char* m_DataWrite;
+	};
+
+
+	//
+	// Lightweight read buffer that uses the contents of a write buffer that must exist
+	// for the life time of this read buffer.
+	//
+	class ReadBuffer
+	{
+	public:
+		ReadBuffer(const WriteBuffer& write_buffer);
+
+		// TODO: Not entirely convinced by this API with regards to the ability of its users
+		//  to quickly, safely and easily detect buffer overflow scenarios before it asserts.
+		void Read(void* data, unsigned int length);
+		const char* ReadAt(unsigned int position) const;
+		void SeekRel(int offset);
+
+		unsigned int GetBytesRead() const { return m_DataRead - m_Data; }
+		unsigned int GetTotalBytes() const { return m_DataEnd - m_Data; }
+
+	private:
+		const char* m_Data;
+		const char* m_DataEnd;
+		const char* m_DataRead;
+	};
+
+
+	// Binary serialisation
+	void SaveVersionedBinary(WriteBuffer& out, const void* object, const clcpp::Type* type);
+	void LoadVersionedBinary(ReadBuffer& in, void* object, const clcpp::Type* type);
 
 
 	struct JSONError
@@ -90,11 +147,11 @@ namespace clutl
 
 
 	// Cannot load nullstr fields
-	JSONError LoadJSON(DataBuffer& in, void* object, const clcpp::Type* type);
+	JSONError LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type);
 
 	// Can save nullstr fields
-	void SaveJSON(DataBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags = 0);
+	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags = 0);
 
 	// Saves the entire object database
-	void SaveJSON(DataBuffer& out, const ObjectDatabase& object_db, unsigned int flags = 0);
+	void SaveJSON(WriteBuffer& out, const ObjectDatabase& object_db, unsigned int flags = 0);
 }

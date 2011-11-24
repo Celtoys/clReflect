@@ -4,7 +4,12 @@
 #include <clutl/Objects.h>
 #include <clcpp/FunctionCall.h>
 
-#include <string.h>
+
+// Explicit dependencies
+// TODO: Some how remove the need for these or provide a means of locating them on the target platform
+extern "C" void* __cdecl memcpy(void* dst, const void* src, unsigned int size);
+extern "C" void* __cdecl memset(void* dst, int val, unsigned int size);
+
 
 
 namespace
@@ -54,6 +59,14 @@ namespace
 		clcpp::internal::Assert(class_type->destructor != 0);
 		CallFunction(class_type->destructor, object);
 		delete [] (char*)object;
+	}
+
+
+	unsigned int strlen(const char* str)
+	{
+		const char *end = str;
+		while (*end++) ;
+		return end - str - 1;
 	}
 }
 
