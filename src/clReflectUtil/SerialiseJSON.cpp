@@ -737,7 +737,19 @@ namespace
 
 	void LoadInteger(Context& ctx, __int64 integer, char* object, const clcpp::Type* type, clcpp::Qualifier::Operator op)
 	{
-		if (type)
+		if (type == 0)
+			return;
+
+		if (op == clcpp::Qualifier::POINTER)
+		{
+			*(unsigned int*)object = (unsigned int)integer;
+
+			// Keep track of any pointers
+			if (type->DerivesFrom(clcpp::GetTypeNameHash<clutl::NamedObject>()))
+				ctx.AddPointer((clutl::NamedObject**)object);
+		}
+
+		else
 		{
 			// Dispatch to the correct integer loader based on the field type
 			unsigned int index = GetTypeDispatchIndex(type->name.hash);
@@ -745,10 +757,6 @@ namespace
 			LoadIntegerFunc func = g_TypeDispatchLUT[index].load_integer;
 			if (func)
 				func(object, integer);
-
-			// Keep track of any pointers
-			if (op == clcpp::Qualifier::POINTER && type->DerivesFrom(clcpp::GetTypeNameHash<clutl::NamedObject>()))
-				ctx.AddPointer((clutl::NamedObject**)object);
 		}
 	}
 
