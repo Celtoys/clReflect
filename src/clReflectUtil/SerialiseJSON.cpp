@@ -675,7 +675,7 @@ namespace
 	// ----------------------------------------------------------------------------------------------------
 
 
-	void ParserValue(Context& ctx, Token& t, char* object, const clcpp::Field* field);
+	void ParserValue(Context& ctx, Token& t, char* object, const clcpp::Type* type, clcpp::Qualifier::Operator op, const clcpp::Field* field);
 	void ParserObject(Context& ctx, Token& t, char* object, const clcpp::Type* type);
 
 
@@ -695,20 +695,20 @@ namespace
 	}
 
 
-	void ParserString(const Token& t, char* object, const clcpp::Field* field)
+	void ParserString(const Token& t, char* object, const clcpp::Type* type, clcpp::Qualifier::Operator op)
 	{
 		// Was there an error expecting a string?
 		if (!t.IsValid())
 			return;
 
 		// With enum fields, lookup the enum constant by name and assign if it exists
-		if (field && field->type->kind == clcpp::Primitive::KIND_ENUM)
+		if (type && type->kind == clcpp::Primitive::KIND_ENUM)
 		{
-			const clcpp::Enum* enum_type = field->type->AsEnum();
+			const clcpp::Enum* enum_type = type->AsEnum();
 			unsigned int constant_hash = clcpp::internal::HashData(t.val.string, t.length);
 			const clcpp::EnumConstant* constant = clcpp::FindPrimitive(enum_type->constants, constant_hash);
 			if (constant)
-				*(int*)(object + field->offset) = constant->value;
+				*(int*)object = constant->value;
 		}
 	}
 
@@ -735,64 +735,63 @@ namespace
 	}
 
 
-	void LoadInteger(Context& ctx, __int64 integer, char* object, const clcpp::Field* field)
+	void LoadInteger(Context& ctx, __int64 integer, char* object, const clcpp::Type* type, clcpp::Qualifier::Operator op)
 	{
-		if (field)
+		if (type)
 		{
 			// Dispatch to the correct integer loader based on the field type
-			unsigned int index = GetTypeDispatchIndex(field->type->name.hash);
+			unsigned int index = GetTypeDispatchIndex(type->name.hash);
 			clcpp::internal::Assert(index < g_TypeDispatchMod && "Index is out of range");
 			LoadIntegerFunc func = g_TypeDispatchLUT[index].load_integer;
 			if (func)
-				func(object + field->offset, integer);
+				func(object, integer);
 
 			// Keep track of any pointers
-			if (field->qualifier.op == clcpp::Qualifier::POINTER &&
-				field->type->DerivesFrom(clcpp::GetTypeNameHash<clutl::NamedObject>()))
-				ctx.AddPointer((clutl::NamedObject**)(object + field->offset));
+			if (op == clcpp::Qualifier::POINTER && type->DerivesFrom(clcpp::GetTypeNameHash<clutl::NamedObject>()))
+				ctx.AddPointer((clutl::NamedObject**)object);
 		}
 	}
 
 
-	void ParserInteger(Context& ctx, const Token& t, char* object, const clcpp::Field* field)
+	void ParserInteger(Context& ctx, const Token& t, char* object, const clcpp::Type* type, clcpp::Qualifier::Operator op)
 	{
 		if (t.IsValid())
-			LoadInteger(ctx, t.val.integer, object, field);
+			LoadInteger(ctx, t.val.integer, object, type, op);
 	}
 
 
-	void ParserDecimal(const Token& t, char* object, const clcpp::Field* field)
+	void ParserDecimal(const Token& t, char* object, const clcpp::Type* type, clcpp::Qualifier::Operator op)
 	{
 		// Was there an error expecting a decimal?
 		if (!t.IsValid())
 			return;
 
-		if (field)
+		if (type)
 		{
 			// Dispatch to the correct decimal loader based on the field type
-			unsigned int index = GetTypeDispatchIndex(field->type->name.hash);
+			unsigned int index = GetTypeDispatchIndex(type->name.hash);
 			clcpp::internal::Assert(index < g_TypeDispatchMod && "Index is out of range");
 			LoadDecimalFunc func = g_TypeDispatchLUT[index].load_decimal;
 			if (func)
-				func(object + field->offset, t.val.decimal);
+				func(object, t.val.decimal);
 		}
 	}
 
 
-	void ParserElements(Context& ctx, Token& t)
+	void ParserElements(Context& ctx, Token& t, clcpp::WriteIterator& writer, const clcpp::Type* type, clcpp::Qualifier::Operator op)
 	{
 		// Expect a value first
-		ParserValue(ctx, t, 0, 0);
+		ParserValue(ctx, t, (char*)writer.AddEmpty(), type, op, 0);
 
 		if (t.type == TT_COMMA)
 		{
 			t = LexerToken(ctx);
-			ParserElements(ctx, t);
+			ParserElements(ctx, t, writer, type, op);
 		}
 	}
 
 
-	void ParserArray(Context& ctx, Token& t)
+	void ParserArray(Context& ctx, Token& t, clcpp::WriteIterator& writer, const clcpp::Type* type, clcpp::Qualifier::Operator op)
 	{
 		if (!Expect(ctx, t, TT_LBRACKET).IsValid())
 			return;
@@ -804,35 +803,52 @@ namespace
 			return;
 		}
 
-		ParserElements(ctx, t);
+		ParserElements(ctx, t, writer, type, op);
 		Expect(ctx, t, TT_RBRACKET);
 	}
 
 
-	void ParserLiteralValue(Context& ctx, const Token& t, int integer, char* object, const clcpp::Field* field)
+	void ParserArray(Context& ctx, Token& t, char* object, const clcpp::Type* type, const clcpp::Field* field)
 	{
-		if (t.IsValid())
-			LoadInteger(ctx, integer, object, field);
+		// Dispatch with the correct write iterator
+		if (field && field->ci)
+		{
+			clcpp::WriteIterator writer(field, object);
+			ParserArray(ctx, t, writer, writer.m_ValueType, writer.m_ValueIsPtr ? clcpp::Qualifier::POINTER : clcpp::Qualifier::VALUE);
+		}
+
+		else if (type->ci)
+		{
+			clcpp::WriteIterator writer(type->AsTemplateType(), object);
+			ParserArray(ctx, t, writer, writer.m_ValueType, writer.m_ValueIsPtr ? clcpp::Qualifier::POINTER : clcpp::Qualifier::VALUE);
+		}
 	}
 
 
-	void ParserValue(Context& ctx, Token& t, char* object, const clcpp::Field* field)
+	void ParserLiteralValue(Context& ctx, const Token& t, int integer, char* object, const clcpp::Type* type, clcpp::Qualifier::Operator op)
+	{
+		if (t.IsValid())
+			LoadInteger(ctx, integer, object, type, op);
+	}
+
+
+	void ParserValue(Context& ctx, Token& t, char* object, const clcpp::Type* type, clcpp::Qualifier::Operator op, const clcpp::Field* field)
 	{
 		switch (t.type)
 		{
-		case (TT_STRING): return ParserString(Expect(ctx, t, TT_STRING), object, field);
-		case (TT_INTEGER): return ParserInteger(ctx, Expect(ctx, t, TT_INTEGER), object, field);
-		case (TT_DECIMAL): return ParserDecimal(Expect(ctx, t, TT_DECIMAL), object, field);
+		case (TT_STRING): return ParserString(Expect(ctx, t, TT_STRING), object, type, op);
+		case (TT_INTEGER): return ParserInteger(ctx, Expect(ctx, t, TT_INTEGER), object, type, op);
+		case (TT_DECIMAL): return ParserDecimal(Expect(ctx, t, TT_DECIMAL), object, type, op);
 		case (TT_LBRACE):
 			{
-				if (field)
-					return ParserObject(ctx, t, object + field->offset, field->type);
+				if (type)
+					return ParserObject(ctx, t, object, type);
 				return ParserObject(ctx, t, 0, 0);
 			}
-		case (TT_LBRACKET): return ParserArray(ctx, t);
-		case (TT_TRUE): return ParserLiteralValue(ctx, Expect(ctx, t, TT_TRUE), 1, object, field);
-		case (TT_FALSE): return ParserLiteralValue(ctx, Expect(ctx, t, TT_FALSE), 0, object, field);
-		case (TT_NULL): return ParserLiteralValue(ctx, Expect(ctx, t, TT_NULL), 0, object, field);
+		case (TT_LBRACKET): return ParserArray(ctx, t, object, type, field);
+		case (TT_TRUE): return ParserLiteralValue(ctx, Expect(ctx, t, TT_TRUE), 1, object, type, op);
+		case (TT_FALSE): return ParserLiteralValue(ctx, Expect(ctx, t, TT_FALSE), 0, object, type, op);
+		case (TT_NULL): return ParserLiteralValue(ctx, Expect(ctx, t, TT_NULL), 0, object, type, op);
 
 		default:
 			ctx.SetError(clutl::JSONError::UNEXPECTED_TOKEN);
@@ -916,7 +932,7 @@ namespace
 		if (!Expect(ctx, t, TT_COLON).IsValid())
 			return;
 
-		ParserValue(ctx, t, object, field);
+		ParserValue(ctx, t, object + field->offset, field->type, field->qualifier.op, field);
 	}
 
 
