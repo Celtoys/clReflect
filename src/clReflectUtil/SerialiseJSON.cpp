@@ -29,7 +29,7 @@
 //    * Escape sequences need converting.
 //    * Enums communicated by value (load integer checks for enum - could have a verify mode to ensure the constant exists).
 //    * Field names need to be in memory for JSON serialising to work.
-//    * Pointers & containers.
+//    * Containers.
 //
 
 #include <clutl/Serialise.h>
@@ -142,10 +142,12 @@ namespace
 	class Context
 	{
 	public:
-		Context(clutl::ReadBuffer& read_buffer)
+		Context(clutl::ReadBuffer& read_buffer, clutl::ObjectDatabase* object_db, clutl::PointerMap* pmap)
 			: m_ReadBuffer(read_buffer)
 			, m_Line(1)
 			, m_LinePosition(0)
+			, m_ObjectDB(object_db)
+			, m_PointerMap(pmap)
 		{
 		}
 
@@ -215,11 +217,28 @@ namespace
 			return m_Error;
 		}
 
+		clutl::NamedObject* CreateNamedObject(unsigned int type_hash, const char* object_name)
+		{
+			if (m_ObjectDB == 0)
+				return 0;
+			return m_ObjectDB->CreateNamedObject(type_hash, object_name);
+		}
+
+		void AddPointer(clutl::NamedObject** ptr)
+		{
+			if (m_PointerMap)
+				m_PointerMap->AddPointer(ptr);
+		}
+
 	private:
+		// Parsing state
 		clutl::ReadBuffer& m_ReadBuffer;
 		clutl::JSONError m_Error;
 		unsigned int m_Line;
 		unsigned int m_LinePosition;
+
+		clutl::ObjectDatabase* m_ObjectDB;
+		clutl::PointerMap* m_PointerMap;
 	};
 
 
@@ -355,16 +374,18 @@ namespace
 	}
 
 
-	bool LexerHexInteger(Context& ctx, unsigned __int64& uintval)
+	Token LexerHexInteger(Context& ctx, Token& token)
 	{
+		unsigned __int64& uintval = (unsigned __int64&)token.val.integer;
+
 		// Consume the first digit
 		if (ctx.ReadOverflows(0))
-			return false;
+			return Token::Null;
 		char c = ctx.PeekChar();
 		if (!ishexdigit(c))
 		{
 			ctx.SetError(clutl::JSONError::EXPECTING_HEX_DIGIT);
-			return false;
+			return Token::Null;
 		}
 
 		uintval = 0;
@@ -381,11 +402,11 @@ namespace
 
 			// Peek at the next character and leave if it's not a hex digit
 			if (ctx.ReadOverflows(0))
-				return false;
+				return Token::Null;
 			c = ctx.PeekChar();
 		} while (ishexdigit(c));
 
-		return true;
+		return token;
 	}
 
 
@@ -443,6 +464,25 @@ namespace
 		const char* number_start = ctx.PeekChars();
 		Token token(TT_INTEGER, 0);
 
+		// Is this a hex integer?
+		unsigned __int64 uintval;
+		if (ctx.PeekChar() == '0')
+		{
+			if (ctx.ReadOverflows(1))
+				return Token::Null;
+
+			// Change the token type to decimal if 'd' is present, relying on the value
+			// union to alias between double/int types
+			switch (ctx.PeekChars()[1])
+			{
+			case 'd':
+				token.type = TT_DECIMAL;
+			case 'x':
+				ctx.ConsumeChars(2);
+				return LexerHexInteger(ctx, token);
+			}
+		}
+
 		// Consume negative
 		bool is_negative = false;
 		if (ctx.PeekChar() == '-')
@@ -451,32 +491,9 @@ namespace
 			ctx.ConsumeChar();
 		}
 
-		unsigned __int64 uintval;
-		if (ctx.PeekChar() == 'x')
-		{
-			// Parse integer digits as hex
-			ctx.ConsumeChar();
-			if (!LexerHexInteger(ctx, uintval))
-				return Token::Null;
-		}
-		else if (ctx.PeekChar() == 'd')
-		{
-			// Parse integer digits as hex
-			ctx.ConsumeChar();
-			if (!LexerHexInteger(ctx, uintval))
-				return Token::Null;
-
-			// Alias directly as a decimal
-			token.type = TT_DECIMAL;
-			token.val.decimal = (double&)uintval;
-			return token;
-		}
-		else
-		{
-			// Parse integer digits
-			if (!LexerInteger(ctx, uintval))
-				return Token::Null;
-		}
+		// Parse integer digits
+		if (!LexerInteger(ctx, uintval))
+			return Token::Null;
 
 		// Convert to signed integer
 		if (is_negative)
@@ -718,7 +735,7 @@ namespace
 	}
 
 
-	void LoadInteger(__int64 integer, char* object, const clcpp::Field* field)
+	void LoadInteger(Context& ctx, __int64 integer, char* object, const clcpp::Field* field)
 	{
 		if (field)
 		{
@@ -728,14 +745,19 @@ namespace
 			LoadIntegerFunc func = g_TypeDispatchLUT[index].load_integer;
 			if (func)
 				func(object + field->offset, integer);
+
+			// Keep track of any pointers
+			if (field->qualifier.op == clcpp::Qualifier::POINTER &&
+				field->type->DerivesFrom(clcpp::GetTypeNameHash<clutl::NamedObject>()))
+				ctx.AddPointer((clutl::NamedObject**)(object + field->offset));
 		}
 	}
 
 
-	void ParserInteger(const Token& t, char* object, const clcpp::Field* field)
+	void ParserInteger(Context& ctx, const Token& t, char* object, const clcpp::Field* field)
 	{
 		if (t.IsValid())
-			LoadInteger(t.val.integer, object, field);
+			LoadInteger(ctx, t.val.integer, object, field);
 	}
 
 
@@ -787,10 +809,10 @@ namespace
 	}
 
 
-	void ParserLiteralValue(const Token& t, int integer, char* object, const clcpp::Field* field)
+	void ParserLiteralValue(Context& ctx, const Token& t, int integer, char* object, const clcpp::Field* field)
 	{
 		if (t.IsValid())
-			LoadInteger(integer, object, field);
+			LoadInteger(ctx, integer, object, field);
 	}
 
 
@@ -799,7 +821,7 @@ namespace
 		switch (t.type)
 		{
 		case (TT_STRING): return ParserString(Expect(ctx, t, TT_STRING), object, field);
-		case (TT_INTEGER): return ParserInteger(Expect(ctx, t, TT_INTEGER), object, field);
+		case (TT_INTEGER): return ParserInteger(ctx, Expect(ctx, t, TT_INTEGER), object, field);
 		case (TT_DECIMAL): return ParserDecimal(Expect(ctx, t, TT_DECIMAL), object, field);
 		case (TT_LBRACE):
 			{
@@ -808,9 +830,9 @@ namespace
 				return ParserObject(ctx, t, 0, 0);
 			}
 		case (TT_LBRACKET): return ParserArray(ctx, t);
-		case (TT_TRUE): return ParserLiteralValue(Expect(ctx, t, TT_TRUE), 1, object, field);
-		case (TT_FALSE): return ParserLiteralValue(Expect(ctx, t, TT_FALSE), 0, object, field);
-		case (TT_NULL): return ParserLiteralValue(Expect(ctx, t, TT_NULL), 0, object, field);
+		case (TT_TRUE): return ParserLiteralValue(ctx, Expect(ctx, t, TT_TRUE), 1, object, field);
+		case (TT_FALSE): return ParserLiteralValue(ctx, Expect(ctx, t, TT_FALSE), 0, object, field);
+		case (TT_NULL): return ParserLiteralValue(ctx, Expect(ctx, t, TT_NULL), 0, object, field);
 
 		default:
 			ctx.SetError(clutl::JSONError::UNEXPECTED_TOKEN);
@@ -819,12 +841,53 @@ namespace
 	}
 
 
-	void ParserPair(Context& ctx, Token& t, char* object, const clcpp::Type* type)
+	void MakeString(char* dest, int dest_len, const char* src, int src_len)
+	{
+		while (dest_len-- && src_len--)
+			*dest++ = *src++;
+		*dest = 0;
+	}
+
+
+	void ParserPair(Context& ctx, Token& t, char*& object, const clcpp::Type*& type)
 	{
 		// Get the field name
 		Token name = Expect(ctx, t, TT_STRING);
 		if (!name.IsValid())
 			return;
+
+		// Is this an object creation request?
+		if (name.val.string[0] == '@' && object == 0)
+		{
+			// Copy the object name locally
+			char object_name[256];
+			MakeString(object_name, sizeof(object_name), name.val.string + 1, name.length - 1);
+
+			// Parse as a regular pair
+			if (!Expect(ctx, t, TT_COLON).IsValid())
+				return;
+			if (t.type != TT_STRING)
+			{
+				t = Token::Null;
+				ctx.SetError(clutl::JSONError::UNEXPECTED_TOKEN);
+				return;
+			}
+
+			// Create the requested object
+			unsigned int type_hash = clcpp::internal::HashData(t.val.string, t.length);
+			clutl::NamedObject* named_object = ctx.CreateNamedObject(type_hash, object_name);
+			if (named_object == 0)
+			{
+				t = Token::Null;
+				return;
+			}
+
+			// Prepare for all subsequent members
+			object = (char*)named_object;
+			type = named_object->type;
+			t = LexerToken(ctx);
+			return;
+		}
 
 		// Lookup the field in the parent class, if the type is class
 		// We want to continue parsing even if there's a mismatch, to skip the invalid data
@@ -891,86 +954,21 @@ namespace
 clutl::JSONError clutl::LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type)
 {
 	SetupTypeDispatchLUT();
-	Context ctx(in);
+	Context ctx(in, 0, 0);
 	Token t = LexerToken(ctx);
 	ParserObject(ctx, t, (char*)object, type);
 	return ctx.GetError();
 }
 
 
-clutl::JSONError clutl::LoadJSON(ReadBuffer& in, ObjectDatabase* object_db)
+clutl::JSONError clutl::LoadJSON(ReadBuffer& in, ObjectDatabase* object_db, PointerMap& pmap)
 {
 	SetupTypeDispatchLUT();
+	Context ctx(in, object_db, &pmap);
 
-	Token object_name, type_name;
-
-	// Loop reading every creation request
-	Context ctx(in);
-	while (ctx.GetError().code == JSONError::NONE && ctx.Remaining())
-	{
-		// Read the current character and break at stream end
-		if (ctx.ReadOverflows(0, clutl::JSONError::NONE))
-			break;
-		char c = ctx.PeekChar();
-
-		switch (c)
-		{
-			// Skip white-space, keeping track of line numbers
-		case ('\n'):
-			ctx.IncLine();
-		case (' '):
-		case ('\t'):
-		case ('\v'):
-		case ('\f'):
-		case ('\r'):
-			ctx.ConsumeChar();
-			continue;
-
-			// Skip the equality
-		case ('='):
-			ctx.ConsumeChar();
-			continue;
-		}
-
-		// On the first pass, get the object name
-		if (!object_name.IsValid())
-		{
-			object_name = LexerString(ctx);
-			if (!object_name.IsValid())
-				break;
-		}
-
-		// Parse the type name and get its hash on the second pass
-		else if (!type_name.IsValid())
-		{
-			type_name = LexerString(ctx);
-			if (!type_name.IsValid())
-				break;
-			unsigned int type_hash = clcpp::internal::HashData(type_name.val.string, type_name.length);
-
-			// Copy the object name locally and null-terminate it (don't want to modify the source data)
-			char object_name_sz[256];
-			char* on_ptr = object_name_sz;
-			while (true)
-			{
-				int len = on_ptr - object_name_sz;
-				if (len > object_name.length ||
-					len >= sizeof(object_name_sz) - 1)
-					break;
-				*on_ptr++ = *object_name.val.string++;
-			}
-			*on_ptr++ = 0;
-
-			// Create the object and load its contets
-			clutl::NamedObject* object = object_db->CreateNamedObject(type_hash, object_name_sz);
-			Token t = LexerToken(ctx);
-			ParserObject(ctx, t, (char*)object, object->type);
-
-			// Clear the name tokens for the next object
-			object_name = Token();
-			type_name = Token();
-		}
-	}
+	Token t = LexerToken(ctx);
+	while (ctx.Remaining() && ctx.GetError().code == JSONError::NONE)
+		ParserObject(ctx, t, 0, 0);
 
 	return ctx.GetError();
 }
@@ -1094,7 +1092,7 @@ namespace
 
 	void SaveDecimal(clutl::WriteBuffer& out, double decimal, unsigned int flags)
 	{
-		if (flags & clutl::JSONFlags::OUTPUT_HEX_FLOATS)
+		if (flags & clutl::JSONFlags::EMIT_HEX_FLOATS)
 		{
 			// Use a specific prefix to inform the lexer to alias as a decimal
 			out.Write("0d", 2);
@@ -1349,6 +1347,23 @@ namespace
 
 	void SaveClass(clutl::WriteBuffer& out, const char* object, const clcpp::Class* class_type, unsigned int flags, bool& field_written)
 	{
+		// Emit any create object requests
+		if (flags & clutl::JSONFlags::EMIT_CREATE_OBJECT && 
+			class_type->DerivesFrom(clcpp::GetTypeNameHash<clutl::NamedObject>()))
+		{
+			clutl::NamedObject* named_object = (clutl::NamedObject*)object;
+			out.Write("\"@", 2);
+			const char* end = named_object->name.text;
+			while (*end++) ;
+			out.Write(named_object->name.text, end - named_object->name.text);
+			out.Write("\":", 2);
+			SaveString(out, class_type->name.text);
+			
+			// Prepare for the rest of the object
+			field_written = true;
+			flags &= ~clutl::JSONFlags::EMIT_CREATE_OBJECT;
+		}
+
 		// Save each field in the class
 		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
 		int nb_fields = fields.size();
@@ -1457,19 +1472,11 @@ void clutl::SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* ty
 
 void clutl::SaveJSON(WriteBuffer& out, const ObjectDatabase& object_db, unsigned int flags)
 {
-	// Walk over each object in the database
+	// Save each object in the database
 	for (ObjectIterator i(object_db); i.IsValid(); i.MoveNext())
 	{
 		const clutl::NamedObject* object = (clutl::NamedObject*)i.GetObject();
-
-		// Output a non-JSON compliant Javascript assignment
-		SaveString(out, object->name.text);
-		out.Write("=", 1);
-		SaveString(out, object->type->name.text);
-		SaveJSON(out, object, object->type, flags);
-
-		if (flags & JSONFlags::FORMAT_OUTPUT)
-			out.Write("\n", 1);
+		SaveJSON(out, object, object->type, flags | JSONFlags::EMIT_CREATE_OBJECT);
 	}
 }
 

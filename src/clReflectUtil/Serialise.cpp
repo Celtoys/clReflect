@@ -152,12 +152,6 @@ clutl::PointerMap::PointerMap()
 }
 
 
-clutl::PointerMap::PointerMap(int nb_pointers)
-	: m_PointerData(nb_pointers * sizeof(NamedObject*))
-{
-}
-
-
 void clutl::PointerMap::AddPointer(NamedObject** ptr)
 {
 	// Use the internal write buffer to maintain a dynamic list of object pointers

@@ -99,23 +99,33 @@ namespace clutl
 	};
 
 
+	//
+	// A map of pointers encountered during a serialisation operation.
+	// The calling code must:
+	//
+	//    1. Iterate over each pointer in the map with GetNbPointers.
+	//    2. Call GetPointerHash to get the hash of the object name for each pointer.
+	//    3. Lookup the pointer in their object database(s).
+	//    4. Apply that pointer with SetPointerAddress.
+	//
+	// This makes circular references, out-of-order construction of references and the use of
+	// multiple object databases easy to handle without making the serialisation code too complicated.
+	//
 	class PointerMap
 	{
 	public:
 		PointerMap();
 
-		PointerMap(int nb_pointers);
-
+		// Serialisation code adds pointers with this
 		void AddPointer(NamedObject** ptr);
 
+		// Client code traversal of the pointer map
 		unsigned int GetPointerHash(int pointer_index) const;
 		void SetPointerAddress(int pointer_index, NamedObject* ptr);
-
 		int GetNbPointers() const { return m_PointerData.GetBytesWritten() / sizeof(NamedObject**); }
 
 	private:
 		NamedObject*** GetPointerEntry(int pointer_index) const;
-
 		WriteBuffer m_PointerData;
 	};
 
@@ -165,7 +175,8 @@ namespace clutl
 		{
 			INDENT_MASK = 0x0F,
 			FORMAT_OUTPUT = 0x10,
-			OUTPUT_HEX_FLOATS = 0x20,
+			EMIT_HEX_FLOATS = 0x20,
+			EMIT_CREATE_OBJECT = 0x40
 		};
 	};
 
@@ -173,7 +184,7 @@ namespace clutl
 	// Cannot load nullstr fields
 	JSONError LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type);
 
-	JSONError LoadJSON(ReadBuffer& in, ObjectDatabase* object_db);
+	JSONError LoadJSON(ReadBuffer& in, ObjectDatabase* object_db, PointerMap& pmap);
 
 	// Can save nullstr fields
 	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags = 0);
