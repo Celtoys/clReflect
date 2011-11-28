@@ -142,12 +142,12 @@ namespace
 	class Context
 	{
 	public:
-		Context(clutl::ReadBuffer& read_buffer, clutl::ObjectDatabase* object_db, clutl::PointerMap* pmap)
+		Context(clutl::ReadBuffer& read_buffer, clutl::ObjectDatabase* object_db, clutl::NamedObjectList* created_objects)
 			: m_ReadBuffer(read_buffer)
 			, m_Line(1)
 			, m_LinePosition(0)
 			, m_ObjectDB(object_db)
-			, m_PointerMap(pmap)
+			, m_CreatedObjects(created_objects)
 		{
 		}
 
@@ -221,13 +221,13 @@ namespace
 		{
 			if (m_ObjectDB == 0)
 				return 0;
-			return m_ObjectDB->CreateNamedObject(type_hash, object_name);
-		}
 
-		void AddPointer(clutl::NamedObject** ptr)
-		{
-			if (m_PointerMap)
-				m_PointerMap->AddPointer(ptr);
+			// Create the object and track its pointer
+			clutl::NamedObject* object = m_ObjectDB->CreateNamedObject(type_hash, object_name);
+			if (m_CreatedObjects != 0)
+				m_CreatedObjects->AddObject(object);
+
+			return object;
 		}
 
 	private:
@@ -238,7 +238,7 @@ namespace
 		unsigned int m_LinePosition;
 
 		clutl::ObjectDatabase* m_ObjectDB;
-		clutl::PointerMap* m_PointerMap;
+		clutl::NamedObjectList* m_CreatedObjects;
 	};
 
 
@@ -695,7 +695,7 @@ namespace
 	}
 
 
-	void ParserString(const Token& t, char* object, const clcpp::Type* type, clcpp::Qualifier::Operator op)
+	void ParserString(const Token& t, char* object, const clcpp::Type* type)
 	{
 		// Was there an error expecting a string?
 		if (!t.IsValid())
@@ -743,10 +743,6 @@ namespace
 		if (op == clcpp::Qualifier::POINTER)
 		{
 			*(unsigned int*)object = (unsigned int)integer;
-
-			// Keep track of any pointers
-			if (type->DerivesFrom(clcpp::GetTypeNameHash<clutl::NamedObject>()))
-				ctx.AddPointer((clutl::NamedObject**)object);
 		}
 
 		else
@@ -768,7 +764,7 @@ namespace
 	}
 
 
-	void ParserDecimal(const Token& t, char* object, const clcpp::Type* type, clcpp::Qualifier::Operator op)
+	void ParserDecimal(const Token& t, char* object, const clcpp::Type* type)
 	{
 		// Was there an error expecting a decimal?
 		if (!t.IsValid())
@@ -844,9 +840,9 @@ namespace
 	{
 		switch (t.type)
 		{
-		case (TT_STRING): return ParserString(Expect(ctx, t, TT_STRING), object, type, op);
+		case (TT_STRING): return ParserString(Expect(ctx, t, TT_STRING), object, type);
 		case (TT_INTEGER): return ParserInteger(ctx, Expect(ctx, t, TT_INTEGER), object, type, op);
-		case (TT_DECIMAL): return ParserDecimal(Expect(ctx, t, TT_DECIMAL), object, type, op);
+		case (TT_DECIMAL): return ParserDecimal(Expect(ctx, t, TT_DECIMAL), object, type);
 		case (TT_LBRACE):
 			{
 				if (type)
@@ -985,10 +981,10 @@ clutl::JSONError clutl::LoadJSON(ReadBuffer& in, void* object, const clcpp::Type
 }
 
 
-clutl::JSONError clutl::LoadJSON(ReadBuffer& in, ObjectDatabase* object_db, PointerMap& pmap)
+clutl::JSONError clutl::LoadJSON(ReadBuffer& in, ObjectDatabase* object_db, NamedObjectList& loaded_objects)
 {
 	SetupTypeDispatchLUT();
-	Context ctx(in, object_db, &pmap);
+	Context ctx(in, object_db, &loaded_objects);
 
 	Token t = LexerToken(ctx);
 	while (ctx.Remaining() && ctx.GetError().code == JSONError::NONE)

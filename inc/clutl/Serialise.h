@@ -100,33 +100,20 @@ namespace clutl
 
 
 	//
-	// A map of pointers encountered during a serialisation operation.
-	// The calling code must:
+	// A list of objects created during a serialisation operation that require pointer patching.
+	// Combine with FieldVisitor to walk the pointer fields of an object and replace the hash
+	// value with the actual pointer.
 	//
-	//    1. Iterate over each pointer in the map with GetNbPointers.
-	//    2. Call GetPointerHash to get the hash of the object name for each pointer.
-	//    3. Lookup the pointer in their object database(s).
-	//    4. Apply that pointer with SetPointerAddress.
-	//
-	// This makes circular references, out-of-order construction of references and the use of
-	// multiple object databases easy to handle without making the serialisation code too complicated.
-	//
-	class PointerMap
+	class NamedObjectList
 	{
 	public:
-		PointerMap();
+		void AddObject(NamedObject* object);
+		NamedObject* GetObject(int index);
 
-		// Serialisation code adds pointers with this
-		void AddPointer(NamedObject** ptr);
-
-		// Client code traversal of the pointer map
-		unsigned int GetPointerHash(int pointer_index) const;
-		void SetPointerAddress(int pointer_index, NamedObject* ptr);
-		int GetNbPointers() const { return m_PointerData.GetBytesWritten() / sizeof(NamedObject**); }
+		int GetNbObjects() { return m_Data.GetBytesWritten() / sizeof(NamedObject*); }
 
 	private:
-		NamedObject*** GetPointerEntry(int pointer_index) const;
-		WriteBuffer m_PointerData;
+		WriteBuffer m_Data;
 	};
 
 
@@ -184,7 +171,10 @@ namespace clutl
 	// Cannot load nullstr fields
 	JSONError LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type);
 
-	JSONError LoadJSON(ReadBuffer& in, ObjectDatabase* object_db, PointerMap& pmap);
+	// Creates and loads sequence of objects encountered in a JSON stream. Any pointers in the returned
+	// objects will store the hash of the name of the object pointed to which must be patched up by the
+	// caller using whatever object databases they have at their disposal.
+	JSONError LoadJSON(ReadBuffer& in, ObjectDatabase* object_db, NamedObjectList& loaded_objects);
 
 	// Can save nullstr fields
 	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags = 0);

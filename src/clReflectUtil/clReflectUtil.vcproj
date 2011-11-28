@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="clReflectUtil"
-	ProjectGUID="{10A13EF0-11F8-11E1-A79D-F46D04D48D5F}"
+	ProjectGUID="{DB231300-19A6-11E1-8EDA-F46D04D48D5F}"
 	RootNamespace="clReflectUtil"
 	Keyword="Win32Proj"
 	>
@@ -63,12 +63,16 @@
 	<Files>
 		<Filter
 			Name="Public API"
-			UniqueIdentifier="{546cc7ee-169c-11e1-b30d-f46d04d48d5f}"
+			UniqueIdentifier="{1b624480-19b7-11e1-816d-f46d04d48d5f}"
 			>
 			<Filter
 				Name="clutl"
-				UniqueIdentifier="{546cc7ef-169c-11e1-9ffc-f46d04d48d5f}"
+				UniqueIdentifier="{1b624481-19b7-11e1-ad4e-f46d04d48d5f}"
 				>
+				<File
+					RelativePath="..\..\inc\clutl\FieldVisitor.h"
+					>
+				</File>
 				<File
 					RelativePath="..\..\inc\clutl\Module.h"
 					>
@@ -85,6 +89,10 @@
 		</Filter>
 		<File
 			RelativePath="clReflectUtil.pibfile"
+			>
+		</File>
+		<File
+			RelativePath="FieldVisitor.cpp"
 			>
 		</File>
 		<File
@@ -111,7 +119,7 @@
 	<Globals>
 		<Global
 			Name="PiBDigest"
-			Value="Qa6r8R8NGNYEumk-aG9C0w=="
+			Value="q3iLHLRV25yKKAD_s-iywA=="
 		/>
 	</Globals>
 </VisualStudioProject>
