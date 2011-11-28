@@ -152,10 +152,3 @@ void clutl::NamedObjectList::AddObject(NamedObject* object)
 	NamedObject** dest = (NamedObject**)m_Data.Alloc(sizeof(NamedObject*));
 	*dest = object;
 }
-
-
-clutl::NamedObject* clutl::NamedObjectList::GetObject(int index)
-{
-	clcpp::internal::Assert(index < GetNbObjects() && "Object index too big");
-	return *((NamedObject**)m_Data.GetData() + index);
-}

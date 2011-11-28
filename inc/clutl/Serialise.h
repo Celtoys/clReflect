@@ -108,9 +108,12 @@ namespace clutl
 	{
 	public:
 		void AddObject(NamedObject* object);
-		NamedObject* GetObject(int index);
 
-		int GetNbObjects() { return m_Data.GetBytesWritten() / sizeof(NamedObject*); }
+		NamedObject** GetObjects(int& nb_objects)
+		{
+			nb_objects = m_Data.GetBytesWritten() / sizeof(NamedObject*);
+			return (NamedObject**)m_Data.GetData();
+		}
 
 	private:
 		WriteBuffer m_Data;
