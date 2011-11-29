@@ -33,13 +33,11 @@
 // The C++ standard specifies that use of default placement new does not require inclusion of <new>.
 // However, MSVC2005 disagrees and requires this. Since I don't want any CRT dependencies in the library,
 // I don't want to include that. However, the C++ standard also states that implementing your own
-// default new 
+// default new is illegal.
 //
 // I could just be pragmatic and ignore that (I have done for as long as I've known of the existence
 // of placement new). Or I could do this... wrap pointers in a specific type that forwards to its own
 // placement new, treating it like an allocator that returns the wrapped pointer.
-//
-// Much cleaner but there is some extra code in debug builds - I may revisit this :/
 //
 namespace clcpp
 {
@@ -47,8 +45,6 @@ namespace clcpp
 	{
 		struct PtrWrapper
 		{
-			PtrWrapper(void* p) : ptr(p) { }
-			void* ptr;
 		};
 	}
 }
@@ -59,7 +55,7 @@ namespace clcpp
 //
 inline void* operator new (unsigned int size, const clcpp::internal::PtrWrapper& p)
 {
-	return p.ptr;
+	return (void*)&p;
 }
 inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
 {
@@ -86,7 +82,30 @@ namespace clcpp
 
 
 		//
-		// Hashes the full string int a 32-bit value
+		// Functions to abstract the calling of an object's constructor and destructor, for
+		// debugging and letting the compiler do the type deduction. Makes it a little easier
+		// to use the PtrWrapper abstraction.
+		//
+		template <typename TYPE>
+		inline void CallConstructor(TYPE* object)
+		{
+			new (*(PtrWrapper*)object) TYPE;
+		}
+		template <typename TYPE>
+		inline void CallDestructor(TYPE* object)
+		{
+			object->~TYPE();
+		}
+
+
+		//
+		// Hashes the specified data into a 32-bit value
+		//
+		unsigned HashData(const void* data, int length);
+
+
+		//
+		// Hashes the full string into a 32-bit value
 		//
 		unsigned int HashNameString(const char* name_string);
 
@@ -132,9 +151,7 @@ namespace clcpp
 			// Allocate and call the constructor for each element
 			m_Data = (TYPE*)m_Allocator->Alloc(m_Size * sizeof(TYPE));
 			for (unsigned int i = 0; i < m_Size; i++)
-			{
-				new (internal::PtrWrapper(m_Data + i)) TYPE;
-			}
+				internal::CallConstructor(m_Data + i);
 		}
 
 		// Initialise with pre-allocated data
@@ -145,39 +162,35 @@ namespace clcpp
 		{
 		}
 
-		// Copy construct
-		CArray(const CArray& rhs)
-			: m_Size(rhs.size())
-			, m_Data(0)
-			, m_Allocator(rhs.m_Allocator)
-		{
-			// Allocate and copy each entry
-			m_Data = (TYPE*)m_Allocator->Alloc(m_Size * sizeof(TYPE));
-			for (unsigned int i = 0; i < m_Size; i++)
-			{
-				m_Data[i] = rhs.m_Data[i];
-			}
-		}
-
 		~CArray()
 		{
 			if (m_Allocator)
 			{
 				// Call the destructor on each element and free the allocated memory
 				for (unsigned int i = 0; i < m_Size; i++)
-				{
-					m_Data[i].TYPE::~TYPE();
-				}
+					internal::CallDestructor(m_Data + i);
 				m_Allocator->Free(m_Data);
 			}
 		}
 
 		// A shallow copy of each member in the array
-		void copy(const CArray<TYPE>& rhs)
+		void shallow_copy(const CArray<TYPE>& rhs)
 		{
 			m_Size = rhs.m_Size;
 			m_Data = rhs.m_Data;
 			m_Allocator = rhs.m_Allocator;
+		}
+
+		void deep_copy(const CArray<TYPE>& rhs, IAllocator* allocator)
+		{
+			m_Allocator = allocator;
+			internal::Assert(m_Allocator != 0);
+
+			// Allocate and copy each entry
+			m_Size = rhs.m_Size;
+			m_Data = (TYPE*)m_Allocator->Alloc(m_Size * sizeof(TYPE));
+			for (unsigned int i = 0; i < m_Size; i++)
+				m_Data[i] = rhs.m_Data[i];
 		}
 
 		// Removes an element from the list without reallocating any memory
@@ -220,7 +233,8 @@ namespace clcpp
 		}
 
 	private:
-		// No need to implement if it's not used
+		// No need to implement if it's not used - private to ensure they don't get called by accident
+		CArray(const CArray& rhs);
 		CArray& operator= (const CArray& rhs);
 
 		unsigned int m_Size;
@@ -250,5 +264,19 @@ namespace clcpp
 		// Derived classes must implement just the read function, returning
 		// true on success, false otherwise.
 		virtual bool Read(void* dest, int size) = 0;
+	};
+
+
+	//
+	// Represents the range [start, end) for iterating over an array
+	//
+	struct Range
+	{
+		Range() : first(0), last(0)
+		{
+		}
+
+		int first;
+		int last;
 	};
 }
