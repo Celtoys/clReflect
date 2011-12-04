@@ -241,7 +241,6 @@ namespace cldb
 		std::string value;
 	};
 
-
 	//
 	// A basic built-in type that classes/structs can also inherit from
 	// Only one base type is supported until it becomes necessary to do otherwise.
@@ -254,10 +253,10 @@ namespace cldb
 			, size(0)
 		{
 		}
-		Type(Name n, Name p, u32 s, Name b)
+		Type(Name n, Name p, u32 s, std::vector<Name>& b)
 			: Primitive(Primitive::KIND_TYPE, n, p)
 			, size(s)
-			, base_type(b)
+			, base_types(b)
 		{
 		}
 		Type(Kind k)
@@ -265,18 +264,19 @@ namespace cldb
 			, size(0)
 		{
 		}
-		Type(Kind k, Name n, Name p, u32 s, Name b) : Primitive(k, n, p), size(s), base_type(b) { }
+		Type(Kind k, Name n, Name p, u32 s, std::vector<Name>& b) : Primitive(k, n, p), size(s), base_types(b) { }
 
 		bool Equals(const Type& rhs) const
 		{
-			return Primitive::Equals(rhs) && size == rhs.size && base_type == rhs.base_type;
+			return Primitive::Equals(rhs) && size == rhs.size && base_types == rhs.base_types;
 		}
 
 		// Total size of the type, including alignment
 		u32 size;
 
 		// Single type this one derives from. Can be either a Class or TemplateType.
-		Name base_type;
+		//Name base_type;
+		std::vector<Name> base_types;
 	};
 
 
@@ -490,7 +490,7 @@ namespace cldb
 			: Type(Primitive::KIND_CLASS)
 		{
 		}
-		Class(Name n, Name p, Name b, u32 s)
+		Class(Name n, Name p, std::vector<Name>& b, u32 s)
 			: Type(Primitive::KIND_CLASS, n, p, s, b)
 		{
 		}

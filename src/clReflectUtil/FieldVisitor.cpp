@@ -66,8 +66,10 @@ namespace
 		}
 
 		// Template types have no fields; just bases
-		if (template_type->base_type != 0)
-			VisitField(object, template_type->base_type, clcpp::Qualifier(), visitor);
+		for (int i = 0; i < template_type->base_types.size(); i++)
+		{
+			VisitField(object, template_type->base_types[i], clcpp::Qualifier(), visitor);
+		}
 	}
 
 
@@ -91,9 +93,11 @@ namespace
 			VisitField(object + field->offset, field->type, field->qualifier, visitor);
 		}
 
-		// Visit the base type at the same offset
-		if (class_type->base_type != 0)
-			VisitField(object, class_type->base_type, clcpp::Qualifier(), visitor);
+		// Visit the base types at the same offset
+		for (int i = 0; i < class_type->base_types.size(); i++)
+		{
+			VisitField(object, class_type->base_types[i], clcpp::Qualifier(), visitor);
+		}
 	}
 }
 

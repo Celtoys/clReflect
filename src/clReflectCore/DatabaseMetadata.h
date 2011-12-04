@@ -125,7 +125,7 @@ namespace cldb
 		struct DatabaseType
 		{
 			// An empty type
-			DatabaseType() : size(0), packed_size(0), base_type(0) { }
+			DatabaseType() : size(0), packed_size(0) { }
 
 			// Set the type
 			template <typename TYPE>

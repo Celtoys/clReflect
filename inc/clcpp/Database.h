@@ -270,7 +270,6 @@ namespace clcpp
 		Type()
 			: Primitive(KIND)
 			, size(0)
-			, base_type(0)
 			, ci(0)
 		{
 		}
@@ -278,7 +277,6 @@ namespace clcpp
 		Type(Kind k)
 			: Primitive(k)
 			, size(0)
-			, base_type(0)
 			, ci(0)
 		{
 		}
@@ -286,9 +284,16 @@ namespace clcpp
 		// Does this type derive from the specified type, by hash?
 		bool DerivesFrom(unsigned int type_name_hash) const
 		{
-			for (const Type* type = base_type; type; type = type->base_type)
+			// TODO RVF: Test this
+
+			for (int i=0; i<base_types.size(); i++)
 			{
-				if (type->name.hash == type_name_hash)
+				// Search in immediate bases
+				if (base_types[i]->name.hash == type_name_hash)
+					return true;
+
+				// Search up the inheritance tree
+				if (base_types[i]->DerivesFrom(type_name_hash))
 					return true;
 			}
 
@@ -304,7 +309,7 @@ namespace clcpp
 		unsigned int size;
 
 		// Single type this one derives from. Can be either a Class or TemplateType.
-		const Type* base_type;
+		CArray<const Type*> base_types;
 
 		// This is non-null if the type is a registered container
 		ContainerInfo* ci;
