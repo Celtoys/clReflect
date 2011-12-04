@@ -76,49 +76,6 @@ namespace
 	const clang::ClassTemplateSpecializationDecl* GetTemplateSpecialisation(const clang::Type* type);
 	bool ParseTemplateSpecialisation(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, const clang::ClassTemplateSpecializationDecl* cts_decl, std::string& type_name_str);
 
-
-	// TODO RVF: Remove this function
-	/*
-	cldb::Name ParseBaseClass(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, const std::string& name, const clang::CXXRecordDecl* record_decl)
-	{
-		if (record_decl->getNumBases() == 0)
-			return cldb::Name();
-
-		// Can't support virtual base classes - offsets change at runtime
-		const clang::CXXBaseSpecifier& base = *record_decl->bases_begin();
-		if (base.isVirtual())
-		{
-			LOG(ast, WARNING, "Class '%s' has an unsupported virtual base class\n", name.c_str());
-			return cldb::Name();
-		}
-
-		// Parse the type name
-		clang::QualType base_type = base.getType();
-		std::string type_name_str = base_type.getAsString(ctx.getLangOptions());
-		Remove(type_name_str, "struct ");
-		Remove(type_name_str, "class ");
-
-		// First see if the base class is a template specialisation and try to parse it
-		if (const clang::ClassTemplateSpecializationDecl* cts_decl = GetTemplateSpecialisation(base_type.split().first))
-		{
-			if (!ParseTemplateSpecialisation(db, specs, ctx, cts_decl, type_name_str))
-			{
-				LOG(ast, WARNING, "Base class '%s' of '%s' is templated and could not be parsed so skipping", type_name_str.c_str(), name.c_str());
-				return cldb::Name();
-			}
-		}
-
-		// Check the type is reflected
-		else if (!specs.IsReflected(type_name_str))
-		{
-			LOG(ast, WARNING, "Base class '%s' of '%s' is not reflected so skipping\n", type_name_str.c_str(), name.c_str());
-			return cldb::Name();
-		}
-
-		return db.GetName(type_name_str.c_str());
-	}
-	*/
-
 	cldb::Name ParseBaseClass(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, cldb::Name derived_type_name, const clang::CXXBaseSpecifier& base)
 	{
 		// Can't support virtual base classes - offsets change at runtime

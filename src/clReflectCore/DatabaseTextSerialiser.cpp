@@ -100,20 +100,6 @@ namespace
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
 		fputs(itohex(primitive.size), fp);
-
-		// TODO RVF : Refactor this
-		/*
-		fputs("\t", fp);
-		fputs(HexStringFromName(primitive.base_type, db), fp);
-		*/
-		/*
-		for(int i = 0; i < primitive.base_types.size(); i++)
-		{
-			if (i>0)
-				fputs(",", fp);
-			fputs(HexStringFromName(primitive.base_types[i], db), fp);
-		}
-		*/
 	}
 
 
@@ -214,6 +200,14 @@ namespace
 		fputs(itohex(ci.count), fp);
 	}
 
+	void WriteTypeInheritance(FILE *fp, const cldb::TypeInheritance& ti, const cldb::Database& db)
+	{
+		fputs(HexStringFromName(ti.name, db), fp);
+		fputs("\t", fp);
+		fputs(HexStringFromName(ti.derived_type, db), fp);
+		fputs("\t", fp);
+		fputs(HexStringFromName(ti.base_type, db), fp);
+	}
 
 	void WriteTextAttribute(FILE* fp, const cldb::TextAttribute& primitive, const cldb::Database& db)
 	{
@@ -289,6 +283,8 @@ void cldb::WriteTextDatabase(const char* filename, const Database& db)
 	WritePrimitives<TextAttribute>(fp, db, WriteTextAttribute, "Text Attributes", "Name\t\tParent\t\tValue");
 
 	WritePrimitives<ContainerInfo>(fp, db, WriteContainerInfo, "Containers", "Name\t\tRead\t\tWrite\t\tFlags\t\tCount");
+
+	WritePrimitives<TypeInheritance>(fp, db, WriteTypeInheritance, "Inheritance", "Name\t\tDerived\t\tBase");
 
 	fclose(fp);
 }
@@ -420,8 +416,7 @@ namespace
 		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
-		// Type parsing - discard the size and base type
-		tok.GetHexInt();
+		// Type parsing - discard the size
 		tok.GetHexInt();
 
 		// Add a new class to the database
@@ -503,7 +498,6 @@ namespace
 	}
 
 
-	// TODO RVF : Refactor this
 	void ParseClass(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
@@ -514,7 +508,6 @@ namespace
 
 		// Type parsing
 		cldb::u32 size = tok.GetHexInt();
-		cldb::u32 base = tok.GetHexInt();
 
 		// Add a new class to the database
 		cldb::Class primitive(
@@ -526,8 +519,6 @@ namespace
 	}
 
 
-
-	// TODO RVF : Refactor this to remove "base" ?
 	void ParseTemplateType(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
@@ -538,7 +529,6 @@ namespace
 
 		// Type parsing - discard size
 		tok.GetHexInt();
-		cldb::u32 base = tok.GetHexInt();
 
 		// Template type argument parsing
 		cldb::TemplateType primitive(db.GetName(name), db.GetName(parent));
@@ -664,6 +654,22 @@ namespace
 		db.Add(ci.name, ci);
 	}
 
+	void ParseInheritance(char* line, cldb::Database&db)
+	{
+		StringTokeniser tok(line, "\t");
+		
+		// Parse the inheritance
+		cldb::u32 name = tok.GetHexInt();
+		cldb::u32 derived_type = tok.GetHexInt();
+		cldb::u32 base_type = tok.GetHexInt();
+
+		// Construct and add to the database
+		cldb::TypeInheritance ti;
+		ti.name = db.GetName(name);
+		ti.derived_type = db.GetName(derived_type);
+		ti.base_type = db.GetName(base_type);
+		db.Add(ti.name, ti);
+	}
 
 	template <typename PARSE_FUNC>
 	void ParseTable(FILE* fp, char* line, cldb::Database& db, const char* table_name, PARSE_FUNC parse_func)
@@ -728,6 +734,7 @@ bool cldb::ReadTextDatabase(const char* filename, Database& db)
 		ParseTable(fp, line, db, "Name Attributes", ParseNameAttribute);
 		ParseTable(fp, line, db, "Text Attributes", ParseTextAttribute);
 		ParseTable(fp, line, db, "Containers", ParseContainerInfo);
+		ParseTable(fp, line, db, "Inheritance", ParseInheritance);
 	}
 
 	fclose(fp);

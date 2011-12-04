@@ -125,7 +125,6 @@ namespace
 	{
 		CopyPrimitive((clcpp::Primitive&)dest, src, kind);
 		dest.size = src.size;
-		dest.base_type = (clcpp::Type*)src.base_type.hash;
 	}
 	void CopyPrimitive(clcpp::TemplateType& dest, const cldb::TemplateType& src, clcpp::Primitive::Kind kind)
 	{
@@ -469,7 +468,6 @@ namespace
 		}
 	}
 
-
 	const clcpp::Type* LinkContainerIterator(CppExport& cppexp, const char* container_name, const clcpp::Type* iterator_type)
 	{
 		if (iterator_type == 0)
@@ -649,6 +647,7 @@ namespace
 	// Overloads for sorting primitive arrays within a primitive
 	void SortPrimitives(clcpp::Enum& primitive)
 	{
+		SortPrimitives(primitive.base_types);
 		SortPrimitives(primitive.constants);
 		SortPrimitives(primitive.attributes);
 	}
@@ -663,6 +662,7 @@ namespace
 	}
 	void SortPrimitives(clcpp::Class& primitive)
 	{
+		SortPrimitives(primitive.base_types);
 		SortPrimitives(primitive.enums);
 		SortPrimitives(primitive.classes);
 		SortPrimitives(primitive.methods);
@@ -670,6 +670,12 @@ namespace
 		SortPrimitives(primitive.attributes);
 		SortPrimitives(primitive.templates);
 	}
+
+	void SortPrimitives(clcpp::TemplateType& primitive)
+	{
+		SortPrimitives(primitive.base_types);
+	}
+
 	void SortPrimitives(clcpp::Template& primitive)
 	{
 		SortPrimitives(primitive.instances);
@@ -816,8 +822,15 @@ namespace
 	void VerifyPrimitive(CppExport& cppexp, const clcpp::Type& primitive)
 	{
 		// Report any warnings with unresolved base class types
+		/*
 		if (const char* unresolved = VerifyPtr(cppexp, primitive.base_type))
 			LOG(main, WARNING, "Type '%s' couldn't find base type reference to '%s'\n", primitive.name.text, unresolved);
+			*/
+		for (int i = 0; i < primitive.base_types.size(); i++)
+		{
+			if (const char* unresolved = VerifyPtr(cppexp, primitive.base_types[i]))
+				LOG(main, WARNING, "Type '%s' couldn't find base type reference to '%s'\n", primitive.name.text, unresolved);
+		}
 	}
 	void VerifyPrimitive(CppExport& cppexp, const clcpp::TemplateType& primitive)
 	{
@@ -933,8 +946,9 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 
 	// Link up any references between primitives
 	Link(cppexp.db->fields, &clcpp::Field::type, cppexp.db->type_primitives);
-	Link(cppexp.db->classes, &clcpp::Type::base_type, cppexp.db->type_primitives);
-	Link(cppexp.db->template_types, &clcpp::TemplateType::base_type, cppexp.db->type_primitives);
+	// TODO RV Maybe remove these two, if not needed. I think all this work is done below
+	//Link(cppexp.db->classes, &clcpp::Type::base_types, cppexp.db->type_primitives);
+	//Link(cppexp.db->template_types, &clcpp::TemplateType::base_types, cppexp.db->type_primitives);
 	Link(cppexp.db->template_types, &clcpp::TemplateType::parameter_types, cppexp.db->type_primitives);
 
 	// Return parameters are parented to their functions as parameters. Move them from
@@ -952,12 +966,42 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	SortPrimitives(cppexp.db->functions);
 	SortPrimitives(cppexp.db->classes);
 	SortPrimitives(cppexp.db->templates);
+	SortPrimitives(cppexp.db->template_types);
 	SortPrimitives(cppexp.db->namespaces);
 	SortPrimitives(cppexp.db->type_primitives);
 
 	// Container infos need to be parented to their owners and their read/writer iterator
 	// pointers need to be linked to their reflected types
 	LinkContainerInfos(cppexp, field_parents);
+
+	// Build base classes arrays
+	{
+		// Collect bases classes per type (key=derived class hash, value=vector with base classes)
+		typedef std::map<cldb::u32, std::vector<const clcpp::Type*> > BasesClassesPerTypeMap;
+		BasesClassesPerTypeMap baseclassesPerType;
+		for (cldb::DBMap<cldb::TypeInheritance>::const_iterator it = db.m_TypeInheritances.begin(); it!= db.m_TypeInheritances.end(); it++)
+		{
+			const clcpp::Type* base_type = clcpp::FindPrimitive(cppexp.db->type_primitives, it->second.base_type.hash);
+			assert(base_type && "base class not found. Possibly a clReflect bug" );
+			baseclassesPerType[it->second.derived_type.hash].push_back(base_type);
+		}
+
+		for(BasesClassesPerTypeMap::iterator it = baseclassesPerType.begin(); it != baseclassesPerType.end(); it++)
+		{
+			clcpp::Type* type = const_cast<clcpp::Type*>(clcpp::FindPrimitive(cppexp.db->type_primitives, it->first));
+			assert(type && "Type not found in map. Possibly a clReflect bug.");
+			type->base_types.shallow_copy( 
+				clcpp::CArray<const clcpp::Type*>(cppexp.allocator.Alloc<const clcpp::Type*>(it->second.size()), it->second.size())
+				);
+
+			for (int i=0; i < type->base_types.size(); i++)
+			{
+				type->base_types[i] = it->second[i];
+			}
+		}
+
+	}
+
 
 	// Each class may have constructor/destructor methods in their method list. Run through
 	// each class and make pointers to these in the class. This is done after sorting so that
@@ -1027,7 +1071,7 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		(&clcpp::Primitive::parent);
 
 	PtrSchema& schema_type = relocator.AddSchema<clcpp::Type>(&schema_primitive)
-		(&clcpp::Class::base_type)
+		(&clcpp::Type::base_types, array_data_offset)
 		(&clcpp::Type::ci);
 
 	PtrSchema& schema_enum_constant = relocator.AddSchema<clcpp::EnumConstant>(&schema_primitive);
@@ -1150,6 +1194,10 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		relocator.AddPointers(schema_ptr, cppexp.db->namespaces[i].classes);
 		relocator.AddPointers(schema_ptr, cppexp.db->namespaces[i].functions);
 		relocator.AddPointers(schema_ptr, cppexp.db->namespaces[i].templates);
+	}
+	for (int i = 0; i< cppexp.db->type_primitives.size(); i++)
+	{
+		relocator.AddPointers(schema_ptr, cppexp.db->type_primitives[i]->base_types);
 	}
 
 	// Make all pointers relative to the start address
@@ -1314,14 +1362,11 @@ namespace
 	void LogPrimitive(const clcpp::TemplateType& tt)
 	{
 		LOG(cppexp, INFO, "class %s", tt.name.text);
-		if (tt.base_type)
-		{
-			LOG_APPEND(cppexp, INFO, " : public %s\n", tt.base_type->name.text);
-		}
-		else
-		{
-			LOG_APPEND(cppexp, INFO, "\n");
-		}
+
+		for (int i=0; i < tt.base_types.size(); i++)
+			LOG_APPEND(cppexp, INFO, (i==0) ? " : public %s" : ", public %s", tt.base_types[i]->name.text);
+
+		LOG_APPEND(cppexp, INFO, "\n");
 	}
 
 
@@ -1342,14 +1387,12 @@ namespace
 	void LogPrimitive(const clcpp::Class& cls)
 	{
 		LOG(cppexp, INFO, "class %s", cls.name.text);
-		if (cls.base_type)
-		{
-			LOG_APPEND(cppexp, INFO, " : public %s\n", cls.base_type->name.text);
-		}
-		else
-		{
-			LOG_APPEND(cppexp, INFO, "\n");
-		}
+
+		for (int i=0; i < cls.base_types.size(); i++)
+			LOG_APPEND(cppexp, INFO, (i==0) ? " : public %s" : ", public %s", cls.base_types[i]->name.text);
+		
+		LOG_APPEND(cppexp, INFO, "\n");
+
 		LOG(cppexp, INFO, "{\n");
 		LOG_PUSH_INDENT(cppexp);
 

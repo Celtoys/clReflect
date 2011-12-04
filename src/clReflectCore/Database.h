@@ -254,7 +254,6 @@ namespace cldb
 
 	//
 	// A basic built-in type that classes/structs can also inherit from
-	// Only one base type is supported until it becomes necessary to do otherwise.
 	//
 	struct Type : public Primitive
 	{

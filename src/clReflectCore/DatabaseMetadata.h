@@ -125,7 +125,7 @@ namespace cldb
 		struct DatabaseType
 		{
 			// An empty type
-			DatabaseType() : size(0), packed_size(0) { }
+			DatabaseType() : size(0), packed_size(0), base_type(0) { }
 
 			// Set the type
 			template <typename TYPE>
@@ -191,7 +191,7 @@ namespace cldb
 			template <> const DatabaseType& GetType<NameAttribute>() const { return m_NameAttributeType; }
 			template <> const DatabaseType& GetType<TextAttribute>() const { return m_TextAttributeType; }
 			template <> const DatabaseType& GetType<ContainerInfo>() const { return m_ContainerInfoType; }
-			template <> const DatabaseType& GetType<TypeInheritance>() const { return m_TypeInheritanceType; }
+			template <> const DatabaseType& GetType<TypeInheritance>() const { return m_InheritanceType; }
 
 			// All type descriptions
 			DatabaseType m_PrimitiveType;
@@ -215,7 +215,8 @@ namespace cldb
 			// Container type description
 			DatabaseType m_ContainerInfoType;
 
-			DatabaseType m_TypeInheritanceType;
+			// Inheritance type description
+			DatabaseType m_InheritanceType;
 		};
 	}
 }

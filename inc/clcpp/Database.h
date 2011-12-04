@@ -284,15 +284,16 @@ namespace clcpp
 		// Does this type derive from the specified type, by hash?
 		bool DerivesFrom(unsigned int type_name_hash) const
 		{
-			// TODO RVF: Test this
-
+			// Search in immediate bases
 			for (int i=0; i<base_types.size(); i++)
 			{
-				// Search in immediate bases
 				if (base_types[i]->name.hash == type_name_hash)
 					return true;
+			}
 
-				// Search up the inheritance tree
+			// Search up the inheritance tree
+			for (int i=0; i<base_types.size(); i++)
+			{
 				if (base_types[i]->DerivesFrom(type_name_hash))
 					return true;
 			}

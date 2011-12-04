@@ -39,8 +39,14 @@ namespace
 
 		// This has to be the same template type generated multiple times in different translation units
 		// Ensure that their descriptions match up as best as possible at this point
+
+
+		// TODO RVF : Think of a way to check the TemplateType without using base_type, as it doesn't exist anymore
+		/*
 		if (a.base_type != b.base_type)
 			LOG(main, WARNING, "Template Type %s differs in base type specification during merge\n", name);
+		*/
+
 	}
 
 
@@ -50,8 +56,13 @@ namespace
 
 		// This has to be the same class included multiple times in different translation units
 		// Ensure that their descriptions match up as best as possible at this point
+
+		// TODO RVF : Think of a way to check the Class without using base_type, as it doesn't exist anymore
+		/*
 		if (class_a.base_type != class_b.base_type)
 			LOG(main, WARNING, "Class %s differs in base type specification during merge\n", class_name);
+		*/
+
 		if (class_a.size != class_b.size)
 			LOG(main, WARNING, "Class %s differs in size during merge\n", class_name);
 	}
@@ -161,4 +172,7 @@ void MergeDatabases(cldb::Database& dest_db, const cldb::Database& src_db)
 
 	// Merge containers
 	MergeUniques<cldb::ContainerInfo>(dest_db, src_db);
+
+	// Merge inheritance
+	MergeUniques<cldb::TypeInheritance>(dest_db, src_db);
 }

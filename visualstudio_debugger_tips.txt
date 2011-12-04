@@ -1,0 +1,69 @@
+You can add some fancy Visual Studio Debugger visualizers to help developing with clReflect.
+Edit your Visual Studio's autoexp.dat file, which you can find in your Visual Studio
+installation at <VisualStudioInstallionFolder>\Common7\Packages\Debugger.
+At the end of the file you can find something like this:
+
+[hresult]
+;1234=my custom error code
+
+Right before that text, insert all the following content to add debugger visualizers for some of clReflect's classes:
+
+
+;------------------------------------------------------------------------------
+;  clcpp::CArray<*>
+;------------------------------------------------------------------------------
+clcpp::CArray<*>{
+	children
+	(
+	    #array
+	    (
+			expr :	($c.m_Data)[$i],  
+			size :	$c.m_Size
+		)
+	)
+	
+    preview
+    ( 
+        #( 
+			"[", 
+            $e.m_Size,
+            "](", 
+            
+            #array
+            (
+				expr : 	($c.m_Data)[$i],  
+				size : 	$c.m_Size
+			), 
+			")"
+		)
+	)
+}
+
+
+;------------------------------------------------------------------------------
+;  clcpp::Name
+;------------------------------------------------------------------------------
+clcpp::Name{
+	preview
+	( 
+		#( 
+			"[", 
+            $e.hash,
+			",",
+			[$e.text,s],
+            "]"
+		)
+	)
+	
+	stringview
+	(
+		#( 
+			"[", 
+            $e.hash,
+			",",
+			[$e.text,s],
+            "]"
+		)
+	)
+
+}

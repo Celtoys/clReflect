@@ -97,8 +97,9 @@ cldb::meta::DatabaseTypes::DatabaseTypes()
 		DatabaseField(&cldb::ContainerInfo::count),
 	};
 
-	DatabaseField bases_fields[] =
+	DatabaseField inheritance_fields[] =
 	{
+		DatabaseField(&cldb::TypeInheritance::name),
 		DatabaseField(&cldb::TypeInheritance::derived_type),
 		DatabaseField(&cldb::TypeInheritance::base_type),
 	};
@@ -126,5 +127,5 @@ cldb::meta::DatabaseTypes::DatabaseTypes()
 	m_ContainerInfoType.Type<cldb::ContainerInfo>().Fields(container_info_fields);
 
 	// Create descriptions of inheritance
-	m_TypeInheritanceType.Type<cldb::TypeInheritance>().Fields(bases_fields);
+	m_InheritanceType.Type<cldb::TypeInheritance>().Fields(inheritance_fields);
 }
