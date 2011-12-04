@@ -1,0 +1,24 @@
+namespace cz
+	template cz::TArray
+	class cz::Fu1	
+		Field: int a
+		Field: float b
+		Field: float array1
+	class cz::Fu2	
+		function cz::Fu2::DoSomething
+			Returns: void (not added)
+			cz::Fu2* this
+		Field: float array2
+	attribute scriptable
+	attribute customname
+	class cz::Vector3 : cz::Fu1	
+		Field: float x
+		Field: float y
+		Field: float z
+		function cz::Vector3::Add
+			Returns: void (not added)
+			cz::Vector3* this
+			float _x
+			float _y
+			float _z
+WARNING: Class 'cz::DFu' has too many bases
