@@ -241,6 +241,19 @@ namespace cldb
 		std::string value;
 	};
 
+	struct TypeInheritance
+	{
+		TypeInheritance(Name _derived_type, Name _base_type) : derived_type(_derived_type), base_type(_base_type)
+		{
+		}
+		TypeInheritance()
+		{
+		}
+
+		Name derived_type;
+		Name base_type;
+	};
+
 	//
 	// A basic built-in type that classes/structs can also inherit from
 	// Only one base type is supported until it becomes necessary to do otherwise.
@@ -253,10 +266,9 @@ namespace cldb
 			, size(0)
 		{
 		}
-		Type(Name n, Name p, u32 s, std::vector<Name>& b)
+		Type(Name n, Name p, u32 s)
 			: Primitive(Primitive::KIND_TYPE, n, p)
 			, size(s)
-			, base_types(b)
 		{
 		}
 		Type(Kind k)
@@ -264,19 +276,16 @@ namespace cldb
 			, size(0)
 		{
 		}
-		Type(Kind k, Name n, Name p, u32 s, std::vector<Name>& b) : Primitive(k, n, p), size(s), base_types(b) { }
+		Type(Kind k, Name n, Name p, u32 s) : Primitive(k, n, p), size(s) { }
 
 		bool Equals(const Type& rhs) const
 		{
-			return Primitive::Equals(rhs) && size == rhs.size && base_types == rhs.base_types;
+			return Primitive::Equals(rhs) && size == rhs.size;
 		}
 
 		// Total size of the type, including alignment
 		u32 size;
 
-		// Single type this one derives from. Can be either a Class or TemplateType.
-		//Name base_type;
-		std::vector<Name> base_types;
 	};
 
 
@@ -319,7 +328,7 @@ namespace cldb
 		{
 		}
 		Enum(Name n, Name p)
-			: Type(Primitive::KIND_ENUM, n, p, sizeof(int), cldb::Name())
+			: Type(Primitive::KIND_ENUM, n, p, sizeof(int))
 		{
 		}
 	};
@@ -430,8 +439,8 @@ namespace cldb
 			for (int i = 0; i < MAX_NB_ARGS; i++)
 				parameter_ptrs[i] = false;
 		}
-		TemplateType(Name n, Name p, Name b)
-			: Type(KIND_TEMPLATE_TYPE, n, p, 0, b)
+		TemplateType(Name n, Name p)
+			: Type(KIND_TEMPLATE_TYPE, n, p, 0)
 		{
 			for (int i = 0; i < MAX_NB_ARGS; i++)
 				parameter_ptrs[i] = false;
@@ -490,8 +499,8 @@ namespace cldb
 			: Type(Primitive::KIND_CLASS)
 		{
 		}
-		Class(Name n, Name p, std::vector<Name>& b, u32 s)
-			: Type(Primitive::KIND_CLASS, n, p, s, b)
+		Class(Name n, Name p, u32 s)
+			: Type(Primitive::KIND_CLASS, n, p, s)
 		{
 		}
 
@@ -583,6 +592,10 @@ namespace cldb
 	{
 	};
 
+	template<>
+	struct DBMap<TypeInheritance> : public std::map<u32, TypeInheritance>
+	{
+	};
 
 	class Database
 	{
@@ -592,6 +605,7 @@ namespace cldb
 		void AddBaseTypePrimitives();
 
 		void AddContainerInfo(const std::string& container, const std::string& read_iterator, const std::string& write_iterator, bool has_key);
+		void AddTypeInheritance(Name& derived_type, Name& base_type);
 
 		const Name& GetName(const char* text);
 		const Name& GetName(u32 hash) const;
@@ -642,6 +656,7 @@ namespace cldb
 
 		// Containers
 		template <> DBMap<ContainerInfo>& GetDBMap() { return m_ContainerInfos; }
+		template <> DBMap<TypeInheritance>& GetDBMap() { return m_TypeInheritances; }
 
 		// Single pass-through const retrieval of the primitive stores. This strips the const-ness
 		// of the 'this' pointer to remove the need to copy-paste the GetPrimitiveStore implementations
@@ -674,6 +689,8 @@ namespace cldb
 
 		// Store for containers
 		DBMap<ContainerInfo> m_ContainerInfos;
+
+		DBMap<TypeInheritance> m_TypeInheritances;
 
 		// All referenced GetType functions per type
 		// This is currently not serialised or merged as it's generated during the export

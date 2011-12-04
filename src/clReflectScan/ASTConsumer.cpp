@@ -45,6 +45,7 @@
 #include <clang/AST/TemplateName.h>
 #include <clang/Basic/SourceManager.h>
 
+#include <queue>
 
 namespace
 {
@@ -76,6 +77,7 @@ namespace
 	bool ParseTemplateSpecialisation(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, const clang::ClassTemplateSpecializationDecl* cts_decl, std::string& type_name_str);
 
 
+	// TODO RVF: Remove this function
 	cldb::Name ParseBaseClass(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, const std::string& name, const clang::CXXRecordDecl* record_decl)
 	{
 		if (record_decl->getNumBases() == 0)
@@ -473,6 +475,41 @@ void ASTConsumer::AddNamespaceDecl(clang::NamedDecl* decl, const std::string& na
 }
 
 
+cldb::Name ParseBaseClass(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, const std::string& name, const clang::CXXBaseSpecifier& base)
+{
+	// Can't support virtual base classes - offsets change at runtime
+	if (base.isVirtual())
+	{
+		LOG(ast, WARNING, "Class '%s' has an unsupported virtual base class\n", name.c_str());
+		return cldb::Name();
+	}
+
+	// Parse the type name
+	clang::QualType base_type = base.getType();
+	std::string type_name_str = base_type.getAsString(ctx.getLangOptions());
+	Remove(type_name_str, "struct ");
+	Remove(type_name_str, "class ");
+
+	// First see if the base class is a template specialisation and try to parse it
+	if (const clang::ClassTemplateSpecializationDecl* cts_decl = GetTemplateSpecialisation(base_type.split().first))
+	{
+		if (!ParseTemplateSpecialisation(db, specs, ctx, cts_decl, type_name_str))
+		{
+			LOG(ast, WARNING, "Base class '%s' of '%s' is templated and could not be parsed so skipping", type_name_str.c_str(), name.c_str());
+			return cldb::Name();
+		}
+	}
+
+	// Check the type is reflected
+	else if (!specs.IsReflected(type_name_str))
+	{
+		LOG(ast, WARNING, "Base class '%s' of '%s' is not reflected so skipping\n", type_name_str.c_str(), name.c_str());
+		return cldb::Name();
+	}
+
+	return db.GetName(type_name_str.c_str());
+}
+
 void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name)
 {
 	// Cast to a record (NOTE: CXXRecord is a temporary clang type and will change in future revisions)
@@ -483,20 +520,36 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, 
 	if (record_decl->isThisDeclarationADefinition() == clang::VarDecl::DeclarationOnly)
 		return;
 
-	// Can only inherit from one base class for now - offsets change based on derived type
-	if (record_decl->getNumBases() > 1)
+
+	if (record_decl->getNumVBases())
 	{
-		LOG(ast, WARNING, "Class '%s' has too many bases\n", name.c_str());
+		LOG(ast, WARNING, "Class '%s' has an unsupported virtual base class\n", name.c_str());
 		return;
 	}
 
-	// Parse any base classes
-	cldb::Name base_name;
+	Name thiclass_name = m_DB.GetName(name.c_str());
+
+	std::queue
+
+	// Parse base classes
+	std::queue<cldb::Name> base_names;
 	if (record_decl->getNumBases())
 	{
-		base_name = ParseBaseClass(m_DB, m_ReflectionSpecs, m_ASTContext, name, record_decl);
-		if (base_name == cldb::Name())
-			return;
+		const clang::CXXBaseSpecifier& base = *record_decl->bases_begin();
+		for (clang::base_class_const_iterator i = record_decl->bases_begin(); i!= record_decl->bases_end(); i++)
+		{
+			cldb::Name base_name = ParseBaseClass(m_DB, m_ReflectionSpecs, m_ASTContext, name, *i);
+			// If the base class is valid, then add the inheritance relationship
+			if (base_name != cldb::Name())
+			{
+				m_DB.AddTypeInheritance(thiclass_name, base_name);
+				base_names.push(base_name);
+			}
+			else
+			{
+				return;
+			}
+		}
 	}
 
 	if (record_decl->isAnonymousStructOrUnion())
@@ -509,15 +562,20 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, 
 	{
 		// Add to the database
 		LOG(ast, INFO, "class %s", name.c_str());
-		if (base_name != cldb::Name())
-			LOG_APPEND(ast, INFO, " : %s", base_name.text.c_str());
+		bool first = true;
+		while(!base_names.empty())
+		{
+			LOG_APPEND(ast, INFO, (first) ? " : %s" : ", %s", base_names.front().text.c_str());
+			first = false;
+			base_names.pop();
+		}
 		LOG_NEWLINE(ast);
 		const clang::ASTRecordLayout& layout = m_ASTContext.getASTRecordLayout(record_decl);
 		cldb::u32 size = layout.getSize().getQuantity();
 		m_DB.AddPrimitive(cldb::Class(
 			m_DB.GetName(name.c_str()),
 			m_DB.GetName(parent_name.c_str()),
-			base_name, size));
+			size));
 		AddContainedDecls(decl, name, &layout);
 	}
 }

@@ -378,8 +378,7 @@ namespace
 		cldb::Type primitive(
 			db.GetName(name),
 			db.GetName(parent),
-			size,
-			cldb::Name());
+			size);
 
 		db.AddPrimitive(primitive);
 	}
@@ -497,6 +496,7 @@ namespace
 	}
 
 
+	// TODO RVF : Refactor this
 	void ParseClass(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
@@ -513,13 +513,14 @@ namespace
 		cldb::Class primitive(
 			db.GetName(name),
 			db.GetName(parent),
-			db.GetName(base),
 			size);
 
 		db.AddPrimitive(primitive);
 	}
 
 
+
+	// TODO RVF : Refactor this to remove "base" ?
 	void ParseTemplateType(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
@@ -533,7 +534,7 @@ namespace
 		cldb::u32 base = tok.GetHexInt();
 
 		// Template type argument parsing
-		cldb::TemplateType primitive(db.GetName(name), db.GetName(parent), db.GetName(base));
+		cldb::TemplateType primitive(db.GetName(name), db.GetName(parent));
 		for (int i = 0; i < cldb::TemplateType::MAX_NB_ARGS; i++)
 		{
 			cldb::u32 type = tok.GetHexInt();

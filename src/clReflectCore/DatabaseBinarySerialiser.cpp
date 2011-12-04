@@ -259,6 +259,8 @@ void cldb::WriteBinaryDatabase(const char* filename, const Database& db)
 
 	WriteTable<cldb::ContainerInfo>(fp, db, dbtypes);
 
+	WriteTable<cldb::TypeInheritance>(fp, db, dbtypes);
+
 	fclose(fp);
 }
 
@@ -427,6 +429,8 @@ bool cldb::ReadBinaryDatabase(const char* filename, Database& db)
 	ReadTable<cldb::TextAttribute>(fp, db, dbtypes);
 
 	ReadTable<cldb::ContainerInfo>(fp, db, dbtypes);
+
+	ReadTable<cldb::TypeInheritance>(fp, db, dbtypes);
 
 	fclose(fp);
 

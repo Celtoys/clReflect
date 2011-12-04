@@ -77,23 +77,23 @@ void cldb::Database::AddBaseTypePrimitives()
 	// Create a selection of basic C++ types
 	// TODO: Figure the size of these out based on platform
 	Name parent;
-	AddPrimitive(Type(GetName("void"), parent, 0, cldb::Name()));
-	AddPrimitive(Type(GetName("bool"), parent, sizeof(bool), cldb::Name()));
-	AddPrimitive(Type(GetName("char"), parent, sizeof(char), cldb::Name()));
-	AddPrimitive(Type(GetName("unsigned char"), parent, sizeof(unsigned char), cldb::Name()));
-	AddPrimitive(Type(GetName("wchar_t"), parent, sizeof(wchar_t), cldb::Name()));
-	AddPrimitive(Type(GetName("short"), parent, sizeof(short), cldb::Name()));
-	AddPrimitive(Type(GetName("unsigned short"), parent, sizeof(unsigned short), cldb::Name()));
-	AddPrimitive(Type(GetName("int"), parent, sizeof(int), cldb::Name()));
-	AddPrimitive(Type(GetName("unsigned int"), parent, sizeof(unsigned int), cldb::Name()));
-	AddPrimitive(Type(GetName("long"), parent, sizeof(long), cldb::Name()));
-	AddPrimitive(Type(GetName("unsigned long"), parent, sizeof(unsigned long), cldb::Name()));
-	AddPrimitive(Type(GetName("float"), parent, sizeof(float), cldb::Name()));
-	AddPrimitive(Type(GetName("double"), parent, sizeof(double), cldb::Name()));
+	AddPrimitive(Type(GetName("void"), parent, 0));
+	AddPrimitive(Type(GetName("bool"), parent, sizeof(bool)));
+	AddPrimitive(Type(GetName("char"), parent, sizeof(char)));
+	AddPrimitive(Type(GetName("unsigned char"), parent, sizeof(unsigned char)));
+	AddPrimitive(Type(GetName("wchar_t"), parent, sizeof(wchar_t)));
+	AddPrimitive(Type(GetName("short"), parent, sizeof(short)));
+	AddPrimitive(Type(GetName("unsigned short"), parent, sizeof(unsigned short)));
+	AddPrimitive(Type(GetName("int"), parent, sizeof(int)));
+	AddPrimitive(Type(GetName("unsigned int"), parent, sizeof(unsigned int)));
+	AddPrimitive(Type(GetName("long"), parent, sizeof(long)));
+	AddPrimitive(Type(GetName("unsigned long"), parent, sizeof(unsigned long)));
+	AddPrimitive(Type(GetName("float"), parent, sizeof(float)));
+	AddPrimitive(Type(GetName("double"), parent, sizeof(double)));
 
 	// 64-bit types as clang sees them
-	AddPrimitive(Type(GetName("long long"), parent, sizeof(__int64), cldb::Name()));
-	AddPrimitive(Type(GetName("unsigned long long"), parent, sizeof(unsigned __int64), cldb::Name()));
+	AddPrimitive(Type(GetName("long long"), parent, sizeof(__int64)));
+	AddPrimitive(Type(GetName("unsigned long long"), parent, sizeof(unsigned __int64)));
 }
 
 
@@ -105,6 +105,25 @@ void cldb::Database::AddContainerInfo(const std::string& container, const std::s
 	ci.write_iterator_type = GetName(write_iterator.c_str());
 	ci.flags = has_key ? ContainerInfo::HAS_KEY : 0;
 	m_ContainerInfos[ci.name.hash] = ci;
+}
+
+void cldb::Database::AddTypeInheritance(Name& derived_type, Name& base_type)
+{
+	std::string text = base_type.text + "<-" + derived_type.text;
+	u32 hash = clcpp::internal::HashNameString(text.c_str());
+
+	// See if we have this in the map already
+	DBMap<TypeInheritance>::iterator i = m_TypeInheritances.find(hash);
+	if (i != m_TypeInheritances.end())
+	{
+		// check for collision
+		assert(i->second.derived_type.text==derived_type.text && i->second.base_type.text==base_type.text);
+	}
+	else
+	{
+		m_TypeInheritances[hash] = TypeInheritance(derived_type, base_type);
+	}
+
 }
 
 

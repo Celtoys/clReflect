@@ -42,7 +42,6 @@ cldb::meta::DatabaseTypes::DatabaseTypes()
 	DatabaseField type_fields[] =
 	{
 		DatabaseField(&cldb::Type::size),
-		DatabaseField(&cldb::Type::base_type),
 	};
 
 	DatabaseField enum_constant_fields[] =
@@ -98,6 +97,12 @@ cldb::meta::DatabaseTypes::DatabaseTypes()
 		DatabaseField(&cldb::ContainerInfo::count),
 	};
 
+	DatabaseField bases_fields[] =
+	{
+		DatabaseField(&cldb::TypeInheritance::derived_type),
+		DatabaseField(&cldb::TypeInheritance::base_type),
+	};
+
 	// Create the descriptions of each type
 	m_PrimitiveType.Type<cldb::Primitive>().Fields(primitive_fields);
 	m_TypeType.Type<cldb::Type>().Base(&m_PrimitiveType).Fields(type_fields);
@@ -119,4 +124,7 @@ cldb::meta::DatabaseTypes::DatabaseTypes()
 
 	// Create descriptions of the container type
 	m_ContainerInfoType.Type<cldb::ContainerInfo>().Fields(container_info_fields);
+
+	// Create descriptions of inheritance
+	m_TypeInheritanceType.Type<cldb::TypeInheritance>().Fields(bases_fields);
 }
