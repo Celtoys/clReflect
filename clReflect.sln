@@ -1,33 +1,33 @@
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "clReflectCpp", "src\clReflectCpp\clReflectCpp.vcproj", "{DB07C2D0-19A6-11E1-B2F8-F46D04D48D5F}"
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{DFBCE66E-19A6-11E1-9D0F-F46D04D48D5F}") = "clReflectCpp", "src\clReflectCpp\clReflectCpp.vcproj", "{DB07C2D0-19A6-11E1-B2F8-F46D04D48D5F}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "clReflectUtil", "src\clReflectUtil\clReflectUtil.vcproj", "{DB231300-19A6-11E1-8EDA-F46D04D48D5F}"
+Project("{DFBD0D80-19A6-11E1-B6F8-F46D04D48D5F}") = "clReflectUtil", "src\clReflectUtil\clReflectUtil.vcproj", "{DB231300-19A6-11E1-8EDA-F46D04D48D5F}"
 	ProjectSection(ProjectDependencies) = postProject
 		{DB07C2D0-19A6-11E1-B2F8-F46D04D48D5F} = {DB07C2D0-19A6-11E1-B2F8-F46D04D48D5F}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "clReflectCore", "src\clReflectCore\clReflectCore.vcproj", "{DB2A17E2-19A6-11E1-B48B-F46D04D48D5F}"
+Project("{DFBD0D81-19A6-11E1-BFBF-F46D04D48D5F}") = "clReflectCore", "src\clReflectCore\clReflectCore.vcproj", "{DB2A17E2-19A6-11E1-B48B-F46D04D48D5F}"
 	ProjectSection(ProjectDependencies) = postProject
 		{DB231300-19A6-11E1-8EDA-F46D04D48D5F} = {DB231300-19A6-11E1-8EDA-F46D04D48D5F}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "clReflectScan", "src\clReflectScan\clReflectScan.vcproj", "{DDEA4950-19A6-11E1-888B-F46D04D48D5F}"
+Project("{DFBD0D82-19A6-11E1-A811-F46D04D48D5F}") = "clReflectScan", "src\clReflectScan\clReflectScan.vcproj", "{DDEA4950-19A6-11E1-888B-F46D04D48D5F}"
 	ProjectSection(ProjectDependencies) = postProject
 		{DB2A17E2-19A6-11E1-B48B-F46D04D48D5F} = {DB2A17E2-19A6-11E1-B48B-F46D04D48D5F}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "clReflectMerge", "src\clReflectMerge\clReflectMerge.vcproj", "{DE030170-19A6-11E1-B3D1-F46D04D48D5F}"
+Project("{DFBD0D83-19A6-11E1-878C-F46D04D48D5F}") = "clReflectMerge", "src\clReflectMerge\clReflectMerge.vcproj", "{DE030170-19A6-11E1-B3D1-F46D04D48D5F}"
 	ProjectSection(ProjectDependencies) = postProject
 		{DDEA4950-19A6-11E1-888B-F46D04D48D5F} = {DDEA4950-19A6-11E1-888B-F46D04D48D5F}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "clReflectExport", "src\clReflectExport\clReflectExport.vcproj", "{DE09DF40-19A6-11E1-9D1C-F46D04D48D5F}"
+Project("{DFBD3490-19A6-11E1-948D-F46D04D48D5F}") = "clReflectExport", "src\clReflectExport\clReflectExport.vcproj", "{DE09DF40-19A6-11E1-9D1C-F46D04D48D5F}"
 	ProjectSection(ProjectDependencies) = postProject
 		{DE030170-19A6-11E1-B3D1-F46D04D48D5F} = {DE030170-19A6-11E1-B3D1-F46D04D48D5F}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "clReflectTest", "src\clReflectTest\clReflectTest.vcproj", "{DFBBD500-19A6-11E1-AA52-F46D04D48D5F}"
+Project("{DFBD3491-19A6-11E1-AFCC-F46D04D48D5F}") = "clReflectTest", "src\clReflectTest\clReflectTest.vcproj", "{DFBBD500-19A6-11E1-AA52-F46D04D48D5F}"
 	ProjectSection(ProjectDependencies) = postProject
 		{DE09DF40-19A6-11E1-9D1C-F46D04D48D5F} = {DE09DF40-19A6-11E1-9D1C-F46D04D48D5F}
 	EndProjectSection

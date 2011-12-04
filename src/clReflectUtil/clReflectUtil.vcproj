@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="8.00"
 	Name="clReflectUtil"
 	ProjectGUID="{DB231300-19A6-11E1-8EDA-F46D04D48D5F}"
 	RootNamespace="clReflectUtil"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform
