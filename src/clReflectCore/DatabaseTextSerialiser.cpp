@@ -100,13 +100,20 @@ namespace
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
 		fputs(itohex(primitive.size), fp);
+
+		// TODO RVF : Refactor this
+		/*
 		fputs("\t", fp);
+		fputs(HexStringFromName(primitive.base_type, db), fp);
+		*/
+		/*
 		for(int i = 0; i < primitive.base_types.size(); i++)
 		{
 			if (i>0)
 				fputs(",", fp);
 			fputs(HexStringFromName(primitive.base_types[i], db), fp);
 		}
+		*/
 	}
 
 

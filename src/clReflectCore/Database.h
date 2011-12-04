@@ -243,13 +243,11 @@ namespace cldb
 
 	struct TypeInheritance
 	{
-		TypeInheritance(Name _derived_type, Name _base_type) : derived_type(_derived_type), base_type(_base_type)
-		{
-		}
 		TypeInheritance()
 		{
 		}
 
+		Name name;
 		Name derived_type;
 		Name base_type;
 	};

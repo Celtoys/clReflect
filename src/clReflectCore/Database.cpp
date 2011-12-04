@@ -110,20 +110,11 @@ void cldb::Database::AddContainerInfo(const std::string& container, const std::s
 void cldb::Database::AddTypeInheritance(Name& derived_type, Name& base_type)
 {
 	std::string text = base_type.text + "<-" + derived_type.text;
-	u32 hash = clcpp::internal::HashNameString(text.c_str());
-
-	// See if we have this in the map already
-	DBMap<TypeInheritance>::iterator i = m_TypeInheritances.find(hash);
-	if (i != m_TypeInheritances.end())
-	{
-		// check for collision
-		assert(i->second.derived_type.text==derived_type.text && i->second.base_type.text==base_type.text);
-	}
-	else
-	{
-		m_TypeInheritances[hash] = TypeInheritance(derived_type, base_type);
-	}
-
+	TypeInheritance ti;
+	ti.name = GetName(text.c_str()); 
+	ti.derived_type = derived_type;
+	ti.base_type = base_type;
+	m_TypeInheritances[ti.name.hash] = ti;
 }
 
 

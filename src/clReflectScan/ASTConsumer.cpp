@@ -78,6 +78,7 @@ namespace
 
 
 	// TODO RVF: Remove this function
+	/*
 	cldb::Name ParseBaseClass(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, const std::string& name, const clang::CXXRecordDecl* record_decl)
 	{
 		if (record_decl->getNumBases() == 0)
@@ -115,6 +116,44 @@ namespace
 		}
 
 		return db.GetName(type_name_str.c_str());
+	}
+	*/
+
+	cldb::Name ParseBaseClass(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, cldb::Name derived_type_name, const clang::CXXBaseSpecifier& base)
+	{
+		// Can't support virtual base classes - offsets change at runtime
+		if (base.isVirtual())
+		{
+			LOG(ast, WARNING, "Class '%s' has an unsupported virtual base class\n", derived_type_name.text.c_str());
+			return cldb::Name();
+		}
+
+		// Parse the type name
+		clang::QualType base_type = base.getType();
+		std::string type_name_str = base_type.getAsString(ctx.getLangOptions());
+		Remove(type_name_str, "struct ");
+		Remove(type_name_str, "class ");
+
+		// First see if the base class is a template specialisation and try to parse it
+		if (const clang::ClassTemplateSpecializationDecl* cts_decl = GetTemplateSpecialisation(base_type.split().first))
+		{
+			if (!ParseTemplateSpecialisation(db, specs, ctx, cts_decl, type_name_str))
+			{
+				LOG(ast, WARNING, "Base class '%s' of '%s' is templated and could not be parsed so skipping", type_name_str.c_str(), derived_type_name.text.c_str());
+				return cldb::Name();
+			}
+		}
+
+		// Check the type is reflected
+		else if (!specs.IsReflected(type_name_str))
+		{
+			LOG(ast, WARNING, "Base class '%s' of '%s' is not reflected so skipping\n", type_name_str.c_str(), derived_type_name.text.c_str());
+			return cldb::Name();
+		}
+
+		cldb::Name base_name = db.GetName(type_name_str.c_str());
+		db.AddTypeInheritance(derived_type_name, base_name);
+		return base_name;
 	}
 
 
@@ -185,17 +224,24 @@ namespace
 		// Create the referenced template type on demand if it doesn't exist
 		if (db.GetFirstPrimitive<cldb::TemplateType>(type_name_str.c_str()) == 0)
 		{
-			// Try to parse the base class
-			cldb::Name base_name;
-			if (cts_decl->getNumBases())
+			cldb::Name type_name = db.GetName(type_name_str.c_str());
+
+			// Try to parse the base classes
+			std::queue<cldb::Name> base_names;
+			for (clang::CXXRecordDecl::base_class_const_iterator base_it = cts_decl->bases_begin(); base_it != cts_decl->bases_end(); base_it++)
 			{
-				base_name = ParseBaseClass(db, specs, ctx, type_name_str, llvm::dyn_cast<clang::CXXRecordDecl>(cts_decl));
-				if (base_name == cldb::Name())
+				cldb::Name base_name = ParseBaseClass(db, specs, ctx, type_name, *base_it);
+				if (base_name != cldb::Name())
+				{
+					base_names.push(base_name);
+				}
+				else
+				{
 					return false;
+				}
 			}
 
-			cldb::Name type_name = db.GetName(type_name_str.c_str());
-			cldb::TemplateType type(type_name, parent_name, base_name);
+			cldb::TemplateType type(type_name, parent_name);
 
 			// Populate the template argument list
 			for (unsigned int i = 0; i < list.size(); i++)
@@ -206,8 +252,13 @@ namespace
 
 			// Log the creation of this new instance
 			LOG(ast, INFO, "class %s", type_name_str.c_str());
-			if (base_name != cldb::Name())
-				LOG_APPEND(ast, INFO, " : %s", base_name.text.c_str());
+			bool first = true;
+			while(!base_names.empty())
+			{
+				LOG_APPEND(ast, INFO, (first) ? " : %s" : ", %s", base_names.front().text.c_str());
+				first = false;
+				base_names.pop();
+			}
 			LOG_NEWLINE(ast);
 
 			db.AddPrimitive(type);
@@ -474,42 +525,6 @@ void ASTConsumer::AddNamespaceDecl(clang::NamedDecl* decl, const std::string& na
 	AddContainedDecls(decl, name, 0);
 }
 
-
-cldb::Name ParseBaseClass(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, const std::string& name, const clang::CXXBaseSpecifier& base)
-{
-	// Can't support virtual base classes - offsets change at runtime
-	if (base.isVirtual())
-	{
-		LOG(ast, WARNING, "Class '%s' has an unsupported virtual base class\n", name.c_str());
-		return cldb::Name();
-	}
-
-	// Parse the type name
-	clang::QualType base_type = base.getType();
-	std::string type_name_str = base_type.getAsString(ctx.getLangOptions());
-	Remove(type_name_str, "struct ");
-	Remove(type_name_str, "class ");
-
-	// First see if the base class is a template specialisation and try to parse it
-	if (const clang::ClassTemplateSpecializationDecl* cts_decl = GetTemplateSpecialisation(base_type.split().first))
-	{
-		if (!ParseTemplateSpecialisation(db, specs, ctx, cts_decl, type_name_str))
-		{
-			LOG(ast, WARNING, "Base class '%s' of '%s' is templated and could not be parsed so skipping", type_name_str.c_str(), name.c_str());
-			return cldb::Name();
-		}
-	}
-
-	// Check the type is reflected
-	else if (!specs.IsReflected(type_name_str))
-	{
-		LOG(ast, WARNING, "Base class '%s' of '%s' is not reflected so skipping\n", type_name_str.c_str(), name.c_str());
-		return cldb::Name();
-	}
-
-	return db.GetName(type_name_str.c_str());
-}
-
 void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name)
 {
 	// Cast to a record (NOTE: CXXRecord is a temporary clang type and will change in future revisions)
@@ -527,22 +542,19 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, 
 		return;
 	}
 
-	Name thiclass_name = m_DB.GetName(name.c_str());
-
-	std::queue
+	cldb::Name type_name = m_DB.GetName(name.c_str());
 
 	// Parse base classes
 	std::queue<cldb::Name> base_names;
 	if (record_decl->getNumBases())
 	{
-		const clang::CXXBaseSpecifier& base = *record_decl->bases_begin();
-		for (clang::base_class_const_iterator i = record_decl->bases_begin(); i!= record_decl->bases_end(); i++)
+		for (clang::CXXRecordDecl::base_class_const_iterator base_it = record_decl->bases_begin(); base_it != record_decl->bases_end(); base_it++)
 		{
-			cldb::Name base_name = ParseBaseClass(m_DB, m_ReflectionSpecs, m_ASTContext, name, *i);
+			cldb::Name base_name = ParseBaseClass(m_DB, m_ReflectionSpecs, m_ASTContext, type_name, *base_it);
 			// If the base class is valid, then add the inheritance relationship
 			if (base_name != cldb::Name())
 			{
-				m_DB.AddTypeInheritance(thiclass_name, base_name);
+				m_DB.AddTypeInheritance(type_name, base_name);
 				base_names.push(base_name);
 			}
 			else
