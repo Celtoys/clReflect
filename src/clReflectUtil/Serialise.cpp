@@ -147,8 +147,8 @@ void clutl::ReadBuffer::SeekRel(int offset)
 }
 
 
-void clutl::NamedObjectList::AddObject(NamedObject* object)
+void clutl::ObjectList::AddObject(Object* object)
 {
-	NamedObject** dest = (NamedObject**)m_Data.Alloc(sizeof(NamedObject*));
+	Object** dest = (Object**)m_Data.Alloc(sizeof(Object*));
 	*dest = object;
 }

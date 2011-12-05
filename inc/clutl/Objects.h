@@ -5,10 +5,9 @@
 #include <clcpp/clcpp.h>
 
 
-// Only want to reflect the Object/NamedObject classes so that derivers will reflect
+// Only want to reflect the Object class so that derivers will reflect
 // The type parameter is not interesting here
 clcpp_reflect_part(clutl::Object)
-clcpp_reflect_part(clutl::NamedObject)
 
 
 //
@@ -53,33 +52,10 @@ namespace clutl
 
 		// Type of the object
 		const clcpp::Type* type;
-	};
 
-
-	//
-	// Base object class for objects that are to be the root of any serialisation network
-	// Doesn't inherit from Object so that it's impossible to mistakenly treat a NamedObject
-	// as an Object.
-	//
-	struct NamedObject
-	{
-		// Default constructor
-		NamedObject()
-			: object_db(0)
-			, type(0)
-		{
-		}
-
-		// Carry a virtual function table, as described for Object
-		virtual ~NamedObject() { }
-
-		// Object database that owns this object
-		ObjectDatabase* object_db;
-
-		// Type of the object
-		const clcpp::Type* type;
-
-		// TODO: Is it wise to use the same name type?
+		// Name of the object
+		// Set this to a unique name if you wish to have a serialisable pointer to it
+		// TODO: Is it wise to use the same name type as the reflection stuff?
 		clcpp::Name name;
 	};
 
@@ -91,32 +67,33 @@ namespace clutl
 		~ObjectDatabase();
 
 		// Template helpers for acquring the required typename and correctly casting during creation
-		template <typename TYPE> TYPE* CreateObject()
+		template <typename TYPE> TYPE* CreateAnonObject()
 		{
-			return static_cast<TYPE*>(CreateObject(clcpp::GetTypeNameHash<TYPE>()));
+			return static_cast<TYPE*>(CreateAnonObject(clcpp::GetTypeNameHash<TYPE>()));
 		}
 		template <typename TYPE> TYPE* CreateNamedObject(const char* name_text)
 		{
 			return static_cast<TYPE*>(CreateNamedObject(clcpp::GetTypeNameHash<TYPE>(), name_text));
 		}
 
-		// Create and destroy objects of a given type name
-		Object* CreateObject(unsigned int type_hash);
+		// Create an anonymous object which doesn't get tracked by the database
+		Object* CreateAnonObject(unsigned int type_hash);
+
+		// Create a named object that is internally tracked by name and can be found at a later point
+		Object* CreateNamedObject(unsigned int type_hash, const char* name_text);
+
+		// Destroy either a named or anonymous object
 		void DestroyObject(Object* object);
 
-		// Create and destroy objects of the given type name and object name. Objects created with this method
-		// are internally tracked and can be requested by name at a later point.
-		NamedObject* CreateNamedObject(unsigned int type_hash, const char* name_text);
-		void DestroyNamedObject(NamedObject* object);
-
-		NamedObject* FindNamedObject(unsigned int name_hash) const;
+		// Find a created object by name
+		Object* FindNamedObject(unsigned int name_hash) const;
 
 	private:
 		struct HashEntry
 		{
 			HashEntry() : object(0) { }
 			clcpp::Name name;
-			NamedObject* object;
+			Object* object;
 		};
 
 		const HashEntry* FindHashEntry(unsigned int hash_index, unsigned int hash) const;

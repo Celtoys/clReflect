@@ -141,7 +141,7 @@ namespace
 	class Context
 	{
 	public:
-		Context(clutl::ReadBuffer& read_buffer, clutl::ObjectDatabase* object_db, clutl::NamedObjectList* created_objects)
+		Context(clutl::ReadBuffer& read_buffer, clutl::ObjectDatabase* object_db, clutl::ObjectList* created_objects)
 			: m_ReadBuffer(read_buffer)
 			, m_Line(1)
 			, m_LinePosition(0)
@@ -216,13 +216,13 @@ namespace
 			return m_Error;
 		}
 
-		clutl::NamedObject* CreateNamedObject(unsigned int type_hash, const char* object_name)
+		clutl::Object* CreateNamedObject(unsigned int type_hash, const char* object_name)
 		{
 			if (m_ObjectDB == 0)
 				return 0;
 
 			// Create the object and track its pointer
-			clutl::NamedObject* object = m_ObjectDB->CreateNamedObject(type_hash, object_name);
+			clutl::Object* object = m_ObjectDB->CreateNamedObject(type_hash, object_name);
 			if (m_CreatedObjects != 0)
 				m_CreatedObjects->AddObject(object);
 
@@ -237,7 +237,7 @@ namespace
 		unsigned int m_LinePosition;
 
 		clutl::ObjectDatabase* m_ObjectDB;
-		clutl::NamedObjectList* m_CreatedObjects;
+		clutl::ObjectList* m_CreatedObjects;
 	};
 
 
@@ -916,7 +916,7 @@ namespace
 
 			// Create the requested object
 			unsigned int type_hash = clcpp::internal::HashData(t.val.string, t.length);
-			clutl::NamedObject* named_object = ctx.CreateNamedObject(type_hash, object_name);
+			clutl::Object* named_object = ctx.CreateNamedObject(type_hash, object_name);
 			if (named_object == 0)
 			{
 				t = Token::Null;
@@ -992,7 +992,7 @@ clutl::JSONError clutl::LoadJSON(ReadBuffer& in, void* object, const clcpp::Type
 }
 
 
-clutl::JSONError clutl::LoadJSON(ReadBuffer& in, ObjectDatabase* object_db, NamedObjectList& loaded_objects)
+clutl::JSONError clutl::LoadJSON(ReadBuffer& in, ObjectDatabase* object_db, ObjectList& loaded_objects)
 {
 	SetupTypeDispatchLUT();
 	Context ctx(in, object_db, &loaded_objects);
@@ -1222,39 +1222,53 @@ namespace
 	}
 
 
-	bool SavePtr(clutl::WriteBuffer& out, const void* object)
+	bool IsNamedObjectPtr(const void* object, unsigned int& hash)
 	{
 		// Only use the hash if the pointer is non-null
-		clutl::NamedObject* named_object = *((clutl::NamedObject**)object);
-		unsigned int hash = 0;
+		clutl::Object* named_object = *((clutl::Object**)object);
+		hash = 0;
 		if (named_object != 0)
+		{
 			hash = named_object->name.hash;
 
-	#ifdef SAVE_POINTER_HASH_AS_HEX
-		out.Write("0x", 2);
-		SaveHexInteger(out, hash);
-	#else
-		SaveUnsignedInteger(out, hash);
-	#endif
+			// If the target object has no name then its pointer is not meant for serialisation
+			if (hash == 0)
+				return false;
+		}
 
 		return true;
 	}
 
 
+	void SavePtr(clutl::WriteBuffer& out, unsigned int hash)
+	{
+#ifdef SAVE_POINTER_HASH_AS_HEX
+		out.Write("0x", 2);
+		SaveHexInteger(out, hash);
+#else
+		SaveUnsignedInteger(out, hash);
+#endif
+	}
+
+
 	bool SavePtr(clutl::WriteBuffer& out, const void* object, const clcpp::Type* type, int backtrack_on_failure)
 	{
-		// Only save pointer types that derive from NamedObject
-		bool success = false;
 		if (type->kind == clcpp::Primitive::KIND_CLASS)
 		{
 			const clcpp::Class* class_type = type->AsClass();
-			if (class_type->DerivesFrom(clcpp::GetTypeNameHash<clutl::NamedObject>()))
-				success = SavePtr(out, object);
-			if (!success)
-				out.SeekRel(-backtrack_on_failure);
+
+			// Only save pointer types that derive from Object and are named
+			unsigned int hash = 0;
+			if (class_type->DerivesFrom(clcpp::GetTypeNameHash<clutl::Object>()) &&
+				IsNamedObjectPtr(object, hash))
+			{
+				SavePtr(out, hash);
+				return true;
+			}
 		}
 
-		return success;
+		out.SeekRel(-backtrack_on_failure);
+		return false;
 	}
 
 
@@ -1270,20 +1284,26 @@ namespace
 			if (reader.m_ValueType->kind == clcpp::Primitive::KIND_CLASS)
 			{
 				const clcpp::Class* class_type = reader.m_ValueType->AsClass();
-				if (class_type->DerivesFrom(clcpp::GetTypeNameHash<clutl::NamedObject>()))
+				if (class_type->DerivesFrom(clcpp::GetTypeNameHash<clutl::Object>()))
 				{
 					// Save comma-separated pointers
-					for (unsigned int i = 0; i < reader.m_Count - 1; i++)
+					bool written = false;
+					for (unsigned int i = 0; i < reader.m_Count; i++)
 					{
 						clcpp::ContainerKeyValue kv = reader.GetKeyValue();
-						SavePtr(out, kv.value);
-						out.Write(",", 1);
+
+						// Only save if the object is named
+						unsigned int hash = 0;
+						if (IsNamedObjectPtr(kv.value, hash))
+						{
+							if (written)
+								out.Write(",", 1);
+							SavePtr(out, hash);
+							written = true;
+						}
+
 						reader.MoveNext();
 					}
-
-					// Add the last one without a comma
-					clcpp::ContainerKeyValue kv = reader.GetKeyValue();
-					SavePtr(out, kv.value);
 				}
 			}
 		}
@@ -1380,9 +1400,9 @@ namespace
 	{
 		// Emit any create object requests
 		if (flags & clutl::JSONFlags::EMIT_CREATE_OBJECT && 
-			class_type->DerivesFrom(clcpp::GetTypeNameHash<clutl::NamedObject>()))
+			class_type->DerivesFrom(clcpp::GetTypeNameHash<clutl::Object>()))
 		{
-			clutl::NamedObject* named_object = (clutl::NamedObject*)object;
+			clutl::Object* named_object = (clutl::Object*)object;
 			out.Write("\"@", 2);
 			const char* end = named_object->name.text;
 			while (*end++) ;
@@ -1507,7 +1527,7 @@ void clutl::SaveJSON(WriteBuffer& out, const ObjectDatabase& object_db, unsigned
 	// Save each object in the database
 	for (ObjectIterator i(object_db); i.IsValid(); i.MoveNext())
 	{
-		const clutl::NamedObject* object = (clutl::NamedObject*)i.GetObject();
+		const clutl::Object* object = (clutl::Object*)i.GetObject();
 		SaveJSON(out, object, object->type, flags | JSONFlags::EMIT_CREATE_OBJECT);
 	}
 }

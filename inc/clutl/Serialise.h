@@ -38,7 +38,7 @@ namespace clcpp
 namespace clutl
 {
 	class ObjectDatabase;
-	struct NamedObject;
+	struct Object;
 
 
 	//
@@ -104,15 +104,15 @@ namespace clutl
 	// Combine with FieldVisitor to walk the pointer fields of an object and replace the hash
 	// value with the actual pointer.
 	//
-	class NamedObjectList
+	class ObjectList
 	{
 	public:
-		void AddObject(NamedObject* object);
+		void AddObject(Object* object);
 
-		NamedObject** GetObjects(int& nb_objects)
+		Object** GetObjects(int& nb_objects)
 		{
-			nb_objects = m_Data.GetBytesWritten() / sizeof(NamedObject*);
-			return (NamedObject**)m_Data.GetData();
+			nb_objects = m_Data.GetBytesWritten() / sizeof(Object*);
+			return (Object**)m_Data.GetData();
 		}
 
 	private:
@@ -177,7 +177,7 @@ namespace clutl
 	// Creates and loads sequence of objects encountered in a JSON stream. Any pointers in the returned
 	// objects will store the hash of the name of the object pointed to which must be patched up by the
 	// caller using whatever object databases they have at their disposal.
-	JSONError LoadJSON(ReadBuffer& in, ObjectDatabase* object_db, NamedObjectList& loaded_objects);
+	JSONError LoadJSON(ReadBuffer& in, ObjectDatabase* object_db, ObjectList& loaded_objects);
 
 	// Can save nullstr fields
 	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags = 0);

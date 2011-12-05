@@ -31,7 +31,7 @@ namespace clutl
 	//    FieldDelegate d = FieldDelegate::Make<Visitor, &Visitor::Visit>(&v);
 	//
 	//    // Use it to visit the fields of this object
-	//    clutl::NamedObject* visited_object = ...;
+	//    clutl::Object* visited_object = ...;
 	//    VisitFields(visited_object, visited_object->type, d);
 	//    
 	class FieldDelegate
