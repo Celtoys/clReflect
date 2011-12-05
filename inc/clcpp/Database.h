@@ -285,14 +285,14 @@ namespace clcpp
 		bool DerivesFrom(unsigned int type_name_hash) const
 		{
 			// Search in immediate bases
-			for (int i=0; i<base_types.size(); i++)
+			for (int i = 0; i < base_types.size(); i++)
 			{
 				if (base_types[i]->name.hash == type_name_hash)
 					return true;
 			}
 
 			// Search up the inheritance tree
-			for (int i=0; i<base_types.size(); i++)
+			for (int i = 0; i < base_types.size(); i++)
 			{
 				if (base_types[i]->DerivesFrom(type_name_hash))
 					return true;
@@ -309,7 +309,7 @@ namespace clcpp
 		// Size of the type in bytes
 		unsigned int size;
 
-		// Single type this one derives from. Can be either a Class or TemplateType.
+		// Types this one derives from. Can be either a Class or TemplateType.
 		CArray<const Type*> base_types;
 
 		// This is non-null if the type is a registered container

@@ -45,7 +45,6 @@
 #include <clang/AST/TemplateName.h>
 #include <clang/Basic/SourceManager.h>
 
-#include <queue>
 
 namespace
 {
@@ -75,6 +74,7 @@ namespace
 	bool GetParameterInfo(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, ParameterInfo& info, int flags);
 	const clang::ClassTemplateSpecializationDecl* GetTemplateSpecialisation(const clang::Type* type);
 	bool ParseTemplateSpecialisation(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, const clang::ClassTemplateSpecializationDecl* cts_decl, std::string& type_name_str);
+
 
 	cldb::Name ParseBaseClass(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, cldb::Name derived_type_name, const clang::CXXBaseSpecifier& base)
 	{
@@ -184,18 +184,13 @@ namespace
 			cldb::Name type_name = db.GetName(type_name_str.c_str());
 
 			// Try to parse the base classes
-			std::queue<cldb::Name> base_names;
+			std::vector<cldb::Name> base_names;
 			for (clang::CXXRecordDecl::base_class_const_iterator base_it = cts_decl->bases_begin(); base_it != cts_decl->bases_end(); base_it++)
 			{
 				cldb::Name base_name = ParseBaseClass(db, specs, ctx, type_name, *base_it);
-				if (base_name != cldb::Name())
-				{
-					base_names.push(base_name);
-				}
-				else
-				{
+				if (base_name == cldb::Name())
 					return false;
-				}
+				base_names.push_back(base_name);
 			}
 
 			cldb::TemplateType type(type_name, parent_name);
@@ -209,13 +204,8 @@ namespace
 
 			// Log the creation of this new instance
 			LOG(ast, INFO, "class %s", type_name_str.c_str());
-			bool first = true;
-			while(!base_names.empty())
-			{
-				LOG_APPEND(ast, INFO, (first) ? " : %s" : ", %s", base_names.front().text.c_str());
-				first = false;
-				base_names.pop();
-			}
+			for (size_t i = 0; i < base_names.size(); i++)
+				LOG_APPEND(ast, INFO, (i == 0) ? " : %s" : ", %s", base_names[i].text.c_str());
 			LOG_NEWLINE(ast);
 
 			db.AddPrimitive(type);
@@ -502,22 +492,18 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, 
 	cldb::Name type_name = m_DB.GetName(name.c_str());
 
 	// Parse base classes
-	std::queue<cldb::Name> base_names;
+	std::vector<cldb::Name> base_names;
 	if (record_decl->getNumBases())
 	{
 		for (clang::CXXRecordDecl::base_class_const_iterator base_it = record_decl->bases_begin(); base_it != record_decl->bases_end(); base_it++)
 		{
 			cldb::Name base_name = ParseBaseClass(m_DB, m_ReflectionSpecs, m_ASTContext, type_name, *base_it);
-			// If the base class is valid, then add the inheritance relationship
-			if (base_name != cldb::Name())
-			{
-				m_DB.AddTypeInheritance(type_name, base_name);
-				base_names.push(base_name);
-			}
-			else
-			{
+			if (base_name == cldb::Name())
 				return;
-			}
+
+			// If the base class is valid, then add the inheritance relationship
+			m_DB.AddTypeInheritance(type_name, base_name);
+			base_names.push_back(base_name);
 		}
 	}
 
@@ -531,13 +517,8 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, 
 	{
 		// Add to the database
 		LOG(ast, INFO, "class %s", name.c_str());
-		bool first = true;
-		while(!base_names.empty())
-		{
-			LOG_APPEND(ast, INFO, (first) ? " : %s" : ", %s", base_names.front().text.c_str());
-			first = false;
-			base_names.pop();
-		}
+		for (size_t i = 0; i < base_names.size(); i++)
+			LOG_APPEND(ast, INFO, (i == 0) ? " : %s" : ", %s", base_names[i].text.c_str());
 		LOG_NEWLINE(ast);
 		const clang::ASTRecordLayout& layout = m_ASTContext.getASTRecordLayout(record_decl);
 		cldb::u32 size = layout.getSize().getQuantity();

@@ -868,28 +868,6 @@ namespace
 	}
 
 
-	const clcpp::Field* FindFieldsRecursive(const clcpp::Class* class_type, unsigned int hash)
-	{
-		const clcpp::Field* field = 0;
-		field = clcpp::FindPrimitive(class_type->fields, hash);
-
-		// Search up through the inheritance hierarchy
-		if (field==0)
-		{
-			for (int i = 0; i < class_type->base_types.size(); i++)
-			{
-				if (class_type->base_types[i]->kind == clcpp::Primitive::KIND_CLASS)
-				{
-					field = FindFieldsRecursive(class_type->base_types[i]->AsClass(), hash);
-					if (field)
-						return field;
-				}
-			}
-		}
-
-		return 0;
-	}
-
 	void ParserPair(Context& ctx, Token& t, char*& object, const clcpp::Type*& type)
 	{
 		// Get the field name
@@ -937,8 +915,17 @@ namespace
 		{
 			const clcpp::Class* class_type = type->AsClass();
 			unsigned int field_hash = clcpp::internal::HashData(name.val.string, name.length);
+			field = clcpp::FindPrimitive(class_type->fields, field_hash);
 
-			field = FindFieldsRecursive(class_type, field_hash);
+			// Search up through the inheritance hierarchy for the field
+			const clcpp::Type* base_type = class_type->base_type;
+			while (field == 0 && base_type)
+			{
+				// Only classes have fields that can be inspected
+				if (base_type->kind == clcpp::Primitive::KIND_CLASS)
+					field = clcpp::FindPrimitive(base_type->AsClass()->fields, field_hash);
+				base_type = base_type->base_type;
+			}
 
 			// Don't load values for transient/nullstr fields
 			if (field && (field->flag_attributes & (clcpp::FlagAttribute::TRANSIENT | clcpp::FlagAttribute::NULLSTR)))
@@ -950,6 +937,7 @@ namespace
 
 		ParserValue(ctx, t, object + field->offset, field->type, field->qualifier.op, field);
 	}
+
 
 	void ParserMembers(Context& ctx, Token& t, char* object, const clcpp::Type* type)
 	{
@@ -1376,7 +1364,7 @@ namespace
 	}
 
 
-	void DoSaveClass(clutl::WriteBuffer& out, const char* object, const clcpp::Class* class_type, unsigned int flags, bool& field_written)
+	void SaveClass(clutl::WriteBuffer& out, const char* object, const clcpp::Class* class_type, unsigned int flags, bool& field_written)
 	{
 		// Emit any create object requests
 		if (flags & clutl::JSONFlags::EMIT_CREATE_OBJECT && 
@@ -1433,23 +1421,20 @@ namespace
 				field_written = true;
 		}
 
-	}
+		// Locate the most immediate base class (skipping template types, for example)
+		const clcpp::Type* base_type = class_type->base_type;
+		while (base_type && base_type->kind != clcpp::Primitive::KIND_CLASS)
+			base_type = base_type->base_type;
 
-	void SaveClass(clutl::WriteBuffer& out, const char* object, const clcpp::Type* type, unsigned int flags, bool& field_written)
-	{
-		for (int i = 0; i< type->base_types.size(); i++)
+		// Recurse into base class
+		if (base_type)
 		{
-			const clcpp::Type* base_type = type->base_types[i];
-			if (base_type->kind == clcpp::Primitive::KIND_CLASS)
-			{
-				NewLine(out, flags);
-				DoSaveClass(out, object, base_type->AsClass(), flags, field_written);
-			}
-
-			if (base_type->base_types.size())
-				SaveClass(out, object, base_type, flags, field_written);
+			const clcpp::Class* base_class = base_type->AsClass();
+			NewLine(out, flags);
+			SaveClass(out, object, base_class, flags, field_written);
 		}
 	}
+
 
 	void SaveTemplateType(clutl::WriteBuffer& out, const char* object, const clcpp::TemplateType* template_type, unsigned int flags)
 	{

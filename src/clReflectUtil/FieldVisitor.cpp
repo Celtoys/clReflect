@@ -67,9 +67,7 @@ namespace
 
 		// Template types have no fields; just bases
 		for (int i = 0; i < template_type->base_types.size(); i++)
-		{
 			VisitField(object, template_type->base_types[i], clcpp::Qualifier(), visitor);
-		}
 	}
 
 
@@ -95,9 +93,7 @@ namespace
 
 		// Visit the base types at the same offset
 		for (int i = 0; i < class_type->base_types.size(); i++)
-		{
 			VisitField(object, class_type->base_types[i], clcpp::Qualifier(), visitor);
-		}
 	}
 }
 

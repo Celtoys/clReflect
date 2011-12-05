@@ -107,7 +107,8 @@ void cldb::Database::AddContainerInfo(const std::string& container, const std::s
 	m_ContainerInfos[ci.name.hash] = ci;
 }
 
-void cldb::Database::AddTypeInheritance(Name& derived_type, Name& base_type)
+
+void cldb::Database::AddTypeInheritance(const Name& derived_type, const Name& base_type)
 {
 	std::string text = base_type.text + "<-" + derived_type.text;
 	TypeInheritance ti;

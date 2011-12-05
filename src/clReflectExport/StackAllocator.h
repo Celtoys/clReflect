@@ -29,6 +29,7 @@
 
 
 #include <cassert>
+#include <clcpp/Core.h>
 
 
 //
@@ -87,6 +88,14 @@ public:
 		}
 
 		return data;
+	}
+
+	template <typename TYPE>
+	void Alloc(clcpp::CArray<TYPE>& array, int size)
+	{
+		// Direct member copy of an array constructed with pre-allocated data
+		TYPE* data = Alloc<TYPE>(size);
+		array.shallow_copy(clcpp::CArray<TYPE>(data, size));
 	}
 
 	const void* GetData() const { return m_Data; }

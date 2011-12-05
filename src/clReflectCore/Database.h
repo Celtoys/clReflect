@@ -241,16 +241,6 @@ namespace cldb
 		std::string value;
 	};
 
-	struct TypeInheritance
-	{
-		TypeInheritance()
-		{
-		}
-
-		Name name;
-		Name derived_type;
-		Name base_type;
-	};
 
 	//
 	// A basic built-in type that classes/structs can also inherit from
@@ -377,7 +367,6 @@ namespace cldb
 		// If this is set then the field is a function parameter
 		u32 parent_unique_id;
 
-		// TODO: arrays
 		// TODO: bit fields
 	};
 
@@ -581,14 +570,27 @@ namespace cldb
 
 
 	//
-	// Container infos are uniquely named - this is a DBMap specialisation to ensure
-	// that requirement.
+	// Description of a relationship inheritance between two types
+	//
+	struct TypeInheritance
+	{
+		TypeInheritance()
+		{
+		}
+
+		Name name;
+		Name derived_type;
+		Name base_type;
+	};
+
+
+	//
+	// These types are uniquely named with a DBMap specialisation to ensure that requirement
 	//
 	template <>
 	struct DBMap<ContainerInfo> : public std::map<u32, ContainerInfo>
 	{
 	};
-
 	template<>
 	struct DBMap<TypeInheritance> : public std::map<u32, TypeInheritance>
 	{
@@ -602,7 +604,7 @@ namespace cldb
 		void AddBaseTypePrimitives();
 
 		void AddContainerInfo(const std::string& container, const std::string& read_iterator, const std::string& write_iterator, bool has_key);
-		void AddTypeInheritance(Name& derived_type, Name& base_type);
+		void AddTypeInheritance(const Name& derived_type, const Name& base_type);
 
 		const Name& GetName(const char* text);
 		const Name& GetName(u32 hash) const;
@@ -651,7 +653,7 @@ namespace cldb
 		template <> DBMap<NameAttribute>& GetDBMap() { return m_NameAttributes; }
 		template <> DBMap<TextAttribute>& GetDBMap() { return m_TextAttributes; }
 
-		// Containers
+		// Non-primitives
 		template <> DBMap<ContainerInfo>& GetDBMap() { return m_ContainerInfos; }
 		template <> DBMap<TypeInheritance>& GetDBMap() { return m_TypeInheritances; }
 
@@ -684,9 +686,8 @@ namespace cldb
 		DBMap<NameAttribute> m_NameAttributes;
 		DBMap<TextAttribute> m_TextAttributes;
 
-		// Store for containers
+		// Store for non-primitives
 		DBMap<ContainerInfo> m_ContainerInfos;
-
 		DBMap<TypeInheritance> m_TypeInheritances;
 
 		// All referenced GetType functions per type

@@ -77,7 +77,7 @@ namespace
 
 		// Build the in-memory name array
 		unsigned int nb_names = cppexp.name_map.size();
-		cppexp.db->names.shallow_copy(clcpp::CArray<clcpp::Name>(cppexp.allocator.Alloc<clcpp::Name>(nb_names), nb_names));
+		cppexp.allocator.Alloc(cppexp.db->names, nb_names);
 		unsigned int index = 0;
 		for (CppExport::NameMap::const_iterator i = cppexp.name_map.begin(); i != cppexp.name_map.end(); ++i)
 		{
@@ -135,10 +135,6 @@ namespace
 			dest.parameter_ptrs[i] = src.parameter_ptrs[i];
 		}
 	}
-	void CopyPrimitive(clcpp::Class& dest, const cldb::Class& src, clcpp::Primitive::Kind kind)
-	{
-		CopyPrimitive((clcpp::Type&)dest, src, kind);
-	}
 	void CopyPrimitive(clcpp::IntAttribute& dest, const cldb::IntAttribute& src, clcpp::Primitive::Kind kind)
 	{
 		CopyPrimitive((clcpp::Primitive&)dest, src, kind);
@@ -188,7 +184,7 @@ namespace
 	{
 		// Allocate enough entries for all primitives
 		const cldb::DBMap<CLDB_TYPE>& src = db.GetDBMap<CLDB_TYPE>();
-		dest.shallow_copy(clcpp::CArray<CLCPP_TYPE>(cppexp.allocator.Alloc<CLCPP_TYPE>(src.size()), src.size()));
+		cppexp.allocator.Alloc(dest, src.size());
 
 		// Copy individually
 		int index = 0;
@@ -307,7 +303,7 @@ namespace
 			if (int nb_refs = i->second.second)
 			{
 				PARENT_TYPE& parent = *i->second.first;
-				(parent.*carray).shallow_copy(clcpp::CArray<const CHILD_TYPE*>(allocator.Alloc<const CHILD_TYPE*>(nb_refs), nb_refs));
+				allocator.Alloc((parent.*carray), nb_refs);
 
 				// To save having to do any further lookups, store the count inside the array
 				// at the end
@@ -371,7 +367,7 @@ namespace
 			cppexp.db->text_attributes.size();
 
 		// Create the destination array
-		attributes.shallow_copy(clcpp::CArray<clcpp::Attribute*>(cppexp.allocator.Alloc<clcpp::Attribute*>(size), size));
+		cppexp.allocator.Alloc(attributes, size);
 
 		// Collect all attribute pointers
 		int pos = 0;
@@ -537,6 +533,44 @@ namespace
 	}
 
 
+	void BuildBaseClassArrays(CppExport& cppexp, const cldb::Database& db)
+	{
+		// Collect bases types per type (key=derived type, value=vector with base types)
+		typedef std::map< clcpp::Type*, std::vector<const clcpp::Type*> > BaseTypesPerTypeMap;
+		BaseTypesPerTypeMap base_classes;
+		for (cldb::DBMap<cldb::TypeInheritance>::const_iterator i = db.m_TypeInheritances.begin(); i != db.m_TypeInheritances.end(); ++i)
+		{
+			const cldb::TypeInheritance& inherit = i->second;
+			const char* base_type_str = inherit.base_type.text.c_str();
+			const char* derived_type_str = inherit.derived_type.text.c_str();
+
+			const clcpp::Type* base_type = clcpp::FindPrimitive(cppexp.db->type_primitives, inherit.base_type.hash);
+			if (base_type != 0)
+			{
+				// Only collect base classes for those derived types which exist
+				const clcpp::Type* derived_type = clcpp::FindPrimitive(cppexp.db->type_primitives, inherit.derived_type.hash);
+				if (derived_type != 0)
+					base_classes[const_cast<clcpp::Type*>(derived_type)].push_back(base_type);
+				else
+					LOG(main, WARNING, "Derived type '%s' with base '%s' could not be found\n", derived_type_str, base_type_str);
+			}
+			else
+			{
+				LOG(main, WARNING, "Base type '%s' of '%s' could not be found\n", base_type_str, derived_type_str);
+			}
+		}
+
+		// Allocate base type arrays and populate them
+		for (BaseTypesPerTypeMap::iterator i = base_classes.begin(); i != base_classes.end(); ++i)
+		{
+			clcpp::Type* type = i->first;
+			cppexp.allocator.Alloc(type->base_types, i->second.size());
+			for (int j = 0; j < type->base_types.size(); j++)
+				type->base_types[j] = i->second[j];
+		}
+	}
+
+
 	int ReturnParameterIndex(const clcpp::CArray<const clcpp::Field*>& parameters)
 	{
 		// Linear search for the named return value
@@ -588,7 +622,7 @@ namespace
 	{
 		// Allocate enough space for the primitives
 		int nb_global_primitives = CountGlobalPrimitives(src);
-		dest.shallow_copy(clcpp::CArray<const TYPE*>(allocator.Alloc<const TYPE*>(nb_global_primitives), nb_global_primitives));
+		allocator.Alloc(dest, nb_global_primitives);
 
 		// Gather all unparented primitives
 		int index = 0;
@@ -617,7 +651,7 @@ namespace
 	{
 		// Allocate the array
 		int nb_type_primitives = cppexp.db->types.size() + cppexp.db->classes.size() + cppexp.db->enums.size() + cppexp.db->template_types.size();
-		cppexp.db->type_primitives.shallow_copy(clcpp::CArray<const clcpp::Type*>(cppexp.allocator.Alloc<const clcpp::Type*>(nb_type_primitives), nb_type_primitives));
+		cppexp.allocator.Alloc(cppexp.db->type_primitives, nb_type_primitives);
 
 		// Generate references to anything that is a type
 		int index = 0;
@@ -754,7 +788,7 @@ namespace
 	void AddGetTypeFunctions(CppExport& cppexp, clcpp::CArray<clcpp::internal::GetTypeFunctions>& dest, const cldb::GetTypeFunctions::MapType& src)
 	{
 		// Allocate enough space in the destination
-		dest.shallow_copy(clcpp::CArray<clcpp::internal::GetTypeFunctions>(cppexp.allocator.Alloc<clcpp::internal::GetTypeFunctions>(src.size()), src.size()));
+		cppexp.allocator.Alloc(dest, src.size());
 
 		// Copy all function addresses
 		int index = 0;
@@ -822,10 +856,6 @@ namespace
 	void VerifyPrimitive(CppExport& cppexp, const clcpp::Type& primitive)
 	{
 		// Report any warnings with unresolved base class types
-		/*
-		if (const char* unresolved = VerifyPtr(cppexp, primitive.base_type))
-			LOG(main, WARNING, "Type '%s' couldn't find base type reference to '%s'\n", primitive.name.text, unresolved);
-			*/
 		for (int i = 0; i < primitive.base_types.size(); i++)
 		{
 			if (const char* unresolved = VerifyPtr(cppexp, primitive.base_types[i]))
@@ -946,9 +976,6 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 
 	// Link up any references between primitives
 	Link(cppexp.db->fields, &clcpp::Field::type, cppexp.db->type_primitives);
-	// TODO RV Maybe remove these two, if not needed. I think all this work is done below
-	//Link(cppexp.db->classes, &clcpp::Type::base_types, cppexp.db->type_primitives);
-	//Link(cppexp.db->template_types, &clcpp::TemplateType::base_types, cppexp.db->type_primitives);
 	Link(cppexp.db->template_types, &clcpp::TemplateType::parameter_types, cppexp.db->type_primitives);
 
 	// Return parameters are parented to their functions as parameters. Move them from
@@ -974,33 +1001,8 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	// pointers need to be linked to their reflected types
 	LinkContainerInfos(cppexp, field_parents);
 
-	// Build base classes arrays
-	{
-		// Collect bases classes per type (key=derived class hash, value=vector with base classes)
-		typedef std::map<cldb::u32, std::vector<const clcpp::Type*> > BasesClassesPerTypeMap;
-		BasesClassesPerTypeMap baseclassesPerType;
-		for (cldb::DBMap<cldb::TypeInheritance>::const_iterator it = db.m_TypeInheritances.begin(); it!= db.m_TypeInheritances.end(); it++)
-		{
-			const clcpp::Type* base_type = clcpp::FindPrimitive(cppexp.db->type_primitives, it->second.base_type.hash);
-			assert(base_type && "base class not found. Possibly a clReflect bug" );
-			baseclassesPerType[it->second.derived_type.hash].push_back(base_type);
-		}
-
-		for(BasesClassesPerTypeMap::iterator it = baseclassesPerType.begin(); it != baseclassesPerType.end(); it++)
-		{
-			clcpp::Type* type = const_cast<clcpp::Type*>(clcpp::FindPrimitive(cppexp.db->type_primitives, it->first));
-			assert(type && "Type not found in map. Possibly a clReflect bug.");
-			type->base_types.shallow_copy( 
-				clcpp::CArray<const clcpp::Type*>(cppexp.allocator.Alloc<const clcpp::Type*>(it->second.size()), it->second.size())
-				);
-
-			for (int i=0; i < type->base_types.size(); i++)
-			{
-				type->base_types[i] = it->second[i];
-			}
-		}
-
-	}
+	// Build base classes arrays after the type primitive array has been sorted
+	BuildBaseClassArrays(cppexp, db);
 
 
 	// Each class may have constructor/destructor methods in their method list. Run through
