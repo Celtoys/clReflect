@@ -179,7 +179,7 @@ namespace
 	}
 
 
-	void WriteNameAttribute(FILE* fp, const cldb::NameAttribute& primitive, const cldb::Database& db)
+	void WritePrimitiveAttribute(FILE* fp, const cldb::PrimitiveAttribute& primitive, const cldb::Database& db)
 	{
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
@@ -279,7 +279,7 @@ void cldb::WriteTextDatabase(const char* filename, const Database& db)
 	WritePrimitives<FlagAttribute>(fp, db, WritePrimitive, "Flag Attributes", "Name\t\tParent");
 	WritePrimitives<IntAttribute>(fp, db, WriteIntAttribute, "Int Attributes", "Name\t\tParent\t\tValue");
 	WritePrimitives<FloatAttribute>(fp, db, WriteFloatAttribute, "Float Attributes", "Name\t\tParent\t\tValue");
-	WritePrimitives<NameAttribute>(fp, db, WriteNameAttribute, "Name Attributes", "Name\t\tParent\t\tValue");
+	WritePrimitives<PrimitiveAttribute>(fp, db, WritePrimitiveAttribute, "Primitive Attributes", "Name\t\tParent\t\tValue");
 	WritePrimitives<TextAttribute>(fp, db, WriteTextAttribute, "Text Attributes", "Name\t\tParent\t\tValue");
 
 	WritePrimitives<ContainerInfo>(fp, db, WriteContainerInfo, "Containers", "Name\t\tRead\t\tWrite\t\tFlags\t\tCount");
@@ -591,7 +591,7 @@ namespace
 	}
 
 
-	void ParseNameAttribute(char* line, cldb::Database& db)
+	void ParsePrimitiveAttribute(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
@@ -603,7 +603,7 @@ namespace
 		cldb::u32 value = tok.GetHexInt();
 
 		// Add a new attribute to the database
-		cldb::NameAttribute primitive(
+		cldb::PrimitiveAttribute primitive(
 			db.GetName(name),
 			db.GetName(parent),
 			db.GetName(value));
@@ -731,7 +731,7 @@ bool cldb::ReadTextDatabase(const char* filename, Database& db)
 		ParseTable(fp, line, db, "Flag Attributes", ParsePrimitive<cldb::FlagAttribute>);
 		ParseTable(fp, line, db, "Int Attributes", ParseIntAttribute);
 		ParseTable(fp, line, db, "Float Attributes", ParseFloatAttribute);
-		ParseTable(fp, line, db, "Name Attributes", ParseNameAttribute);
+		ParseTable(fp, line, db, "Primitive Attributes", ParsePrimitiveAttribute);
 		ParseTable(fp, line, db, "Text Attributes", ParseTextAttribute);
 		ParseTable(fp, line, db, "Containers", ParseContainerInfo);
 		ParseTable(fp, line, db, "Inheritance", ParseInheritance);

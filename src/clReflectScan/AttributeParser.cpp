@@ -265,10 +265,10 @@ namespace
 		sscanf(val.GetText(), "%f", &value);
 		attributes.push_back(new cldb::FloatAttribute(name, cldb::Name(), value));
 	}
-	void AddNameAttribute(cldb::Database& db, std::vector<cldb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
+	void AddPrimitiveAttribute(cldb::Database& db, std::vector<cldb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
 	{
 		cldb::Name name = db.GetName(attribute_name->GetText());
-		attributes.push_back(new cldb::NameAttribute(name, cldb::Name(), db.GetName(val.GetText())));
+		attributes.push_back(new cldb::PrimitiveAttribute(name, cldb::Name(), db.GetName(val.GetText())));
 	}
 	void AddTextAttribute(cldb::Database& db, std::vector<cldb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
 	{
@@ -307,7 +307,7 @@ namespace
 				AddFloatAttribute(db, attributes, attribute_name, val);
 				break;
 			case (TOKEN_SYMBOL):
-				AddNameAttribute(db, attributes, attribute_name, val);
+				AddPrimitiveAttribute(db, attributes, attribute_name, val);
 				break;
 			case (TOKEN_STRING):
 				AddTextAttribute(db, attributes, attribute_name, val);

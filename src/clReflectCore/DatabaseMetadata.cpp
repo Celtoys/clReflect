@@ -78,9 +78,9 @@ cldb::meta::DatabaseTypes::DatabaseTypes()
 		DatabaseField(&cldb::FloatAttribute::value),
 	};
 
-	DatabaseField name_attribute_fields[] =
+	DatabaseField primitive_attribute_fields[] =
 	{
-		DatabaseField(&cldb::NameAttribute::value),
+		DatabaseField(&cldb::PrimitiveAttribute::value),
 	};
 
 	DatabaseField text_attribute_fields[] =
@@ -120,7 +120,7 @@ cldb::meta::DatabaseTypes::DatabaseTypes()
 	m_FlagAttributeType.Type<cldb::FlagAttribute>().Base(&m_PrimitiveType);
 	m_IntAttributeType.Type<cldb::IntAttribute>().Base(&m_PrimitiveType).Fields(int_attribute_fields);
 	m_FloatAttributeType.Type<cldb::FloatAttribute>().Base(&m_PrimitiveType).Fields(float_attribute_fields);
-	m_NameAttributeType.Type<cldb::NameAttribute>().Base(&m_PrimitiveType).Fields(name_attribute_fields);
+	m_PrimitiveAttributeType.Type<cldb::PrimitiveAttribute>().Base(&m_PrimitiveType).Fields(primitive_attribute_fields);
 	m_TextAttributeType.Type<cldb::TextAttribute>().Base(&m_PrimitiveType).Fields(text_attribute_fields);
 
 	// Create descriptions of the container type

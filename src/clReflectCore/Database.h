@@ -130,7 +130,7 @@ namespace cldb
 			KIND_FLAG_ATTRIBUTE,
 			KIND_INT_ATTRIBUTE,
 			KIND_FLOAT_ATTRIBUTE,
-			KIND_NAME_ATTRIBUTE,
+			KIND_PRIMITIVE_ATTRIBUTE,
 			KIND_TEXT_ATTRIBUTE,
 			KIND_TYPE,
 			KIND_ENUM_CONSTANT,
@@ -220,11 +220,11 @@ namespace cldb
 		}
 		float value;
 	};
-	struct NameAttribute : public Attribute
+	struct PrimitiveAttribute : public Attribute
 	{
-		NameAttribute() : Attribute(Primitive::KIND_NAME_ATTRIBUTE) { }
-		NameAttribute(Name n, Name p, Name v) : Attribute(Primitive::KIND_NAME_ATTRIBUTE, n, p), value(v) { }
-		bool Equals(const NameAttribute& rhs) const
+		PrimitiveAttribute() : Attribute(Primitive::KIND_PRIMITIVE_ATTRIBUTE) { }
+		PrimitiveAttribute(Name n, Name p, Name v) : Attribute(Primitive::KIND_PRIMITIVE_ATTRIBUTE, n, p), value(v) { }
+		bool Equals(const PrimitiveAttribute& rhs) const
 		{
 			return Primitive::Equals(rhs) && value == rhs.value;
 		}
@@ -650,7 +650,7 @@ namespace cldb
 		template <> DBMap<FlagAttribute>& GetDBMap() { return m_FlagAttributes; }
 		template <> DBMap<IntAttribute>& GetDBMap() { return m_IntAttributes; }
 		template <> DBMap<FloatAttribute>& GetDBMap() { return m_FloatAttributes; }
-		template <> DBMap<NameAttribute>& GetDBMap() { return m_NameAttributes; }
+		template <> DBMap<PrimitiveAttribute>& GetDBMap() { return m_PrimitiveAttributes; }
 		template <> DBMap<TextAttribute>& GetDBMap() { return m_TextAttributes; }
 
 		// Non-primitives
@@ -683,7 +683,7 @@ namespace cldb
 		DBMap<FlagAttribute> m_FlagAttributes;
 		DBMap<IntAttribute> m_IntAttributes;
 		DBMap<FloatAttribute> m_FloatAttributes;
-		DBMap<NameAttribute> m_NameAttributes;
+		DBMap<PrimitiveAttribute> m_PrimitiveAttributes;
 		DBMap<TextAttribute> m_TextAttributes;
 
 		// Store for non-primitives

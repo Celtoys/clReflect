@@ -143,7 +143,7 @@ void MergeDatabases(cldb::Database& dest_db, const cldb::Database& src_db)
 	MergeOverloads<cldb::FlagAttribute>(dest_db, src_db);
 	MergeOverloads<cldb::IntAttribute>(dest_db, src_db);
 	MergeOverloads<cldb::FloatAttribute>(dest_db, src_db);
-	MergeOverloads<cldb::NameAttribute>(dest_db, src_db);
+	MergeOverloads<cldb::PrimitiveAttribute>(dest_db, src_db);
 	MergeOverloads<cldb::TextAttribute>(dest_db, src_db);
 
 	// Merge uniquely named non-primitives

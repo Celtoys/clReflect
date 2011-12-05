@@ -42,7 +42,7 @@ namespace clcpp
 	struct Class;
 	struct IntAttribute;
 	struct FloatAttribute;
-	struct NameAttribute;
+	struct PrimitiveAttribute;
 	struct TextAttribute;
 
 
@@ -154,7 +154,7 @@ namespace clcpp
 			KIND_FLAG_ATTRIBUTE,
 			KIND_INT_ATTRIBUTE,
 			KIND_FLOAT_ATTRIBUTE,
-			KIND_NAME_ATTRIBUTE,
+			KIND_PRIMITIVE_ATTRIBUTE,
 			KIND_TEXT_ATTRIBUTE,
 			KIND_TYPE,
 			KIND_ENUM_CONSTANT,
@@ -203,7 +203,7 @@ namespace clcpp
 		// Safe utility functions for casting to derived types
 		inline const IntAttribute* AsIntAttribute() const;
 		inline const FloatAttribute* AsFloatAttribute() const;
-		inline const NameAttribute* AsNameAttribute() const;
+		inline const PrimitiveAttribute* AsPrimitiveAttribute() const;
 		inline const TextAttribute* AsTextAttribute() const;
 	};
 
@@ -245,11 +245,11 @@ namespace clcpp
 		FloatAttribute() : Attribute(KIND), value(0) { }
 		float value;
 	};
-	struct NameAttribute : public Attribute
+	struct PrimitiveAttribute : public Attribute
 	{
-		static const Kind KIND = KIND_NAME_ATTRIBUTE;
-		NameAttribute() : Attribute(KIND) { }
-		Name value;
+		static const Kind KIND = KIND_PRIMITIVE_ATTRIBUTE;
+		PrimitiveAttribute() : Attribute(KIND), primitive(0) { }
+		const Primitive* primitive;
 	};
 	struct TextAttribute : public Attribute
 	{
@@ -560,22 +560,22 @@ namespace clcpp
 	//
 	inline const IntAttribute* Attribute::AsIntAttribute() const
 	{
-		internal::Assert(kind == IntAttribute::KIND_INT_ATTRIBUTE);
+		internal::Assert(kind == IntAttribute::KIND);
 		return (const IntAttribute*)this;
 	}
 	inline const FloatAttribute* Attribute::AsFloatAttribute() const
 	{
-		internal::Assert(kind == FloatAttribute::KIND_FLOAT_ATTRIBUTE);
+		internal::Assert(kind == FloatAttribute::KIND);
 		return (const FloatAttribute*)this;
 	}
-	inline const NameAttribute* Attribute::AsNameAttribute() const
+	inline const PrimitiveAttribute* Attribute::AsPrimitiveAttribute() const
 	{
-		internal::Assert(kind == NameAttribute::KIND_NAME_ATTRIBUTE);
-		return (const NameAttribute*)this;
+		internal::Assert(kind == PrimitiveAttribute::KIND);
+		return (const PrimitiveAttribute*)this;
 	}
 	inline const TextAttribute* Attribute::AsTextAttribute() const
 	{
-		internal::Assert(kind == TextAttribute::KIND_TEXT_ATTRIBUTE);
+		internal::Assert(kind == TextAttribute::KIND);
 		return (const TextAttribute*)this;
 	}
 
@@ -702,7 +702,7 @@ namespace clcpp
 			CArray<FlagAttribute> flag_attributes;
 			CArray<IntAttribute> int_attributes;
 			CArray<FloatAttribute> float_attributes;
-			CArray<NameAttribute> name_attributes;
+			CArray<PrimitiveAttribute> primitive_attributes;
 			CArray<TextAttribute> text_attributes;
 
 			// A list of references to all types, enums and classes for potentially quicker

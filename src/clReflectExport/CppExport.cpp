@@ -145,12 +145,10 @@ namespace
 		CopyPrimitive((clcpp::Primitive&)dest, src, kind);
 		dest.value = src.value;
 	}
-	void CopyPrimitive(clcpp::NameAttribute& dest, const cldb::NameAttribute& src, clcpp::Primitive::Kind kind)
+	void CopyPrimitive(clcpp::PrimitiveAttribute& dest, const cldb::PrimitiveAttribute& src, clcpp::Primitive::Kind kind)
 	{
 		CopyPrimitive((clcpp::Primitive&)dest, src, kind);
-
-		// Only copy the hash as the string will be patched up later
-		dest.value.hash = src.value.hash;
+		dest.primitive = (clcpp::Primitive*)src.value.hash;
 	}
 	void CopyPrimitive(clcpp::TextAttribute& dest, const cldb::TextAttribute& src, clcpp::Primitive::Kind kind)
 	{
@@ -363,7 +361,7 @@ namespace
 			cppexp.db->flag_attributes.size() +
 			cppexp.db->int_attributes.size() +
 			cppexp.db->float_attributes.size() +
-			cppexp.db->name_attributes.size() +
+			cppexp.db->primitive_attributes.size() +
 			cppexp.db->text_attributes.size();
 
 		// Create the destination array
@@ -374,20 +372,13 @@ namespace
 		BuildAttributePtrArray(attributes, cppexp.db->flag_attributes, pos);
 		BuildAttributePtrArray(attributes, cppexp.db->int_attributes, pos);
 		BuildAttributePtrArray(attributes, cppexp.db->float_attributes, pos);
-		BuildAttributePtrArray(attributes, cppexp.db->name_attributes, pos);
+		BuildAttributePtrArray(attributes, cppexp.db->primitive_attributes, pos);
 		BuildAttributePtrArray(attributes, cppexp.db->text_attributes, pos);
 	}
 
 
-	void AssignAttributeNamesAndText(CppExport& cppexp)
+	void AssignAttributeText(CppExport& cppexp)
 	{
-		// First assign the name value text pointers
-		for (int i = 0; i < cppexp.db->name_attributes.size(); i++)
-		{
-			clcpp::NameAttribute& attr = cppexp.db->name_attributes[i];
-			attr.value.text = cppexp.name_map[attr.value.hash];
-		}
-
 		// Count how many bytes are needed to store all attribute text
 		int text_size = 0;
 		for (int i = 0; i < cppexp.db->text_attributes.size(); i++)
@@ -629,9 +620,7 @@ namespace
 		for (int i = 0; i < src.size(); i++)
 		{
 			if (src[i].parent == 0)
-			{
 				dest[index++] = &src[i];
-			}
 		}
 	}
 
@@ -785,6 +774,39 @@ namespace
 	}
 
 
+	void GatherAttributeRefPrimitives(CppExport& cppexp, std::map<cldb::u32, const clcpp::Primitive*>& primitives)
+	{
+		// Gather the primitives that can be referenced by a PrimitiveAttribute
+		for (int i = 0; i < cppexp.db->type_primitives.size(); i++)
+		{
+			const clcpp::Primitive* primitive = cppexp.db->type_primitives[i];
+			primitives[primitive->name.hash] = primitive;
+		}
+		for (int i = 0; i < cppexp.db->functions.size(); i++)
+		{
+			const clcpp::Primitive* primitive = &cppexp.db->functions[i];
+			primitives[primitive->name.hash] = primitive;
+		}
+	}
+
+
+	void AssignPrimitiveAttributes(CppExport& cppexp)
+	{
+		typedef std::map<cldb::u32, const clcpp::Primitive*> PrimitiveMap;
+		PrimitiveMap primitives;
+		GatherAttributeRefPrimitives(cppexp, primitives);
+
+		// Point to any primitive attributes and let VerifyPtr clean up anything which can't be assigned
+		for (int i = 0; i < cppexp.db->primitive_attributes.size(); i++)
+		{
+			clcpp::PrimitiveAttribute& attr = cppexp.db->primitive_attributes[i];
+			PrimitiveMap::iterator prim_i = primitives.find((cldb::u32)attr.primitive);
+			if (prim_i != primitives.end())
+				attr.primitive = prim_i->second;
+		}
+	}
+
+
 	void AddGetTypeFunctions(CppExport& cppexp, clcpp::CArray<clcpp::internal::GetTypeFunctions>& dest, const cldb::GetTypeFunctions::MapType& src)
 	{
 		// Allocate enough space in the destination
@@ -853,8 +875,15 @@ namespace
 			}
 		}
 	}
+	void VerifyPrimitive(CppExport& cppexp, const clcpp::PrimitiveAttribute& primitive)
+	{
+		if (const char* unresolved = VerifyPtr(cppexp, primitive.primitive))
+			LOG(main, WARNING, "Attribute '%s' couldn't find primitive reference to '%s'\n", primitive.name.text, unresolved);
+	}
 	void VerifyPrimitive(CppExport& cppexp, const clcpp::Type& primitive)
 	{
+		VerifyPrimitive(cppexp, (clcpp::Primitive&)primitive);
+
 		// Report any warnings with unresolved base class types
 		for (int i = 0; i < primitive.base_types.size(); i++)
 		{
@@ -896,7 +925,7 @@ namespace
 		VerifyPrimitives(cppexp, cppexp.db->flag_attributes);
 		VerifyPrimitives(cppexp, cppexp.db->int_attributes);
 		VerifyPrimitives(cppexp, cppexp.db->float_attributes);
-		VerifyPrimitives(cppexp, cppexp.db->name_attributes);
+		VerifyPrimitives(cppexp, cppexp.db->primitive_attributes);
 		VerifyPrimitives(cppexp, cppexp.db->text_attributes);
 	}
 }
@@ -926,12 +955,12 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	BuildCArray<cldb::FlagAttribute>(cppexp, cppexp.db->flag_attributes, db);
 	BuildCArray<cldb::IntAttribute>(cppexp, cppexp.db->int_attributes, db);
 	BuildCArray<cldb::FloatAttribute>(cppexp, cppexp.db->float_attributes, db);
-	BuildCArray<cldb::NameAttribute>(cppexp, cppexp.db->name_attributes, db);
+	BuildCArray<cldb::PrimitiveAttribute>(cppexp, cppexp.db->primitive_attributes, db);
 	BuildCArray<cldb::TextAttribute>(cppexp, cppexp.db->text_attributes, db);
 	BuildCArray<cldb::ContainerInfo>(cppexp, cppexp.db->container_infos, db);
 
-	// Now ensure all name and text data are pointing into the data to be memory mapped
-	AssignAttributeNamesAndText(cppexp);
+	// Now ensure all text data is pointing into the data to be memory mapped
+	AssignAttributeText(cppexp);
 
 	// Generate a list of references to all type primitives so that runtime serialisation code
 	// can quickly look them up.
@@ -1017,6 +1046,9 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	AddFlagAttributeBits(cppexp.db->functions);
 	AddFlagAttributeBits(cppexp.db->classes);
 
+	// Ensure any primitive attributes have their pointers patched
+	AssignPrimitiveAttributes(cppexp);
+
 	AddGetTypeFunctions(cppexp, cppexp.db->get_type_functions, db.m_GetTypeFunctions);
 
 	// Primitives reference each other via their names (hash codes). This code first of all copies
@@ -1054,7 +1086,7 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		(&clcpp::internal::DatabaseMem::flag_attributes, array_data_offset)
 		(&clcpp::internal::DatabaseMem::int_attributes, array_data_offset)
 		(&clcpp::internal::DatabaseMem::float_attributes, array_data_offset)
-		(&clcpp::internal::DatabaseMem::name_attributes, array_data_offset)
+		(&clcpp::internal::DatabaseMem::primitive_attributes, array_data_offset)
 		(&clcpp::internal::DatabaseMem::text_attributes, array_data_offset)
 		(&clcpp::internal::DatabaseMem::type_primitives, array_data_offset)
 		(&clcpp::internal::DatabaseMem::get_type_functions, array_data_offset)
@@ -1122,8 +1154,8 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 	PtrSchema& schema_int_attribute = relocator.AddSchema<clcpp::IntAttribute>(&schema_primitive);
 	PtrSchema& schema_float_attribute = relocator.AddSchema<clcpp::FloatAttribute>(&schema_primitive);
 
-	PtrSchema& schema_name_attribute = relocator.AddSchema<clcpp::NameAttribute>(&schema_primitive)
-		(&clcpp::Name::text, offsetof(clcpp::NameAttribute, value));
+	PtrSchema& schema_primitive_attribute = relocator.AddSchema<clcpp::PrimitiveAttribute>(&schema_primitive)
+		(&clcpp::PrimitiveAttribute::primitive);
 
 	PtrSchema& schema_text_attribute = relocator.AddSchema<clcpp::TextAttribute>(&schema_primitive)
 		(&clcpp::TextAttribute::value);
@@ -1150,7 +1182,7 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 	relocator.AddPointers(schema_primitive, cppexp.db->flag_attributes);
 	relocator.AddPointers(schema_int_attribute, cppexp.db->int_attributes);
 	relocator.AddPointers(schema_float_attribute, cppexp.db->float_attributes);
-	relocator.AddPointers(schema_name_attribute, cppexp.db->name_attributes);
+	relocator.AddPointers(schema_primitive_attribute, cppexp.db->primitive_attributes);
 	relocator.AddPointers(schema_text_attribute, cppexp.db->text_attributes);
 	relocator.AddPointers(schema_ptr, cppexp.db->type_primitives);
 	relocator.AddPointers(schema_container_info, cppexp.db->container_infos);

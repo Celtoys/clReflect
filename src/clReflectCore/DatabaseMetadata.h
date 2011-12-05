@@ -188,7 +188,7 @@ namespace cldb
 			template <> const DatabaseType& GetType<FlagAttribute>() const { return m_FlagAttributeType; }
 			template <> const DatabaseType& GetType<IntAttribute>() const { return m_IntAttributeType; }
 			template <> const DatabaseType& GetType<FloatAttribute>() const { return m_FloatAttributeType; }
-			template <> const DatabaseType& GetType<NameAttribute>() const { return m_NameAttributeType; }
+			template <> const DatabaseType& GetType<PrimitiveAttribute>() const { return m_PrimitiveAttributeType; }
 			template <> const DatabaseType& GetType<TextAttribute>() const { return m_TextAttributeType; }
 			template <> const DatabaseType& GetType<ContainerInfo>() const { return m_ContainerInfoType; }
 			template <> const DatabaseType& GetType<TypeInheritance>() const { return m_InheritanceType; }
@@ -209,7 +209,7 @@ namespace cldb
 			DatabaseType m_FlagAttributeType;
 			DatabaseType m_IntAttributeType;
 			DatabaseType m_FloatAttributeType;
-			DatabaseType m_NameAttributeType;
+			DatabaseType m_PrimitiveAttributeType;
 			DatabaseType m_TextAttributeType;
 
 			// Container type description

@@ -221,7 +221,7 @@ bool clcpp::Database::Load(IFile* file, IAllocator* allocator, unsigned int base
 		ParentPrimitivesToDatabase(m_DatabaseMem->flag_attributes, this);
 		ParentPrimitivesToDatabase(m_DatabaseMem->int_attributes, this);
 		ParentPrimitivesToDatabase(m_DatabaseMem->float_attributes, this);
-		ParentPrimitivesToDatabase(m_DatabaseMem->name_attributes, this);
+		ParentPrimitivesToDatabase(m_DatabaseMem->primitive_attributes, this);
 		ParentPrimitivesToDatabase(m_DatabaseMem->text_attributes, this);
 	}
 

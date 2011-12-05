@@ -377,8 +377,8 @@ namespace
 			case (cldb::Primitive::KIND_FLOAT_ATTRIBUTE):
 				ProcessAttribute(db, (cldb::FloatAttribute*)attribute, add);
 				break;
-			case (cldb::Primitive::KIND_NAME_ATTRIBUTE):
-				ProcessAttribute(db, (cldb::NameAttribute*)attribute, add);
+			case (cldb::Primitive::KIND_PRIMITIVE_ATTRIBUTE):
+				ProcessAttribute(db, (cldb::PrimitiveAttribute*)attribute, add);
 				break;
 			case (cldb::Primitive::KIND_TEXT_ATTRIBUTE):
 				ProcessAttribute(db, (cldb::TextAttribute*)attribute, add);
