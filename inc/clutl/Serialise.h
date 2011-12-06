@@ -29,10 +29,11 @@
 #pragma once
 
 
-namespace clcpp
-{
-	struct Type;
-}
+#include <clcpp/clcpp.h>
+
+
+// Partially reflected so that it can be used for reflecting custom serialisation functions
+clcpp_reflect_part(clutl::JSONToken)
 
 
 namespace clutl
@@ -91,6 +92,7 @@ namespace clutl
 
 		unsigned int GetBytesRead() const { return m_DataRead - m_Data; }
 		unsigned int GetTotalBytes() const { return m_DataEnd - m_Data; }
+		unsigned int GetBytesRemaining() const { return m_DataEnd - m_DataRead; }
 
 	private:
 		const char* m_Data;
@@ -168,6 +170,64 @@ namespace clutl
 			EMIT_HEX_FLOATS = 0x20,
 			EMIT_CREATE_OBJECT = 0x40
 		};
+	};
+
+
+	enum JSONTokenType
+	{
+		JSON_TOKEN_NONE,
+
+		// Single character tokens match their character values for simpler switch code
+		JSON_TOKEN_LBRACE = '{',
+		JSON_TOKEN_RBRACE = '}',
+		JSON_TOKEN_COMMA = ',',
+		JSON_TOKEN_COLON = ':',
+		JSON_TOKEN_LBRACKET = '[',
+		JSON_TOKEN_RBRACKET = ']',
+
+		JSON_TOKEN_STRING,
+
+		JSON_TOKEN_TRUE,
+		JSON_TOKEN_FALSE,
+		JSON_TOKEN_NULL,
+
+		JSON_TOKEN_INTEGER,
+		JSON_TOKEN_DECIMAL,
+	};
+
+
+	struct JSONToken
+	{
+		JSONToken()
+			: type(JSON_TOKEN_NONE)
+			, length(0)
+		{
+		}
+
+		explicit JSONToken(JSONTokenType type, int length)
+			: type(type)
+			, length(length)
+		{
+		}
+
+		bool IsValid() const
+		{
+			return type != JSON_TOKEN_NONE;
+		}
+
+		JSONTokenType type;
+		int length;
+
+		// All possible token value representations
+		struct
+		{
+			union
+			{
+				const char* string;
+				__int64 integer;
+				double decimal;
+			};
+		} val;
 	};
 
 
