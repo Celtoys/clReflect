@@ -46,12 +46,42 @@ namespace clcpp
 
 
 	//
+	// This class stores references to objects so that those references can be preserved and safely
+	// passed through compiler-generated proxy functions. If you use CallFunction to call functions which
+	// accept references as parameters, pass an object of this type instead.
+	//
+	template <typename TYPE>
+	class RefParam
+	{
+	public:
+		RefParam(TYPE& reference)
+			: m_Reference(reference)
+		{
+		}
+
+	private:
+		TYPE& m_Reference;
+	};
+
+
+	//
+	// Function adaptor for generating a RefParam when passing arguments by reference to CallFunction
+	//
+	template <typename TYPE>
+	RefParam<TYPE> ByRef(TYPE& reference)
+	{
+		return RefParam<TYPE>(reference);
+	}
+
+
+	//
 	// Call a function with no parameters and to return value.
 	//
 	inline void CallFunction(const Function* function)
 	{
 		typedef void (*CallFunc)();
 		CallFunc call_func = (CallFunc)function->address;
+		internal::Assert(call_func != 0);
 		call_func();
 	}
 
@@ -59,10 +89,11 @@ namespace clcpp
 	//
 	// Call a function with one parameter and no return value.
 	//
-	template <typename A0> inline void CallFunction(const Function* function, A0 a0)
+	template <typename A0> inline void CallFunction(const Function* function, const A0& a0)
 	{
 		typedef void (*CallFunc)(A0);
 		CallFunc call_func = (CallFunc)function->address;
+		internal::Assert(call_func != 0);
 		call_func(a0);
 	}
 
@@ -70,10 +101,11 @@ namespace clcpp
 	//
 	// Call a function with two parameters and no return value.
 	//
-	template <typename A0, typename A1> inline void CallFunction(const Function* function, A0 a0, A1 a1)
+	template <typename A0, typename A1> inline void CallFunction(const Function* function, const A0& a0, const A1& a1)
 	{
 		typedef void (*CallFunc)(A0, A1);
 		CallFunc call_func = (CallFunc)function->address;
+		internal::Assert(call_func != 0);
 		call_func(a0, a1);
 	}
 }
