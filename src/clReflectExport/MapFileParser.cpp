@@ -189,14 +189,13 @@ namespace
 					if (!strcmp(token, skip_tokens[i]))
 					{
 						skip = true;
+						break;
 					}
 				}
 
+				// What's remaining must be the type name
 				if (skip == false)
-				{
-					// What's remaining must be the type name
 					strcat(type_name, token);
-				}
 			}
 
 			if (*ptr == ',' || *ptr == ')')
@@ -208,6 +207,12 @@ namespace
 
 		parameter.type = db.GetName(type_name);
 		return parameter;
+	}
+
+
+	bool IsVoidParameter(const cldb::Field& field)
+	{
+		return field.qualifier.op == cldb::Qualifier::VALUE && field.type.text == "void";
 	}
 
 
@@ -229,7 +234,7 @@ namespace
 		const char* ptr = function_signature.c_str();
 		cldb::Field return_parameter = MatchParameter(db, ptr, ptr + func_pos, is_this_call);
 		cldb::Field* return_parameter_ptr = 0;
-		if (return_parameter.type.text != "void")
+		if (!IsVoidParameter(return_parameter))
 			return_parameter_ptr = &return_parameter;
 
 		// Isolate the parameters in the signature
@@ -275,7 +280,7 @@ namespace
 		while (ptr < end)
 		{
 			cldb::Field parameter = MatchParameter(db, ptr, end, is_this_call);
-			if (parameter.type.text != "void")
+			if (!IsVoidParameter(parameter))
 				parameters.push_back(parameter);
 		}
 
