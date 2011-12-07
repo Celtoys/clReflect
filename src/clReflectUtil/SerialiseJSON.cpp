@@ -905,7 +905,11 @@ namespace
 		if (!Expect(ctx, t, clutl::JSON_TOKEN_COLON).IsValid())
 			return;
 
-		ParserValue(ctx, t, object + field->offset, field->type, field->qualifier.op, field);
+		// Parse or skip the field if it's unknown
+		if (field)
+			ParserValue(ctx, t, object + field->offset, field->type, field->qualifier.op, field);
+		else
+			t = LexerToken(ctx);
 	}
 
 	void ParserMembers(Context& ctx, clutl::JSONToken& t, char* object, const clcpp::Type* type)
