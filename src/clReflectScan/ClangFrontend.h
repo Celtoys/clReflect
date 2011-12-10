@@ -49,7 +49,7 @@ public:
 
 	bool ParseAST(const char* filename);
 
-	void GetIncludedFiles(std::vector<std::string>& files) const;
+	void GetIncludedFiles(std::vector<std::string>& files, bool includeSystemHeaders=true) const;
 
 	clang::ASTContext& GetASTContext() { return m_CompilerInstance.getASTContext(); }
 

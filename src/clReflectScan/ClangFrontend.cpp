@@ -148,7 +148,7 @@ bool ClangParser::ParseAST(const char* filename)
 
 
 
-void ClangParser::GetIncludedFiles(std::vector<std::string>& files) const
+void ClangParser::GetIncludedFiles(std::vector<std::string>& files, bool includeSystemHeaders) const
 {
 	// First need a mapping from unique file ID to the File Entry
 	llvm::SmallVector<const clang::FileEntry*, 0> uid_to_files;
@@ -165,6 +165,10 @@ void ClangParser::GetIncludedFiles(std::vector<std::string>& files) const
 		// is the only way you can get at that index
 		size_t file_uid = std::distance(begin, i);
 		const clang::FileEntry* file_entry = uid_to_files[file_uid];
-		files.push_back(file_entry->getName());
+
+		if (includeSystemHeaders || header_search.getFileDirFlavor(file_entry)==clang::SrcMgr::C_User)
+		{
+			files.push_back(file_entry->getName());
+		}
 	}
 }
