@@ -73,22 +73,32 @@ namespace
 		FileStream(const char* f)
 			: filename(f)
 		{
+			fp = fopen(filename, "w");
+		}
+
+		FileStream(const FileStream& fs)
+			: filename(fs.filename)
+		{
+			fp = fopen(filename, "w");
+		}
+
+		~FileStream()
+		{
+			if (fp != 0)
+				fclose(fp);
 		}
 
 		void Log(const char* text)
 		{
-			// Open the file for each log attempt
-			FILE* fp = fopen(filename, "a");
-			if (fp == 0)
+			// Flush the file for each write, trying to prevent missing log data
+			if (fp != 0)
 			{
-				return;
+				fputs(text, fp);
+				fflush(fp);
 			}
-
-			// Write and close immediately so that the file isn't left open on crash and all output is flushed
-			fputs(text, fp);
-			fclose(fp);
 		}
 
+		FILE* fp;
 		const char* filename;
 	};
 

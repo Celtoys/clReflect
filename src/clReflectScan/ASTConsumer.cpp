@@ -71,12 +71,12 @@ namespace
 	};
 
 
-	bool GetParameterInfo(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, ParameterInfo& info, int flags);
+	bool GetParameterInfo(ASTConsumer& consumer, clang::QualType qual_type, ParameterInfo& info, int flags);
 	const clang::ClassTemplateSpecializationDecl* GetTemplateSpecialisation(const clang::Type* type);
-	bool ParseTemplateSpecialisation(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, const clang::ClassTemplateSpecializationDecl* cts_decl, std::string& type_name_str);
+	bool ParseTemplateSpecialisation(ASTConsumer& consumer, const clang::ClassTemplateSpecializationDecl* cts_decl, std::string& type_name_str);
 
 
-	cldb::Name ParseBaseClass(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, cldb::Name derived_type_name, const clang::CXXBaseSpecifier& base)
+	cldb::Name ParseBaseClass(ASTConsumer& consumer, cldb::Name derived_type_name, const clang::CXXBaseSpecifier& base)
 	{
 		// Can't support virtual base classes - offsets change at runtime
 		if (base.isVirtual())
@@ -87,14 +87,14 @@ namespace
 
 		// Parse the type name
 		clang::QualType base_type = base.getType();
-		std::string type_name_str = base_type.getAsString(ctx.getLangOptions());
+		std::string type_name_str = base_type.getAsString(consumer.GetASTContext().getLangOptions());
 		Remove(type_name_str, "struct ");
 		Remove(type_name_str, "class ");
 
 		// First see if the base class is a template specialisation and try to parse it
 		if (const clang::ClassTemplateSpecializationDecl* cts_decl = GetTemplateSpecialisation(base_type.split().first))
 		{
-			if (!ParseTemplateSpecialisation(db, specs, ctx, cts_decl, type_name_str))
+			if (!ParseTemplateSpecialisation(consumer, cts_decl, type_name_str))
 			{
 				LOG(ast, WARNING, "Base class '%s' of '%s' is templated and could not be parsed so skipping", type_name_str.c_str(), derived_type_name.text.c_str());
 				return cldb::Name();
@@ -102,12 +102,13 @@ namespace
 		}
 
 		// Check the type is reflected
-		else if (!specs.IsReflected(type_name_str))
+		else if (!consumer.GetReflectionSpecs().IsReflected(type_name_str))
 		{
 			LOG(ast, WARNING, "Base class '%s' of '%s' is not reflected so skipping\n", type_name_str.c_str(), derived_type_name.text.c_str());
 			return cldb::Name();
 		}
 
+		cldb::Database& db = consumer.GetDB();
 		cldb::Name base_name = db.GetName(type_name_str.c_str());
 		db.AddTypeInheritance(derived_type_name, base_name);
 		return base_name;
@@ -127,17 +128,18 @@ namespace
 	}
 
 
-	bool ParseTemplateSpecialisation(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, const clang::ClassTemplateSpecializationDecl* cts_decl, std::string& type_name_str)
+	bool ParseTemplateSpecialisation(ASTConsumer& consumer, const clang::ClassTemplateSpecializationDecl* cts_decl, std::string& type_name_str)
 	{
 		// Get the template being specialised and see if it's marked for reflection
 		// The template definition needs to be in scope for specialisations to occur. This implies
 		// that the reflection spec must also be in scope.
 		const clang::ClassTemplateDecl* template_decl = cts_decl->getSpecializedTemplate();
-		type_name_str = template_decl->getQualifiedNameAsString();
-		if (!specs.IsReflected(type_name_str))
+		type_name_str = template_decl->getQualifiedNameAsString(consumer.GetPrintingPolicy());
+		if (!consumer.GetReflectionSpecs().IsReflected(type_name_str))
 			return false;
 
 		// Parent the instance to its declaring template
+		cldb::Database& db = consumer.GetDB();
 		cldb::Name parent_name = db.GetName(type_name_str.c_str());
 
 		// Prepare for adding template arguments to the type name
@@ -157,7 +159,7 @@ namespace
 				return false;
 
 			// Recursively parse the template argument to get some parameter info
-			if (!GetParameterInfo(db, specs, ctx, arg.getAsType(), template_args[i], false))
+			if (!GetParameterInfo(consumer, arg.getAsType(), template_args[i], false))
 				return false;
 
 			// References currently not supported
@@ -187,7 +189,7 @@ namespace
 			std::vector<cldb::Name> base_names;
 			for (clang::CXXRecordDecl::base_class_const_iterator base_it = cts_decl->bases_begin(); base_it != cts_decl->bases_end(); base_it++)
 			{
-				cldb::Name base_name = ParseBaseClass(db, specs, ctx, type_name, *base_it);
+				cldb::Name base_name = ParseBaseClass(consumer, type_name, *base_it);
 				if (base_name == cldb::Name())
 					return false;
 				base_names.push_back(base_name);
@@ -215,7 +217,7 @@ namespace
 	}
 
 
-	bool GetParameterInfo(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, ParameterInfo& info, int flags)
+	bool GetParameterInfo(ASTConsumer& consumer, clang::QualType qual_type, ParameterInfo& info, int flags)
 	{
 		// Get type info for the parameter
 		clang::SplitQualType sqt = qual_type.split();
@@ -262,7 +264,7 @@ namespace
 		// Record the qualifiers before stripping them and generating the type name
 		clang::Qualifiers qualifiers = clang::Qualifiers::fromFastMask(sqt.second);
 		qual_type.removeLocalFastQualifiers();
-		info.type_name = qual_type.getAsString(ctx.getLangOptions());
+		info.type_name = qual_type.getAsString(consumer.GetASTContext().getLangOptions());
 		info.qualifer.is_const = qualifiers.hasConst();
 
 		// Is this a field that can be safely recorded?
@@ -283,7 +285,7 @@ namespace
 		// Parse template specialisation parameters
 		if (const clang::ClassTemplateSpecializationDecl* cts_decl = GetTemplateSpecialisation(type))
 		{
-			if (!ParseTemplateSpecialisation(db, specs, ctx, cts_decl, info.type_name))
+			if (!ParseTemplateSpecialisation(consumer, cts_decl, info.type_name))
 				return false;
 		}
 
@@ -298,7 +300,7 @@ namespace
 		if ((flags & MF_CHECK_TYPE_IS_REFLECTED) != 0 &&
 			tc != clang::Type::Builtin &&
 			info.qualifer.op == cldb::Qualifier::VALUE &&
-			!specs.IsReflected(info.type_name))
+			!consumer.GetReflectionSpecs().IsReflected(info.type_name))
 			return false;
 
 		return true;
@@ -395,12 +397,21 @@ ASTConsumer::ASTConsumer(clang::ASTContext& context, cldb::Database& db, const R
 	: m_ASTContext(context)
 	, m_DB(db)
 	, m_ReflectionSpecs(rspecs)
+	, m_PrintingPolicy(0)
 {
 	LOG_TO_STDOUT(ast, WARNING);
 	LOG_TO_STDOUT(ast, ERROR);
 
 	if (ast_log != "")
 		LOG_TO_FILE(ast, ALL, ast_log.c_str());
+
+	m_PrintingPolicy = new clang::PrintingPolicy(m_ASTContext.getLangOptions());
+}
+
+
+ASTConsumer::~ASTConsumer()
+{
+	delete m_PrintingPolicy;
 }
 
 
@@ -437,7 +448,7 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const std::string& parent_name
 		return;
 
 	// Has this decl been marked for reflection?
-	std::string name = decl->getQualifiedNameAsString();
+	std::string name = decl->getQualifiedNameAsString(*m_PrintingPolicy);
 	if (!m_ReflectionSpecs.IsReflected(name.c_str()))
 		return;
 
@@ -497,7 +508,7 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, 
 	{
 		for (clang::CXXRecordDecl::base_class_const_iterator base_it = record_decl->bases_begin(); base_it != record_decl->bases_end(); base_it++)
 		{
-			cldb::Name base_name = ParseBaseClass(m_DB, m_ReflectionSpecs, m_ASTContext, type_name, *base_it);
+			cldb::Name base_name = ParseBaseClass(*this, type_name, *base_it);
 			if (base_name == cldb::Name())
 				return;
 
@@ -693,7 +704,7 @@ void ASTConsumer::AddContainedDecls(clang::NamedDecl* decl, const std::string& p
 bool ASTConsumer::MakeField(clang::QualType qual_type, const char* param_name, const std::string& parent_name, int index, cldb::Field& field, int flags)
 {
 	ParameterInfo info;
-	if (!GetParameterInfo(m_DB, m_ReflectionSpecs, m_ASTContext, qual_type, info, flags))
+	if (!GetParameterInfo(*this, qual_type, info, flags))
 		return false;
 
 	// Construct the field

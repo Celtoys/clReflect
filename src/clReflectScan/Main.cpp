@@ -37,6 +37,8 @@
 
 #include "clang/AST/ASTContext.h"
 
+#include <time.h>
+
 
 namespace
 {
@@ -106,6 +108,8 @@ namespace
 
 int main(int argc, const char* argv[])
 {
+	float start = clock();
+
 	LOG_TO_STDOUT(main, ALL);
 	LOG_TO_STDOUT(attr, ALL);
 
@@ -125,6 +129,8 @@ int main(int argc, const char* argv[])
 		return 1;
 	}
 
+	float prologue = clock();
+
 	// Parse the AST
 	ClangParser parser(args);
 	if (!parser.ParseAST(input_filename))
@@ -133,11 +139,15 @@ int main(int argc, const char* argv[])
 		return 1;
 	}
 
+	float parsing = clock();
+
 	// Gather reflection specs for the translation unit
 	clang::ASTContext& ast_context = parser.GetASTContext();
 	std::string spec_log = args.GetProperty("-spec_log");
 	ReflectionSpecs reflection_specs(args.Have("-reflect_specs_all"), spec_log);
 	reflection_specs.Gather(ast_context.getTranslationUnitDecl());
+
+	float specs = clock();
 
 	// On the second pass, build the reflection database
 	cldb::Database db;
@@ -145,6 +155,8 @@ int main(int argc, const char* argv[])
 	std::string ast_log = args.GetProperty("-ast_log");
 	ASTConsumer ast_consumer(ast_context, db, reflection_specs, ast_log);
 	ast_consumer.WalkTranlationUnit(ast_context.getTranslationUnitDecl());
+
+	float build = clock();
 
 	// Add all the container specs
 	const ReflectionSpecContainer::MapType& container_specs = reflection_specs.GetContainerSpecs();
@@ -163,8 +175,23 @@ int main(int argc, const char* argv[])
 	if (output != "")
 		WriteDatabase(db, output);
 
+	float dbwrite = clock();
+
 	if (args.Have("-test_db"))
 		TestDBReadWrite(db);
+
+	float end = clock();
+
+	// Print some rough profiling info
+	if (args.Have("-timing"))
+	{
+		printf("Prologue:   %.3f\n", (prologue - start) / CLOCKS_PER_SEC);
+		printf("Parsing:    %.3f\n", (parsing - prologue) / CLOCKS_PER_SEC);
+		printf("Specs:      %.3f\n", (specs - parsing) / CLOCKS_PER_SEC);
+		printf("Building:   %.3f\n", (build - specs) / CLOCKS_PER_SEC);
+		printf("Database:   %.3f\n", (dbwrite - build) / CLOCKS_PER_SEC);
+		printf("Total time: %.3f\n", (end - start) / CLOCKS_PER_SEC);
+	}
 
 	return 0;
 }
