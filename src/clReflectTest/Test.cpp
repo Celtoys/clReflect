@@ -569,7 +569,7 @@ void FunctionEnums(
 
 
 // Trigger warnings for unnamed parameters
-clcpp_reflect(myfunc)
+clcpp_reflect(UnnamedParameterFunction)
 int UnnamedParameterFunction(int)
 {
 	return 0;

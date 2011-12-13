@@ -111,7 +111,6 @@ int main(int argc, const char* argv[])
 	float start = clock();
 
 	LOG_TO_STDOUT(main, ALL);
-	LOG_TO_STDOUT(attr, ALL);
 
 	// Leave early if there aren't enough arguments
 	Arguments args(argc, argv);
