@@ -45,6 +45,8 @@
 #include <clang/AST/TemplateName.h>
 #include <clang/Basic/SourceManager.h>
 
+#include <stdarg.h>
+
 
 namespace
 {
@@ -52,6 +54,96 @@ namespace
 	enum
 	{
 		MF_CHECK_TYPE_IS_REFLECTED = 1,
+	};
+
+
+	// Helper for constructing printf-formatted strings immediately and passing them between functions
+	struct va
+	{
+		va(const char* format, ...)
+		{
+			char buffer[512];
+			va_list args;
+			va_start(args, format);
+			vsnprintf_s(buffer, sizeof(buffer), _TRUNCATE, format, args);
+			va_end(args);
+			text = buffer;
+		}
+
+		operator const std::string& () const
+		{
+			return text;
+		}
+
+		std::string text;
+	};
+
+
+	struct Status
+	{
+		static Status Warn(const std::string& message)
+		{
+			Status status;
+			status.messages.push_back(message);
+			return status;
+		}
+
+		static Status JoinWarn(const Status& older, const std::string& message)
+		{
+			if (older.IsSilentFail())
+				return older;
+
+			// Add the message before concatenating with the older ones
+			Status status;
+			status.messages.push_back(message);
+			for (size_t i = 0; i < older.messages.size(); i++)
+				status.messages.push_back(older.messages[i]);
+			return status;
+		}
+
+		static Status SilentFail()
+		{
+			Status status;
+			status.messages.push_back("");
+			return status;
+		}
+
+		bool HasWarnings() const
+		{
+			return !messages.empty();
+		}
+
+		bool IsSilentFail() const
+		{
+			return messages.size() && messages[0] == "";
+		}
+
+		void Print(clang::SourceLocation location, clang::SourceManager& srcmgr, const std::string& message)
+		{
+			// Don't do anything on a silent fail
+			if (IsSilentFail())
+				return;
+
+			// Get text for source location
+			clang::PresumedLoc presumed_loc = srcmgr.getPresumedLoc(location);
+			const char* filename = presumed_loc.getFilename();
+			int line = presumed_loc.getLine();
+
+			// Print immediate warning
+			LOG(warnings, INFO, "%s(%d) : warning - ", filename, line);
+			LOG_APPEND(warnings, INFO, message.c_str());
+
+			// Join with older warnings
+			for (size_t i = 0; i < messages.size(); i++)
+			{
+				LOG_APPEND(warnings, INFO, " - ");
+				LOG_APPEND(warnings, INFO, messages[i].c_str());
+			}
+
+			LOG_APPEND(warnings, INFO, "\n");
+		}
+
+		std::vector<std::string> messages;
 	};
 
 
@@ -71,46 +163,51 @@ namespace
 	};
 
 
-	bool GetParameterInfo(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, ParameterInfo& info, int flags);
-	const clang::ClassTemplateSpecializationDecl* GetTemplateSpecialisation(const clang::Type* type);
-	bool ParseTemplateSpecialisation(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, const clang::ClassTemplateSpecializationDecl* cts_decl, std::string& type_name_str);
+	Status GetParameterInfo(ASTConsumer& consumer, clang::QualType qual_type, ParameterInfo& info, int flags);
+	Status ParseTemplateSpecialisation(ASTConsumer& consumer, const clang::ClassTemplateSpecializationDecl* cts_decl, std::string& type_name_str);
 
 
-	cldb::Name ParseBaseClass(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, cldb::Name derived_type_name, const clang::CXXBaseSpecifier& base)
+	Status ParseBaseClass(ASTConsumer& consumer, cldb::Name derived_type_name, const clang::CXXBaseSpecifier& base, cldb::Name& base_name)
 	{
-		// Can't support virtual base classes - offsets change at runtime
-		if (base.isVirtual())
-		{
-			LOG(ast, WARNING, "Class '%s' has an unsupported virtual base class\n", derived_type_name.text.c_str());
-			return cldb::Name();
-		}
-
 		// Parse the type name
-		clang::QualType base_type = base.getType();
-		std::string type_name_str = base_type.getAsString(ctx.getLangOptions());
+		base_name = cldb::Name();
+		clang::QualType base_qual_type = base.getType();
+		const clang::Type* base_type = base_qual_type.split().first;
+		std::string type_name_str = base_qual_type.getAsString(consumer.GetASTContext().getLangOptions());
 		Remove(type_name_str, "struct ");
 		Remove(type_name_str, "class ");
 
+		// Can't support virtual base classes - offsets change at runtime
+		if (base.isVirtual())
+			return Status::Warn(va("Class '%s' is an unsupported virtual base class", type_name_str.c_str()));
+
 		// First see if the base class is a template specialisation and try to parse it
-		if (const clang::ClassTemplateSpecializationDecl* cts_decl = GetTemplateSpecialisation(base_type.split().first))
+		if (base_type->getTypeClass() == clang::Type::TemplateSpecialization)
 		{
-			if (!ParseTemplateSpecialisation(db, specs, ctx, cts_decl, type_name_str))
-			{
-				LOG(ast, WARNING, "Base class '%s' of '%s' is templated and could not be parsed so skipping", type_name_str.c_str(), derived_type_name.text.c_str());
-				return cldb::Name();
-			}
+			const clang::CXXRecordDecl* type_decl = base_type->getAsCXXRecordDecl();
+			if (type_decl == 0)
+				return Status::Warn(va("Base class '%s' is templated and could not be resolved", type_name_str.c_str()));
+			if (type_decl->getTemplateSpecializationKind() == clang::TSK_Undeclared)
+				return Status::Warn(va("Base class '%s' has not been instantiated so could not be resolved", type_name_str.c_str()));
+
+			const clang::ClassTemplateSpecializationDecl* cts_decl = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(type_decl);
+			assert(cts_decl && "Couldn't cast to template specialisation decl");
+
+			Status status = ParseTemplateSpecialisation(consumer, cts_decl, type_name_str);
+			if (status.HasWarnings())
+				return Status::JoinWarn(status, va("Base class '%s' is templated and could not be parsed", type_name_str.c_str()));
 		}
 
 		// Check the type is reflected
-		else if (!specs.IsReflected(type_name_str))
+		else if (!consumer.GetReflectionSpecs().IsReflected(type_name_str))
 		{
-			LOG(ast, WARNING, "Base class '%s' of '%s' is not reflected so skipping\n", type_name_str.c_str(), derived_type_name.text.c_str());
-			return cldb::Name();
+			return Status::Warn(va("Base class '%s' is not marked for reflection", type_name_str.c_str()));
 		}
 
-		cldb::Name base_name = db.GetName(type_name_str.c_str());
+		cldb::Database& db = consumer.GetDB();
+		base_name = db.GetName(type_name_str.c_str());
 		db.AddTypeInheritance(derived_type_name, base_name);
-		return base_name;
+		return Status();
 	}
 
 
@@ -127,17 +224,18 @@ namespace
 	}
 
 
-	bool ParseTemplateSpecialisation(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, const clang::ClassTemplateSpecializationDecl* cts_decl, std::string& type_name_str)
+	Status ParseTemplateSpecialisation(ASTConsumer& consumer, const clang::ClassTemplateSpecializationDecl* cts_decl, std::string& type_name_str)
 	{
 		// Get the template being specialised and see if it's marked for reflection
 		// The template definition needs to be in scope for specialisations to occur. This implies
 		// that the reflection spec must also be in scope.
 		const clang::ClassTemplateDecl* template_decl = cts_decl->getSpecializedTemplate();
-		type_name_str = template_decl->getQualifiedNameAsString();
-		if (!specs.IsReflected(type_name_str))
-			return false;
+		type_name_str = template_decl->getQualifiedNameAsString(consumer.GetPrintingPolicy());
+		if (!consumer.GetReflectionSpecs().IsReflected(type_name_str))
+			return Status::Warn("Template has not been marked for reflection");
 
 		// Parent the instance to its declaring template
+		cldb::Database& db = consumer.GetDB();
 		cldb::Name parent_name = db.GetName(type_name_str.c_str());
 
 		// Prepare for adding template arguments to the type name
@@ -147,26 +245,27 @@ namespace
 		ParameterInfo template_args[cldb::TemplateType::MAX_NB_ARGS];
 		const clang::TemplateArgumentList& list = cts_decl->getTemplateArgs();
 		if (list.size() >= cldb::TemplateType::MAX_NB_ARGS)
-			return false;
+			return Status::Warn(va("Only %d template arguments are supported; template has %d", cldb::TemplateType::MAX_NB_ARGS, list.size()));
 
 		for (unsigned int i = 0; i < list.size(); i++)
 		{
 			// Only support type arguments
 			const clang::TemplateArgument& arg = list[i];
 			if (arg.getKind() != clang::TemplateArgument::Type)
-				return false;
+				return Status::Warn(va("Unsupported non-type template parameter %d", i + 1));
 
 			// Recursively parse the template argument to get some parameter info
-			if (!GetParameterInfo(db, specs, ctx, arg.getAsType(), template_args[i], false))
-				return false;
+			Status status = GetParameterInfo(consumer, arg.getAsType(), template_args[i], false);
+			if (status.HasWarnings())
+				return Status::JoinWarn(status, va("Unsupported template parameter type %d", i + 1));
 
 			// References currently not supported
 			if (template_args[i].qualifer.op == cldb::Qualifier::REFERENCE)
-				return false;
+				return Status::Warn(va("Unsupported reference type as template parameter %d", i + 1));
 
 			// Can't reflect array template parameters
 			if (template_args[i].array_count)
-				return false;
+				return Status::Warn(va("Unsupported array template parameter %d", i + 1));
 
 			// Concatenate the arguments in the type name
 			if (i)
@@ -187,9 +286,10 @@ namespace
 			std::vector<cldb::Name> base_names;
 			for (clang::CXXRecordDecl::base_class_const_iterator base_it = cts_decl->bases_begin(); base_it != cts_decl->bases_end(); base_it++)
 			{
-				cldb::Name base_name = ParseBaseClass(db, specs, ctx, type_name, *base_it);
-				if (base_name == cldb::Name())
-					return false;
+				cldb::Name base_name;
+				Status status = ParseBaseClass(consumer, type_name, *base_it, base_name);
+				if (status.HasWarnings())
+					return Status::JoinWarn(status, "Failure to create template type due to invalid base class");
 				base_names.push_back(base_name);
 			}
 
@@ -211,11 +311,11 @@ namespace
 			db.AddPrimitive(type);
 		}
 
-		return true;
+		return Status();
 	}
 
 
-	bool GetParameterInfo(cldb::Database& db, const ReflectionSpecs& specs, clang::ASTContext& ctx, clang::QualType qual_type, ParameterInfo& info, int flags)
+	Status GetParameterInfo(ASTConsumer& consumer, clang::QualType qual_type, ParameterInfo& info, int flags)
 	{
 		// Get type info for the parameter
 		clang::SplitQualType sqt = qual_type.split();
@@ -226,7 +326,7 @@ namespace
 		{
 			uint64_t size = *array_type->getSize().getRawData();
 			if (size > UINT_MAX)
-				return false;
+				return Status::Warn(va("Array size too big (%d)", size));
 			info.array_count = (cldb::u32)size;
 			qual_type = array_type->getElementType();
 			sqt = qual_type.split();
@@ -262,7 +362,7 @@ namespace
 		// Record the qualifiers before stripping them and generating the type name
 		clang::Qualifiers qualifiers = clang::Qualifiers::fromFastMask(sqt.second);
 		qual_type.removeLocalFastQualifiers();
-		info.type_name = qual_type.getAsString(ctx.getLangOptions());
+		info.type_name = qual_type.getAsString(consumer.GetASTContext().getLangOptions());
 		info.qualifer.is_const = qualifiers.hasConst();
 
 		// Is this a field that can be safely recorded?
@@ -270,21 +370,34 @@ namespace
 		clang::Type::TypeClass tc = type->getTypeClass();
 		switch (tc)
 		{
-		case (clang::Type::Builtin):
-		case (clang::Type::Enum):
-		case (clang::Type::Elaborated):
-		case (clang::Type::Record):
-		case (clang::Type::TemplateSpecialization):
+		case clang::Type::TemplateSpecialization:
+		case clang::Type::Builtin:
+		case clang::Type::Enum:
+		case clang::Type::Elaborated:
+		case clang::Type::Record:
 			break;
 		default:
-			return false;
+			return Status::Warn("Type class is unknown");
 		}
 
-		// Parse template specialisation parameters
-		if (const clang::ClassTemplateSpecializationDecl* cts_decl = GetTemplateSpecialisation(type))
+		if (const clang::CXXRecordDecl* type_decl = type->getAsCXXRecordDecl())
 		{
-			if (!ParseTemplateSpecialisation(db, specs, ctx, cts_decl, info.type_name))
-				return false;
+			// Don't attempt to parse declarations that contain this as it will be fully defined after
+			// a merge operation. clang will try its best not to instantiate a template when it doesn't have too.
+			// In such situations, parsing the specialisation is not possible.
+			if (tc == clang::Type::TemplateSpecialization && type_decl->getTemplateSpecializationKind() == clang::TSK_Undeclared)
+				return Status::SilentFail();
+
+			if (type_decl->getTemplateSpecializationKind() != clang::TSK_Undeclared)
+			{
+				const clang::ClassTemplateSpecializationDecl* cts_decl = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(type_decl);
+				assert(cts_decl && "Couldn't cast to template specialisation decl");
+
+				// Parse template specialisation parameters
+				Status status = ParseTemplateSpecialisation(consumer, cts_decl, info.type_name);
+				if (status.HasWarnings())
+					return Status::JoinWarn(status, va("Couldn't parse template specialisation parameter '%s'", info.type_name.c_str()));
+			}
 		}
 
 		// Pull the class descriptions from the type name
@@ -298,10 +411,42 @@ namespace
 		if ((flags & MF_CHECK_TYPE_IS_REFLECTED) != 0 &&
 			tc != clang::Type::Builtin &&
 			info.qualifer.op == cldb::Qualifier::VALUE &&
-			!specs.IsReflected(info.type_name))
-			return false;
+			!consumer.GetReflectionSpecs().IsReflected(info.type_name))
+			return Status::Warn(va("Type '%s' has not been marked for reflection", info.type_name.c_str()));
 
-		return true;
+		return Status();
+	}
+
+
+
+
+	Status MakeField(ASTConsumer& consumer, clang::QualType qual_type, const char* param_name, const std::string& parent_name, int index, cldb::Field& field, int flags)
+	{
+		ParameterInfo info;
+		Status status = GetParameterInfo(consumer, qual_type, info, flags);
+		if (status.HasWarnings())
+			return Status::JoinWarn(status, va("Failure to make field '%s'", param_name));
+
+		// Construct the field
+		cldb::Database& db = consumer.GetDB();
+		cldb::Name type_name = db.GetName(info.type_name.c_str());
+		field = cldb::Field(
+			db.GetName(param_name),
+			db.GetName(parent_name.c_str()),
+			type_name, info.qualifer, index);
+
+		// Add a container info for this field if it's a constant array
+		if (info.array_count)
+		{
+			std::string full_name = parent_name + "::" + param_name;
+			cldb::ContainerInfo ci;
+			ci.name = db.GetName(full_name.c_str());
+			ci.flags = cldb::ContainerInfo::IS_C_ARRAY;
+			ci.count = info.array_count;
+			db.AddPrimitive(ci);
+		}
+
+		return Status();
 	}
 
 
@@ -362,7 +507,7 @@ namespace
 
 			// 'noreflect' must be the first attribute
 			if (i && attribute->name.hash == noreflect_hash)
-				LOG(ast, WARNING, "'noreflect' attribute unexpected and ignored");
+				Status().Print(location, srcmgr, "'noreflect' attribute unexpected and ignored");
 
 			// Add the attributes to the database, parented to the calling declaration
 			attribute->parent = db.GetName(parent.c_str());
@@ -395,12 +540,20 @@ ASTConsumer::ASTConsumer(clang::ASTContext& context, cldb::Database& db, const R
 	: m_ASTContext(context)
 	, m_DB(db)
 	, m_ReflectionSpecs(rspecs)
+	, m_PrintingPolicy(0)
 {
-	LOG_TO_STDOUT(ast, WARNING);
-	LOG_TO_STDOUT(ast, ERROR);
+	LOG_TO_STDOUT(warnings, INFO);
 
 	if (ast_log != "")
 		LOG_TO_FILE(ast, ALL, ast_log.c_str());
+
+	m_PrintingPolicy = new clang::PrintingPolicy(m_ASTContext.getLangOptions());
+}
+
+
+ASTConsumer::~ASTConsumer()
+{
+	delete m_PrintingPolicy;
 }
 
 
@@ -437,7 +590,7 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const std::string& parent_name
 		return;
 
 	// Has this decl been marked for reflection?
-	std::string name = decl->getQualifiedNameAsString();
+	std::string name = decl->getQualifiedNameAsString(*m_PrintingPolicy);
 	if (!m_ReflectionSpecs.IsReflected(name.c_str()))
 		return;
 
@@ -485,7 +638,7 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, 
 
 	if (record_decl->getNumVBases())
 	{
-		LOG(ast, WARNING, "Class '%s' has an unsupported virtual base class\n", name.c_str());
+		Status().Print(record_decl->getLocation(), m_ASTContext.getSourceManager(), va("Class '%s' has an unsupported virtual base class", name.c_str()));
 		return;
 	}
 
@@ -497,9 +650,13 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, 
 	{
 		for (clang::CXXRecordDecl::base_class_const_iterator base_it = record_decl->bases_begin(); base_it != record_decl->bases_end(); base_it++)
 		{
-			cldb::Name base_name = ParseBaseClass(m_DB, m_ReflectionSpecs, m_ASTContext, type_name, *base_it);
-			if (base_name == cldb::Name())
+			cldb::Name base_name;
+			Status status = ParseBaseClass(*this, type_name, *base_it, base_name);
+			if (status.HasWarnings())
+			{
+				status.Print(record_decl->getLocation(), m_ASTContext.getSourceManager(), va("Failed to reflect class '%s'", name.c_str()));
 				return;
+			}
 
 			// If the base class is valid, then add the inheritance relationship
 			m_DB.AddTypeInheritance(type_name, base_name);
@@ -596,9 +753,10 @@ void ASTConsumer::AddMethodDecl(clang::NamedDecl* decl, const std::string& name,
 	{
 		// Parse the 'this' type, treating it as the first parameter to the method
 		cldb::Field this_param;
-		if (!MakeField(method_decl->getThisType(m_ASTContext), "this", name, 0, this_param, MF_CHECK_TYPE_IS_REFLECTED))
+		Status status = MakeField(*this, method_decl->getThisType(m_ASTContext), "this", name, 0, this_param, MF_CHECK_TYPE_IS_REFLECTED);
+		if (status.HasWarnings())
 		{
-			LOG(ast, WARNING, "Unsupported/unreflected 'this' type for '%s'\n", name.c_str());
+			status.Print(method_decl->getLocation(), m_ASTContext.getSourceManager(), va("Failed to reflect method '%s' due to invalid 'this' type", name.c_str()));
 			return;
 		}
 		parameters.push_back(this_param);
@@ -623,9 +781,10 @@ void ASTConsumer::AddFieldDecl(clang::NamedDecl* decl, const std::string& name, 
 	cldb::Field field;
 	cldb::u32 offset = layout->getFieldOffset(field_decl->getFieldIndex()) / 8;
 	std::string field_name = field_decl->getName().str();
-	if (!MakeField(field_decl->getType(), field_name.c_str(), parent_name, offset, field, MF_CHECK_TYPE_IS_REFLECTED))
+	Status status = MakeField(*this, field_decl->getType(), field_name.c_str(), parent_name, offset, field, MF_CHECK_TYPE_IS_REFLECTED);
+	if (status.HasWarnings())
 	{
-		LOG(ast, WARNING, "Unsupported/unreflected type for field '%s' in '%s'\n", field_name.c_str(), parent_name.c_str());
+		status.Print(field_decl->getLocation(), m_ASTContext.getSourceManager(), va("Failed to reflect field in '%s'", parent_name.c_str()));
 		return;
 	}
 
@@ -651,7 +810,7 @@ void ASTConsumer::AddClassTemplateDecl(clang::NamedDecl* decl, const std::string
 		const clang::TemplateParameterList* parameters = template_decl->getTemplateParameters();
 		if (parameters->size() > cldb::TemplateType::MAX_NB_ARGS)
 		{
-			LOG(ast, WARNING, "Too many template arguments for '%s'\n", name.c_str());
+			Status().Print(template_decl->getLocation(), m_ASTContext.getSourceManager(), va("Too many template arguments for '%s'", name.c_str()));
 			return;
 		}
 
@@ -660,7 +819,7 @@ void ASTConsumer::AddClassTemplateDecl(clang::NamedDecl* decl, const std::string
 		{
 			if (llvm::dyn_cast<clang::TemplateTypeParmDecl>(*i) == 0)
 			{
-				LOG(ast, WARNING, "Unsupported template argument type for '%s'\n", name.c_str());
+				Status().Print(template_decl->getLocation(), m_ASTContext.getSourceManager(), va("Unsupported template argument type for '%s'", name.c_str()));
 				return;
 			}
 		}
@@ -690,34 +849,6 @@ void ASTConsumer::AddContainedDecls(clang::NamedDecl* decl, const std::string& p
 }
 
 
-bool ASTConsumer::MakeField(clang::QualType qual_type, const char* param_name, const std::string& parent_name, int index, cldb::Field& field, int flags)
-{
-	ParameterInfo info;
-	if (!GetParameterInfo(m_DB, m_ReflectionSpecs, m_ASTContext, qual_type, info, flags))
-		return false;
-
-	// Construct the field
-	cldb::Name type_name = m_DB.GetName(info.type_name.c_str());
-	field = cldb::Field(
-		m_DB.GetName(param_name),
-		m_DB.GetName(parent_name.c_str()),
-		type_name, info.qualifer, index);
-
-	// Add a container info for this field if it's a constant array
-	if (info.array_count)
-	{
-		std::string full_name = parent_name + "::" + param_name;
-		cldb::ContainerInfo ci;
-		ci.name = m_DB.GetName(full_name.c_str());
-		ci.flags = cldb::ContainerInfo::IS_C_ARRAY;
-		ci.count = info.array_count;
-		m_DB.AddPrimitive(ci);
-	}
-
-	return true;
-}
-
-
 void ASTConsumer::MakeFunction(clang::NamedDecl* decl, const std::string& function_name, const std::string& parent_name, std::vector<cldb::Field>& parameters)
 {
 	// Cast to a function
@@ -730,9 +861,10 @@ void ASTConsumer::MakeFunction(clang::NamedDecl* decl, const std::string& functi
 
 	// Parse the return type - named as a reserved keyword so it won't clash with user symbols
 	cldb::Field return_parameter;
-	if (!MakeField(function_decl->getResultType(), "return", function_name, -1, return_parameter, 0))
+	Status status = MakeField(*this, function_decl->getResultType(), "return", function_name, -1, return_parameter, 0);
+	if (status.HasWarnings())
 	{
-		LOG(ast, WARNING, "Unsupported/unreflected return type for '%s' - skipping reflection\n", function_name.c_str());
+		status.Print(function_decl->getLocation(), m_ASTContext.getSourceManager(), va("Failed to reflect function '%s' due to invalid return type", function_name.c_str()));
 		return;
 	}
 
@@ -746,16 +878,17 @@ void ASTConsumer::MakeFunction(clang::NamedDecl* decl, const std::string& functi
 		llvm::StringRef param_name = param_decl->getName();
 		if (param_name.empty())
 		{
-			LOG(ast, WARNING, "Unnamed function parameters not supported - skipping reflection of '%s'\n", function_name.c_str());
+			Status().Print(function_decl->getLocation(), m_ASTContext.getSourceManager(), va("Unnamed function parameters not supported - skipping reflection of '%s'", function_name.c_str()));
 			return;
 		}
 
 		// Collect a list of constructed parameters in case evaluating one of them fails
 		cldb::Field parameter;
 		std::string param_name_str = param_name.str();
-		if (!MakeField(param_decl->getType(), param_name_str.c_str(), function_name, index++, parameter, 0))
+		status = MakeField(*this, param_decl->getType(), param_name_str.c_str(), function_name, index++, parameter, 0);
+		if (status.HasWarnings())
 		{
-			LOG(ast, WARNING, "Unsupported/unreflected parameter type for '%s' - skipping reflection of '%s'\n", param_name_str.c_str(), function_name.c_str());
+			status.Print(function_decl->getLocation(), m_ASTContext.getSourceManager(), va("Failed to reflection function '%s'", function_name.c_str()));
 			return;
 		}
 		parameters.push_back(parameter);

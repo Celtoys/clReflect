@@ -39,6 +39,7 @@ namespace clang
 	class NamedDecl;
 	class TranslationUnitDecl;
 	class QualType;
+	struct PrintingPolicy;
 }
 
 
@@ -46,8 +47,14 @@ class ASTConsumer
 {
 public:
 	ASTConsumer(clang::ASTContext& context, cldb::Database& db, const ReflectionSpecs& rspecs, const std::string& ast_log);
+	~ASTConsumer();
 
 	void WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl);
+
+	cldb::Database& GetDB() { return m_DB; }
+	clang::ASTContext& GetASTContext() { return m_ASTContext; }
+	const ReflectionSpecs& GetReflectionSpecs() { return m_ReflectionSpecs; }
+	clang::PrintingPolicy& GetPrintingPolicy() { return *m_PrintingPolicy; }
 
 private:
 	void AddDecl(clang::NamedDecl* decl, const std::string& parent_name, const clang::ASTRecordLayout* layout);
@@ -60,7 +67,6 @@ private:
 	void AddClassTemplateDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
 	void AddContainedDecls(clang::NamedDecl* decl, const std::string& parent_name, const clang::ASTRecordLayout* layout);
 
-	bool MakeField(clang::QualType qual_type, const char* param_name, const std::string& parent_name, int index, cldb::Field& field, int flags);
 	void MakeFunction(clang::NamedDecl* decl, const std::string& function_name, const std::string& parent_name, std::vector<cldb::Field>& parameters);
 
 	cldb::Database& m_DB;
@@ -68,4 +74,6 @@ private:
 	clang::ASTContext& m_ASTContext;
 
 	const ReflectionSpecs& m_ReflectionSpecs;
+
+	clang::PrintingPolicy* m_PrintingPolicy;
 };

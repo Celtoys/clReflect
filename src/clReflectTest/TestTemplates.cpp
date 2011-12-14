@@ -31,6 +31,10 @@
 struct NonReflectedStruct
 {
 };
+template <typename TYPE>
+struct NonReflectedTemplate
+{
+};
 
 
 clcpp_reflect(TestTemplates)
@@ -97,5 +101,11 @@ namespace TestTemplates
 		BasicTemplate<ParamEnum> BasicTemplateEnumParamB;
 
 		BasicTemplate<NonReflectedStruct> BasicTemplateNonReflectedStruct;
+		BasicTemplate<NonReflectedStruct&> BasicTemplateNonReflectedStructRef;
+		BasicTemplate<NonReflectedStruct[3]> BasicTemplateNonReflectedStructArray;
+
+		NonReflectedTemplate<int> NonReflectedTemplateInt;
+
+		TooManyArgsTemplate<int, int, int, int, int> TooManyArgsTemplateInt;
 	};
 }

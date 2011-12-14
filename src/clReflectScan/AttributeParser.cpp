@@ -100,7 +100,7 @@ namespace
 			return text + 1;
 		}
 
-		LOG(attr, INFO, "%s(%d) : WARNING - String not terminated correctly\n", g_Filename, g_Line);
+		LOG(warnings, INFO, "%s(%d) : warning - String not terminated correctly\n", g_Filename, g_Line);
 		return 0;
 	}
 
@@ -132,7 +132,7 @@ namespace
 				// Only one decimal place is allowed
 				if (is_float)
 				{
-					LOG(attr, INFO, "%s(%d) : WARNING - Floating point number has more than one decimal point\n", g_Filename, g_Line);
+					LOG(warnings, INFO, "%s(%d) : warning - Floating point number has more than one decimal point\n", g_Filename, g_Line);
 					return 0;
 				}
 
@@ -199,7 +199,7 @@ namespace
 
 				else
 				{
-					LOG(attr, INFO, "%s(%d) : WARNING - Invalid character in attribute\n", g_Filename, g_Line);
+					LOG(warnings, INFO, "%s(%d) : warning - Invalid character in attribute\n", g_Filename, g_Line);
 					text = 0;
 				}
 			}
@@ -283,7 +283,7 @@ namespace
 		const Token* attribute_name = ExpectNext(tokens, pos, TOKEN_SYMBOL);
 		if (attribute_name == 0)
 		{
-			LOG(attr, INFO, "%s(%d) : WARNING - Symbol expected in attribute\n", g_Filename, g_Line);
+			LOG(warnings, INFO, "%s(%d) : warning - Symbol expected in attribute\n", g_Filename, g_Line);
 			return false;
 		}
 
@@ -292,7 +292,7 @@ namespace
 		{
 			if (pos >= tokens.size())
 			{
-				LOG(attr, INFO, "%s(%d) : WARNING - Value expected at the end of the attribute\n", g_Filename, g_Line);
+				LOG(warnings, INFO, "%s(%d) : warning - Value expected at the end of the attribute\n", g_Filename, g_Line);
 				return false;
 			}
 
@@ -313,7 +313,7 @@ namespace
 				AddTextAttribute(db, attributes, attribute_name, val);
 				break;
 			default:
-				LOG(attr, INFO, "%s(%d) : WARNING - Value expected for attribute assignment\n", g_Filename, g_Line);
+				LOG(warnings, INFO, "%s(%d) : warning - Value expected for attribute assignment\n", g_Filename, g_Line);
 				return false;
 			}
 		}

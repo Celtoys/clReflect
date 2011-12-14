@@ -93,6 +93,8 @@ namespace TestAttributes
 	void EndOfAttrNoValueParseError() { }
 	clcpp_attr(error=,valid)
 	void MissingValueParserError() { }
+	clcpp_attr(blah, noreflect)
+	void NoReflectNotFirst() { }
 
 	typedef const char* NullStr;
 	struct Blah
