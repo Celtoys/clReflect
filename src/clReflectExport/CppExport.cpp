@@ -1236,6 +1236,14 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		relocator.AddPointers(schema_ptr, cppexp.db->namespaces[i].functions);
 		relocator.AddPointers(schema_ptr, cppexp.db->namespaces[i].templates);
 	}
+
+	relocator.AddPointers(schema_ptr, cppexp.db->global_namespace.namespaces);
+	relocator.AddPointers(schema_ptr, cppexp.db->global_namespace.types);
+	relocator.AddPointers(schema_ptr, cppexp.db->global_namespace.enums);
+	relocator.AddPointers(schema_ptr, cppexp.db->global_namespace.classes);
+	relocator.AddPointers(schema_ptr, cppexp.db->global_namespace.functions);
+	relocator.AddPointers(schema_ptr, cppexp.db->global_namespace.templates);
+
 	for (int i = 0; i< cppexp.db->type_primitives.size(); i++)
 	{
 		relocator.AddPointers(schema_ptr, cppexp.db->type_primitives[i]->base_types);

@@ -269,6 +269,12 @@ const clcpp::Namespace* clcpp::Database::GetNamespace(unsigned int hash) const
 }
 
 
+const clcpp::Namespace* clcpp::Database::GetGlobalnamespace() const
+{
+	return &m_DatabaseMem->global_namespace;
+}
+
+
 const clcpp::Template* clcpp::Database::GetTemplate(unsigned int hash) const
 {
 	int index = BinarySearch<Template, const Primitive&, GetPrimitiveHash>(m_DatabaseMem->templates, hash);

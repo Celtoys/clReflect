@@ -633,6 +633,9 @@ namespace clcpp
 		// Retrieve namespaces using their fully-scoped names
 		const Namespace* GetNamespace(unsigned int hash) const;
 
+		// Retrieve the global namespace, that allows you to reach every primitive
+		const Namespace* GetGlobalnamespace() const;
+
 		// Retrieve templates using their fully-scoped names
 		const Template* GetTemplate(unsigned int hash) const;
 
