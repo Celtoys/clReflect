@@ -84,7 +84,7 @@ namespace
 		static Status Warn(const std::string& message)
 		{
 			Status status;
-			status.messages.push_back(message);
+			status.messages = message;
 			return status;
 		}
 
@@ -95,27 +95,25 @@ namespace
 
 			// Add the message before concatenating with the older ones
 			Status status;
-			status.messages.push_back(message);
-			for (size_t i = 0; i < older.messages.size(); i++)
-				status.messages.push_back(older.messages[i]);
+			status.messages = message + "; " + older.messages;
 			return status;
 		}
 
 		static Status SilentFail()
 		{
 			Status status;
-			status.messages.push_back("");
+			status.messages = "SILENT FAIL";
 			return status;
 		}
 
 		bool HasWarnings() const
 		{
-			return !messages.empty();
+			return messages != "";
 		}
 
 		bool IsSilentFail() const
 		{
-			return messages.size() && messages[0] == "";
+			return messages == "SILENT FAIL";
 		}
 
 		void Print(clang::SourceLocation location, clang::SourceManager& srcmgr, const std::string& message)
@@ -130,20 +128,10 @@ namespace
 			int line = presumed_loc.getLine();
 
 			// Print immediate warning
-			LOG(warnings, INFO, "%s(%d) : warning - ", filename, line);
-			LOG_APPEND(warnings, INFO, message.c_str());
-
-			// Join with older warnings
-			for (size_t i = 0; i < messages.size(); i++)
-			{
-				LOG_APPEND(warnings, INFO, " - ");
-				LOG_APPEND(warnings, INFO, messages[i].c_str());
-			}
-
-			LOG_APPEND(warnings, INFO, "\n");
+			LOG(warnings, INFO, "%s(%d) : warning - %s; %s\n", filename, line, message.c_str(), messages.c_str());
 		}
 
-		std::vector<std::string> messages;
+		std::string messages;
 	};
 
 
