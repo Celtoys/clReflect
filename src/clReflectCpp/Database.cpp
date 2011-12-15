@@ -269,7 +269,7 @@ const clcpp::Namespace* clcpp::Database::GetNamespace(unsigned int hash) const
 }
 
 
-const clcpp::Namespace* clcpp::Database::GetGlobalnamespace() const
+const clcpp::Namespace* clcpp::Database::GetGlobalNamespace() const
 {
 	return &m_DatabaseMem->global_namespace;
 }
