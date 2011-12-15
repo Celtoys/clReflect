@@ -46,10 +46,16 @@ class ClangParser
 {
 public:
 	ClangParser(Arguments& args);
+	enum HeaderType
+	{
+		HeaderType_User,
+		HeaderType_System,
+		HeaderType_ExternC
+	};
 
 	bool ParseAST(const char* filename);
 
-	void GetIncludedFiles(std::vector<std::string>& files, bool includeSystemHeaders=true) const;
+	void GetIncludedFiles(std::vector<std::pair<HeaderType,std::string>>& files) const;
 
 	clang::ASTContext& GetASTContext() { return m_CompilerInstance.getASTContext(); }
 

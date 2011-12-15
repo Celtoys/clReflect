@@ -60,33 +60,20 @@ namespace
 		return str.rfind(end) == str.length() - end.length();
 	}
 
-	void PrintIncludedHeaders(const ClangParser& ast_parser, const char* input_filename)
+	void WriteIncludedHeaders(const ClangParser& ast_parser, const char* outputfile, const char* input_filename)
 	{
-		std::vector<std::string> header_files;
+		std::vector< std::pair<ClangParser::HeaderType, std::string> > header_files;
 		ast_parser.GetIncludedFiles(header_files);
-
-		// Print to output, noting that the source file will also be in the list
-		for (size_t i = 0; i < header_files.size(); i++)
-		{
-			if (header_files[i] != input_filename)
-			{
-				LOG(main, INFO, "Included: %s\n", header_files[i].c_str());
-			}
-		}
-	}
-
-	void WriteIncludedHeaders(const ClangParser& ast_parser, const char* outputfile, const char* input_filename, bool includeSystemHeaders)
-	{
-		std::vector<std::string> header_files;
-		ast_parser.GetIncludedFiles(header_files, includeSystemHeaders);
 
 		FILE* fp = fopen(outputfile, "wt");
 		// Print to output, noting that the source file will also be in the list
 		for (size_t i = 0; i < header_files.size(); i++)
 		{
-			if (header_files[i] != input_filename)
+			if (header_files[i].second != input_filename)
 			{
-				fprintf(fp, header_files[i].c_str());
+				fprintf(fp, "%c %s",
+					(header_files[i].first==ClangParser::HeaderType_User) ? 'u' : ( (header_files[i].first==ClangParser::HeaderType_System) ? 's' : 'e'),
+					header_files[i].second.c_str());
 				fprintf(fp, "\n");
 			}
 		}
@@ -183,13 +170,10 @@ int main(int argc, const char* argv[])
 		db.AddContainerInfo(i->first, c.read_iterator_type, c.write_iterator_type, c.has_key);
 	}
 
-	// Gather included header files if requested
-	if (args.Have("-output_headers"))
-		PrintIncludedHeaders(parser, input_filename);
-
-	std::string output_user_headers = args.GetProperty("-output_user_headers");
+	// Write included header files if requested
+	std::string output_user_headers = args.GetProperty("-output_headers");
 	if (output_user_headers!="")
-		WriteIncludedHeaders(parser, output_user_headers.c_str(), input_filename, false);
+		WriteIncludedHeaders(parser, output_user_headers.c_str(), input_filename);
 
 	// Write to a text/binary database depending upon extension
 	std::string output = args.GetProperty("-output");
