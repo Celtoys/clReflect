@@ -171,9 +171,9 @@ int main(int argc, const char* argv[])
 	}
 
 	// Write included header files if requested
-	std::string output_user_headers = args.GetProperty("-output_headers");
-	if (output_user_headers!="")
-		WriteIncludedHeaders(parser, output_user_headers.c_str(), input_filename);
+	std::string output_headers = args.GetProperty("-output_headers");
+	if (output_headers!="")
+		WriteIncludedHeaders(parser, output_headers.c_str(), input_filename);
 
 	// Write to a text/binary database depending upon extension
 	std::string output = args.GetProperty("-output");

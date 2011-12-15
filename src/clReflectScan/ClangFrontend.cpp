@@ -148,7 +148,7 @@ bool ClangParser::ParseAST(const char* filename)
 
 
 
-void ClangParser::GetIncludedFiles(std::vector<std::pair<HeaderType,std::string>>& files) const
+void ClangParser::GetIncludedFiles(std::vector< std::pair<HeaderType,std::string> >& files) const
 {
 	// First need a mapping from unique file ID to the File Entry
 	llvm::SmallVector<const clang::FileEntry*, 0> uid_to_files;
