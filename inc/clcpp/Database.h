@@ -70,6 +70,7 @@ namespace clcpp
 	struct Name
 	{
 		Name() : hash(0), text(0) { }
+		bool operator == (const Name& rhs) const { return hash == rhs.hash; }
 		unsigned int hash;
 		const char* text;
 	};

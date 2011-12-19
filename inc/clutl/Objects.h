@@ -47,6 +47,9 @@ namespace clutl
 		//
 		virtual ~Object() { }
 
+		// Shortcut for calling DestroyObject on this object in its owning database
+		void Delete();
+
 		// Object database that owns this object
 		ObjectDatabase* object_db;
 
@@ -118,7 +121,7 @@ namespace clutl
 		ObjectIterator(const ObjectDatabase& object_db);
 
 		// Get the current object or object name under iteration
-		void* GetObject() const;
+		Object* GetObject() const;
 		clcpp::Name GetObjectName() const;
 
 		// Move onto the next object in the database

@@ -1373,7 +1373,7 @@ namespace
 			out.Write("\"@", 2);
 			const char* end = named_object->name.text;
 			while (*end++) ;
-			out.Write(named_object->name.text, end - named_object->name.text);
+			out.Write(named_object->name.text, end - named_object->name.text - 1);
 			out.Write("\":", 2);
 			SaveString(out, class_type->name.text);
 			
@@ -1534,7 +1534,7 @@ void clutl::SaveJSON(WriteBuffer& out, const ObjectDatabase& object_db, unsigned
 	// Save each object in the database
 	for (ObjectIterator i(object_db); i.IsValid(); i.MoveNext())
 	{
-		const clutl::Object* object = (clutl::Object*)i.GetObject();
+		const clutl::Object* object = i.GetObject();
 		SaveJSON(out, object, object->type, flags | JSONFlags::EMIT_CREATE_OBJECT);
 	}
 }

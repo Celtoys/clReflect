@@ -30,6 +30,13 @@ namespace
 }
 
 
+void clutl::Object::Delete()
+{
+	if (object_db)
+		object_db->DestroyObject(this);
+}
+
+
 clutl::ObjectDatabase::ObjectDatabase(const clcpp::Database* reflection_db, unsigned int max_nb_objects)
 	: m_ReflectionDB(reflection_db)
 	, m_MaxNbObjects(0)
@@ -117,6 +124,8 @@ void clutl::ObjectDatabase::DestroyObject(Object* object)
 	if (object->name.hash != 0)
 	{
 		// Locate the hash table entry and check that the object pointers match
+		// TODO: Doesn't really work if insertion of an object required a probe and the objects before it
+		// have been deleted.
 		unsigned int name_hash = object->name.hash;
 		HashEntry* he = const_cast<HashEntry*>(FindHashEntry(name_hash % m_MaxNbObjects, name_hash));
 		clcpp::internal::Assert(he != 0);
@@ -180,7 +189,7 @@ clutl::ObjectIterator::ObjectIterator(const ObjectDatabase& object_db)
 }
 
 
-void* clutl::ObjectIterator::GetObject() const
+clutl::Object* clutl::ObjectIterator::GetObject() const
 {
 	clcpp::internal::Assert(IsValid());
 	return m_ObjectDB.m_NamedObjects[m_Position].object;
