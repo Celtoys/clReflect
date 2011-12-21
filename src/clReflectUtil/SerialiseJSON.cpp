@@ -77,12 +77,10 @@ namespace
 	class Context
 	{
 	public:
-		Context(clutl::ReadBuffer& read_buffer, clutl::ObjectDatabase* object_db, clutl::ObjectList* created_objects)
+		Context(clutl::ReadBuffer& read_buffer)
 			: m_ReadBuffer(read_buffer)
 			, m_Line(1)
 			, m_LinePosition(0)
-			, m_ObjectDB(object_db)
-			, m_CreatedObjects(created_objects)
 		{
 		}
 
@@ -152,28 +150,12 @@ namespace
 			return m_Error;
 		}
 
-		clutl::Object* CreateNamedObject(unsigned int type_hash, const char* object_name)
-		{
-			if (m_ObjectDB == 0)
-				return 0;
-
-			// Create the object and track its pointer
-			clutl::Object* object = m_ObjectDB->CreateObject(type_hash, object_name);
-			if (m_CreatedObjects != 0)
-				m_CreatedObjects->AddObject(object);
-
-			return object;
-		}
-
 	private:
 		// Parsing state
 		clutl::ReadBuffer& m_ReadBuffer;
 		clutl::JSONError m_Error;
 		unsigned int m_Line;
 		unsigned int m_LinePosition;
-
-		clutl::ObjectDatabase* m_ObjectDB;
-		clutl::ObjectList* m_CreatedObjects;
 	};
 
 
@@ -802,8 +784,11 @@ namespace
 		case (clutl::JSON_TOKEN_LBRACE):
 			{
 				if (type)
-					return ParserObject(ctx, t, object, type);
-				return ParserObject(ctx, t, 0, 0);
+					ParserObject(ctx, t, object, type);
+				else
+					ParserObject(ctx, t, 0, 0);
+
+				Expect(ctx, t, clutl::JSON_TOKEN_RBRACE);
 			}
 		case (clutl::JSON_TOKEN_LBRACKET): return ParserArray(ctx, t, object, type, field);
 		case (clutl::JSON_TOKEN_TRUE): return ParserLiteralValue(ctx, Expect(ctx, t, clutl::JSON_TOKEN_TRUE), 1, object, type, op);
@@ -814,14 +799,6 @@ namespace
 			ctx.SetError(clutl::JSONError::UNEXPECTED_TOKEN);
 			break;
 		}
-	}
-
-
-	void MakeString(char* dest, int dest_len, const char* src, int src_len)
-	{
-		while (dest_len-- && src_len--)
-			*dest++ = *src++;
-		*dest = 0;
 	}
 
 
@@ -854,39 +831,6 @@ namespace
 		if (!name.IsValid())
 			return;
 
-		// Is this an object creation request?
-		if (name.val.string[0] == '@' && object == 0)
-		{
-			// Copy the object name locally
-			char object_name[256];
-			MakeString(object_name, sizeof(object_name), name.val.string + 1, name.length - 1);
-
-			// Parse as a regular pair
-			if (!Expect(ctx, t, clutl::JSON_TOKEN_COLON).IsValid())
-				return;
-			if (t.type != clutl::JSON_TOKEN_STRING)
-			{
-				t = clutl::JSONToken();
-				ctx.SetError(clutl::JSONError::UNEXPECTED_TOKEN);
-				return;
-			}
-
-			// Create the requested object
-			unsigned int type_hash = clcpp::internal::HashData(t.val.string, t.length);
-			clutl::Object* named_object = ctx.CreateNamedObject(type_hash, object_name);
-			if (named_object == 0)
-			{
-				t = clutl::JSONToken();
-				return;
-			}
-
-			// Prepare for all subsequent members
-			object = (char*)named_object;
-			type = named_object->type;
-			t = LexerToken(ctx);
-			return;
-		}
-
 		// Lookup the field in the parent class, if the type is class
 		// We want to continue parsing even if there's a mismatch, to skip the invalid data
 		const clcpp::Field* field = 0;
@@ -911,6 +855,7 @@ namespace
 		else
 			t = LexerToken(ctx);
 	}
+
 
 	void ParserMembers(Context& ctx, clutl::JSONToken& t, char* object, const clcpp::Type* type)
 	{
@@ -938,7 +883,6 @@ namespace
 		}
 
 		ParserMembers(ctx, t, object, type);
-		Expect(ctx, t, clutl::JSON_TOKEN_RBRACE);
 	}
 }
 
@@ -946,22 +890,9 @@ namespace
 clutl::JSONError clutl::LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type)
 {
 	SetupTypeDispatchLUT();
-	Context ctx(in, 0, 0);
+	Context ctx(in);
 	clutl::JSONToken t = LexerToken(ctx);
 	ParserObject(ctx, t, (char*)object, type);
-	return ctx.GetError();
-}
-
-
-clutl::JSONError clutl::LoadJSON(ReadBuffer& in, ObjectDatabase* object_db, ObjectList& loaded_objects)
-{
-	SetupTypeDispatchLUT();
-	Context ctx(in, object_db, &loaded_objects);
-
-	clutl::JSONToken t = LexerToken(ctx);
-	while (ctx.Remaining() && ctx.GetError().code == JSONError::NONE)
-		ParserObject(ctx, t, 0, 0);
-
 	return ctx.GetError();
 }
 
@@ -1365,23 +1296,6 @@ namespace
 
 	void SaveClassFields(clutl::WriteBuffer& out, const char* object, const clcpp::Class* class_type, unsigned int& flags, bool& field_written)
 	{
-		// Emit any create object requests
-		if (flags & clutl::JSONFlags::EMIT_CREATE_OBJECT && 
-			class_type->DerivesFrom(clcpp::GetTypeNameHash<clutl::Object>()))
-		{
-			clutl::Object* named_object = (clutl::Object*)object;
-			out.Write("\"@", 2);
-			const char* end = named_object->name.text;
-			while (*end++) ;
-			out.Write(named_object->name.text, end - named_object->name.text - 1);
-			out.Write("\":", 2);
-			SaveString(out, class_type->name.text);
-			
-			// Prepare for the rest of the object
-			field_written = true;
-			flags &= ~clutl::JSONFlags::EMIT_CREATE_OBJECT;
-		}
-
 		// Save each field in the class
 		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
 		int nb_fields = fields.size();
@@ -1526,17 +1440,6 @@ void clutl::SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* ty
 {
 	SetupTypeDispatchLUT();
 	SaveObject(out, (char*)object, type, flags);
-}
-
-
-void clutl::SaveJSON(WriteBuffer& out, const ObjectDatabase& object_db, unsigned int flags)
-{
-	// Save each object in the database
-	for (ObjectIterator i(object_db); i.IsValid(); i.MoveNext())
-	{
-		const clutl::Object* object = i.GetObject();
-		SaveJSON(out, object, object->type, flags | JSONFlags::EMIT_CREATE_OBJECT);
-	}
 }
 
 

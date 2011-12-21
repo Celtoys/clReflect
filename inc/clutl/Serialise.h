@@ -38,7 +38,6 @@ clcpp_reflect_part(clutl::JSONToken)
 
 namespace clutl
 {
-	class ObjectDatabase;
 	struct Object;
 
 
@@ -101,27 +100,6 @@ namespace clutl
 	};
 
 
-	//
-	// A list of objects created during a serialisation operation that require pointer patching.
-	// Combine with FieldVisitor to walk the pointer fields of an object and replace the hash
-	// value with the actual pointer.
-	//
-	class ObjectList
-	{
-	public:
-		void AddObject(Object* object);
-
-		Object** GetObjects(int& nb_objects)
-		{
-			nb_objects = m_Data.GetBytesWritten() / sizeof(Object*);
-			return (Object**)m_Data.GetData();
-		}
-
-	private:
-		WriteBuffer m_Data;
-	};
-
-
 	// Binary serialisation
 	void SaveVersionedBinary(WriteBuffer& out, const void* object, const clcpp::Type* type);
 	void LoadVersionedBinary(ReadBuffer& in, void* object, const clcpp::Type* type);
@@ -167,8 +145,7 @@ namespace clutl
 		{
 			INDENT_MASK = 0x0F,
 			FORMAT_OUTPUT = 0x10,
-			EMIT_HEX_FLOATS = 0x20,
-			EMIT_CREATE_OBJECT = 0x40
+			EMIT_HEX_FLOATS = 0x20
 		};
 	};
 
@@ -234,14 +211,6 @@ namespace clutl
 	// Cannot load nullstr fields
 	JSONError LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type);
 
-	// Creates and loads sequence of objects encountered in a JSON stream. Any pointers in the returned
-	// objects will store the hash of the name of the object pointed to which must be patched up by the
-	// caller using whatever object databases they have at their disposal.
-	JSONError LoadJSON(ReadBuffer& in, ObjectDatabase* object_db, ObjectList& loaded_objects);
-
 	// Can save nullstr fields
 	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags = 0);
-
-	// Saves the entire object database
-	void SaveJSON(WriteBuffer& out, const ObjectDatabase& object_db, unsigned int flags = 0);
 }

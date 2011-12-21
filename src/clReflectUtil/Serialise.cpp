@@ -144,10 +144,3 @@ void clutl::ReadBuffer::SeekRel(int offset)
 	clcpp::internal::Assert(m_DataRead + offset <= m_DataEnd && "Seek overflow");
 	m_DataRead += offset;
 }
-
-
-void clutl::ObjectList::AddObject(Object* object)
-{
-	Object** dest = (Object**)m_Data.Alloc(sizeof(Object*));
-	*dest = object;
-}
