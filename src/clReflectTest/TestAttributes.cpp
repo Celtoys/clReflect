@@ -95,12 +95,6 @@ namespace TestAttributes
 	void MissingValueParserError() { }
 	clcpp_attr(blah, noreflect)
 	void NoReflectNotFirst() { }
-
-	typedef const char* NullStr;
-	struct Blah
-	{
-		const char* x;
-	};
 }
 
 void TestAttributesFunc(clcpp::Database& db)
@@ -120,6 +114,4 @@ void TestAttributesFunc(clcpp::Database& db)
 	const clcpp::Function* l = FindPrimitive(j->functions, db.GetName("TestAttributes::AttrTypes").hash);
 
 	const clcpp::Function* common = FindPrimitive(j->functions, db.GetName("TestAttributes::CommonFlagAttributes").hash);
-
-	const clcpp::Type* t = clcpp::GetType<TestAttributes::NullStr>();
 }

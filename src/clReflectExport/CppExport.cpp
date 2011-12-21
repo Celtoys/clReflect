@@ -749,7 +749,6 @@ namespace
 	{
 		// Cache attribute names
 		static unsigned int transient_hash = clcpp::internal::HashNameString("transient");
-		static unsigned int nullstr_hash = clcpp::internal::HashNameString("nullstr");
 
 		// Merge all detected common flags
 		unsigned int bits = 0;
@@ -758,8 +757,6 @@ namespace
 			const clcpp::Attribute& attribute = *attributes[i];
 			if (attribute.name.hash == transient_hash)
 				bits |= clcpp::FlagAttribute::TRANSIENT;
-			else if (attribute.name.hash == nullstr_hash)
-				bits |= clcpp::FlagAttribute::NULLSTR;
 			else if (startswith(attribute.name.text, "load_"))
 				bits |= clcpp::FlagAttribute::CUSTOM_LOAD;
 			else if (startswith(attribute.name.text, "save"))

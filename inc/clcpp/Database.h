@@ -230,13 +230,10 @@ namespace clcpp
 			// "transient" - These primitives are ignored during serialisation
 			TRANSIENT		= 0x01,
 
-			// "nullstr" - The primitive is a null terminated char* pointer representing a string
-			NULLSTR			= 0x02,
-
 			// If an attribute starts with "load_" or "save_" then these flags are set to indicate there
 			// are custom loading functions assigned
-			CUSTOM_LOAD		= 0x04,
-			CUSTOM_SAVE		= 0x08,
+			CUSTOM_LOAD		= 0x02,
+			CUSTOM_SAVE		= 0x04,
 		};
 	};
 	struct IntAttribute : public Attribute

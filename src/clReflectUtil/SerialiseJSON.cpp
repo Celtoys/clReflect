@@ -841,8 +841,8 @@ namespace
 
 			field = FindFieldsRecursive(class_type, field_hash);
 
-			// Don't load values for transient/nullstr fields
-			if (field && (field->flag_attributes & (clcpp::FlagAttribute::TRANSIENT | clcpp::FlagAttribute::NULLSTR)))
+			// Don't load values for transient fields
+			if (field && (field->flag_attributes & clcpp::FlagAttribute::TRANSIENT))
 				field = 0;
 		}
 
@@ -1321,9 +1321,7 @@ namespace
 			// Dispatch to save function that can handle the field type
 			bool success = true;
 			const char* field_object = object + field->offset;
-			if (field->flag_attributes & clcpp::FlagAttribute::NULLSTR)
-				SaveString(out, *(char**)field_object);
-			else if (field->ci != 0)
+			if (field->ci != 0)
 				SaveFieldArray(out, field_object, field, flags);
 			else if (field->qualifier.op == clcpp::Qualifier::POINTER)
 				success = SavePtr(out, field_object, field->type, out.GetBytesWritten() - field_start_pos);

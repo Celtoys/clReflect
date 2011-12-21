@@ -208,9 +208,7 @@ namespace clutl
 	};
 
 
-	// Cannot load nullstr fields
+	// JSON serialisation
 	JSONError LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type);
-
-	// Can save nullstr fields
 	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags = 0);
 }
