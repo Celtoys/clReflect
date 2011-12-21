@@ -158,7 +158,7 @@ namespace
 				return 0;
 
 			// Create the object and track its pointer
-			clutl::Object* object = m_ObjectDB->CreateNamedObject(type_hash, object_name);
+			clutl::Object* object = m_ObjectDB->CreateObject(type_hash, object_name);
 			if (m_CreatedObjects != 0)
 				m_CreatedObjects->AddObject(object);
 

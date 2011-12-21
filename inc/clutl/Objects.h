@@ -50,16 +50,18 @@ namespace clutl
 		// Shortcut for calling DestroyObject on this object in its owning database
 		void Delete();
 
-		// Object database that owns this object
-		ObjectDatabase* object_db;
-
 		// Type of the object
 		const clcpp::Type* type;
 
 		// Name of the object
 		// Set this to a unique name if you wish to have a serialisable pointer to it
 		// TODO: Is it wise to use the same name type as the reflection stuff?
+		// TODO: When you delete an object, its name text pointer is invalidated.
+		//       Anybody who holds a Name by value will no longer have a valid text pointer.
 		clcpp::Name name;
+
+		// Object database that owns this object
+		ObjectDatabase* object_db;
 	};
 
 
@@ -70,36 +72,41 @@ namespace clutl
 		~ObjectDatabase();
 
 		// Template helpers for acquring the required typename and correctly casting during creation
-		template <typename TYPE> TYPE* CreateAnonObject()
+		template <typename TYPE> TYPE* CreateObject()
 		{
-			return static_cast<TYPE*>(CreateAnonObject(clcpp::GetTypeNameHash<TYPE>()));
+			return static_cast<TYPE*>(CreateObject(clcpp::GetTypeNameHash<TYPE>()));
 		}
-		template <typename TYPE> TYPE* CreateNamedObject(const char* name_text)
+		template <typename TYPE> TYPE* CreateObject(const char* name_text)
 		{
-			return static_cast<TYPE*>(CreateNamedObject(clcpp::GetTypeNameHash<TYPE>(), name_text));
+			return static_cast<TYPE*>(CreateObject(clcpp::GetTypeNameHash<TYPE>(), name_text));
 		}
 
 		// Create an anonymous object which doesn't get tracked by the database
-		Object* CreateAnonObject(unsigned int type_hash);
+		Object* CreateObject(unsigned int type_hash);
 
 		// Create a named object that is internally tracked by name and can be found at a later point
-		Object* CreateNamedObject(unsigned int type_hash, const char* name_text);
+		Object* CreateObject(unsigned int type_hash, const char* name_text);
 
 		// Destroy either a named or anonymous object
 		void DestroyObject(Object* object);
 
 		// Find a created object by name
-		Object* FindNamedObject(unsigned int name_hash) const;
+		Object* FindObject(unsigned int name_hash) const;
+
+		unsigned int GetMaxNbObjects() const { return m_MaxNbObjects; }
 
 	private:
 		struct HashEntry
 		{
-			HashEntry() : object(0) { }
-			clcpp::Name name;
+			HashEntry() : hash(0), object(0), next(0) { }
+			unsigned int hash;
 			Object* object;
+			HashEntry* next;
 		};
 
-		const HashEntry* FindHashEntry(unsigned int hash_index, unsigned int hash) const;
+		void AddHashEntry(Object* object);
+		void RemoveHashEntry(Object* object);
+		HashEntry* FindHashEntry(unsigned int hash_index, unsigned int hash);
 
 		const clcpp::Database* m_ReflectionDB;
 
@@ -120,9 +127,8 @@ namespace clutl
 	public:
 		ObjectIterator(const ObjectDatabase& object_db);
 
-		// Get the current object or object name under iteration
+		// Get the current object under iteration
 		Object* GetObject() const;
-		clcpp::Name GetObjectName() const;
 
 		// Move onto the next object in the database
 		void MoveNext();

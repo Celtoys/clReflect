@@ -70,7 +70,7 @@ clutl::ObjectDatabase::~ObjectDatabase()
 }
 
 
-clutl::Object* clutl::ObjectDatabase::CreateAnonObject(unsigned int type_hash)
+clutl::Object* clutl::ObjectDatabase::CreateObject(unsigned int type_hash)
 {
 	// Can the type be located?
 	const clcpp::Type* type = m_ReflectionDB->GetType(type_hash);
@@ -95,10 +95,10 @@ clutl::Object* clutl::ObjectDatabase::CreateAnonObject(unsigned int type_hash)
 }
 
 
-clutl::Object* clutl::ObjectDatabase::CreateNamedObject(unsigned int type_hash, const char* name_text)
+clutl::Object* clutl::ObjectDatabase::CreateObject(unsigned int type_hash, const char* name_text)
 {
 	// Create the object
-	Object* object = CreateAnonObject(type_hash);
+	Object* object = CreateObject(type_hash);
 	if (object == 0)
 		return 0;
 
@@ -106,14 +106,10 @@ clutl::Object* clutl::ObjectDatabase::CreateNamedObject(unsigned int type_hash, 
 	int name_length = strlen(name_text);
 	object->name.text = new char[name_length + 1];
 	memcpy((void*)object->name.text, name_text, name_length + 1);
-	object->name.hash = clcpp::internal::HashData(object->name.text, name_length);
 
-	// Find the first empty slot in the hash table
-	// TODO: Grow based on load-factor?
-	HashEntry* he = const_cast<HashEntry*>(FindHashEntry(object->name.hash % m_MaxNbObjects, 0));
-	clcpp::internal::Assert(he != 0);
-	he->name = object->name;
-	he->object = object;
+	// Add to the hash table
+	object->name.hash = clcpp::internal::HashData(object->name.text, name_length);
+	AddHashEntry(object);
 
 	return object;
 }
@@ -121,22 +117,14 @@ clutl::Object* clutl::ObjectDatabase::CreateNamedObject(unsigned int type_hash, 
 
 void clutl::ObjectDatabase::DestroyObject(Object* object)
 {
+	// Remove from the hash table if it's named
 	if (object->name.hash != 0)
 	{
-		// Locate the hash table entry and check that the object pointers match
-		// TODO: Doesn't really work if insertion of an object required a probe and the objects before it
-		// have been deleted.
-		unsigned int name_hash = object->name.hash;
-		HashEntry* he = const_cast<HashEntry*>(FindHashEntry(name_hash % m_MaxNbObjects, name_hash));
-		clcpp::internal::Assert(he != 0);
-		clcpp::internal::Assert(he->object == object);
+		RemoveHashEntry(object);
 
-		// Clear out this slot in the hash table
-		he->name.hash = 0;
-		if (he->name.text != 0)
-			delete [] he->name.text;
-		he->name.text = 0;
-		he->object = 0;
+		// Release the name
+		clcpp::internal::Assert(object->name.text != 0);
+		delete [] object->name.text;
 	}
 
 	// These represent fatal code errors
@@ -151,28 +139,95 @@ void clutl::ObjectDatabase::DestroyObject(Object* object)
 }
 
 
-clutl::Object* clutl::ObjectDatabase::FindNamedObject(unsigned int name_hash) const
+clutl::Object* clutl::ObjectDatabase::FindObject(unsigned int name_hash) const
 {
-	const HashEntry* he = FindHashEntry(name_hash % m_MaxNbObjects, name_hash);
+	// Locate first entry and search the collision chain for a matching hash
+	const HashEntry* he = m_NamedObjects + name_hash % m_MaxNbObjects;
+	while (he && he->hash != name_hash)
+		he = he->next;
+
+	// Return the object upon match
 	if (he)
 		return he->object;
+
 	return 0;
 }
 
 
-const clutl::ObjectDatabase::HashEntry* clutl::ObjectDatabase::FindHashEntry(unsigned int hash_index, unsigned int hash) const
+void clutl::ObjectDatabase::AddHashEntry(Object* object)
 {
-	// Linear probe for an empty slot (search upper half/lower half to save a divide)
+	// Check the natural hash location
+	HashEntry* he = m_NamedObjects + object->name.hash % m_MaxNbObjects;
+	if (he->hash)
+	{
+		// Seek to the end of the collision chain
+		while (he->next)
+			he = he->next;
+
+		// Run a linear probe on entries after the last in the chain to find a free slot
+		HashEntry* free_entry = FindHashEntry(he - m_NamedObjects, 0);
+		clcpp::internal::Assert(free_entry != 0);							// TODO: Grow based on load-factor?
+		he->next = free_entry;
+		he = free_entry;
+	}
+
+	// Add to the table
+	he->hash = object->name.hash;
+	he->object = object;
+	he->next = 0;
+}
+
+
+void clutl::ObjectDatabase::RemoveHashEntry(Object* object)
+{
+	// Get the natural hash location
+	unsigned int name_hash = object->name.hash;
+	HashEntry* he = m_NamedObjects + name_hash % m_MaxNbObjects;
+
+	// Search the collision chain
+	HashEntry* prev_entry = 0;
+	while (he && he->hash != name_hash)
+	{
+		prev_entry = he;
+		he = he->next;
+	}
+
+	clcpp::internal::Assert(he != 0);
+	clcpp::internal::Assert(he->object == object);
+
+	// Pull all collision hash entries one slot closer
+	while (HashEntry* next_entry = he->next)
+	{
+		he->hash = next_entry->hash;
+		he->object = next_entry->object;
+		prev_entry = he;
+		he = next_entry;
+	}
+
+	// Ensure the last entry in the collision chain has no next pointer
+	if (prev_entry)
+		prev_entry->next = 0;
+
+	// Clear out this slot in the hash table
+	he->hash = 0;
+	he->object = 0;
+	he->next = 0;
+}
+
+
+clutl::ObjectDatabase::HashEntry* clutl::ObjectDatabase::FindHashEntry(unsigned int hash_index, unsigned int hash)
+{
+	// Linear probe for an empty slot (search upper half/lower half to save a modulo)
 	for (unsigned int i = hash_index; i < m_MaxNbObjects; i++)
 	{
 		HashEntry& he = m_NamedObjects[i];
-		if (he.name.hash == hash)
+		if (he.hash == hash)
 			return &he;
 	}
 	for (unsigned int i = 0; i < hash_index; i++)
 	{
 		HashEntry& he = m_NamedObjects[i];
-		if (he.name.hash == hash)
+		if (he.hash == hash)
 			return &he;
 	}
 
@@ -196,13 +251,6 @@ clutl::Object* clutl::ObjectIterator::GetObject() const
 }
 
 
-clcpp::Name clutl::ObjectIterator::GetObjectName() const
-{
-	clcpp::internal::Assert(IsValid());
-	return m_ObjectDB.m_NamedObjects[m_Position].name;
-}
-
-
 void clutl::ObjectIterator::MoveNext()
 {
 	m_Position++;
@@ -220,6 +268,60 @@ void clutl::ObjectIterator::ScanForEntry()
 {
 	// Search for the next non-empty slot
 	while (m_Position < m_ObjectDB.m_MaxNbObjects &&
-		m_ObjectDB.m_NamedObjects[m_Position].name.hash == 0)
+		m_ObjectDB.m_NamedObjects[m_Position].hash == 0)
 		m_Position++;
 }
+
+
+/*void Add(clutl::ObjectDatabase& db, clutl::Object& object, unsigned int hash, unsigned int shifted)
+{
+	object.name.hash = db.GetMaxNbObjects() * shifted + hash;
+	db.AddHashEntry(&object);
+}
+
+
+void TestObjectDatabaseHashing(const clcpp::Database* reflection_db)
+{
+	using namespace clcpp;
+	using namespace clutl;
+
+	ObjectDatabase db(reflection_db, 10);
+
+	Object a, b, c, d, e, f, g, h;
+
+	// Insert all objects such that they are linearly located in the hash array
+	Add(db, a, 1, 0);
+	Add(db, b, 1, 1);
+	Add(db, c, 1, 2);
+	Add(db, d, 4, 0);
+	Add(db, e, 4, 1);
+	Add(db, f, 4, 2);
+	Add(db, g, 4, 3);
+	Add(db, h, 1, 4);
+
+	// Remove the central '1' object
+	db.RemoveHashEntry(&b);
+
+	// Remove the central '4' objects
+	db.RemoveHashEntry(&e);
+	db.RemoveHashEntry(&f);
+
+	// Remove front and back entries
+	db.RemoveHashEntry(&a);
+	db.RemoveHashEntry(&g);
+
+	// Add back some entries
+	db.AddHashEntry(&b);
+	db.AddHashEntry(&a);
+	db.AddHashEntry(&f);
+
+	// Remove '1' entries in reverse order
+	db.RemoveHashEntry(&h);
+	db.RemoveHashEntry(&c);
+	db.RemoveHashEntry(&b);
+	db.RemoveHashEntry(&a);
+
+	// Remove '4' entries
+	db.RemoveHashEntry(&f);
+	db.RemoveHashEntry(&d);
+}*/
