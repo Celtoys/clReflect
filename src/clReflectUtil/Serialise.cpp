@@ -108,6 +108,23 @@ void clutl::WriteBuffer::Write(const void* data, unsigned int length)
 }
 
 
+void clutl::WriteBuffer::WriteStr(const char* str)
+{
+	// Calculate string length before writing the data
+	const char* end = str;
+	while (*end)
+		end++;
+	Write(str, end - str);
+}
+
+
+void clutl::WriteBuffer::WriteChar(char c)
+{
+	char* data_write = (char*)Alloc(1);
+	*data_write = c;
+}
+
+
 void clutl::WriteBuffer::SeekRel(int offset)
 {
 	clcpp::internal::Assert(m_DataWrite + offset <= m_DataEnd && "Seek overflow");

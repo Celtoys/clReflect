@@ -61,6 +61,10 @@ namespace clutl
 		// Copy data into the write buffer
 		// Grows the capacity on demand
 		void Write(const void* data, unsigned int length);
+		
+		// Utilities built upon Alloc/Write
+		void WriteStr(const char* str);
+		void WriteChar(char c);
 
 		void SeekRel(int offset);
 

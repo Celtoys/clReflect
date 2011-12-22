@@ -48,7 +48,7 @@ namespace clutl
 		virtual ~Object() { }
 
 		// Shortcut for calling DestroyObject on this object in its owning database
-		void Delete();
+		void Delete() const;
 
 		// Type of the object
 		const clcpp::Type* type;
@@ -88,7 +88,7 @@ namespace clutl
 		Object* CreateObject(unsigned int type_hash, const char* name_text);
 
 		// Destroy either a named or anonymous object
-		void DestroyObject(Object* object);
+		void DestroyObject(const Object* object);
 
 		// Find a created object by name
 		Object* FindObject(unsigned int name_hash) const;
@@ -105,7 +105,7 @@ namespace clutl
 		};
 
 		void AddHashEntry(Object* object);
-		void RemoveHashEntry(Object* object);
+		void RemoveHashEntry(const Object* object);
 		HashEntry* FindHashEntry(unsigned int hash_index, unsigned int hash);
 
 		const clcpp::Database* m_ReflectionDB;

@@ -76,10 +76,10 @@ public:
 	{
 	}
 
-	void Initialise(const clcpp::Primitive* primitive, void* container_object, clcpp::WriteIterator& storage)
+	void Initialise(const clcpp::Primitive* primitive, void* container_object, clcpp::WriteIterator& storage, int count)
 	{
 		clcpp::internal::Assert(primitive != 0);
-		clcpp:: internal::Assert(container_object != 0);
+		clcpp::internal::Assert(container_object != 0);
 
 		// Ensure this is a field
 		clcpp::internal::Assert(primitive->kind == clcpp::Primitive::KIND_FIELD);
@@ -97,7 +97,7 @@ public:
 
 		// Prepare for iteration
 		m_Position = 0;
-		storage.m_Count = field->ci->count;
+		storage.m_Count = count;
 		m_Size = storage.m_Count * m_ElementSize;
 	}
 
@@ -169,7 +169,26 @@ clcpp::ReadIterator::~ReadIterator()
 }
 
 
-clcpp::WriteIterator::WriteIterator(const TemplateType* type, void* container_object)
+clcpp::WriteIterator::WriteIterator()
+	: m_Initialised(false)
+{
+}
+
+
+clcpp::WriteIterator::~WriteIterator()
+{
+	if (m_Initialised)
+	{
+		// Destruct the write iterator
+		if (m_IteratorImplType != 0)
+			CallFunction(m_IteratorImplType->destructor, (IWriteIterator*)m_ImplData);
+		else
+			clcpp::internal::CallDestructor((ArrayWriteIterator*)m_ImplData);
+	}
+}
+
+
+void clcpp::WriteIterator::Initialise(const TemplateType* type, void* container_object, int count)
 {
 	// Can't make a write iterator if there's no container interface
 	if (type->ci == 0)
@@ -185,11 +204,12 @@ clcpp::WriteIterator::WriteIterator(const TemplateType* type, void* container_ob
 	CallFunction(m_IteratorImplType->constructor, (IWriteIterator*)m_ImplData);
 
 	// Complete implementation-specific initialisation
-	((IWriteIterator*)m_ImplData)->Initialise(type, container_object, *this);
+	((IWriteIterator*)m_ImplData)->Initialise(type, container_object, *this, count);
+	m_Initialised = true;
 }
 
 
-clcpp::WriteIterator::WriteIterator(const Field* field, void* container_object)
+void clcpp::WriteIterator::Initialise(const Field* field, void* container_object)
 {
 	// Can't make a write iterator if there's no container interface
 	if (field->ci == 0)
@@ -199,15 +219,13 @@ clcpp::WriteIterator::WriteIterator(const Field* field, void* container_object)
 	clcpp::internal::CallConstructor((ArrayWriteIterator*)m_ImplData);
 
 	// Complete implementation-specific initialisation
-	((IWriteIterator*)m_ImplData)->Initialise(field, container_object, *this);
+	((IWriteIterator*)m_ImplData)->Initialise(field, container_object, *this, field->ci->count);
+	m_Initialised = true;
 }
 
 
-clcpp::WriteIterator::~WriteIterator()
+bool clcpp::WriteIterator::IsInitialised() const
 {
-	// Destruct the write iterator
-	if (m_IteratorImplType != 0)
-		CallFunction(m_IteratorImplType->destructor, (IWriteIterator*)m_ImplData);
-	else
-		clcpp::internal::CallDestructor((ArrayWriteIterator*)m_ImplData);
+	return m_Initialised;
 }
+

@@ -30,7 +30,7 @@ namespace
 }
 
 
-void clutl::Object::Delete()
+void clutl::Object::Delete() const
 {
 	if (object_db)
 		object_db->DestroyObject(this);
@@ -115,7 +115,7 @@ clutl::Object* clutl::ObjectDatabase::CreateObject(unsigned int type_hash, const
 }
 
 
-void clutl::ObjectDatabase::DestroyObject(Object* object)
+void clutl::ObjectDatabase::DestroyObject(const Object* object)
 {
 	// Remove from the hash table if it's named
 	if (object->name.hash != 0)
@@ -178,7 +178,7 @@ void clutl::ObjectDatabase::AddHashEntry(Object* object)
 }
 
 
-void clutl::ObjectDatabase::RemoveHashEntry(Object* object)
+void clutl::ObjectDatabase::RemoveHashEntry(const Object* object)
 {
 	// Get the natural hash location
 	unsigned int name_hash = object->name.hash;

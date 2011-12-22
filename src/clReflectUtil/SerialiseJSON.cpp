@@ -81,6 +81,7 @@ namespace
 			: m_ReadBuffer(read_buffer)
 			, m_Line(1)
 			, m_LinePosition(0)
+			, m_StackPosition(0xFFFFFFFF)
 		{
 		}
 
@@ -150,12 +151,39 @@ namespace
 			return m_Error;
 		}
 
+		void PushState(const clutl::JSONToken& token)
+		{
+			clcpp::internal::Assert(m_StackPosition == 0xFFFFFFFF);
+
+			// Push
+			m_StackPosition = m_ReadBuffer.GetBytesRead();
+			m_StackToken = token;
+		}
+
+		void PopState(clutl::JSONToken& token)
+		{
+			clcpp::internal::Assert(m_StackPosition != 0xFFFFFFFF);
+
+			// Restore state
+			int offset = m_ReadBuffer.GetBytesRead() - m_StackPosition;
+			m_ReadBuffer.SeekRel(-offset);
+			token = m_StackToken;
+
+			// Pop
+			m_StackPosition = 0xFFFFFFFF;
+			m_StackToken = clutl::JSONToken();
+		}
+
 	private:
 		// Parsing state
 		clutl::ReadBuffer& m_ReadBuffer;
 		clutl::JSONError m_Error;
 		unsigned int m_Line;
 		unsigned int m_LinePosition;
+
+		// One-level deep parsing state stack
+		unsigned int m_StackPosition;
+		clutl::JSONToken m_StackToken;
 	};
 
 
@@ -699,20 +727,25 @@ namespace
 	}
 
 
-	void ParserElements(Context& ctx, clutl::JSONToken& t, clcpp::WriteIterator& writer, const clcpp::Type* type, clcpp::Qualifier::Operator op)
+	int ParserElements(Context& ctx, clutl::JSONToken& t, clcpp::WriteIterator* writer, const clcpp::Type* type, clcpp::Qualifier::Operator op)
 	{
 		// Expect a value first
-		ParserValue(ctx, t, (char*)writer.AddEmpty(), type, op, 0);
+		if (writer)
+			ParserValue(ctx, t, (char*)writer->AddEmpty(), type, op, 0);
+		else
+			ParserValue(ctx, t, 0, 0, op, 0);
 
 		if (t.type == clutl::JSON_TOKEN_COMMA)
 		{
 			t = LexerToken(ctx);
-			ParserElements(ctx, t, writer, type, op);
+			return 1 + ParserElements(ctx, t, writer, type, op);
 		}
+
+		return 1;
 	}
 
 
-	void ParserArray(Context& ctx, clutl::JSONToken& t, clcpp::WriteIterator& writer, const clcpp::Type* type, clcpp::Qualifier::Operator op)
+	void ParserArray(Context& ctx, clutl::JSONToken& t, char* object, const clcpp::Type* type, const clcpp::Field* field)
 	{
 		if (!Expect(ctx, t, clutl::JSON_TOKEN_LBRACKET).IsValid())
 			return;
@@ -724,25 +757,31 @@ namespace
 			return;
 		}
 
-		ParserElements(ctx, t, writer, type, op);
-		Expect(ctx, t, clutl::JSON_TOKEN_RBRACKET);
-	}
-
-
-	void ParserArray(Context& ctx, clutl::JSONToken& t, char* object, const clcpp::Type* type, const clcpp::Field* field)
-	{
-		// Dispatch with the correct write iterator
+		clcpp::WriteIterator writer;
 		if (field && field->ci)
 		{
-			clcpp::WriteIterator writer(field, object);
-			ParserArray(ctx, t, writer, writer.m_ValueType, writer.m_ValueIsPtr ? clcpp::Qualifier::POINTER : clcpp::Qualifier::VALUE);
+			// Fields are fixed array iterators
+			writer.Initialise(field, object);
 		}
 
-		else if (type->ci)
+		else if (type && type->ci)
 		{
-			clcpp::WriteIterator writer(type->AsTemplateType(), object);
-			ParserArray(ctx, t, writer, writer.m_ValueType, writer.m_ValueIsPtr ? clcpp::Qualifier::POINTER : clcpp::Qualifier::VALUE);
+			//unsigned int pos = ctx.m_ReadBuffer.GetBytesRead();
+
+			ctx.PushState(t);
+			int array_count = ParserElements(ctx, t, 0, 0, clcpp::Qualifier::VALUE);
+			ctx.PopState(t);
+
+			// Template types are dynamic container iterators
+			writer.Initialise(type->AsTemplateType(), object, array_count);
 		}
+
+		if (writer.IsInitialised())
+			ParserElements(ctx, t, &writer, writer.m_ValueType, writer.m_ValueIsPtr ? clcpp::Qualifier::POINTER : clcpp::Qualifier::VALUE);
+		else
+			ParserElements(ctx, t, 0, 0, clcpp::Qualifier::VALUE);
+
+		Expect(ctx, t, clutl::JSON_TOKEN_RBRACKET);
 	}
 
 
@@ -755,7 +794,7 @@ namespace
 
 	void ParserValue(Context& ctx, clutl::JSONToken& t, char* object, const clcpp::Type* type, clcpp::Qualifier::Operator op, const clcpp::Field* field)
 	{
-		if (type->kind == clcpp::Primitive::KIND_CLASS)
+		if (type && type->kind == clcpp::Primitive::KIND_CLASS)
 		{
 			const clcpp::Class* class_type = type->AsClass();
 
@@ -789,6 +828,7 @@ namespace
 					ParserObject(ctx, t, 0, 0);
 
 				Expect(ctx, t, clutl::JSON_TOKEN_RBRACE);
+				break;
 			}
 		case (clutl::JSON_TOKEN_LBRACKET): return ParserArray(ctx, t, object, type, field);
 		case (clutl::JSON_TOKEN_TRUE): return ParserLiteralValue(ctx, Expect(ctx, t, clutl::JSON_TOKEN_TRUE), 1, object, type, op);
@@ -853,7 +893,7 @@ namespace
 		if (field)
 			ParserValue(ctx, t, object + field->offset, field->type, field->qualifier.op, field);
 		else
-			t = LexerToken(ctx);
+			ParserValue(ctx, t, 0, 0, clcpp::Qualifier::VALUE, 0);
 	}
 
 
@@ -909,18 +949,17 @@ namespace
 
 	void SaveString(clutl::WriteBuffer& out, const char* start, const char* end)
 	{
-		out.Write("\"", 1);
-		out.Write(start, end - start - 1);
-		out.Write("\"", 1);
+		out.WriteChar('\"');
+		out.Write(start, end - start);
+		out.WriteChar('\"');
 	}
 
 
 	void SaveString(clutl::WriteBuffer& out, const char* str)
 	{
-		const char* end = str;
-		while (*end++)
-			;
-		SaveString(out, str, end);
+		out.WriteChar('\"');
+		out.WriteStr(str);
+		out.WriteChar('\"');
 	}
 
 
@@ -1024,7 +1063,7 @@ namespace
 		if (flags & clutl::JSONFlags::EMIT_HEX_FLOATS)
 		{
 			// Use a specific prefix to inform the lexer to alias as a decimal
-			out.Write("0d", 2);
+			out.WriteStr("0d");
 			SaveHexInteger(out, (unsigned __int64&)decimal);
 			return;
 		}
@@ -1141,7 +1180,7 @@ namespace
 	void SavePtr(clutl::WriteBuffer& out, unsigned int hash)
 	{
 #ifdef SAVE_POINTER_HASH_AS_HEX
-		out.Write("0x", 2);
+		out.WriteStr("0x");
 		SaveHexInteger(out, hash);
 #else
 		SaveUnsignedInteger(out, hash);
@@ -1174,7 +1213,7 @@ namespace
 	{
 		// TODO: If the iterator has a key, save a dictionary instead
 
-		out.Write("[", 1);
+		out.WriteChar('[');
 
 		// Figure out if this an iterator over named object pointers
 		if (reader.m_ValueIsPtr)
@@ -1195,7 +1234,7 @@ namespace
 						if (IsNamedObjectPtr(kv.value, hash))
 						{
 							if (written)
-								out.Write(",", 1);
+								out.WriteChar(',');
 							SavePtr(out, hash);
 							written = true;
 						}
@@ -1213,7 +1252,7 @@ namespace
 			{
 				clcpp::ContainerKeyValue kv = reader.GetKeyValue();
 				SaveObject(out, (char*)kv.value, reader.m_ValueType, flags);
-				out.Write(",", 1);
+				out.WriteChar(',');
 				reader.MoveNext();
 			}
 
@@ -1222,7 +1261,7 @@ namespace
 			SaveObject(out, (char*)kv.value, reader.m_ValueType, flags);
 		}
 
-		out.Write("]", 1);
+		out.WriteChar(']');
 	}
 
 
@@ -1232,7 +1271,7 @@ namespace
 		clcpp::ReadIterator reader(field, object);
 		if (reader.m_Count == 0)
 		{
-			out.Write("[]", 2);
+			out.WriteStr("[]");
 			return;
 		}
 
@@ -1244,11 +1283,11 @@ namespace
 	{
 		if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
 		{
-			out.Write("\n", 1);
+			out.WriteChar('\n');
 
 			// Open the next new line with tabs
 			for (unsigned int i = 0; i < (flags & clutl::JSONFlags::INDENT_MASK); i++)
-				out.Write("\t", 1);
+				out.WriteChar('\t');
 		}
 	}
 
@@ -1258,7 +1297,7 @@ namespace
 		if (flags & clutl::JSONFlags::FORMAT_OUTPUT)
 		{
 			NewLine(out, flags);
-			out.Write("{", 1);
+			out.WriteChar('{');
 			
 			// Increment indent level
 			int indent_level = flags & clutl::JSONFlags::INDENT_MASK;
@@ -1269,7 +1308,7 @@ namespace
 		}
 		else
 		{
-			out.Write("{", 1);
+			out.WriteChar('{');
 		}
 	}
 
@@ -1284,12 +1323,12 @@ namespace
 			flags |= ((indent_level - 1) & clutl::JSONFlags::INDENT_MASK);
 
 			NewLine(out, flags);
-			out.Write("}", 1);
+			out.WriteChar('}');
 			NewLine(out, flags);
 		}
 		else
 		{
-			out.Write("}", 1);
+			out.WriteChar('}');
 		}
 	}
 
@@ -1310,13 +1349,13 @@ namespace
 			int field_start_pos = out.GetBytesWritten();
 			if (field_written)
 			{
-				out.Write(",", 1);
+				out.WriteChar(',');
 				NewLine(out, flags);
 			}
 
 			// Write the field name
 			SaveString(out, field->name.text);
-			out.Write(":", 1);
+			out.WriteChar(':');
 
 			// Dispatch to save function that can handle the field type
 			bool success = true;
@@ -1369,7 +1408,7 @@ namespace
 				switch (token.type)
 				{
 				case clutl::JSON_TOKEN_STRING:
-					SaveString(out, token.val.string, token.val.string + token.length + 1);
+					SaveString(out, token.val.string, token.val.string + token.length);
 					break;
 				case clutl::JSON_TOKEN_INTEGER:
 					SaveInteger(out, token.val.integer);
@@ -1398,7 +1437,7 @@ namespace
 		clcpp::ReadIterator reader(template_type, object);
 		if (reader.m_Count == 0)
 		{
-			out.Write("[]", 2);
+			out.WriteStr("[]");
 			return;
 		}
 
