@@ -8,6 +8,7 @@
 // Only want to reflect the Object class so that derivers will reflect
 // The type parameter is not interesting here
 clcpp_reflect_part(clutl::Object)
+clcpp_reflect_part(clutl::ObjectGroup)
 
 
 //
@@ -17,9 +18,6 @@ clcpp_reflect_part(clutl::Object)
 //
 namespace clutl
 {
-	class ObjectDatabase;
-
-
 	//
 	// Base object class for objects that require runtime knowledge of their type
 	//
@@ -27,7 +25,7 @@ namespace clutl
 	{
 		// Default constructor
 		Object()
-			: object_db(0)
+			: object_group(0)
 			, type(0)
 		{
 		}
@@ -47,7 +45,7 @@ namespace clutl
 		//
 		virtual ~Object() { }
 
-		// Shortcut for calling DestroyObject on this object in its owning database
+		// Shortcut for calling DestroyObject on this object in its owning group
 		void Delete() const;
 
 		// Type of the object
@@ -60,16 +58,35 @@ namespace clutl
 		//       Anybody who holds a Name by value will no longer have a valid text pointer.
 		clcpp::Name name;
 
-		// Object database that owns this object
-		ObjectDatabase* object_db;
+		// Object group that owns this object
+		class ObjectGroup* object_group;
 	};
 
 
-	class ObjectDatabase
+	//
+	// Hash table based storage of collections of objects.
+	// The ObjectGroup is an object itself, allowing groups to be nested within other groups.
+	//
+	class ObjectGroup : public Object
 	{
 	public:
-		ObjectDatabase(const clcpp::Database* reflection_db, unsigned int max_nb_objects);
-		~ObjectDatabase();
+		ObjectGroup(const clcpp::Database* reflection_db);
+		~ObjectGroup();
+
+		// Create a nested group within this one
+		ObjectGroup* CreateObjectGroup(const char* name_text);
+
+		// Create an anonymous object which doesn't get tracked by the database
+		Object* CreateObject(unsigned int type_hash);
+
+		// Create a named object that is internally tracked by name and can be found at a later point
+		Object* CreateObject(unsigned int type_hash, const char* name_text);
+
+		// Destroy named/anonymous object or an object group
+		void DestroyObject(const Object* object);
+
+		// Find a created object by name
+		Object* FindObject(unsigned int name_hash) const;
 
 		// Template helpers for acquring the required typename and correctly casting during creation
 		template <typename TYPE> TYPE* CreateObject()
@@ -81,38 +98,20 @@ namespace clutl
 			return static_cast<TYPE*>(CreateObject(clcpp::GetTypeNameHash<TYPE>(), name_text));
 		}
 
-		// Create an anonymous object which doesn't get tracked by the database
-		Object* CreateObject(unsigned int type_hash);
-
-		// Create a named object that is internally tracked by name and can be found at a later point
-		Object* CreateObject(unsigned int type_hash, const char* name_text);
-
-		// Destroy either a named or anonymous object
-		void DestroyObject(const Object* object);
-
-		// Find a created object by name
-		Object* FindObject(unsigned int name_hash) const;
-
-		unsigned int GetMaxNbObjects() const { return m_MaxNbObjects; }
-
 	private:
-		struct HashEntry
-		{
-			HashEntry() : hash(0), object(0), next(0) { }
-			unsigned int hash;
-			Object* object;
-			HashEntry* next;
-		};
+		struct HashEntry;
 
 		void AddHashEntry(Object* object);
 		void RemoveHashEntry(const Object* object);
-		HashEntry* FindHashEntry(unsigned int hash_index, unsigned int hash);
+		void Resize();
 
+		// Reflection database to use for type access
 		const clcpp::Database* m_ReflectionDB;
 
 		// An open-addressed hash table with linear probing - good cache behaviour for storing
 		// hashes of pointers that may suffer from clustering.
 		unsigned int m_MaxNbObjects;
+		unsigned int m_NbObjects;
 		HashEntry* m_NamedObjects;
 
 		friend class ObjectIterator;
@@ -120,12 +119,30 @@ namespace clutl
 
 
 	//
-	// Iterator for visiting all created objects in an object database.
+	// The main object database, currently just a holder for a root object group.
+	// May be extended at a later date to do scoped named lookup.
+	//
+	class ObjectDatabase
+	{
+	public:
+		ObjectDatabase(const clcpp::Database* reflection_db);
+		~ObjectDatabase();
+
+		ObjectGroup* GetRootGroup() const { return m_RootGroup; }
+
+	private:
+		ObjectGroup* m_RootGroup;
+	};
+
+
+	//
+	// Iterator for visiting all created objects in an object group.
+	// The iterator is invalidated if objects are added/removed from the group.
 	//
 	class ObjectIterator
 	{
 	public:
-		ObjectIterator(const ObjectDatabase& object_db);
+		ObjectIterator(const ObjectGroup* object_group);
 
 		// Get the current object under iteration
 		Object* GetObject() const;
@@ -140,7 +157,7 @@ namespace clutl
 	private:
 		void ScanForEntry();
 
-		const ObjectDatabase& m_ObjectDB;
+		const ObjectGroup* m_ObjectGroup;
 		unsigned int m_Position;
 	};
 }
