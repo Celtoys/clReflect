@@ -25,8 +25,9 @@ namespace clutl
 	{
 		// Default constructor
 		Object()
-			: object_group(0)
-			, type(0)
+			: type(0)
+			, unique_id(0)
+			, object_group(0)
 		{
 		}
 
@@ -51,12 +52,9 @@ namespace clutl
 		// Type of the object
 		const clcpp::Type* type;
 
-		// Name of the object
-		// Set this to a unique name if you wish to have a serialisable pointer to it
-		// TODO: Is it wise to use the same name type as the reflection stuff?
-		// TODO: When you delete an object, its name text pointer is invalidated.
-		//       Anybody who holds a Name by value will no longer have a valid text pointer.
-		clcpp::Name name;
+		// Unique ID for storing the object within an object group and quickly retrieving it
+		// If this is zero, the object is anonymous and not tracked
+		unsigned int unique_id;
 
 		// Object group that owns this object
 		class ObjectGroup* object_group;
@@ -74,13 +72,13 @@ namespace clutl
 		~ObjectGroup();
 
 		// Create a nested group within this one
-		ObjectGroup* CreateObjectGroup(const char* name_text);
+		ObjectGroup* CreateObjectGroup(unsigned int unique_id);
 
 		// Create an anonymous object which doesn't get tracked by the database
 		Object* CreateObject(unsigned int type_hash);
 
 		// Create a named object that is internally tracked by name and can be found at a later point
-		Object* CreateObject(unsigned int type_hash, const char* name_text);
+		Object* CreateObject(unsigned int type_hash, unsigned int unique_id);
 
 		// Destroy named/anonymous object or an object group
 		void DestroyObject(const Object* object);
@@ -93,9 +91,9 @@ namespace clutl
 		{
 			return static_cast<TYPE*>(CreateObject(clcpp::GetTypeNameHash<TYPE>()));
 		}
-		template <typename TYPE> TYPE* CreateObject(const char* name_text)
+		template <typename TYPE> TYPE* CreateObject(unsigned int unique_id)
 		{
-			return static_cast<TYPE*>(CreateObject(clcpp::GetTypeNameHash<TYPE>(), name_text));
+			return static_cast<TYPE*>(CreateObject(clcpp::GetTypeNameHash<TYPE>(), unique_id));
 		}
 
 	private:

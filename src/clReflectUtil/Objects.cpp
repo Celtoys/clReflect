@@ -5,11 +5,6 @@
 #include <clcpp/FunctionCall.h>
 
 
-// Explicit dependencies
-// TODO: Some how remove the need for these or provide a means of locating them on the target platform
-extern "C" void* __cdecl memcpy(void* dst, const void* src, unsigned int size);
-
-
 struct clutl::ObjectGroup::HashEntry
 {
 	HashEntry() : hash(0), object(0) { }
@@ -17,17 +12,6 @@ struct clutl::ObjectGroup::HashEntry
 	Object* object;
 };
 
-
-
-namespace
-{
-	unsigned int strlen(const char* str)
-	{
-		const char *end = str;
-		while (*end++) ;
-		return end - str - 1;
-	}
-}
 
 
 void clutl::Object::Delete() const
@@ -57,7 +41,7 @@ clutl::ObjectGroup::~ObjectGroup()
 }
 
 
-clutl::ObjectGroup* clutl::ObjectGroup::CreateObjectGroup(const char* name_text)
+clutl::ObjectGroup* clutl::ObjectGroup::CreateObjectGroup(unsigned int unique_id)
 {
 	// Can the object group type be located?
 	const clcpp::Type* type = m_ReflectionDB->GetType(clcpp::GetTypeNameHash<ObjectGroup>());
@@ -69,13 +53,8 @@ clutl::ObjectGroup* clutl::ObjectGroup::CreateObjectGroup(const char* name_text)
 	group->object_group = this;
 	group->type = type;
 
-	// Construct the name
-	int name_length = strlen(name_text);
-	group->name.text = new char[name_length + 1];
-	memcpy((void*)group->name.text, name_text, name_length + 1);
-
 	// Add to the hash table
-	group->name.hash = clcpp::internal::HashData(group->name.text, name_length);
+	group->unique_id = unique_id;
 	AddHashEntry(group);
 
 	return group;
@@ -107,20 +86,15 @@ clutl::Object* clutl::ObjectGroup::CreateObject(unsigned int type_hash)
 }
 
 
-clutl::Object* clutl::ObjectGroup::CreateObject(unsigned int type_hash, const char* name_text)
+clutl::Object* clutl::ObjectGroup::CreateObject(unsigned int type_hash, unsigned int unique_id)
 {
 	// Create the object
 	Object* object = CreateObject(type_hash);
 	if (object == 0)
 		return 0;
 
-	// Construct the name
-	int name_length = strlen(name_text);
-	object->name.text = new char[name_length + 1];
-	memcpy((void*)object->name.text, name_text, name_length + 1);
-
 	// Add to the hash table
-	object->name.hash = clcpp::internal::HashData(object->name.text, name_length);
+	object->unique_id = unique_id;
 	AddHashEntry(object);
 
 	return object;
@@ -130,14 +104,8 @@ clutl::Object* clutl::ObjectGroup::CreateObject(unsigned int type_hash, const ch
 void clutl::ObjectGroup::DestroyObject(const Object* object)
 {
 	// Remove from the hash table if it's named
-	if (object->name.hash != 0)
-	{
+	if (object->unique_id != 0)
 		RemoveHashEntry(object);
-
-		// Release the name
-		clcpp::internal::Assert(object->name.text != 0);
-		delete [] object->name.text;
-	}
 
 	// These represent fatal code errors
 	clcpp::internal::Assert(object != 0);
@@ -195,15 +163,15 @@ clutl::Object* clutl::ObjectGroup::FindObject(unsigned int name_hash) const
 void clutl::ObjectGroup::AddHashEntry(Object* object)
 {
 	// Linear probe from the natural hash location for a free slot, reusing any dummy slots
-	unsigned int name_hash = object->name.hash;
+	unsigned int hash = object->unique_id;
 	const unsigned int index_mask = m_MaxNbObjects - 1;
-	unsigned int index = name_hash & index_mask;
+	unsigned int index = hash & index_mask;
 	while (m_NamedObjects[index].hash && m_NamedObjects[index].object != 0)
 		index = (index + 1) & index_mask;
 
 	// Add to the table
 	HashEntry& he = m_NamedObjects[index];
-	he.hash = object->name.hash;
+	he.hash = hash;
 	he.object = object;
 	m_NbObjects++;
 
@@ -216,10 +184,10 @@ void clutl::ObjectGroup::AddHashEntry(Object* object)
 void clutl::ObjectGroup::RemoveHashEntry(const Object* object)
 {
 	// Linear probe from the natural hash location for matching hash
-	unsigned int name_hash = object->name.hash;
+	unsigned int hash = object->unique_id;
 	const unsigned int index_mask = m_MaxNbObjects - 1;
-	unsigned int index = name_hash & index_mask;
-	while (m_NamedObjects[index].hash && m_NamedObjects[index].hash != name_hash)
+	unsigned int index = hash & index_mask;
+	while (m_NamedObjects[index].hash && m_NamedObjects[index].hash != hash)
 		index = (index + 1) & index_mask;
 
 	// Leave the has key in-place, clearing the object pointer, marking the object as a dummy object

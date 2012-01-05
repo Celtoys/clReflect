@@ -1166,7 +1166,7 @@ namespace
 		hash = 0;
 		if (named_object != 0)
 		{
-			hash = named_object->name.hash;
+			hash = named_object->unique_id;
 
 			// If the target object has no name then its pointer is not meant for serialisation
 			if (hash == 0)
