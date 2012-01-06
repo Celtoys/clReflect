@@ -93,9 +93,12 @@ clutl::Object* clutl::ObjectGroup::CreateObject(unsigned int type_hash, unsigned
 	if (object == 0)
 		return 0;
 
-	// Add to the hash table
-	object->unique_id = unique_id;
-	AddHashEntry(object);
+	// Add to the hash table if there is a unique ID assigned
+	if (unique_id != 0)
+	{
+		object->unique_id = unique_id;
+		AddHashEntry(object);
+	}
 
 	return object;
 }
