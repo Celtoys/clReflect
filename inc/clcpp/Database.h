@@ -413,8 +413,8 @@ namespace clcpp
 
 		Function()
 			: Primitive(KIND)
-			, return_parameter(0)
 			, unique_id(0)
+			, return_parameter(0)
 			, flag_attributes(0)
 		{
 		}
