@@ -25,6 +25,13 @@
 // ===============================================================================
 //
 
+
+//
+// TODO: This file is very complicated. I'm not sure the complexity benefits of having
+// a flat, one-to-many database is paying off here. Investigate changing clReflectScan
+// so that it exports a hierarchical database.
+//
+
 #include "CppExport.h"
 #include "PtrRelocator.h"
 
@@ -932,6 +939,66 @@ namespace
 		VerifyPrimitives(cppexp, cppexp.db->primitive_attributes);
 		VerifyPrimitives(cppexp, cppexp.db->text_attributes);
 	}
+
+
+	void RemoveInvalidFields(clcpp::CArray<const clcpp::Field*>& fields)
+	{
+		for (int i = 0; i < fields.size(); )
+		{
+			const clcpp::Field* field = fields[i];
+			if (field->type == 0)
+				fields.unstable_remove(i);
+			else
+				i++;
+		}
+	}
+
+
+	void RemoveInvalidFunctions(clcpp::CArray<const clcpp::Function*>& functions)
+	{
+		for (int i = 0; i < functions.size(); )
+		{
+			const clcpp::Function* func = functions[i];
+
+			// Search for an invalid parameter
+			bool invalid = false;
+			for (int j = 0; j < func->parameters.size(); j++)
+			{
+				if (func->parameters[j]->type == 0)
+				{
+					invalid = true;
+					break;
+				}
+			}
+
+			invalid |= (func->return_parameter && func->return_parameter->type == 0);
+
+			// Remove from the container if invalid
+			if (invalid)
+				functions.unstable_remove(i);
+			else
+				i++;
+		}
+	}
+
+
+	void IsolateInvalidPrimitives(CppExport& cppexp)
+	{
+		// Fields and functions within classes
+		for (int i = 0; i < cppexp.db->classes.size(); i++)
+		{
+			clcpp::Class& primitive = cppexp.db->classes[i];
+			RemoveInvalidFields(primitive.fields);
+			RemoveInvalidFunctions(primitive.methods);
+		}
+
+		// Functions within namespaces
+		for (int i = 0; i < cppexp.db->namespaces.size(); i++)
+		{
+			clcpp::Namespace& primitive = cppexp.db->namespaces[i];
+			RemoveInvalidFunctions(primitive.functions);
+		}
+	}
 }
 
 
@@ -1060,6 +1127,12 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	// contain primitives that others reference then at this point, certain primitives will contain
 	// effectively garbage pointers. Do a check here for that.
 	VerifyPrimitives(cppexp);
+
+	// Remove references to primitives with null pointers in the exported database.
+	// Don't want the runtime crashing because it encountered any unexpected null pointers.
+	// The memory for the primitives is left allocated, however this shouldn't be an issue
+	// if your compile is without warnings!
+	IsolateInvalidPrimitives(cppexp);
 
 	return true;
 }
