@@ -1179,12 +1179,12 @@ namespace
 
 	void SavePtr(clutl::WriteBuffer& out, unsigned int hash)
 	{
-#ifdef SAVE_POINTER_HASH_AS_HEX
+	#ifdef SAVE_POINTER_HASH_AS_HEX
 		out.WriteStr("0x");
 		SaveHexInteger(out, hash);
-#else
+	#else
 		SaveUnsignedInteger(out, hash);
-#endif
+	#endif
 	}
 
 
@@ -1196,7 +1196,7 @@ namespace
 
 			// Only save pointer types that derive from Object and are named
 			unsigned int hash = 0;
-			if (class_type->DerivesFrom(clcpp::GetTypeNameHash<clutl::Object>()) &&
+			if ((class_type->flag_attributes & clutl::FLAG_ATTR_IS_OBJECT) &&
 				IsNamedObjectPtr(object, hash))
 			{
 				SavePtr(out, hash);
@@ -1221,7 +1221,7 @@ namespace
 			if (reader.m_ValueType->kind == clcpp::Primitive::KIND_CLASS)
 			{
 				const clcpp::Class* class_type = reader.m_ValueType->AsClass();
-				if (class_type->DerivesFrom(clcpp::GetTypeNameHash<clutl::Object>()))
+				if (class_type->flag_attributes & clutl::FLAG_ATTR_IS_OBJECT)
 				{
 					// Save comma-separated pointers
 					bool written = false;

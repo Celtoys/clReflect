@@ -21,14 +21,12 @@ void clutl::Object::Delete() const
 }
 
 
-clutl::ObjectGroup::ObjectGroup(const clcpp::Database* reflection_db)
-	: m_ReflectionDB(reflection_db)
+clutl::ObjectGroup::ObjectGroup()
+	: m_ReflectionDB(0)
 	, m_MaxNbObjects(8)
 	, m_NbObjects(0)
 	, m_NamedObjects(0)
 {
-	clcpp::internal::Assert(m_ReflectionDB != 0);
-
 	// Allocate the hash table
 	m_NamedObjects = new HashEntry[m_MaxNbObjects];
 }
@@ -43,21 +41,7 @@ clutl::ObjectGroup::~ObjectGroup()
 
 clutl::ObjectGroup* clutl::ObjectGroup::CreateObjectGroup(unsigned int unique_id)
 {
-	// Can the object group type be located?
-	const clcpp::Type* type = m_ReflectionDB->GetType(clcpp::GetTypeNameHash<ObjectGroup>());
-	if (type == 0)
-		return 0;
-
-	// Manually new the object
-	clutl::ObjectGroup* group = new clutl::ObjectGroup(m_ReflectionDB);
-	group->object_group = this;
-	group->type = type;
-
-	// Add to the hash table
-	group->unique_id = unique_id;
-	AddHashEntry(group);
-
-	return group;
+	return (ObjectGroup*)CreateObject(clcpp::GetTypeNameHash<ObjectGroup>(), unique_id);
 }
 
 
@@ -73,15 +57,29 @@ clutl::Object* clutl::ObjectGroup::CreateObject(unsigned int type_hash)
 		return 0;
 	const clcpp::Class* class_type = type->AsClass();
 
-	// Need a constructor to new and a destructor to delete at a later point
-	if (class_type->constructor == 0 || class_type->destructor == 0)
-		return 0;
+	// The object group has no registered constructor so construct manually
+	// if it comes through
+	Object* object = 0;
+	if (type_hash == clcpp::GetTypeNameHash<ObjectGroup>())
+	{
+		object = new ObjectGroup();
+	}
+	else
+	{
+		// Need a constructor to new and a destructor to delete at a later point
+		if (class_type->constructor == 0 || class_type->destructor == 0)
+			return 0;
+		object = (Object*)new char[type->size];
+		CallFunction(class_type->constructor, object);
+	}
 
-	// Allocate and construct the object
-	Object* object = (Object*)new char[type->size];
-	CallFunction(class_type->constructor, object);
+	// Construct the object and pass on any reflection DB pointer to derivers
+	// of the object group type
 	object->object_group = this;
 	object->type = type;
+	if (class_type->flag_attributes & FLAG_ATTR_IS_OBJECT_GROUP)
+		((ObjectGroup*)object)->m_ReflectionDB = m_ReflectionDB;
+
 	return object;
 }
 
@@ -227,7 +225,8 @@ void clutl::ObjectGroup::Resize()
 clutl::ObjectDatabase::ObjectDatabase(const clcpp::Database* reflection_db)
 	: m_RootGroup(0)
 {
-	m_RootGroup = new ObjectGroup(reflection_db);
+	m_RootGroup = new ObjectGroup();
+	m_RootGroup->m_ReflectionDB = reflection_db;
 }
 
 

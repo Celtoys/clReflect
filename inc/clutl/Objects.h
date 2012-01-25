@@ -19,8 +19,19 @@ clcpp_reflect_part(clutl::ObjectGroup)
 namespace clutl
 {
 	//
+	// Custom flag attributes for quickly determining if a type inherits from Object or ObjectGroup
+	//
+	enum
+	{
+		FLAG_ATTR_IS_OBJECT			= 0x10000000,
+		FLAG_ATTR_IS_OBJECT_GROUP	= 0x20000000,
+	};
+
+
+	//
 	// Base object class for objects that require runtime knowledge of their type
 	//
+	clcpp_attr(custom_flag = 0x10000000, custom_flag_inherit)
 	struct Object
 	{
 		// Default constructor
@@ -65,10 +76,11 @@ namespace clutl
 	// Hash table based storage of collections of objects.
 	// The ObjectGroup is an object itself, allowing groups to be nested within other groups.
 	//
+	clcpp_attr(custom_flag = 0x20000000, custom_flag_inherit)
 	class ObjectGroup : public Object
 	{
 	public:
-		ObjectGroup(const clcpp::Database* reflection_db);
+		ObjectGroup();
 		~ObjectGroup();
 
 		// Create a nested group within this one
@@ -113,6 +125,7 @@ namespace clutl
 		HashEntry* m_NamedObjects;
 
 		friend class ObjectIterator;
+		friend class ObjectDatabase;
 	};
 
 

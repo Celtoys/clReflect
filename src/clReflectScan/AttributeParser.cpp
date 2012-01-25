@@ -29,6 +29,7 @@
 
 #include <clReflectCore/Database.h>
 #include <clReflectCore/Logging.h>
+#include <clReflectCore/FileUtils.h>
 
 #include <ctype.h>
 
@@ -46,6 +47,7 @@ namespace
 		TOKEN_EQUALS,
 		TOKEN_COMMA,
 		TOKEN_INT,
+		TOKEN_HEX_INT,
 		TOKEN_FLOAT,
 		TOKEN_SYMBOL,
 		TOKEN_STRING,
@@ -122,28 +124,35 @@ namespace
 
 	const char* ParseNumber(const char* text, std::vector<Token>& tokens)
 	{
-		// Match all digits, taking into account this might be a floating pointer number
-		bool is_float = false;
+		// Match all digits, taking into account this might be a hex or floating pointer number
+		TokenType type = TOKEN_INT;
 		const char* start = text;
-		while (*text && (isdigit(*text) || *text == '.'))
+		while (*text && (isxdigit(*text) || *text == '.' || *text == 'x' || *text == 'X'))
 		{
-			if (*text == '.')
+			switch (*text)
 			{
-				// Only one decimal place is allowed
-				if (is_float)
+			case '.':
+			case 'x':
+			case 'X':
+				// Prevent multiple occurrences
+				if (type != TOKEN_INT)
 				{
-					LOG(warnings, INFO, "%s(%d) : warning - Floating point number has more than one decimal point\n", g_Filename, g_Line);
+					LOG(warnings, INFO, "%s(%d) : warning - invalid integer representation\n", g_Filename, g_Line);
 					return 0;
 				}
 
-				is_float = true;
+				// Decide what to transition to
+				if (*text == '.')
+					type = TOKEN_FLOAT;
+				else
+					type = TOKEN_HEX_INT;
 			}
 
 			text++;
 		}
 
 		// Add the number token based on float/int property
-		tokens.push_back(Token(is_float ? TOKEN_FLOAT : TOKEN_INT, start, text - start));
+		tokens.push_back(Token(type, start, text - start));
 		return text;
 	}
 
@@ -158,7 +167,7 @@ namespace
 			// characters that kick off pattern matching for each token.
 			switch (c)
 			{
-			// Process single character tokens
+				// Process single character tokens
 			case ('='):
 				tokens.push_back(Token(TOKEN_EQUALS, text, 1));
 				text++;
@@ -168,18 +177,18 @@ namespace
 				text++;
 				break;
 
-			// Process strings
+				// Process strings
 			case ('\"'):
 				text = ParseString(text, tokens);
 				break;
 
-			// Skip whitespace
+				// Skip whitespace
 			case (' '):
 			case ('\t'):
 				text++;
 				break;
 
-			// Process symbols that start with underscore
+				// Process symbols that start with underscore
 			case ('_'):
 				text = ParseSymbol(text, tokens);
 				break;
@@ -254,15 +263,24 @@ namespace
 	}
 	void AddIntAttribute(cldb::Database& db, std::vector<cldb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
 	{
-		cldb::Name name = db.GetName(attribute_name->GetText());
 		int value = atoi(val.GetText());
+		cldb::Name name = db.GetName(attribute_name->GetText());
+		attributes.push_back(new cldb::IntAttribute(name, cldb::Name(), value));
+	}
+	void AddHexIntAttribute(cldb::Database& db, std::vector<cldb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
+	{
+		int value = 0;
+		const char* text = val.GetText();
+		if (text[0] == '0' && (text[1] == 'x' || text[2] == 'X'))
+			value = hextoi(text + 2);
+		cldb::Name name = db.GetName(attribute_name->GetText());
 		attributes.push_back(new cldb::IntAttribute(name, cldb::Name(), value));
 	}
 	void AddFloatAttribute(cldb::Database& db, std::vector<cldb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
 	{
-		cldb::Name name = db.GetName(attribute_name->GetText());
-		float value;
+		float value = 0;
 		sscanf(val.GetText(), "%f", &value);
+		cldb::Name name = db.GetName(attribute_name->GetText());
 		attributes.push_back(new cldb::FloatAttribute(name, cldb::Name(), value));
 	}
 	void AddPrimitiveAttribute(cldb::Database& db, std::vector<cldb::Attribute*>& attributes, const Token* attribute_name, const Token& val)
@@ -302,6 +320,9 @@ namespace
 			{
 			case (TOKEN_INT):
 				AddIntAttribute(db, attributes, attribute_name, val);
+				break;
+			case (TOKEN_HEX_INT):
+				AddHexIntAttribute(db, attributes, attribute_name, val);
 				break;
 			case (TOKEN_FLOAT):
 				AddFloatAttribute(db, attributes, attribute_name, val);

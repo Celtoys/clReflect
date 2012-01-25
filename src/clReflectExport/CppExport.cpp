@@ -756,6 +756,7 @@ namespace
 	{
 		// Cache attribute names
 		static unsigned int transient_hash = clcpp::internal::HashNameString("transient");
+		static unsigned int custom_flag = clcpp::internal::HashNameString("custom_flag");
 
 		// Merge all detected common flags
 		unsigned int bits = 0;
@@ -768,6 +769,15 @@ namespace
 				bits |= clcpp::FlagAttribute::CUSTOM_LOAD;
 			else if (startswith(attribute.name.text, "save"))
 				bits |= clcpp::FlagAttribute::CUSTOM_SAVE;
+
+			// A custom flag allows the programmer to manually specify values to OR in
+			else if (attribute.name.hash == custom_flag)
+			{
+				if (attribute.kind == clcpp::Primitive::KIND_INT_ATTRIBUTE)
+					bits |= ((clcpp::IntAttribute&)attribute).value;
+				else
+					LOG(main, WARNING, "Attribute 'custom_flag' must have an integer parameter");
+			}
 		}
 
 		return bits;
@@ -782,6 +792,56 @@ namespace
 			TYPE& primitive = primitives[i];
 			primitive.flag_attributes = GetFlagAttributeBits(primitive.attributes);
 		}
+	}
+
+
+	unsigned int GetInheritedFlagAttributes(clcpp::Class& class_prim)
+	{
+		static unsigned int custom_flag = clcpp::internal::HashNameString("custom_flag");
+		static unsigned int custom_flag_inherit = clcpp::internal::HashNameString("custom_flag_inherit");
+
+		// Collect all custom attribute bits and set the mask determining inheritance
+		unsigned int custom_bits = 0, custom_bits_mask = 0;
+		for (int i = 0; i < class_prim.attributes.size(); i++)
+		{
+			const clcpp::Attribute& attribute = *class_prim.attributes[i];
+			if (attribute.name.hash == custom_flag && attribute.kind == clcpp::Primitive::KIND_INT_ATTRIBUTE)
+				custom_bits |= ((clcpp::IntAttribute&)attribute).value;
+			else if (attribute.name.hash == custom_flag_inherit)
+				custom_bits_mask = 0xFFFFFFFF;
+		}
+
+		return custom_bits & custom_bits_mask;
+	}
+
+
+	unsigned int InheritFlagAttributes(clcpp::Type* primitive)
+	{
+		unsigned int custom_bits = 0;
+
+		// Depth-first, pull custom bits up from base classes
+		for (int i = 0; i < primitive->base_types.size(); i++)
+		{
+			clcpp::Type* base_type = const_cast<clcpp::Type*>(primitive->base_types[i]);
+			custom_bits |= InheritFlagAttributes(base_type);
+		}
+
+		// Merge in the bits of this class
+		if (primitive->kind == clcpp::Primitive::KIND_CLASS)
+		{
+			clcpp::Class& class_prim = *(clcpp::Class*)primitive;
+			custom_bits |= GetInheritedFlagAttributes(class_prim);
+			class_prim.flag_attributes |= custom_bits;
+		}
+
+		return custom_bits;
+	}
+
+
+	void InheritFlagAttributes(CppExport& cppexp)
+	{
+		for (int i = 0; i < cppexp.db->classes.size(); i++)
+			InheritFlagAttributes(&cppexp.db->classes[i]);
 	}
 
 
@@ -943,6 +1003,7 @@ namespace
 
 	void RemoveInvalidFields(clcpp::CArray<const clcpp::Field*>& fields)
 	{
+		// Remove invalid fields, leaving the memory allocated
 		for (int i = 0; i < fields.size(); )
 		{
 			const clcpp::Field* field = fields[i];
@@ -1116,6 +1177,9 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	AddFlagAttributeBits(cppexp.db->fields);
 	AddFlagAttributeBits(cppexp.db->functions);
 	AddFlagAttributeBits(cppexp.db->classes);
+
+	// Push any flag attributes marked for inheritance up through class hierarchies
+	InheritFlagAttributes(cppexp);
 
 	// Ensure any primitive attributes have their pointers patched
 	AssignPrimitiveAttributes(cppexp);
