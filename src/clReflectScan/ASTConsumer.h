@@ -76,4 +76,6 @@ private:
 	const ReflectionSpecs& m_ReflectionSpecs;
 
 	clang::PrintingPolicy* m_PrintingPolicy;
+
+	bool m_AllowReflect;
 };

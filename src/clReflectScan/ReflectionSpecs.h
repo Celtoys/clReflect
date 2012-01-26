@@ -52,8 +52,15 @@ struct ReflectionSpecContainer
 	bool has_key;
 };
 
+enum ReflectionSpecType
+{
+	RST_None,
+	RST_Full,
+	RST_Partial,
+	RST_Container
+};
 
-// TODO: Optimise the use of strings in this class - it's not really any good
+
 class ReflectionSpecs
 {
 public:
@@ -61,16 +68,17 @@ public:
 
 	void Gather(clang::TranslationUnitDecl* tu_decl);
 
-	bool IsReflected(std::string name) const;
+	ReflectionSpecType Get(const std::string& name) const;
 
 	const ReflectionSpecContainer::MapType& GetContainerSpecs() const { return m_ContainerSpecs; }
 
 private:
-	void AddReflectionSpec(const std::string& symbol, bool partial);
+	void AddReflectionSpec(const std::string& symbol, ReflectionSpecType type);
 
 	bool m_ReflectAll;
 
-	std::map<std::string, bool> m_ReflectionSpecs;
+	typedef std::map<std::string, ReflectionSpecType> ReflectionSpecMap;
+	ReflectionSpecMap m_ReflectionSpecs;
 
 	ReflectionSpecContainer::MapType m_ContainerSpecs;
 };

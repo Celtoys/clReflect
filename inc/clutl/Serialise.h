@@ -32,10 +32,7 @@
 #include <clcpp/clcpp.h>
 
 
-// Partially reflected so that it can be used for reflecting custom serialisation functions
-clcpp_reflect_part(clutl::JSONToken)
-
-
+clcpp_reflect_part(clutl)
 namespace clutl
 {
 	struct Object;
@@ -177,6 +174,8 @@ namespace clutl
 	};
 
 
+	// Partially reflected so that it can be used for reflecting custom serialisation functions
+	clcpp_attr(reflect_part)
 	struct JSONToken
 	{
 		JSONToken()

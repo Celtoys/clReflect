@@ -186,6 +186,9 @@ namespace cldb
 			: Primitive(k, n, p)
 		{
 		}
+		virtual ~Attribute()
+		{
+		}
 	};
 
 
@@ -199,11 +202,13 @@ namespace cldb
 	{
 		FlagAttribute() : Attribute(Primitive::KIND_FLAG_ATTRIBUTE) { }
 		FlagAttribute(Name n, Name p) : Attribute(Primitive::KIND_FLAG_ATTRIBUTE, n, p) { }
+		virtual ~FlagAttribute() { }
 	};
 	struct IntAttribute : public Attribute
 	{
 		IntAttribute() : Attribute(Primitive::KIND_INT_ATTRIBUTE) { }
 		IntAttribute(Name n, Name p, int v) : Attribute(Primitive::KIND_INT_ATTRIBUTE, n, p), value(v) { }
+		virtual ~IntAttribute() { }
 		bool Equals(const IntAttribute& rhs) const
 		{
 			return Primitive::Equals(rhs) && value == rhs.value;
@@ -214,6 +219,7 @@ namespace cldb
 	{
 		FloatAttribute() : Attribute(Primitive::KIND_FLOAT_ATTRIBUTE) { }
 		FloatAttribute(Name n, Name p, float v) : Attribute(Primitive::KIND_FLOAT_ATTRIBUTE, n, p), value(v) { }
+		virtual ~FloatAttribute() { }
 		bool Equals(const FloatAttribute& rhs) const
 		{
 			return Primitive::Equals(rhs) && value == rhs.value;
@@ -224,6 +230,7 @@ namespace cldb
 	{
 		PrimitiveAttribute() : Attribute(Primitive::KIND_PRIMITIVE_ATTRIBUTE) { }
 		PrimitiveAttribute(Name n, Name p, Name v) : Attribute(Primitive::KIND_PRIMITIVE_ATTRIBUTE, n, p), value(v) { }
+		virtual ~PrimitiveAttribute() { }
 		bool Equals(const PrimitiveAttribute& rhs) const
 		{
 			return Primitive::Equals(rhs) && value == rhs.value;
@@ -234,6 +241,7 @@ namespace cldb
 	{
 		TextAttribute() : Attribute(Primitive::KIND_TEXT_ATTRIBUTE) { }
 		TextAttribute(Name n, Name p, const char* v) : Attribute(Primitive::KIND_TEXT_ATTRIBUTE, n, p), value(v) { }
+		virtual ~TextAttribute() { }
 		bool Equals(const TextAttribute& rhs) const
 		{
 			return Primitive::Equals(rhs) && value == rhs.value;

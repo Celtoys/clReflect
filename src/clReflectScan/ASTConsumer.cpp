@@ -116,7 +116,7 @@ namespace
 			return messages == "SILENT FAIL";
 		}
 
-		void Print(clang::SourceLocation location, clang::SourceManager& srcmgr, const std::string& message)
+		void Print(clang::SourceLocation location, const clang::SourceManager& srcmgr, const std::string& message)
 		{
 			// Don't do anything on a silent fail
 			if (IsSilentFail())
@@ -186,12 +186,6 @@ namespace
 				return Status::JoinWarn(status, va("Base class '%s' is templated and could not be parsed", type_name_str.c_str()));
 		}
 
-		// Check the type is reflected
-		else if (!consumer.GetReflectionSpecs().IsReflected(type_name_str))
-		{
-			return Status::Warn(va("Base class '%s' is not marked for reflection", type_name_str.c_str()));
-		}
-
 		cldb::Database& db = consumer.GetDB();
 		base_name = db.GetName(type_name_str.c_str());
 		db.AddTypeInheritance(derived_type_name, base_name);
@@ -219,8 +213,6 @@ namespace
 		// that the reflection spec must also be in scope.
 		const clang::ClassTemplateDecl* template_decl = cts_decl->getSpecializedTemplate();
 		type_name_str = template_decl->getQualifiedNameAsString(consumer.GetPrintingPolicy());
-		if (!consumer.GetReflectionSpecs().IsReflected(type_name_str))
-			return Status::Warn("Template has not been marked for reflection");
 
 		// Parent the instance to its declaring template
 		cldb::Database& db = consumer.GetDB();
@@ -393,15 +385,6 @@ namespace
 		Remove(info.type_name, "struct ");
 		Remove(info.type_name, "class ");
 
-		// Has the type itself been marked for reflection?
-		// This check is only valid for value type class fields, as in every other
-		// case the type can be forward-declared and not have any reflection spec present.
-		if ((flags & MF_CHECK_TYPE_IS_REFLECTED) != 0 &&
-			tc != clang::Type::Builtin &&
-			info.qualifer.op == cldb::Qualifier::VALUE &&
-			!consumer.GetReflectionSpecs().IsReflected(info.type_name))
-			return Status::Warn(va("Type '%s' has not been marked for reflection", info.type_name.c_str()));
-
 		return Status();
 	}
 
@@ -439,31 +422,48 @@ namespace
 
 
 	template <typename TYPE>
-	void ProcessAttribute(cldb::Database& db, TYPE* attribute, bool add)
+	void AddAttribute(cldb::Database& db, TYPE* attribute)
 	{
-		if (add)
+		// Only add the attribute if its unique
+		const cldb::DBMap<TYPE>& store = db.GetDBMap<TYPE>();
+		cldb::DBMap<TYPE>::const_iterator i = store.find(attribute->name.hash);
+		if (i == store.end() || !i->second.Equals(*attribute))
 		{
-			// Only add the attribute if its unique
-			const cldb::DBMap<TYPE>& store = db.GetDBMap<TYPE>();
-			cldb::DBMap<TYPE>::const_iterator i = store.find(attribute->name.hash);
-			if (i == store.end() || !i->second.Equals(*attribute))
-			{
-				LOG(ast, INFO, "attribute %s\n", attribute->name.text.c_str());
-				db.AddPrimitive(*attribute);
-			}
+			LOG(ast, INFO, "attribute %s\n", attribute->name.text.c_str());
+			db.AddPrimitive(*attribute);
 		}
-
-		// Delete as the specified type to catch the correct destructor
-		delete attribute;
 	}
 
 
-	bool ParseAttributes(cldb::Database& db, clang::SourceManager& srcmgr, clang::NamedDecl* decl, const std::string& parent)
+	enum ParseAttributesResult
 	{
+		PAR_Normal,
+		PAR_Reflect,
+		PAR_ReflectPartial,
+		PAR_NoReflect,
+	};
+
+
+	ParseAttributesResult ParseAttributes(ASTConsumer& consumer, clang::NamedDecl* decl, const std::string& parent, bool allow_reflect)
+	{
+		ParseAttributesResult result = PAR_Normal;
+
+		cldb::Database& db = consumer.GetDB();
+		const clang::SourceManager& srcmgr = consumer.GetASTContext().getSourceManager();
+
+		// See what the reflection specs have to say (namespaces can't have attributes)
+		const ReflectionSpecs& specs = consumer.GetReflectionSpecs();
+		ReflectionSpecType spec_type = specs.Get(parent);
+		switch (spec_type)
+		{
+		case (RST_Full): result = PAR_Reflect; break;
+		case (RST_Partial): result = PAR_ReflectPartial; break;
+		}
+
 		// Reflection attributes are stored as clang annotation attributes
 		clang::specific_attr_iterator<clang::AnnotateAttr> i = decl->specific_attr_begin<clang::AnnotateAttr>();
 		if (i == decl->specific_attr_end<clang::AnnotateAttr>())
-			return true;
+			return result;
 
 		// Get the annotation text
 		clang::AnnotateAttr* attribute = *i;
@@ -482,44 +482,70 @@ namespace
 		// Parse all attributes in the text
 		std::vector<cldb::Attribute*> attributes = ::ParseAttributes(db, attribute_text.str().c_str(), filename, line);
 
-		// Determine if the attributes are being added or whether their memory is just being deleted
-		// TODO: Need to evaluate whether this works on parent primitives, too.
-		bool add = true;
+		// Look for a reflection spec as the first attribute
+		size_t attr_search_start = 0;
+		static unsigned int reflect_hash = clcpp::internal::HashNameString("reflect");
+		static unsigned int reflect_part_hash = clcpp::internal::HashNameString("reflect_part");
 		static unsigned int noreflect_hash = clcpp::internal::HashNameString("noreflect");
-		if (attributes.size() && attributes[0]->name.hash == noreflect_hash)
-			add = false;
-
-		for (size_t i = 0; i < attributes.size(); i++)
+		if (attributes.size())
 		{
-			cldb::Attribute* attribute = attributes[i];
+			unsigned int name_hash = attributes[0]->name.hash;
+			if (name_hash == reflect_hash)
+				result = PAR_Reflect;
+			else if (name_hash == reflect_part_hash)
+				result = PAR_ReflectPartial;
+			else if (name_hash == noreflect_hash)
+				result = PAR_NoReflect;
 
-			// 'noreflect' must be the first attribute
-			if (i && attribute->name.hash == noreflect_hash)
-				Status().Print(location, srcmgr, "'noreflect' attribute unexpected and ignored");
+			// Start adding attributes after any reflection specs
+			// Their existence is implied by the presence of the primitives they describe
+			if (result != PAR_Normal)
+				attr_search_start = 1;
+		}
 
-			// Add the attributes to the database, parented to the calling declaration
-			attribute->parent = db.GetName(parent.c_str());
-			switch (attribute->kind)
+		// Determine whether the attributes themselves need reflecting
+		if (allow_reflect || result != PAR_NoReflect)
+		{
+			for (size_t i = attr_search_start; i < attributes.size(); i++)
 			{
-			case (cldb::Primitive::KIND_FLAG_ATTRIBUTE):
-				ProcessAttribute(db, (cldb::FlagAttribute*)attribute, add);
-				break;
-			case (cldb::Primitive::KIND_INT_ATTRIBUTE):
-				ProcessAttribute(db, (cldb::IntAttribute*)attribute, add);
-				break;
-			case (cldb::Primitive::KIND_FLOAT_ATTRIBUTE):
-				ProcessAttribute(db, (cldb::FloatAttribute*)attribute, add);
-				break;
-			case (cldb::Primitive::KIND_PRIMITIVE_ATTRIBUTE):
-				ProcessAttribute(db, (cldb::PrimitiveAttribute*)attribute, add);
-				break;
-			case (cldb::Primitive::KIND_TEXT_ATTRIBUTE):
-				ProcessAttribute(db, (cldb::TextAttribute*)attribute, add);
-				break;
+				cldb::Attribute* attribute = attributes[i];
+
+				if (result != PAR_Normal)
+				{
+					// Check that no attribute after the initial one contains a reflection spec
+					unsigned int name_hash = attributes[i]->name.hash;
+					if (name_hash == reflect_hash || name_hash == reflect_part_hash || name_hash == noreflect_hash)
+						Status().Print(location, srcmgr, va("'%s' attribute unexpected and ignored", attributes[i]->name.text.c_str()));
+				}
+
+				// Add the attributes to the database, parented to the calling declaration
+				attribute->parent = db.GetName(parent.c_str());
+				switch (attribute->kind)
+				{
+				case (cldb::Primitive::KIND_FLAG_ATTRIBUTE):
+					AddAttribute(db, (cldb::FlagAttribute*)attribute);
+					break;
+				case (cldb::Primitive::KIND_INT_ATTRIBUTE):
+					AddAttribute(db, (cldb::IntAttribute*)attribute);
+					break;
+				case (cldb::Primitive::KIND_FLOAT_ATTRIBUTE):
+					AddAttribute(db, (cldb::FloatAttribute*)attribute);
+					break;
+				case (cldb::Primitive::KIND_PRIMITIVE_ATTRIBUTE):
+					AddAttribute(db, (cldb::PrimitiveAttribute*)attribute);
+					break;
+				case (cldb::Primitive::KIND_TEXT_ATTRIBUTE):
+					AddAttribute(db, (cldb::TextAttribute*)attribute);
+					break;
+				}
 			}
 		}
 
-		return add;
+		// Delete the allocated attributes
+		for (size_t i = 0; i < attributes.size(); i++)
+			delete attributes[i];
+
+		return result;
 	}
 }
 
@@ -529,6 +555,7 @@ ASTConsumer::ASTConsumer(clang::ASTContext& context, cldb::Database& db, const R
 	, m_DB(db)
 	, m_ReflectionSpecs(rspecs)
 	, m_PrintingPolicy(0)
+	, m_AllowReflect(false)
 {
 	LOG_TO_STDOUT(warnings, INFO);
 
@@ -577,26 +604,45 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const std::string& parent_name
 	if (decl->isInvalidDecl())
 		return;
 
-	// Has this decl been marked for reflection?
-	std::string name = decl->getQualifiedNameAsString(*m_PrintingPolicy);
-	if (!m_ReflectionSpecs.IsReflected(name.c_str()))
-		return;
-
 	// Gather all attributes associated with this primitive
-	if (!ParseAttributes(m_DB, m_ASTContext.getSourceManager(), decl, name))
+	std::string name = decl->getQualifiedNameAsString(*m_PrintingPolicy);
+	ParseAttributesResult result = ParseAttributes(*this, decl, name, m_AllowReflect);
+
+	// Return immediately if 'noreflect' is specified, ignoring all children
+	if (result == PAR_NoReflect)
 		return;
 
-	clang::Decl::Kind kind = decl->getKind();
-	switch (kind)
+	// If 'reflect' is specified, backup the allow reflect state and set it to true for this
+	// declaration and all of its children.
+	int old_allow_reflect = -1;
+	if (result == PAR_Reflect)
 	{
-	case (clang::Decl::Namespace): AddNamespaceDecl(decl, name, parent_name); break;
-	case (clang::Decl::CXXRecord): AddClassDecl(decl, name, parent_name); break;
-	case (clang::Decl::Enum): AddEnumDecl(decl, name, parent_name); break;
-	case (clang::Decl::Function): AddFunctionDecl(decl, name, parent_name); break;
-	case (clang::Decl::CXXMethod): AddMethodDecl(decl, name, parent_name); break;
-	case (clang::Decl::Field): AddFieldDecl(decl, name, parent_name, layout); break;
-	case (clang::Decl::ClassTemplate): AddClassTemplateDecl(decl, name, parent_name); break;
+		old_allow_reflect = m_AllowReflect;
+		m_AllowReflect = true;
 	}
+
+	// Reflect only if the allow reflect state has been inherited or the 'reflect_part'
+	// attribute is specified
+	if (m_AllowReflect || result == PAR_ReflectPartial)
+	{
+		clang::Decl::Kind kind = decl->getKind();
+		switch (kind)
+		{
+		case (clang::Decl::Namespace): AddNamespaceDecl(decl, name, parent_name); break;
+		case (clang::Decl::CXXRecord): AddClassDecl(decl, name, parent_name); break;
+		case (clang::Decl::Enum): AddEnumDecl(decl, name, parent_name); break;
+		case (clang::Decl::Function): AddFunctionDecl(decl, name, parent_name); break;
+		case (clang::Decl::CXXMethod): AddMethodDecl(decl, name, parent_name); break;
+		case (clang::Decl::Field): AddFieldDecl(decl, name, parent_name, layout); break;
+		case (clang::Decl::ClassTemplate): AddClassTemplateDecl(decl, name, parent_name); break;
+		}
+	}
+
+	// Restore any previously changed allow reflect state
+	if (old_allow_reflect != -1)
+		m_AllowReflect = old_allow_reflect != 0;
+
+	// if m_ReflectPrimitives was changed, restore it
 }
 
 

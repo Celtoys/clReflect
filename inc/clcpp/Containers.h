@@ -5,11 +5,7 @@
 #include "clcpp.h"
 
 
-// Partially reflect so that they can be used as base classes
-clcpp_reflect_part(clcpp::IReadIterator)
-clcpp_reflect_part(clcpp::IWriteIterator)
-
-
+clcpp_reflect_part(clcpp)
 namespace clcpp
 {
 	class ReadIterator;
@@ -41,6 +37,7 @@ namespace clcpp
 	// The interface that the various read iterators for containers must
 	// derive from.
 	//
+	clcpp_attr(reflect_part)
 	struct IReadIterator
 	{
 		virtual ~IReadIterator() { }
@@ -61,6 +58,7 @@ namespace clcpp
 	// The interface that the various write iterators for containers must
 	// derive from.
 	//
+	clcpp_attr(reflect_part)
 	struct IWriteIterator
 	{
 		virtual ~IWriteIterator() { }
