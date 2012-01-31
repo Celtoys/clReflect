@@ -355,14 +355,19 @@ namespace
 
 	const char* VerifyDigits(Context& ctx, const char* decimal, const char* end)
 	{
-		do
+		while (true)
 		{
 			if (decimal >= end)
 			{
 				ctx.SetError(clutl::JSONError::UNEXPECTED_END_OF_DATA);
 				return 0;
 			}
-		} while (isdigit(*decimal++));
+
+			if (!isdigit(*decimal))
+				break;
+
+			decimal++;
+		}
 
 		return decimal;
 	}
