@@ -45,9 +45,7 @@
 
 // Explicitly stated dependencies in stdlib.h
 extern "C" double strtod(const char* s00, char** se);
-// This is Microsoft's safer version of the ISO C++ _fcvt which takes the extra buffer and size parameters
-// for overflow checking and thread safety
-extern "C" int _fcvt_s(char* buffer, unsigned int buffer_size, double val, int count, int* dec, int* sign);
+extern "C" int snprintf(char* dest, unsigned int n, const char* fmt, ...);
 
 
 static void SetupTypeDispatchLUT();
@@ -1068,53 +1066,10 @@ namespace
 			return;
 		}
 
-		// Convert the double to a string on the local stack
-		char fcvt_buffer[512] = { 0 };
-		int dec = -1, sign = -1;
-		_fcvt_s(fcvt_buffer, sizeof(fcvt_buffer), decimal, 48, &dec, &sign);
-
-		char decimal_buffer[512];
-		char* iptr = fcvt_buffer;
-		char* optr = decimal_buffer;
-
-		// Prefix with negative sign
-		if (sign)
-			*optr++ = '-';
-
-		// With a negative decimal position, prefix with 0. and however many
-		// zeroes are needed
-		if (dec <= 0)
-		{
-			*optr++ = '0';
-			*optr++ = '.';
-
-			dec = -dec;
-			while (dec-- > 0)
-				*optr++ = '0';
-
-			dec = -1;
-		}
-
-		// Copy between buffers
-		char* last_nonzero_digit = optr;
-		while (*iptr)
-		{
-			// Insert decimal point
-			if (iptr - fcvt_buffer == dec)
-			{
-				*optr++ = '.';
-				last_nonzero_digit = optr;
-			}
-
-			*optr++ = *iptr++;
-
-			// Keep track of the last non-zero digit
-			if (*iptr && *iptr != '0')
-				last_nonzero_digit = optr;
-		}
-
-		*(last_nonzero_digit + 1) = 0;
-		out.Write(decimal_buffer, last_nonzero_digit - decimal_buffer + 1);
+		// Serialise full float rep
+		char float_buffer[512];
+		int count = snprintf(float_buffer, sizeof(float_buffer), "%f", decimal);
+		out.Write(float_buffer, count);
 	}
 
 
