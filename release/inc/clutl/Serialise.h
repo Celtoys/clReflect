@@ -29,16 +29,13 @@
 #pragma once
 
 
-namespace clcpp
-{
-	struct Type;
-}
+#include <clcpp/clcpp.h>
 
 
+clcpp_reflect_part(clutl)
 namespace clutl
 {
-	class ObjectDatabase;
-	struct NamedObject;
+	struct Object;
 
 
 	//
@@ -61,6 +58,10 @@ namespace clutl
 		// Copy data into the write buffer
 		// Grows the capacity on demand
 		void Write(const void* data, unsigned int length);
+		
+		// Utilities built upon Alloc/Write
+		void WriteStr(const char* str);
+		void WriteChar(char c);
 
 		void SeekRel(int offset);
 
@@ -91,32 +92,12 @@ namespace clutl
 
 		unsigned int GetBytesRead() const { return m_DataRead - m_Data; }
 		unsigned int GetTotalBytes() const { return m_DataEnd - m_Data; }
+		unsigned int GetBytesRemaining() const { return m_DataEnd - m_DataRead; }
 
 	private:
 		const char* m_Data;
 		const char* m_DataEnd;
 		const char* m_DataRead;
-	};
-
-
-	//
-	// A list of objects created during a serialisation operation that require pointer patching.
-	// Combine with FieldVisitor to walk the pointer fields of an object and replace the hash
-	// value with the actual pointer.
-	//
-	class NamedObjectList
-	{
-	public:
-		void AddObject(NamedObject* object);
-
-		NamedObject** GetObjects(int& nb_objects)
-		{
-			nb_objects = m_Data.GetBytesWritten() / sizeof(NamedObject*);
-			return (NamedObject**)m_Data.GetData();
-		}
-
-	private:
-		WriteBuffer m_Data;
 	};
 
 
@@ -165,23 +146,72 @@ namespace clutl
 		{
 			INDENT_MASK = 0x0F,
 			FORMAT_OUTPUT = 0x10,
-			EMIT_HEX_FLOATS = 0x20,
-			EMIT_CREATE_OBJECT = 0x40
+			EMIT_HEX_FLOATS = 0x20
 		};
 	};
 
 
-	// Cannot load nullstr fields
+	enum JSONTokenType
+	{
+		JSON_TOKEN_NONE,
+
+		// Single character tokens match their character values for simpler switch code
+		JSON_TOKEN_LBRACE = '{',
+		JSON_TOKEN_RBRACE = '}',
+		JSON_TOKEN_COMMA = ',',
+		JSON_TOKEN_COLON = ':',
+		JSON_TOKEN_LBRACKET = '[',
+		JSON_TOKEN_RBRACKET = ']',
+
+		JSON_TOKEN_STRING,
+
+		JSON_TOKEN_TRUE,
+		JSON_TOKEN_FALSE,
+		JSON_TOKEN_NULL,
+
+		JSON_TOKEN_INTEGER,
+		JSON_TOKEN_DECIMAL,
+	};
+
+
+	// Partially reflected so that it can be used for reflecting custom serialisation functions
+	clcpp_attr(reflect_part)
+	struct JSONToken
+	{
+		JSONToken()
+			: type(JSON_TOKEN_NONE)
+			, length(0)
+		{
+		}
+
+		explicit JSONToken(JSONTokenType type, int length)
+			: type(type)
+			, length(length)
+		{
+		}
+
+		bool IsValid() const
+		{
+			return type != JSON_TOKEN_NONE;
+		}
+
+		JSONTokenType type;
+		int length;
+
+		// All possible token value representations
+		struct
+		{
+			union
+			{
+				const char* string;
+				__int64 integer;
+				double decimal;
+			};
+		} val;
+	};
+
+
+	// JSON serialisation
 	JSONError LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type);
-
-	// Creates and loads sequence of objects encountered in a JSON stream. Any pointers in the returned
-	// objects will store the hash of the name of the object pointed to which must be patched up by the
-	// caller using whatever object databases they have at their disposal.
-	JSONError LoadJSON(ReadBuffer& in, ObjectDatabase* object_db, NamedObjectList& loaded_objects);
-
-	// Can save nullstr fields
 	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags = 0);
-
-	// Saves the entire object database
-	void SaveJSON(WriteBuffer& out, const ObjectDatabase& object_db, unsigned int flags = 0);
 }

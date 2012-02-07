@@ -3,21 +3,21 @@
 #include <clcpp/Database.h>
 
 
-#ifdef _WINDOWS
+#if defined(_WINDOWS) || defined(_WIN32)
 
 	// Windows-specific module loading and inspection functions
 	// TODO: Create a single IHost interface in clcpp and stick all this kind of stuff in there?
 	typedef int (__stdcall *FunctionPtr)();
 	extern "C" __declspec(dllimport) void* __stdcall LoadLibraryA(const char* lpLibFileName);
 	extern "C" __declspec(dllimport) FunctionPtr __stdcall GetProcAddress(void* module, const char* lpProcName);
-	extern "C" __declspec(dllimport) void __stdcall FreeLibrary(void* hLibModule);
+	extern "C" __declspec(dllimport) int __stdcall FreeLibrary(void* hLibModule);
 
 #else
 
 	// Non-functioning implementations for all other platforms
 	void* LoadLibraryA(const char*) { return 0; }
 	void* GetProcAddress(void*, const char*) { return 0; }
-	void FreeLibrary(void*);
+	int FreeLibrary(void*);
 
 #endif
 

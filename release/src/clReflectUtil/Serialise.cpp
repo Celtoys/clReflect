@@ -26,7 +26,6 @@
 //
 
 #include <clutl/Serialise.h>
-#include <clcpp/Core.h>
 
 
 // Explicit dependency
@@ -109,6 +108,23 @@ void clutl::WriteBuffer::Write(const void* data, unsigned int length)
 }
 
 
+void clutl::WriteBuffer::WriteStr(const char* str)
+{
+	// Calculate string length before writing the data
+	const char* end = str;
+	while (*end)
+		end++;
+	Write(str, end - str);
+}
+
+
+void clutl::WriteBuffer::WriteChar(char c)
+{
+	char* data_write = (char*)Alloc(1);
+	*data_write = c;
+}
+
+
 void clutl::WriteBuffer::SeekRel(int offset)
 {
 	clcpp::internal::Assert(m_DataWrite + offset <= m_DataEnd && "Seek overflow");
@@ -144,11 +160,4 @@ void clutl::ReadBuffer::SeekRel(int offset)
 {
 	clcpp::internal::Assert(m_DataRead + offset <= m_DataEnd && "Seek overflow");
 	m_DataRead += offset;
-}
-
-
-void clutl::NamedObjectList::AddObject(NamedObject* object)
-{
-	NamedObject** dest = (NamedObject**)m_Data.Alloc(sizeof(NamedObject*));
-	*dest = object;
 }

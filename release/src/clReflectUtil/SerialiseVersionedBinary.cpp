@@ -26,7 +26,6 @@
 //
 
 #include <clutl/Serialise.h>
-#include <clcpp/Database.h>
 
 
 namespace

@@ -5,31 +5,35 @@
 #include <clcpp/clcpp.h>
 
 
-// Only want to reflect the Object/NamedObject classes so that derivers will reflect
-// The type parameter is not interesting here
-clcpp_reflect_part(clutl::Object)
-clcpp_reflect_part(clutl::NamedObject)
-
-
 //
 // This is an example object management API that you can use, ignore or base your own
 // designs upon. It is required by the serialisation API in this library which would need
 // to be branched/copied should you want to use your own object management API.
 //
+clcpp_reflect_part(clutl)
 namespace clutl
 {
-	class ObjectDatabase;
+	//
+	// Custom flag attributes for quickly determining if a type inherits from Object or ObjectGroup
+	//
+	enum
+	{
+		FLAG_ATTR_IS_OBJECT			= 0x10000000,
+		FLAG_ATTR_IS_OBJECT_GROUP	= 0x20000000,
+	};
 
 
 	//
 	// Base object class for objects that require runtime knowledge of their type
 	//
+	clcpp_attr(reflect_part, custom_flag = 0x10000000, custom_flag_inherit)
 	struct Object
 	{
 		// Default constructor
 		Object()
-			: object_db(0)
-			, type(0)
+			: type(0)
+			, unique_id(0)
+			, object_group(0)
 		{
 		}
 
@@ -48,101 +52,106 @@ namespace clutl
 		//
 		virtual ~Object() { }
 
-		// Object database that owns this object
-		ObjectDatabase* object_db;
-
-		// Type of the object
-		const clcpp::Type* type;
-	};
-
-
-	//
-	// Base object class for objects that are to be the root of any serialisation network
-	// Doesn't inherit from Object so that it's impossible to mistakenly treat a NamedObject
-	// as an Object.
-	//
-	struct NamedObject
-	{
-		// Default constructor
-		NamedObject()
-			: object_db(0)
-			, type(0)
-		{
-		}
-
-		// Carry a virtual function table, as described for Object
-		virtual ~NamedObject() { }
-
-		// Object database that owns this object
-		ObjectDatabase* object_db;
+		// Shortcut for calling DestroyObject on this object in its owning group
+		void Delete() const;
 
 		// Type of the object
 		const clcpp::Type* type;
 
-		// TODO: Is it wise to use the same name type?
-		clcpp::Name name;
+		// Unique ID for storing the object within an object group and quickly retrieving it
+		// If this is zero, the object is anonymous and not tracked
+		unsigned int unique_id;
+
+		// Object group that owns this object
+		class ObjectGroup* object_group;
 	};
 
 
-	class ObjectDatabase
+	//
+	// Hash table based storage of collections of objects.
+	// The ObjectGroup is an object itself, allowing groups to be nested within other groups.
+	//
+	clcpp_attr(reflect_part, custom_flag = 0x20000000, custom_flag_inherit)
+	class ObjectGroup : public Object
 	{
 	public:
-		ObjectDatabase(const clcpp::Database* reflection_db, unsigned int max_nb_objects);
-		~ObjectDatabase();
+		ObjectGroup();
+		~ObjectGroup();
+
+		// Create a nested group within this one
+		ObjectGroup* CreateObjectGroup(unsigned int unique_id);
+
+		// Create an anonymous object which doesn't get tracked by the database
+		Object* CreateObject(unsigned int type_hash);
+
+		// Create a named object that is internally tracked by name and can be found at a later point
+		Object* CreateObject(unsigned int type_hash, unsigned int unique_id);
+
+		// Destroy named/anonymous object or an object group
+		void DestroyObject(const Object* object);
+
+		// Find a created object by name
+		Object* FindObject(unsigned int name_hash) const;
 
 		// Template helpers for acquring the required typename and correctly casting during creation
 		template <typename TYPE> TYPE* CreateObject()
 		{
 			return static_cast<TYPE*>(CreateObject(clcpp::GetTypeNameHash<TYPE>()));
 		}
-		template <typename TYPE> TYPE* CreateNamedObject(const char* name_text)
+		template <typename TYPE> TYPE* CreateObject(unsigned int unique_id)
 		{
-			return static_cast<TYPE*>(CreateNamedObject(clcpp::GetTypeNameHash<TYPE>(), name_text));
+			return static_cast<TYPE*>(CreateObject(clcpp::GetTypeNameHash<TYPE>(), unique_id));
 		}
 
-		// Create and destroy objects of a given type name
-		Object* CreateObject(unsigned int type_hash);
-		void DestroyObject(Object* object);
-
-		// Create and destroy objects of the given type name and object name. Objects created with this method
-		// are internally tracked and can be requested by name at a later point.
-		NamedObject* CreateNamedObject(unsigned int type_hash, const char* name_text);
-		void DestroyNamedObject(NamedObject* object);
-
-		NamedObject* FindNamedObject(unsigned int name_hash) const;
-
 	private:
-		struct HashEntry
-		{
-			HashEntry() : object(0) { }
-			clcpp::Name name;
-			NamedObject* object;
-		};
+		struct HashEntry;
 
-		const HashEntry* FindHashEntry(unsigned int hash_index, unsigned int hash) const;
+		void AddHashEntry(Object* object);
+		void RemoveHashEntry(const Object* object);
+		void Resize();
 
+		// Reflection database to use for type access
 		const clcpp::Database* m_ReflectionDB;
 
 		// An open-addressed hash table with linear probing - good cache behaviour for storing
 		// hashes of pointers that may suffer from clustering.
 		unsigned int m_MaxNbObjects;
+		unsigned int m_NbObjects;
 		HashEntry* m_NamedObjects;
 
 		friend class ObjectIterator;
+		friend class ObjectDatabase;
 	};
 
 
 	//
-	// Iterator for visiting all created objects in an object database.
+	// The main object database, currently just a holder for a root object group.
+	// May be extended at a later date to do scoped named lookup.
+	//
+	class ObjectDatabase
+	{
+	public:
+		ObjectDatabase(const clcpp::Database* reflection_db);
+		~ObjectDatabase();
+
+		ObjectGroup* GetRootGroup() const { return m_RootGroup; }
+
+	private:
+		ObjectGroup* m_RootGroup;
+	};
+
+
+	//
+	// Iterator for visiting all created objects in an object group.
+	// The iterator is invalidated if objects are added/removed from the group.
 	//
 	class ObjectIterator
 	{
 	public:
-		ObjectIterator(const ObjectDatabase& object_db);
+		ObjectIterator(const ObjectGroup* object_group);
 
-		// Get the current object or object name under iteration
-		void* GetObject() const;
-		clcpp::Name GetObjectName() const;
+		// Get the current object under iteration
+		Object* GetObject() const;
 
 		// Move onto the next object in the database
 		void MoveNext();
@@ -154,7 +163,7 @@ namespace clutl
 	private:
 		void ScanForEntry();
 
-		const ObjectDatabase& m_ObjectDB;
+		const ObjectGroup* m_ObjectGroup;
 		unsigned int m_Position;
 	};
 }

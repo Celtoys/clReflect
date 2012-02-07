@@ -42,7 +42,7 @@ namespace clcpp
 	struct Class;
 	struct IntAttribute;
 	struct FloatAttribute;
-	struct NameAttribute;
+	struct PrimitiveAttribute;
 	struct TextAttribute;
 
 
@@ -70,6 +70,7 @@ namespace clcpp
 	struct Name
 	{
 		Name() : hash(0), text(0) { }
+		bool operator == (const Name& rhs) const { return hash == rhs.hash; }
 		unsigned int hash;
 		const char* text;
 	};
@@ -154,7 +155,7 @@ namespace clcpp
 			KIND_FLAG_ATTRIBUTE,
 			KIND_INT_ATTRIBUTE,
 			KIND_FLOAT_ATTRIBUTE,
-			KIND_NAME_ATTRIBUTE,
+			KIND_PRIMITIVE_ATTRIBUTE,
 			KIND_TEXT_ATTRIBUTE,
 			KIND_TYPE,
 			KIND_ENUM_CONSTANT,
@@ -203,7 +204,7 @@ namespace clcpp
 		// Safe utility functions for casting to derived types
 		inline const IntAttribute* AsIntAttribute() const;
 		inline const FloatAttribute* AsFloatAttribute() const;
-		inline const NameAttribute* AsNameAttribute() const;
+		inline const PrimitiveAttribute* AsPrimitiveAttribute() const;
 		inline const TextAttribute* AsTextAttribute() const;
 	};
 
@@ -227,10 +228,12 @@ namespace clcpp
 		enum
 		{
 			// "transient" - These primitives are ignored during serialisation
-			TRANSIENT		= 1,
+			TRANSIENT		= 0x01,
 
-			// "nullstr" - The primitive is a null terminated char* pointer representing a string
-			NULLSTR			= 2,
+			// If an attribute starts with "load_" or "save_" then these flags are set to indicate there
+			// are custom loading functions assigned
+			CUSTOM_LOAD		= 0x02,
+			CUSTOM_SAVE		= 0x04,
 		};
 	};
 	struct IntAttribute : public Attribute
@@ -245,11 +248,11 @@ namespace clcpp
 		FloatAttribute() : Attribute(KIND), value(0) { }
 		float value;
 	};
-	struct NameAttribute : public Attribute
+	struct PrimitiveAttribute : public Attribute
 	{
-		static const Kind KIND = KIND_NAME_ATTRIBUTE;
-		NameAttribute() : Attribute(KIND) { }
-		Name value;
+		static const Kind KIND = KIND_PRIMITIVE_ATTRIBUTE;
+		PrimitiveAttribute() : Attribute(KIND), primitive(0) { }
+		const Primitive* primitive;
 	};
 	struct TextAttribute : public Attribute
 	{
@@ -270,7 +273,6 @@ namespace clcpp
 		Type()
 			: Primitive(KIND)
 			, size(0)
-			, base_type(0)
 			, ci(0)
 		{
 		}
@@ -278,7 +280,6 @@ namespace clcpp
 		Type(Kind k)
 			: Primitive(k)
 			, size(0)
-			, base_type(0)
 			, ci(0)
 		{
 		}
@@ -286,9 +287,17 @@ namespace clcpp
 		// Does this type derive from the specified type, by hash?
 		bool DerivesFrom(unsigned int type_name_hash) const
 		{
-			for (const Type* type = base_type; type; type = type->base_type)
+			// Search in immediate bases
+			for (int i = 0; i < base_types.size(); i++)
 			{
-				if (type->name.hash == type_name_hash)
+				if (base_types[i]->name.hash == type_name_hash)
+					return true;
+			}
+
+			// Search up the inheritance tree
+			for (int i = 0; i < base_types.size(); i++)
+			{
+				if (base_types[i]->DerivesFrom(type_name_hash))
 					return true;
 			}
 
@@ -303,8 +312,8 @@ namespace clcpp
 		// Size of the type in bytes
 		unsigned int size;
 
-		// Single type this one derives from. Can be either a Class or TemplateType.
-		const Type* base_type;
+		// Types this one derives from. Can be either a Class or TemplateType.
+		CArray<const Type*> base_types;
 
 		// This is non-null if the type is a registered container
 		ContainerInfo* ci;
@@ -404,8 +413,8 @@ namespace clcpp
 
 		Function()
 			: Primitive(KIND)
-			, return_parameter(0)
 			, unique_id(0)
+			, return_parameter(0)
 			, flag_attributes(0)
 		{
 		}
@@ -554,22 +563,22 @@ namespace clcpp
 	//
 	inline const IntAttribute* Attribute::AsIntAttribute() const
 	{
-		internal::Assert(kind == IntAttribute::KIND_INT_ATTRIBUTE);
+		internal::Assert(kind == IntAttribute::KIND);
 		return (const IntAttribute*)this;
 	}
 	inline const FloatAttribute* Attribute::AsFloatAttribute() const
 	{
-		internal::Assert(kind == FloatAttribute::KIND_FLOAT_ATTRIBUTE);
+		internal::Assert(kind == FloatAttribute::KIND);
 		return (const FloatAttribute*)this;
 	}
-	inline const NameAttribute* Attribute::AsNameAttribute() const
+	inline const PrimitiveAttribute* Attribute::AsPrimitiveAttribute() const
 	{
-		internal::Assert(kind == NameAttribute::KIND_NAME_ATTRIBUTE);
-		return (const NameAttribute*)this;
+		internal::Assert(kind == PrimitiveAttribute::KIND);
+		return (const PrimitiveAttribute*)this;
 	}
 	inline const TextAttribute* Attribute::AsTextAttribute() const
 	{
-		internal::Assert(kind == TextAttribute::KIND_TEXT_ATTRIBUTE);
+		internal::Assert(kind == TextAttribute::KIND);
 		return (const TextAttribute*)this;
 	}
 
@@ -621,6 +630,9 @@ namespace clcpp
 
 		// Retrieve namespaces using their fully-scoped names
 		const Namespace* GetNamespace(unsigned int hash) const;
+
+		// Retrieve the global namespace, that allows you to reach every primitive
+		const Namespace* GetGlobalNamespace() const;
 
 		// Retrieve templates using their fully-scoped names
 		const Template* GetTemplate(unsigned int hash) const;
@@ -696,7 +708,7 @@ namespace clcpp
 			CArray<FlagAttribute> flag_attributes;
 			CArray<IntAttribute> int_attributes;
 			CArray<FloatAttribute> float_attributes;
-			CArray<NameAttribute> name_attributes;
+			CArray<PrimitiveAttribute> primitive_attributes;
 			CArray<TextAttribute> text_attributes;
 
 			// A list of references to all types, enums and classes for potentially quicker

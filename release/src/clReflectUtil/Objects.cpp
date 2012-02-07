@@ -5,191 +5,239 @@
 #include <clcpp/FunctionCall.h>
 
 
-// Explicit dependencies
-// TODO: Some how remove the need for these or provide a means of locating them on the target platform
-extern "C" void* __cdecl memcpy(void* dst, const void* src, unsigned int size);
-extern "C" void* __cdecl memset(void* dst, int val, unsigned int size);
-
-
-
-namespace
+struct clutl::ObjectGroup::HashEntry
 {
-	// Table of primes, each around twice the size of those prior and as far as possible from the nearest pow2 numbers
-	unsigned int g_HashTableSizes[] =
-	{
-		53, 97, 193, 389, 769, 1543, 3079, 6151, 12289, 24593, 49167, 98317, 196613, 393241, 786433, 1572869
-	};
+	HashEntry() : hash(0), object(0) { }
+	unsigned int hash;
+	Object* object;
+};
 
 
-	template <typename OBJECT_TYPE>
-	OBJECT_TYPE* AllocateAndConstructObject(const clcpp::Database* reflection_db, clutl::ObjectDatabase* object_db, unsigned int type_hash)
-	{
-		// Can the type be located?
-		const clcpp::Type* type = reflection_db->GetType(type_hash);
-		if (type == 0)
-			return 0;
 
-		// Can only create class objects
-		if (type->kind != clcpp::Primitive::KIND_CLASS)
-			return 0;
-		const clcpp::Class* class_type = type->AsClass();
-
-		// Need a constructor to new and a destructor to delete at a later point
-		if (class_type->constructor == 0 || class_type->destructor == 0)
-			return 0;
-
-		// Allocate and construct the object
-		OBJECT_TYPE* object = (OBJECT_TYPE*)new char[type->size];
-		CallFunction(class_type->constructor, object);
-		object->object_db = object_db;
-		object->type = type;
-		return object;
-	}
-
-
-	template <typename OBJECT_TYPE>
-	void DestructAndFreeObject(OBJECT_TYPE* object)
-	{
-		// These represent fatal code errors
-		clcpp::internal::Assert(object != 0);
-		clcpp::internal::Assert(object->type != 0);
-
-		// Call the destructor and release the memory
-		const clcpp::Class* class_type = object->type->AsClass();
-		clcpp::internal::Assert(class_type->destructor != 0);
-		CallFunction(class_type->destructor, object);
-		delete [] (char*)object;
-	}
-
-
-	unsigned int strlen(const char* str)
-	{
-		const char *end = str;
-		while (*end++) ;
-		return end - str - 1;
-	}
+void clutl::Object::Delete() const
+{
+	if (object_group)
+		object_group->DestroyObject(this);
 }
 
 
-clutl::ObjectDatabase::ObjectDatabase(const clcpp::Database* reflection_db, unsigned int max_nb_objects)
-	: m_ReflectionDB(reflection_db)
-	, m_MaxNbObjects(0)
+clutl::ObjectGroup::ObjectGroup()
+	: m_ReflectionDB(0)
+	, m_MaxNbObjects(8)
+	, m_NbObjects(0)
 	, m_NamedObjects(0)
 {
-	clcpp::internal::Assert(reflection_db != 0);
-
-	// Round the max number of objects up to the nearest prime number in the table
-	unsigned int prev_size = 0;
-	for (unsigned int i = 0; i < sizeof(g_HashTableSizes) / sizeof(g_HashTableSizes[0]); i++)
-	{
-		if (max_nb_objects > prev_size && max_nb_objects <= g_HashTableSizes[i])
-		{
-			max_nb_objects = g_HashTableSizes[i];
-			break;
-		}
-		prev_size = g_HashTableSizes[i];
-	}
-
 	// Allocate the hash table
-	m_MaxNbObjects = max_nb_objects;
 	m_NamedObjects = new HashEntry[m_MaxNbObjects];
-	memset(m_NamedObjects, 0, m_MaxNbObjects * sizeof(HashEntry));
 }
 
 
-clutl::ObjectDatabase::~ObjectDatabase()
+clutl::ObjectGroup::~ObjectGroup()
 {
 	if (m_NamedObjects != 0)
 		delete [] m_NamedObjects;
 }
 
 
-clutl::Object* clutl::ObjectDatabase::CreateObject(unsigned int type_hash)
+clutl::ObjectGroup* clutl::ObjectGroup::CreateObjectGroup(unsigned int unique_id)
 {
-	return AllocateAndConstructObject<Object>(m_ReflectionDB, this, type_hash);
+	return (ObjectGroup*)CreateObject(clcpp::GetTypeNameHash<ObjectGroup>(), unique_id);
 }
 
 
-void clutl::ObjectDatabase::DestroyObject(Object* object)
+clutl::Object* clutl::ObjectGroup::CreateObject(unsigned int type_hash)
 {
-	DestructAndFreeObject<Object>(object);
-}
-
-
-clutl::NamedObject* clutl::ObjectDatabase::CreateNamedObject(unsigned int type_hash, const char* name_text)
-{
-	// Create the object
-	NamedObject* object = AllocateAndConstructObject<NamedObject>(m_ReflectionDB, this, type_hash);
-	if (object == 0)
+	// Can the type be located?
+	const clcpp::Type* type = m_ReflectionDB->GetType(type_hash);
+	if (type == 0)
 		return 0;
 
-	// Construct the name
-	int name_length = strlen(name_text);
-	object->name.text = new char[name_length + 1];
-	memcpy((void*)object->name.text, name_text, name_length + 1);
-	object->name.hash = clcpp::internal::HashData(object->name.text, name_length);
+	// Can only create class objects
+	if (type->kind != clcpp::Primitive::KIND_CLASS)
+		return 0;
+	const clcpp::Class* class_type = type->AsClass();
 
-	// Find the first empty slot in the hash table
-	// TODO: Grow based on load-factor?
-	HashEntry* he = const_cast<HashEntry*>(FindHashEntry(object->name.hash % m_MaxNbObjects, 0));
-	clcpp::internal::Assert(he != 0);
-	he->name = object->name;
-	he->object = object;
+	// The object group has no registered constructor so construct manually
+	// if it comes through
+	Object* object = 0;
+	if (type_hash == clcpp::GetTypeNameHash<ObjectGroup>())
+	{
+		object = new ObjectGroup();
+	}
+	else
+	{
+		// Need a constructor to new and a destructor to delete at a later point
+		if (class_type->constructor == 0 || class_type->destructor == 0)
+			return 0;
+		object = (Object*)new char[type->size];
+		CallFunction(class_type->constructor, object);
+	}
+
+	// Construct the object and pass on any reflection DB pointer to derivers
+	// of the object group type
+	object->object_group = this;
+	object->type = type;
+	if (class_type->flag_attributes & FLAG_ATTR_IS_OBJECT_GROUP)
+		((ObjectGroup*)object)->m_ReflectionDB = m_ReflectionDB;
 
 	return object;
 }
 
 
-void clutl::ObjectDatabase::DestroyNamedObject(NamedObject* object)
+clutl::Object* clutl::ObjectGroup::CreateObject(unsigned int type_hash, unsigned int unique_id)
 {
-	// Locate the hash table entry and check that the object pointers match
-	unsigned int name_hash = object->name.hash;
-	HashEntry* he = const_cast<HashEntry*>(FindHashEntry(name_hash % m_MaxNbObjects, name_hash));
-	clcpp::internal::Assert(he != 0);
-	clcpp::internal::Assert(he->object == object);
+	// Create the object
+	Object* object = CreateObject(type_hash);
+	if (object == 0)
+		return 0;
 
-	// Clear out this slot in the hash table
-	he->name.hash = 0;
-	if (he->name.text != 0)
-		delete [] he->name.text;
-	he->name.text = 0;
-	he->object = 0;
-
-	DestructAndFreeObject<NamedObject>(object);
-}
-
-
-clutl::NamedObject* clutl::ObjectDatabase::FindNamedObject(unsigned int name_hash) const
-{
-	const HashEntry* he = FindHashEntry(name_hash % m_MaxNbObjects, name_hash);
-	if (he)
-		return he->object;
-	return 0;
-}
-
-
-const clutl::ObjectDatabase::HashEntry* clutl::ObjectDatabase::FindHashEntry(unsigned int hash_index, unsigned int hash) const
-{
-	// Linear probe for an empty slot (search upper half/lower half to save a divide)
-	for (unsigned int i = hash_index; i < m_MaxNbObjects; i++)
+	// Add to the hash table if there is a unique ID assigned
+	if (unique_id != 0)
 	{
-		HashEntry& he = m_NamedObjects[i];
-		if (he.name.hash == hash)
-			return &he;
-	}
-	for (unsigned int i = 0; i < hash_index; i++)
-	{
-		HashEntry& he = m_NamedObjects[i];
-		if (he.name.hash == hash)
-			return &he;
+		object->unique_id = unique_id;
+		AddHashEntry(object);
 	}
 
-	return 0;
+	return object;
 }
 
 
-clutl::ObjectIterator::ObjectIterator(const ObjectDatabase& object_db)
-	: m_ObjectDB(object_db)
+void clutl::ObjectGroup::DestroyObject(const Object* object)
+{
+	// Remove from the hash table if it's named
+	if (object->unique_id != 0)
+		RemoveHashEntry(object);
+
+	// These represent fatal code errors
+	clcpp::internal::Assert(object != 0);
+	clcpp::internal::Assert(object->type != 0);
+
+	if (object->type->name.hash == clcpp::GetTypeNameHash<ObjectGroup>())
+	{
+		// ObjecGroup class does not have a registered destructor
+		delete (ObjectGroup*)object;
+	}
+
+	else
+	{
+		// Call the destructor and release the memory
+		const clcpp::Class* class_type = object->type->AsClass();
+		clcpp::internal::Assert(class_type->destructor != 0);
+		CallFunction(class_type->destructor, object);
+		delete [] (char*)object;
+	}
+}
+
+
+clutl::Object* clutl::ObjectGroup::FindObject(unsigned int name_hash) const
+{
+	// Search up through the object group hierarchy
+	const ObjectGroup* group = this;
+	Object* object = 0;
+	while (object == 0 && group != 0)
+	{
+		HashEntry* named_objects = group->m_NamedObjects;
+
+		// Linear probe from the natural hash location for matching hash
+		const unsigned int index_mask = group->m_MaxNbObjects - 1;
+		unsigned int index = name_hash & index_mask;
+		while (named_objects[index].hash)
+		{
+			// Ensure dummy objects are skipped
+			if (named_objects[index].hash == name_hash &&
+				named_objects[index].object != 0)
+				break;
+
+			index = (index + 1) & index_mask;
+		}
+
+		// Get the object here
+		HashEntry& he = group->m_NamedObjects[index];
+		object = he.object;
+		group = group->object_group;
+	}
+
+	return object;
+}
+
+
+void clutl::ObjectGroup::AddHashEntry(Object* object)
+{
+	// Linear probe from the natural hash location for a free slot, reusing any dummy slots
+	unsigned int hash = object->unique_id;
+	const unsigned int index_mask = m_MaxNbObjects - 1;
+	unsigned int index = hash & index_mask;
+	while (m_NamedObjects[index].hash && m_NamedObjects[index].object != 0)
+		index = (index + 1) & index_mask;
+
+	// Add to the table
+	HashEntry& he = m_NamedObjects[index];
+	he.hash = hash;
+	he.object = object;
+	m_NbObjects++;
+
+	// Resize when load factor is greather than 2/3
+	if (m_NbObjects > (m_MaxNbObjects * 2) / 3)
+		Resize();
+}
+
+
+void clutl::ObjectGroup::RemoveHashEntry(const Object* object)
+{
+	// Linear probe from the natural hash location for matching hash
+	unsigned int hash = object->unique_id;
+	const unsigned int index_mask = m_MaxNbObjects - 1;
+	unsigned int index = hash & index_mask;
+	while (m_NamedObjects[index].hash && m_NamedObjects[index].hash != hash)
+		index = (index + 1) & index_mask;
+
+	// Leave the has key in-place, clearing the object pointer, marking the object as a dummy object
+	HashEntry& he = m_NamedObjects[index];
+	he.object = 0;
+	m_NbObjects--;
+}
+
+
+void clutl::ObjectGroup::Resize()
+{
+	// Make a bigger, empty table
+	unsigned int old_max_nb_objects = m_MaxNbObjects;
+	HashEntry* old_named_objects = m_NamedObjects;
+	if (m_MaxNbObjects < 8192 * 4)
+		m_MaxNbObjects *= 4;
+	else
+		m_MaxNbObjects *= 2;
+	m_NamedObjects = new HashEntry[m_MaxNbObjects];
+
+	// Reinsert all objects into the new hash table
+	m_NbObjects = 0;
+	for (unsigned int i = 0; i < old_max_nb_objects; i++)
+	{
+		HashEntry& he = old_named_objects[i];
+		if (he.object != 0)
+			AddHashEntry(he.object);
+	}
+
+	delete [] old_named_objects;
+}
+
+
+clutl::ObjectDatabase::ObjectDatabase(const clcpp::Database* reflection_db)
+	: m_RootGroup(0)
+{
+	m_RootGroup = new ObjectGroup();
+	m_RootGroup->m_ReflectionDB = reflection_db;
+}
+
+
+clutl::ObjectDatabase::~ObjectDatabase()
+{
+	delete m_RootGroup;
+}
+
+
+clutl::ObjectIterator::ObjectIterator(const ObjectGroup* object_group)
+	: m_ObjectGroup(object_group)
 	, m_Position(0)
 {
 	// Search for the first non-empty slot
@@ -197,17 +245,10 @@ clutl::ObjectIterator::ObjectIterator(const ObjectDatabase& object_db)
 }
 
 
-void* clutl::ObjectIterator::GetObject() const
+clutl::Object* clutl::ObjectIterator::GetObject() const
 {
 	clcpp::internal::Assert(IsValid());
-	return m_ObjectDB.m_NamedObjects[m_Position].object;
-}
-
-
-clcpp::Name clutl::ObjectIterator::GetObjectName() const
-{
-	clcpp::internal::Assert(IsValid());
-	return m_ObjectDB.m_NamedObjects[m_Position].name;
+	return m_ObjectGroup->m_NamedObjects[m_Position].object;
 }
 
 
@@ -220,14 +261,14 @@ void clutl::ObjectIterator::MoveNext()
 
 bool clutl::ObjectIterator::IsValid() const
 {
-	return m_Position < m_ObjectDB.m_MaxNbObjects;
+	return m_Position < m_ObjectGroup->m_MaxNbObjects;
 }
 
 
 void clutl::ObjectIterator::ScanForEntry()
 {
 	// Search for the next non-empty slot
-	while (m_Position < m_ObjectDB.m_MaxNbObjects &&
-		m_ObjectDB.m_NamedObjects[m_Position].name.hash == 0)
+	while (m_Position < m_ObjectGroup->m_MaxNbObjects &&
+		m_ObjectGroup->m_NamedObjects[m_Position].object == 0)
 		m_Position++;
 }
