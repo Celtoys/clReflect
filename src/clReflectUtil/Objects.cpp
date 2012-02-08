@@ -129,7 +129,7 @@ void clutl::ObjectGroup::DestroyObject(const Object* object)
 }
 
 
-clutl::Object* clutl::ObjectGroup::FindObject(unsigned int name_hash) const
+clutl::Object* clutl::ObjectGroup::FindObject(unsigned int unique_id) const
 {
 	// Search up through the object group hierarchy
 	const ObjectGroup* group = this;
@@ -140,11 +140,11 @@ clutl::Object* clutl::ObjectGroup::FindObject(unsigned int name_hash) const
 
 		// Linear probe from the natural hash location for matching hash
 		const unsigned int index_mask = group->m_MaxNbObjects - 1;
-		unsigned int index = name_hash & index_mask;
+		unsigned int index = unique_id & index_mask;
 		while (named_objects[index].hash)
 		{
 			// Ensure dummy objects are skipped
-			if (named_objects[index].hash == name_hash &&
+			if (named_objects[index].hash == unique_id &&
 				named_objects[index].object != 0)
 				break;
 

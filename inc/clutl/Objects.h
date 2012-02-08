@@ -90,8 +90,8 @@ namespace clutl
 		// Destroy named/anonymous object or an object group
 		void DestroyObject(const Object* object);
 
-		// Find a created object by name
-		Object* FindObject(unsigned int name_hash) const;
+		// Find a created object by unique ID
+		Object* FindObject(unsigned int unique_id) const;
 
 		// Template helpers for acquring the required typename and correctly casting during creation
 		template <typename TYPE> TYPE* CreateObject()
