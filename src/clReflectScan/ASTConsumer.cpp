@@ -152,7 +152,7 @@ namespace
 
 
 	Status GetParameterInfo(ASTConsumer& consumer, clang::QualType qual_type, ParameterInfo& info, int flags);
-	Status ParseTemplateSpecialisation(ASTConsumer& consumer, const clang::ClassTemplateSpecializationDecl* cts_decl, std::string& type_name_str);
+	Status ParseTemplateSpecialisation(ASTConsumer& consumer, const clang::Type* type, std::string& type_name_str);
 
 
 	Status ParseBaseClass(ASTConsumer& consumer, cldb::Name derived_type_name, const clang::CXXBaseSpecifier& base, cldb::Name& base_name)
@@ -169,40 +169,15 @@ namespace
 		if (base.isVirtual())
 			return Status::Warn(va("Class '%s' is an unsupported virtual base class", type_name_str.c_str()));
 
-		// First see if the base class is a template specialisation and try to parse it
-		if (base_type->getTypeClass() == clang::Type::TemplateSpecialization)
-		{
-			const clang::CXXRecordDecl* type_decl = base_type->getAsCXXRecordDecl();
-			if (type_decl == 0)
-				return Status::Warn(va("Base class '%s' is templated and could not be resolved", type_name_str.c_str()));
-			if (type_decl->getTemplateSpecializationKind() == clang::TSK_Undeclared)
-				return Status::Warn(va("Base class '%s' has not been instantiated so could not be resolved", type_name_str.c_str()));
-
-			const clang::ClassTemplateSpecializationDecl* cts_decl = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(type_decl);
-			assert(cts_decl && "Couldn't cast to template specialisation decl");
-
-			Status status = ParseTemplateSpecialisation(consumer, cts_decl, type_name_str);
-			if (status.HasWarnings())
-				return Status::JoinWarn(status, va("Base class '%s' is templated and could not be parsed", type_name_str.c_str()));
-		}
+		// Discover any new template types
+		Status status = ParseTemplateSpecialisation(consumer, base_type, type_name_str);
+		if (status.HasWarnings())
+			return status;
 
 		cldb::Database& db = consumer.GetDB();
 		base_name = db.GetName(type_name_str.c_str());
 		db.AddTypeInheritance(derived_type_name, base_name);
 		return Status();
-	}
-
-
-	const clang::ClassTemplateSpecializationDecl* GetTemplateSpecialisation(const clang::Type* type)
-	{
-		// Is this a template specialisation?
-		const clang::CXXRecordDecl* type_decl = type->getAsCXXRecordDecl();
-		if (type_decl == 0 || type_decl->getTemplateSpecializationKind() == clang::TSK_Undeclared)
-			return 0;
-
-		const clang::ClassTemplateSpecializationDecl* cts_decl = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(type_decl);
-		assert(cts_decl && "Couldn't cast to template specialisation decl");
-		return cts_decl;
 	}
 
 
@@ -295,6 +270,33 @@ namespace
 	}
 
 
+	Status ParseTemplateSpecialisation(ASTConsumer& consumer, const clang::Type* type, std::string& type_name_str)
+	{
+		if (const clang::CXXRecordDecl* type_decl = type->getAsCXXRecordDecl())
+		{
+			// Don't attempt to parse declarations that contain this as it will be fully defined after
+			// a merge operation. clang will try its best not to instantiate a template when it doesn't have too.
+			// In such situations, parsing the specialisation is not possible.
+			clang::Type::TypeClass tc = type->getTypeClass();
+			if (tc == clang::Type::TemplateSpecialization && type_decl->getTemplateSpecializationKind() == clang::TSK_Undeclared)
+				return Status::SilentFail();
+
+			if (type_decl->getTemplateSpecializationKind() != clang::TSK_Undeclared)
+			{
+				const clang::ClassTemplateSpecializationDecl* cts_decl = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(type_decl);
+				assert(cts_decl && "Couldn't cast to template specialisation decl");
+
+				// Parse template specialisation parameters
+				Status status = ParseTemplateSpecialisation(consumer, cts_decl, type_name_str);
+				if (status.HasWarnings())
+					return Status::JoinWarn(status, va("Couldn't parse template specialisation parameter '%s'", type_name_str.c_str()));
+			}
+		}
+
+		return Status();
+	}
+
+
 	Status GetParameterInfo(ASTConsumer& consumer, clang::QualType qual_type, ParameterInfo& info, int flags)
 	{
 		// Get type info for the parameter
@@ -360,25 +362,10 @@ namespace
 			return Status::Warn("Type class is unknown");
 		}
 
-		if (const clang::CXXRecordDecl* type_decl = type->getAsCXXRecordDecl())
-		{
-			// Don't attempt to parse declarations that contain this as it will be fully defined after
-			// a merge operation. clang will try its best not to instantiate a template when it doesn't have too.
-			// In such situations, parsing the specialisation is not possible.
-			if (tc == clang::Type::TemplateSpecialization && type_decl->getTemplateSpecializationKind() == clang::TSK_Undeclared)
-				return Status::SilentFail();
-
-			if (type_decl->getTemplateSpecializationKind() != clang::TSK_Undeclared)
-			{
-				const clang::ClassTemplateSpecializationDecl* cts_decl = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(type_decl);
-				assert(cts_decl && "Couldn't cast to template specialisation decl");
-
-				// Parse template specialisation parameters
-				Status status = ParseTemplateSpecialisation(consumer, cts_decl, info.type_name);
-				if (status.HasWarnings())
-					return Status::JoinWarn(status, va("Couldn't parse template specialisation parameter '%s'", info.type_name.c_str()));
-			}
-		}
+		// Discover any new template types
+		Status status = ParseTemplateSpecialisation(consumer, type, info.type_name);
+		if (status.HasWarnings())
+			return status;
 
 		// Pull the class descriptions from the type name
 		Remove(info.type_name, "enum ");
