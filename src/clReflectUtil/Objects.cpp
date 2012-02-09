@@ -14,13 +14,6 @@ struct clutl::ObjectGroup::HashEntry
 
 
 
-void clutl::Object::Delete() const
-{
-	if (object_group)
-		object_group->DestroyObject(this);
-}
-
-
 clutl::ObjectGroup::ObjectGroup()
 	: m_ReflectionDB(0)
 	, m_MaxNbObjects(8)
