@@ -100,7 +100,7 @@ namespace clutl
 
 		void AddHashEntry(Object* object);
 		void RemoveHashEntry(const Object* object);
-		void Resize();
+		void Resize(bool increase);
 
 		// Reflection database to use for type access
 		const clcpp::Database* m_ReflectionDB;
@@ -109,6 +109,7 @@ namespace clutl
 		// hashes of pointers that may suffer from clustering.
 		unsigned int m_MaxNbObjects;
 		unsigned int m_NbObjects;
+		unsigned int m_NbOccupiedEntries;
 		HashEntry* m_NamedObjects;
 
 		friend class ObjectIterator;
