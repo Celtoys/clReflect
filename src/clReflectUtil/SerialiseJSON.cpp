@@ -1102,20 +1102,18 @@ namespace
 	{
 		// Do a linear search for an enum with a matching value
 		int value = *(int*)object;
-		clcpp::Name enum_name;
+		const char* enum_name = "clReflect_JSON_EnumValueNotFound";
 		for (int i = 0; i < enum_type->constants.size(); i++)
 		{
 			if (enum_type->constants[i]->value == value)
 			{
-				enum_name = enum_type->constants[i]->name;
+				enum_name = enum_type->constants[i]->name.text;
 				break;
 			}
 		}
 
-		// TODO: What if a match can't be found?
-
 		// Write the enum name as the value
-		SaveString(out, enum_name.text);
+		SaveString(out, enum_name);
 	}
 
 
