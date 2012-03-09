@@ -221,19 +221,19 @@ namespace
 		switch (c)
 		{
 		// Pass all single character sequences
-		case ('\"'):
-		case ('\\'):
-		case ('/'):
-		case ('b'):
-		case ('n'):
-		case ('f'):
-		case ('r'):
-		case ('t'):
+		case '\"':
+		case '\\':
+		case '/':
+		case 'b':
+		case 'n':
+		case 'f':
+		case 'r':
+		case 't':
 			ctx.ConsumeChar();
 			return 1;
 
 		// Parse the unicode hex digits
-		case ('u'):
+		case 'u':
 			return 1 + Lexer32bitHexDigits(ctx);
 
 		default:
@@ -262,12 +262,12 @@ namespace
 			switch (c)
 			{
 			// The string terminates with a quote
-			case ('\"'):
+			case '\"':
 				ctx.ConsumeChar();
 				return token;
 
 			// Escape sequence
-			case ('\\'):
+			case '\\':
 				len = LexerEscapeSequence(ctx);
 				if (len == 0)
 					return clutl::JSONToken();
@@ -511,48 +511,48 @@ namespace
 		switch (c)
 		{
 		// Branch to the start only if it's a whitespace (the least-common case)
-		case ('\n'):
+		case '\n':
 			ctx.IncLine();
-		case (' '):
-		case ('\t'):
-		case ('\v'):
-		case ('\f'):
-		case ('\r'):
+		case ' ':
+		case '\t':
+		case '\v':
+		case '\f':
+		case '\r':
 			ctx.ConsumeChar();
 			goto start;
 
 		// Structural single character tokens
-		case ('{'):
-		case ('}'):
-		case (','):
-		case ('['):
-		case (']'):
-		case (':'):
+		case '{':
+		case '}':
+		case ',':
+		case '[':
+		case ']':
+		case ':':
 			ctx.ConsumeChar();
 			return clutl::JSONToken((clutl::JSONTokenType)c, 1);
 
 		// Strings
-		case ('\"'):
+		case '\"':
 			return LexerString(ctx);
 
 		// Integer or floating point numbers
-		case ('-'):
-		case ('0'):
-		case ('1'):
-		case ('2'):
-		case ('3'):
-		case ('4'):
-		case ('5'):
-		case ('6'):
-		case ('7'):
-		case ('8'):
-		case ('9'):
+		case '-':
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
 			return LexerNumber(ctx);
 
 		// Keywords
-		case ('t'): return LexerKeyword(ctx, clutl::JSON_TOKEN_TRUE, "rue", 3);
-		case ('f'): return LexerKeyword(ctx, clutl::JSON_TOKEN_FALSE, "alse", 4);
-		case ('n'): return LexerKeyword(ctx, clutl::JSON_TOKEN_NULL, "ull", 3);
+		case 't': return LexerKeyword(ctx, clutl::JSON_TOKEN_TRUE, "rue", 3);
+		case 'f': return LexerKeyword(ctx, clutl::JSON_TOKEN_FALSE, "alse", 4);
+		case 'n': return LexerKeyword(ctx, clutl::JSON_TOKEN_NULL, "ull", 3);
 
 		default:
 			ctx.SetError(clutl::JSONError::UNEXPECTED_CHARACTER);
@@ -820,10 +820,10 @@ namespace
 
 		switch (t.type)
 		{
-		case (clutl::JSON_TOKEN_STRING): return ParserString(Expect(ctx, t, clutl::JSON_TOKEN_STRING), object, type);
-		case (clutl::JSON_TOKEN_INTEGER): return ParserInteger(ctx, Expect(ctx, t, clutl::JSON_TOKEN_INTEGER), object, type, op);
-		case (clutl::JSON_TOKEN_DECIMAL): return ParserDecimal(Expect(ctx, t, clutl::JSON_TOKEN_DECIMAL), object, type);
-		case (clutl::JSON_TOKEN_LBRACE):
+		case clutl::JSON_TOKEN_STRING: return ParserString(Expect(ctx, t, clutl::JSON_TOKEN_STRING), object, type);
+		case clutl::JSON_TOKEN_INTEGER: return ParserInteger(ctx, Expect(ctx, t, clutl::JSON_TOKEN_INTEGER), object, type, op);
+		case clutl::JSON_TOKEN_DECIMAL: return ParserDecimal(Expect(ctx, t, clutl::JSON_TOKEN_DECIMAL), object, type);
+		case clutl::JSON_TOKEN_LBRACE:
 			{
 				if (type)
 					ParserObject(ctx, t, object, type);
@@ -833,10 +833,10 @@ namespace
 				Expect(ctx, t, clutl::JSON_TOKEN_RBRACE);
 				break;
 			}
-		case (clutl::JSON_TOKEN_LBRACKET): return ParserArray(ctx, t, object, type, field);
-		case (clutl::JSON_TOKEN_TRUE): return ParserLiteralValue(ctx, Expect(ctx, t, clutl::JSON_TOKEN_TRUE), 1, object, type, op);
-		case (clutl::JSON_TOKEN_FALSE): return ParserLiteralValue(ctx, Expect(ctx, t, clutl::JSON_TOKEN_FALSE), 0, object, type, op);
-		case (clutl::JSON_TOKEN_NULL): return ParserLiteralValue(ctx, Expect(ctx, t, clutl::JSON_TOKEN_NULL), 0, object, type, op);
+		case clutl::JSON_TOKEN_LBRACKET: return ParserArray(ctx, t, object, type, field);
+		case clutl::JSON_TOKEN_TRUE: return ParserLiteralValue(ctx, Expect(ctx, t, clutl::JSON_TOKEN_TRUE), 1, object, type, op);
+		case clutl::JSON_TOKEN_FALSE: return ParserLiteralValue(ctx, Expect(ctx, t, clutl::JSON_TOKEN_FALSE), 0, object, type, op);
+		case clutl::JSON_TOKEN_NULL: return ParserLiteralValue(ctx, Expect(ctx, t, clutl::JSON_TOKEN_NULL), 0, object, type, op);
 
 		default:
 			ctx.SetError(clutl::JSONError::UNEXPECTED_TOKEN);
@@ -1117,24 +1117,6 @@ namespace
 	}
 
 
-	bool IsNamedObjectPtr(const void* object, unsigned int& hash)
-	{
-		// Only use the hash if the pointer is non-null
-		clutl::Object* named_object = *((clutl::Object**)object);
-		hash = 0;
-		if (named_object != 0)
-		{
-			hash = named_object->unique_id;
-
-			// If the target object has no name then its pointer is not meant for serialisation
-			if (hash == 0)
-				return false;
-		}
-
-		return true;
-	}
-
-
 	void SavePtr(clutl::WriteBuffer& out, unsigned int hash)
 	{
 	#ifdef SAVE_POINTER_HASH_AS_HEX
@@ -1146,24 +1128,29 @@ namespace
 	}
 
 
-	bool SavePtr(clutl::WriteBuffer& out, const void* object, const clcpp::Type* type, int backtrack_on_failure)
+	void SavePtr(clutl::WriteBuffer& out, const void* object)
 	{
-		if (type->kind == clcpp::Primitive::KIND_CLASS)
-		{
-			const clcpp::Class* class_type = type->AsClass();
+		clutl::Object* named_object = *((clutl::Object**)object);
+		unsigned int hash = 0;
+		if (named_object != 0)
+			hash = named_object->unique_id;
 
-			// Only save pointer types that derive from Object and are named
-			unsigned int hash = 0;
-			if ((class_type->flag_attributes & clutl::FLAG_ATTR_IS_OBJECT) &&
-				IsNamedObjectPtr(object, hash))
-			{
-				SavePtr(out, hash);
-				return true;
-			}
+		SavePtr(out, hash);
+	}
+
+
+	bool CanSaveObjectPtr(const void* object)
+	{
+		// Only use the hash if the pointer is non-null
+		clutl::Object* named_object = *((clutl::Object**)object);
+		if (named_object != 0)
+		{
+			// If the target object has no unique ID then its pointer is not meant for serialisation
+			if (named_object->unique_id == 0)
+				return false;
 		}
 
-		out.SeekRel(-backtrack_on_failure);
-		return false;
+		return true;
 	}
 
 
@@ -1188,12 +1175,11 @@ namespace
 						clcpp::ContainerKeyValue kv = reader.GetKeyValue();
 
 						// Only save if the object is named
-						unsigned int hash = 0;
-						if (IsNamedObjectPtr(kv.value, hash))
+						if (CanSaveObjectPtr(kv.value))
 						{
 							if (written)
 								out.WriteChar(',');
-							SavePtr(out, hash);
+							SavePtr(out, kv.value);
 							written = true;
 						}
 
@@ -1303,8 +1289,23 @@ namespace
 			if (field->flag_attributes & clcpp::FlagAttribute::TRANSIENT)
 				continue;
 
+			if (field->qualifier.op == clcpp::Qualifier::POINTER)
+			{
+				// Don't save raw pointers
+				if (field->type->kind != clcpp::Primitive::KIND_CLASS)
+					continue;
+
+				// Don't save values for pointer fields that aren't derived from Object
+				const clcpp::Class* field_class_type = field->type->AsClass();
+				if (!(field_class_type->flag_attributes & clutl::FLAG_ATTR_IS_OBJECT))
+					continue;
+
+				// Don't save pointers to unnamed objects
+				if (!CanSaveObjectPtr(object + field->offset))
+					continue;
+			}
+
 			// Comma separator for multiple fields
-			int field_start_pos = out.GetBytesWritten();
 			if (field_written)
 			{
 				out.WriteChar(',');
@@ -1316,16 +1317,14 @@ namespace
 			out.WriteChar(':');
 
 			// Dispatch to save function that can handle the field type
-			bool success = true;
 			const char* field_object = object + field->offset;
 			if (field->ci != 0)
 				SaveFieldArray(out, field_object, field, flags);
 			else if (field->qualifier.op == clcpp::Qualifier::POINTER)
-				success = SavePtr(out, field_object, field->type, out.GetBytesWritten() - field_start_pos);
+				SavePtr(out, field_object);
 			else
 				SaveObject(out, field_object, field->type, flags);
 
-			if (success)
 				field_written = true;
 		}
 
@@ -1408,19 +1407,19 @@ namespace
 		// Dispatch to a save function based on kind
 		switch (type->kind)
 		{
-		case (clcpp::Primitive::KIND_TYPE):
+		case clcpp::Primitive::KIND_TYPE:
 			SaveType(out, object, type, flags);
 			break;
 
-		case (clcpp::Primitive::KIND_ENUM):
+		case clcpp::Primitive::KIND_ENUM:
 			SaveEnum(out, object, type->AsEnum());
 			break;
 
-		case (clcpp::Primitive::KIND_CLASS):
+		case clcpp::Primitive::KIND_CLASS:
 			SaveClass(out, object, type->AsClass(), flags);
 			break;
 
-		case (clcpp::Primitive::KIND_TEMPLATE_TYPE):
+		case clcpp::Primitive::KIND_TEMPLATE_TYPE:
 			SaveTemplateType(out, object, type->AsTemplateType(), flags);
 			break;
 
