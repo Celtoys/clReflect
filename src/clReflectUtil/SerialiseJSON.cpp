@@ -940,6 +940,16 @@ clutl::JSONError clutl::LoadJSON(ReadBuffer& in, void* object, const clcpp::Type
 }
 
 
+clutl::JSONError clutl::LoadJSON(clutl::ReadBuffer& in, void* object, const clcpp::Field* field)
+{
+	SetupTypeDispatchLUT();
+	Context ctx(in);
+	clutl::JSONToken t = LexerToken(ctx);
+	ParserValue(ctx, t, (char*)object, field->type, field->qualifier.op, field);
+	return ctx.GetError();
+}
+
+
 namespace
 {
 	// ----------------------------------------------------------------------------------------------------
@@ -1277,6 +1287,17 @@ namespace
 	}
 
 
+	void SaveFieldObject(clutl::WriteBuffer& out, const char* object, const clcpp::Field* field, unsigned int& flags)
+	{
+		if (field->ci != 0)
+			SaveFieldArray(out, object, field, flags);
+		else if (field->qualifier.op == clcpp::Qualifier::POINTER)
+			SavePtr(out, object);
+		else
+			SaveObject(out, object, field->type, flags);
+	}
+
+
 	void SaveClassFields(clutl::WriteBuffer& out, const char* object, const clcpp::Class* class_type, unsigned int& flags, bool& field_written)
 	{
 		// Save each field in the class
@@ -1312,20 +1333,11 @@ namespace
 				NewLine(out, flags);
 			}
 
-			// Write the field name
+			// Write the field name and object
 			SaveString(out, field->name.text);
 			out.WriteChar(':');
-
-			// Dispatch to save function that can handle the field type
-			const char* field_object = object + field->offset;
-			if (field->ci != 0)
-				SaveFieldArray(out, field_object, field, flags);
-			else if (field->qualifier.op == clcpp::Qualifier::POINTER)
-				SavePtr(out, field_object);
-			else
-				SaveObject(out, field_object, field->type, flags);
-
-				field_written = true;
+			SaveFieldObject(out, object + field->offset, field, flags);
+			field_written = true;
 		}
 
 	}
@@ -1434,6 +1446,13 @@ void clutl::SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* ty
 {
 	SetupTypeDispatchLUT();
 	SaveObject(out, (char*)object, type, flags);
+}
+
+
+void clutl::SaveJSON(clutl::WriteBuffer& out, const void* object, const clcpp::Field* field, unsigned int flags)
+{
+	SetupTypeDispatchLUT();
+	SaveFieldObject(out, (char*)object, field, flags);
 }
 
 
