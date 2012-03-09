@@ -52,6 +52,14 @@ namespace clutl
 		//
 		virtual ~Object() { }
 
+		template <typename TYPE>
+		TYPE* Cast()
+		{
+			if (type == clcpp::GetType<TYPE>())
+				return (TYPE*)this;
+			return 0;
+		}
+
 		// Type of the object
 		const clcpp::Type* type;
 
@@ -90,10 +98,14 @@ namespace clutl
 		// Find a created object by unique ID
 		Object* FindObject(unsigned int unique_id) const;
 
-		const clcpp::Database* GetReflectionDB() const
-		{
-			return m_ReflectionDB;
-		}
+		// Set whether searches for objects in this group are allowed to walk up
+		// the hierarchy looking for matches
+		// TEMPORARY SOLUTION for multi-threaded access and locking of various object groups
+		// This concept of tree-based access doesn't work well with MPP so will be replaced with something simpler
+		// and more adaptable.
+		void AllowFindInParent(bool allow) { m_AllowFindInParent = allow; }
+
+		const clcpp::Database* GetReflectionDB() const { return m_ReflectionDB; }
 
 	private:
 		struct HashEntry;
@@ -111,6 +123,9 @@ namespace clutl
 		unsigned int m_NbObjects;
 		unsigned int m_NbOccupiedEntries;
 		HashEntry* m_NamedObjects;
+
+		// Allow FindObject to recurse into the parent object group?
+		bool m_AllowFindInParent;
 
 		friend class ObjectIterator;
 		friend class ObjectDatabase;

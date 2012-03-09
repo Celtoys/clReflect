@@ -20,6 +20,7 @@ clutl::ObjectGroup::ObjectGroup()
 	, m_NbObjects(0)
 	, m_NbOccupiedEntries(0)
 	, m_NamedObjects(0)
+	, m_AllowFindInParent(true)
 {
 	// Allocate the hash table
 	m_NamedObjects = new HashEntry[m_MaxNbObjects];
@@ -128,7 +129,7 @@ clutl::Object* clutl::ObjectGroup::FindObject(unsigned int unique_id) const
 	// Search up through the object group hierarchy
 	const ObjectGroup* group = this;
 	Object* object = 0;
-	while (object == 0 && group != 0)
+	while (group != 0)
 	{
 		HashEntry* named_objects = group->m_NamedObjects;
 
@@ -148,6 +149,13 @@ clutl::Object* clutl::ObjectGroup::FindObject(unsigned int unique_id) const
 		// Get the object here
 		HashEntry& he = group->m_NamedObjects[index];
 		object = he.object;
+		if (object != 0)
+			break;
+
+		// Check to see if this group allows finds to walk up the hierarchy
+		if (!group->m_AllowFindInParent)
+			break;
+
 		group = group->object_group;
 	}
 
