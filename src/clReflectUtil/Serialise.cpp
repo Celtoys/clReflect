@@ -26,11 +26,11 @@
 //
 
 #include <clutl/Serialise.h>
+#include "Platform.h"
 
 
 // Explicit dependency
 // TODO: Some how remove the need for this or provide a means of locating it on the target platform
-extern "C" void* __cdecl memcpy(void* dst, const void* src, unsigned int size);
 
 
 clutl::WriteBuffer::WriteBuffer()

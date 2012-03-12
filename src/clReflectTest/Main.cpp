@@ -29,6 +29,26 @@
 
 #include <cstdio>
 #include <malloc.h>
+#include <stdarg.h>
+#include <errno.h>
+
+
+#ifdef _MSC_VER
+extern "C" int snprintf(char* dest, unsigned int n, const char* fmt, ...)
+{
+	// Unfortunately snprintf is not a standardised function and MSVC has its own "safe" version
+	va_list args;
+	va_start(args, fmt);
+	int count = vsnprintf_s(dest, n, _TRUNCATE, fmt, args);
+	va_end(args);
+
+	// This seems to be he only valid way of detecting truncation
+	if (errno == 0 && count == -1)
+		return n - 1;
+
+	return count;
+}
+#endif
 
 
 class StdFile : public clcpp::IFile
@@ -87,6 +107,7 @@ extern void TestSerialise(clcpp::Database& db);
 extern void TestSerialiseJSON(clcpp::Database& db);
 extern void TestOffsets(clcpp::Database& db);
 extern void TestTypedefsFunc(clcpp::Database& db);
+extern void TestFunctionSerialise(clcpp::Database& db);
 
 
 int main()
@@ -112,6 +133,7 @@ int main()
 	TestOffsets(db);
 	TestSerialiseJSON(db);
 	TestTypedefsFunc(db);
+	TestFunctionSerialise(db);
 
 	return 0;
 }

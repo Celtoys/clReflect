@@ -29,7 +29,7 @@ namespace
 		write_buffer.Write(test, strlen(test));
 		clutl::ReadBuffer read_buffer(write_buffer);
 
-		clutl::JSONError error = clutl::LoadJSON(read_buffer, 0, 0);
+		clutl::JSONError error = clutl::LoadJSON(read_buffer, 0, (clcpp::Type*)0);
 		if (error.code == clutl::JSONError::NONE)
 		{
 			printf("PASS\n");
@@ -237,86 +237,92 @@ namespace jsontest
 
 		NestedStruct nested2;
 
+		bool failed(const char* field) const
+		{
+			printf("Comparison of '%s' failed\n", field);
+			return false;
+		}
+
 		bool operator == (const AllFields& rhs) const
 		{
 			if (!(*(BaseStruct*)this == (BaseStruct&)rhs))
 				return false;
 
 			if (f0 != rhs.f0)
-				return false;
+				return failed("f0");
 			if (f1 != rhs.f1)
-				return false;
+				return failed("f1");
 			if (f2 != rhs.f2)
-				return false;
+				return failed("f2");
 			if (f3 != rhs.f3)
-				return false;
+				return failed("f3");
 			if (f4 != rhs.f4)
-				return false;
+				return failed("f4");
 			if (f5 != rhs.f5)
-				return false;
+				return failed("f5");
 			if (f6 != rhs.f6)
-				return false;
+				return failed("f6");
 			if (f7 != rhs.f7)
-				return false;
+				return failed("f7");
 			if (f8 != rhs.f8)
-				return false;
+				return failed("f8");
 			if (f9 != rhs.f9)
-				return false;
+				return failed("f9");
 			if (f10 != rhs.f10)
-				return false;
+				return failed("f10");
 			if (f11 != rhs.f11)
-				return false;
+				return failed("f11");
 			if (f12 != rhs.f12)
-				return false;
+				return failed("f12");
 			if (f13 != rhs.f13)
-				return false;
+				return failed("f13");
 			if (f14 != rhs.f14)
-				return false;
+				return failed("f14");
 			if (f15 != rhs.f15)
-				return false;
+				return failed("f15");
 			if (f16 != rhs.f16)
-				return false;
+				return failed("f16");
 			if (f17 != rhs.f17)
-				return false;
+				return failed("f17");
 			if (f18 != rhs.f18)
-				return false;
+				return failed("f18");
 			if (f19 != rhs.f19)
-				return false;
+				return failed("f19");
 			if (f20 != rhs.f20)
-				return false;
+				return failed("f20");
 			if (f21 != rhs.f21)
-				return false;
+				return failed("f21");
 			if (f22 != rhs.f22)
-				return false;
+				return failed("f22");
 			if (f23 != rhs.f23)
-				return false;
+				return failed("f23");
 			if (f24 != rhs.f24)
-				return false;
+				return failed("f24");
 			if (f25 != rhs.f25)
-				return false;
+				return failed("f25");
 			if (f26 != rhs.f26)
-				return false;
+				return failed("f26");
 			if (f27 != rhs.f27)
-				return false;
+				return failed("f27");
 			if (f28 != rhs.f28)
-				return false;
+				return failed("f28");
 			if (f29 != rhs.f29)
-				return false;
+				return failed("f29");
 			if (f30 != rhs.f30)
-				return false;
+				return failed("f30");
 			if (e0 != rhs.e0)
-				return false;
+				return failed("f31");
 			if (e1 != rhs.e1)
-				return false;
+				return failed("f32");
 			if (e2 != rhs.e2)
-				return false;
+				return failed("f33");
 
 			if (!(nested0 == rhs.nested0))
-				return false;
+				return failed("nested0");
 			if (!(nested1 == rhs.nested1))
-				return false;
+				return failed("nested1");
 			if (!(nested2 == rhs.nested2))
-				return false;
+				return failed("nested2");
 
 			return true;
 		}
@@ -399,7 +405,7 @@ void TestSerialiseJSON(clcpp::Database& db)
 
 	clutl::WriteBuffer write_buffer;
 	jsontest::AllFields a;
-	clutl::SaveJSON(write_buffer, &a, clcpp::GetType<jsontest::AllFields>());
+	clutl::SaveJSON(write_buffer, &a, clcpp::GetType<jsontest::AllFields>(), clutl::JSONFlags::EMIT_HEX_FLOATS);
 	clutl::ReadBuffer read_buffer(write_buffer);
 	jsontest::AllFields b(jsontest::NO_INIT);
 	clutl::LoadJSON(read_buffer, &b, clcpp::GetType<jsontest::AllFields>());

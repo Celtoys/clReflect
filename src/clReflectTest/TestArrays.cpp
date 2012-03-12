@@ -24,7 +24,8 @@ void TestArraysFunc(clcpp::Database& db)
 	{
 		const clcpp::Field* field = type->fields[i];
 
-		clcpp::WriteIterator writer(field, (char*)&s + field->offset);
+		clcpp::WriteIterator writer;
+		writer.Initialise(field, (char*)&s + field->offset);
 		for (unsigned int j = 0; j < writer.m_Count; j++)
 		{
 			void* value_ptr = writer.AddEmpty();
