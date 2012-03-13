@@ -163,10 +163,17 @@ static bool CallFunction_x86_32_msvc(const clcpp::Function* function, const clut
 	{
 		const clutl::ParameterData::ParamDesc& param = parameters.GetParameter(i);
 
-		if (param.op == clcpp::Qualifier::POINTER || param.op == clcpp::Qualifier::REFERENCE)
+		if (param.op == clcpp::Qualifier::POINTER)
 		{
 			// Directly push the pointer value
 			void* param_object = *(void**)param.object;
+			__asm push param_object
+			stack_size += sizeof(void*);
+		}
+
+		else if (param.op == clcpp::Qualifier::REFERENCE)
+		{
+			void* param_object = param.object;
 			__asm push param_object
 			stack_size += sizeof(void*);
 		}
