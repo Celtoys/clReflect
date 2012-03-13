@@ -52,10 +52,6 @@
 //
 namespace clutl
 {
-	class WriteBuffer;
-	class ReadBuffer;
-
-
 	//
 	// Contains a list of parameters ready to be passed to a function
 	// Each parameter is represented as a type/pointer pair, describing how the parameter is passed and
@@ -82,6 +78,7 @@ namespace clutl
 		void PushParameter(const clcpp::Type* type, clcpp::Qualifier::Operator op, void* object);
 
 		unsigned int GetNbParameters() const { return m_NbParameters; }
+		ParamDesc& GetParameter(unsigned int index) { return m_Parameters[index]; }
 		const ParamDesc& GetParameter(unsigned int index) const { return m_Parameters[index]; }
 
 	private:
@@ -108,6 +105,7 @@ namespace clutl
 		// Allocates and constructs a region of memory in the cache for objects of the type specified in the field
 		void* AllocParameter(const clcpp::Field* field);
 
+		ParameterData& GetParameters() { return m_Parameters; }
 		const ParameterData& GetParameters() const { return m_Parameters; }
 
 	private:

@@ -101,13 +101,13 @@ namespace clcpp
 		//
 		// Hashes the specified data into a 32-bit value
 		//
-		unsigned HashData(const void* data, int length);
+		unsigned HashData(const void* data, int length, unsigned int seed = 0);
 
 
 		//
 		// Hashes the full string into a 32-bit value
 		//
-		unsigned int HashNameString(const char* name_string);
+		unsigned int HashNameString(const char* name_string, unsigned int seed = 0);
 
 
 		//
