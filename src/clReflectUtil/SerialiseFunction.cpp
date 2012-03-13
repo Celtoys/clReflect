@@ -71,7 +71,7 @@ void* clutl::ParameterObjectCache::AllocParameter(const clcpp::Field* field)
 	void* param_object = m_Data.Alloc(param_size);
 
 	// Call any class constructors
-	if (field->type->kind == clcpp::Primitive::KIND_CLASS)
+	if (field->type->kind == clcpp::Primitive::KIND_CLASS && field->qualifier.op != clcpp::Qualifier::POINTER)
 	{
 		const clcpp::Class* class_type = field->type->AsClass();
 		if (class_type->constructor)
@@ -92,7 +92,7 @@ void clutl::ParameterObjectCache::DeleteObjects()
 	for (unsigned int i = 0; i < nb_params; i++)
 	{
 		const ParameterData::ParamDesc& param = m_Parameters.GetParameter(i);
-		if (param.type->kind == clcpp::Primitive::KIND_CLASS)
+		if (param.type->kind == clcpp::Primitive::KIND_CLASS && param.op != clcpp::Qualifier::POINTER)
 		{
 			const clcpp::Class* class_type = param.type->AsClass();
 			if (class_type->destructor)
@@ -146,23 +146,27 @@ bool clutl::BuildParameterObjectCache_JSON(clutl::ParameterObjectCache& poc, con
 #ifdef _MSC_VER
 
 
-static bool CallFunction_x86_32_msvc(const clcpp::Function* function, const clutl::ParameterData& parameters, int last_param, bool cleanup)
+static bool CallFunction_x86_32_msvc(const clcpp::Function* function, const clutl::ParameterData& parameters, bool thiscall)
 {
 	// Ensure parameter count matches
 	unsigned int nb_params = function->parameters.size();
 	if (nb_params != parameters.GetNbParameters())
 		return false;
 
+	int last_param = 0;
+	if (thiscall)
+		last_param = 1;
+
 	// Walk over the parameters, pushing them on the native stack in right-to-left order
 	unsigned int stack_size = 0;
 	for (int i = nb_params - 1; i >= last_param; i--)
 	{
 		const clutl::ParameterData::ParamDesc& param = parameters.GetParameter(i);
-		void* param_object = param.object;
 
 		if (param.op == clcpp::Qualifier::POINTER || param.op == clcpp::Qualifier::REFERENCE)
 		{
 			// Directly push the pointer value
+			void* param_object = *(void**)param.object;
 			__asm push param_object
 			stack_size += sizeof(void*);
 		}
@@ -170,6 +174,7 @@ static bool CallFunction_x86_32_msvc(const clcpp::Function* function, const clut
 		else
 		{
 			unsigned int param_size = param.type->size;
+			void* param_object = param.object;
 
 			__asm
 			{
@@ -189,13 +194,29 @@ static bool CallFunction_x86_32_msvc(const clcpp::Function* function, const clut
 		}
 	}
 
-	// TODO: Need to do bounds checking here?
-
-	// Call the function and cleanup the stack
+	// Call the function
 	unsigned int function_address = function->address;
-	__asm call function_address
-	if (cleanup)
-		__asm add esp, stack_size
+	if (thiscall)
+	{
+		const clutl::ParameterData::ParamDesc& param = parameters.GetParameter(0);
+		void* param_object = *(void**)param.object;
+		__asm
+		{
+			mov ecx, param_object
+			mov ebx, function_address
+			call ebx
+		}
+	}
+	else
+	{
+		__asm
+		{
+			call function_address
+			add esp, stack_size
+		}
+	}
+
+	// TODO: Need to do bounds checking here?
 
 	return true;
 }
@@ -207,7 +228,7 @@ bool clutl::CallFunction_x86_32_msvc_cdecl(const clcpp::Function* function, cons
 	if (nb_params != parameters.GetNbParameters())
 		return false;
 
-	return CallFunction_x86_32_msvc(function, parameters, 0, true);
+	return CallFunction_x86_32_msvc(function, parameters, false);
 }
 
 
@@ -217,7 +238,7 @@ bool clutl::CallFunction_x86_32_msvc_thiscall(const clcpp::Function* function, c
 	if (nb_params != parameters.GetNbParameters())
 		return false;
 
-	return CallFunction_x86_32_msvc(function, parameters, 1, false);
+	return CallFunction_x86_32_msvc(function, parameters, true);
 }
 
 
