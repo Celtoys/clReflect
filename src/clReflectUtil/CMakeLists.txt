@@ -1,0 +1,13 @@
+project(clReflectUtil)
+add_clreflect_library(clReflectUtil
+  FieldVisitor.cpp
+  JSONLexer.cpp
+  Module.cpp
+  Objects.cpp
+  Platform.cpp
+  Platform.h
+  Serialise.cpp
+  SerialiseFunction.cpp
+  SerialiseJSON.cpp
+  SerialiseVersionedBinary.cpp
+  )

@@ -2,7 +2,7 @@ project(clReflectScan)
 
 # FIXME: Use CMake's find_package for this?
 # http://www.vtk.org/Wiki/CMake:How_To_Find_Libraries
-set(LLVM_INSTALL_DIR ""
+set(LLVM_INSTALL_DIR "../../extern/llvm"
   CACHE PATH "Path to LLVM source.")
 
 if( LLVM_INSTALL_DIR STREQUAL "" )
