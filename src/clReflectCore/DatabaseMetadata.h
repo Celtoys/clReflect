@@ -83,7 +83,8 @@ namespace cldb
 			{
 				type = FieldTypeTraits<FIELD_TYPE>::type;
 				count = 1;
-				offset = offsetof(CONTAINER_TYPE, *member);
+				offset = POINTER_OFFSETOF(CONTAINER_TYPE, *member);
+
 				size = sizeof(FIELD_TYPE);
 				packed_size = FieldTypeTraits<FIELD_TYPE>::packed_size;
 
@@ -96,7 +97,7 @@ namespace cldb
 			{
 				type = FieldTypeTraits<FIELD_TYPE>::type;
 				count = N;
-				offset = offsetof(CONTAINER_TYPE, *member);
+				offset = POINTER_OFFSETOF(CONTAINER_TYPE, *member);
 				size = sizeof(FIELD_TYPE);
 				packed_size = FieldTypeTraits<FIELD_TYPE>::packed_size;
 
@@ -174,24 +175,7 @@ namespace cldb
 		{
 			DatabaseTypes();
 
-			// A compile-time map to runtime data for each database type
-			template <typename TYPE> const DatabaseType& GetType() const { }
-			template <> const DatabaseType& GetType<Type>() const { return m_TypeType; }
-			template <> const DatabaseType& GetType<EnumConstant>() const { return m_EnumConstantType; }
-			template <> const DatabaseType& GetType<Enum>() const { return m_EnumType; }
-			template <> const DatabaseType& GetType<Field>() const { return m_FieldType; }
-			template <> const DatabaseType& GetType<Function>() const { return m_FunctionType; }
-			template <> const DatabaseType& GetType<Class>() const { return m_ClassType; }
-			template <> const DatabaseType& GetType<Template>() const { return m_TemplateType; }
-			template <> const DatabaseType& GetType<TemplateType>() const { return m_TemplateTypeType; }
-			template <> const DatabaseType& GetType<Namespace>() const { return m_NamespaceType; }
-			template <> const DatabaseType& GetType<FlagAttribute>() const { return m_FlagAttributeType; }
-			template <> const DatabaseType& GetType<IntAttribute>() const { return m_IntAttributeType; }
-			template <> const DatabaseType& GetType<FloatAttribute>() const { return m_FloatAttributeType; }
-			template <> const DatabaseType& GetType<PrimitiveAttribute>() const { return m_PrimitiveAttributeType; }
-			template <> const DatabaseType& GetType<TextAttribute>() const { return m_TextAttributeType; }
-			template <> const DatabaseType& GetType<ContainerInfo>() const { return m_ContainerInfoType; }
-			template <> const DatabaseType& GetType<TypeInheritance>() const { return m_InheritanceType; }
+            template <typename TYPE> const DatabaseType& GetType() const;
 
 			// All type descriptions
 			DatabaseType m_PrimitiveType;
@@ -218,5 +202,25 @@ namespace cldb
 			// Inheritance type description
 			DatabaseType m_InheritanceType;
 		};
+
+        // A compile-time map to runtime data for each database type
+        template <typename TYPE> const DatabaseType& DatabaseTypes::GetType() const { }
+        template <> const DatabaseType& DatabaseTypes::GetType<Type>() const { return m_TypeType; }
+        template <> const DatabaseType& DatabaseTypes::GetType<EnumConstant>() const { return m_EnumConstantType; }
+        template <> const DatabaseType& DatabaseTypes::GetType<Enum>() const { return m_EnumType; }
+        template <> const DatabaseType& DatabaseTypes::GetType<Field>() const { return m_FieldType; }
+        template <> const DatabaseType& DatabaseTypes::GetType<Function>() const { return m_FunctionType; }
+        template <> const DatabaseType& DatabaseTypes::GetType<Class>() const { return m_ClassType; }
+        template <> const DatabaseType& DatabaseTypes::GetType<Template>() const { return m_TemplateType; }
+        template <> const DatabaseType& DatabaseTypes::GetType<TemplateType>() const { return m_TemplateTypeType; }
+        template <> const DatabaseType& DatabaseTypes::GetType<Namespace>() const { return m_NamespaceType; }
+        template <> const DatabaseType& DatabaseTypes::GetType<FlagAttribute>() const { return m_FlagAttributeType; }
+        template <> const DatabaseType& DatabaseTypes::GetType<IntAttribute>() const { return m_IntAttributeType; }
+        template <> const DatabaseType& DatabaseTypes::GetType<FloatAttribute>() const { return m_FloatAttributeType; }
+        template <> const DatabaseType& DatabaseTypes::GetType<PrimitiveAttribute>() const { return m_PrimitiveAttributeType; }
+        template <> const DatabaseType& DatabaseTypes::GetType<TextAttribute>() const { return m_TextAttributeType; }
+        template <> const DatabaseType& DatabaseTypes::GetType<ContainerInfo>() const { return m_ContainerInfoType; }
+        template <> const DatabaseType& DatabaseTypes::GetType<TypeInheritance>() const { return m_InheritanceType; }
+
 	}
 }

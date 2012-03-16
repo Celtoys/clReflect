@@ -65,7 +65,12 @@ const char* itoa(unsigned int value)
 {
 	static const int MAX_SZ = 20;
 	static char text[MAX_SZ];
+#ifdef _MSC_VER
 	return _itoa(value, text, 10);
+#else
+    snprintf(text, 10, "%u", value);
+    return text;
+#endif  // _MSC_VER
 }
 
 

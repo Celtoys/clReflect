@@ -203,6 +203,7 @@ namespace
 
 	unsigned int Log2(unsigned int v)
 	{
+#ifdef _MSC_VER
 		// Branchless, taking into account v=0, x86 specific
 		_asm
 		{
@@ -212,6 +213,16 @@ namespace
 			cmovz eax, ebx
 			mov v, eax
 		}
+#else
+        // we provides a c implementation here since we may compile on llvm
+        if (v == 0)
+        {
+            v = -1;
+        } else
+        {
+            v = sizeof(unsigned int) * 8 - 1 - __builtin_clz(v);
+        }
+#endif  // _MSC_VER
 		return v;
 	}
 }
@@ -248,7 +259,11 @@ void logging::Log(StreamHandle handle, Tag tag, bool do_prefix, const char* form
 	char buffer[512];
 	va_list args;
 	va_start(args, format);
-	vsnprintf_s(buffer, sizeof(buffer), _TRUNCATE, format, args);
+// #ifdef _MSC_VER
+// 	vsnprintf_s(buffer, sizeof(buffer), _TRUNCATE, format, args);
+// #else
+    vsnprintf(buffer, sizeof(buffer), format, args);
+// #endif  // _MSC_VER
 	va_end(args);
 
 	char prefix[128] = { 0 };

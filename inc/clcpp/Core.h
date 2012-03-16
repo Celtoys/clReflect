@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include "Platform.h"
 
 //
 // The C++ standard specifies that use of default placement new does not require inclusion of <new>.
@@ -49,11 +50,10 @@ namespace clcpp
 	}
 }
 
-
 //
 // Placement new for the PtrWrapper logic specified above, which required matching delete
 //
-inline void* operator new (unsigned int size, const clcpp::internal::PtrWrapper& p)
+inline void* operator new (size_type size, const clcpp::internal::PtrWrapper& p)
 {
 	return (void*)&p;
 }
@@ -73,10 +73,14 @@ namespace clcpp
 		{
 			if (expression == false)
 			{
+#ifdef _MSC_VER
 				__asm
 				{
 					int 3h
 				}
+#else
+                asm("int $0x3\n");
+#endif // _MSC_VER
 			}
 		}
 

@@ -117,7 +117,7 @@ clcpp::internal::DatabaseMem* clcpp::internal::LoadMemoryMappedDatabase(IFile* f
 
 				// Only patch non-null
 				if (ptr != 0)
-					ptr += (unsigned int)base_data;
+					ptr += (size_type)base_data;
 			}
 		}
 	}

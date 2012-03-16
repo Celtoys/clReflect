@@ -529,7 +529,12 @@ namespace cldb
 	template <typename TYPE>
 	struct DBMap : public std::multimap<u32, TYPE>
 	{
-		typedef std::pair<iterator, iterator> range;
+#ifdef __GNUC__
+        typedef typename std::multimap<u32, TYPE>::iterator iterator;
+        typedef typename std::multimap<u32, TYPE>::const_iterator const_iterator;
+#endif  // __GNUC__
+
+        typedef std::pair<iterator, iterator> range;
 		typedef std::pair<const_iterator, const_iterator> const_range;
 	};
 
@@ -621,7 +626,7 @@ namespace cldb
 		{
 			assert(name != Name() && "Unnamed objects not supported");
 			DBMap<TYPE>& store = GetDBMap<TYPE>();
-			store.insert(DBMap<TYPE>::value_type(name.hash, object));
+			store.insert(typename DBMap<TYPE>::value_type(name.hash, object));
 		}
 		template <typename TYPE> void AddPrimitive(const TYPE& prim)
 		{
@@ -635,35 +640,14 @@ namespace cldb
 
 			// Return the first instance of an object with this name
 			u32 name = clcpp::internal::HashNameString(name_string);
-			DBMap<TYPE>::const_iterator i = store.find(name);
+			typename DBMap<TYPE>::const_iterator i = store.find(name);
 			if (i != store.end())
 				return &i->second;
 
 			return 0;
 		}
 
-		// A compile-time map to runtime data stores for each primitive type
-		template <typename TYPE> DBMap<TYPE>& GetDBMap() { }
-		template <> DBMap<Namespace>& GetDBMap() { return m_Namespaces; }
-		template <> DBMap<Type>& GetDBMap() { return m_Types; }
-		template <> DBMap<Template>& GetDBMap() { return m_Templates; }
-		template <> DBMap<TemplateType>& GetDBMap() { return m_TemplateTypes; }
-		template <> DBMap<Class>& GetDBMap() { return m_Classes; }
-		template <> DBMap<Enum>& GetDBMap() { return m_Enums; }
-		template <> DBMap<EnumConstant>& GetDBMap() { return m_EnumConstants; }
-		template <> DBMap<Function>& GetDBMap() { return m_Functions; }
-		template <> DBMap<Field>& GetDBMap() { return m_Fields; }
-		
-		// Attribute maps
-		template <> DBMap<FlagAttribute>& GetDBMap() { return m_FlagAttributes; }
-		template <> DBMap<IntAttribute>& GetDBMap() { return m_IntAttributes; }
-		template <> DBMap<FloatAttribute>& GetDBMap() { return m_FloatAttributes; }
-		template <> DBMap<PrimitiveAttribute>& GetDBMap() { return m_PrimitiveAttributes; }
-		template <> DBMap<TextAttribute>& GetDBMap() { return m_TextAttributes; }
-
-		// Non-primitives
-		template <> DBMap<ContainerInfo>& GetDBMap() { return m_ContainerInfos; }
-		template <> DBMap<TypeInheritance>& GetDBMap() { return m_TypeInheritances; }
+		template <typename TYPE> DBMap<TYPE>& GetDBMap();
 
 		// Single pass-through const retrieval of the primitive stores. This strips the const-ness
 		// of the 'this' pointer to remove the need to copy-paste the GetPrimitiveStore implementations
@@ -703,4 +687,30 @@ namespace cldb
 		// stage and discarded after export
 		GetTypeFunctions::MapType m_GetTypeFunctions;
 	};
+
+
+    // A compile-time map to runtime data stores for each primitive type
+    // This is moved out of class to obey C++ standard, MSVC allows this extention,
+    // but g++ does not.
+    template <typename TYPE> DBMap<TYPE>& Database::GetDBMap() { }
+    template <> DBMap<Namespace>& Database::GetDBMap() { return m_Namespaces; }
+    template <> DBMap<Type>& Database::GetDBMap() { return m_Types; }
+    template <> DBMap<Template>& Database::GetDBMap() { return m_Templates; }
+    template <> DBMap<TemplateType>& Database::GetDBMap() { return m_TemplateTypes; }
+    template <> DBMap<Class>& Database::GetDBMap() { return m_Classes; }
+    template <> DBMap<Enum>& Database::GetDBMap() { return m_Enums; }
+    template <> DBMap<EnumConstant>& Database::GetDBMap() { return m_EnumConstants; }
+    template <> DBMap<Function>& Database::GetDBMap() { return m_Functions; }
+    template <> DBMap<Field>& Database::GetDBMap() { return m_Fields; }
+
+    // Attribute maps
+    template <> DBMap<FlagAttribute>& Database::GetDBMap() { return m_FlagAttributes; }
+    template <> DBMap<IntAttribute>& Database::GetDBMap() { return m_IntAttributes; }
+    template <> DBMap<FloatAttribute>& Database::GetDBMap() { return m_FloatAttributes; }
+    template <> DBMap<PrimitiveAttribute>& Database::GetDBMap() { return m_PrimitiveAttributes; }
+    template <> DBMap<TextAttribute>& Database::GetDBMap() { return m_TextAttributes; }
+
+    // Non-primitives
+    template <> DBMap<ContainerInfo>& Database::GetDBMap() { return m_ContainerInfos; }
+    template <> DBMap<TypeInheritance>& Database::GetDBMap() { return m_TypeInheritances; }
 }
