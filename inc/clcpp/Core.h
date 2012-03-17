@@ -28,7 +28,24 @@
 
 #pragma once
 
-#include "Platform.h"
+
+// cross platform type definitions
+#ifdef _MSC_VER
+
+typedef unsigned int size_type;
+
+typedef __int64 int64_t;
+typedef unsigned __int64 uint64_t;
+
+#else
+
+typedef unsigned long size_type;
+
+typedef long long int64_t;
+typedef unsigned long long uint64_t;
+
+#endif // _MSC_VER
+
 
 //
 // The C++ standard specifies that use of default placement new does not require inclusion of <new>.
@@ -284,3 +301,48 @@ namespace clcpp
 		int last;
 	};
 }
+
+
+#ifdef __GNUC__
+
+// The offsetof macro of g++ version does not work with pointer to members.
+//
+// First g++ would expand
+// offset(type, field)
+// macro into:
+// ((size_t)(&((type *)0)-> field))
+//
+// Note that with g++ whose version is later than 3.5, offsetof would actually
+// expand to __builtin_offsetof, the behaviour remains the same
+//
+// So if we feed in data like following(example taken from line 86
+// in DatabaseMetadata.h):
+//
+// offsetof(CONTAINER_TYPE, *member)
+// It would expand to:
+// ((size_t)(&((CONTAINER_TYPE *)0)-> *member))
+//
+// First, with default macro expansion rule, g++ would add a space between
+// "->" and "*member", causing "->*" operator to become two operators, thus
+// breaking our code
+// Second, even if we eliminate the space some how, according to c++ operator
+// precedence, & is first evaluated on ((CONTAINER_TYPE *)0), then the result
+// is evaluated on ->*member, which is the wrong order.
+//
+// Considering all these cases, we provide a custom offsetof macro here which
+// is compatible with pointer to member given our requirements.
+//
+// TODO: We could've moved this into clReflectCore, but this macro is used in
+// clReflectCore, clReflectExport as well as clReflectTest. And currently we do
+// not have a header in clReflectCore for containing this sort of util macros(like
+// the Core.h here). Anyway, we may move this when we have such a header.
+
+#define POINTER_OFFSETOF(type, field) ((size_t)(&(((type *)0)->##field)))
+
+#else
+
+// For MSVC, we can just use official offsetof macro
+#define POINTER_OFFSETOF(type, field) offsetof(type, field)
+
+#endif  /* __GNUC__ */
+
