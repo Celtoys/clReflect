@@ -14,7 +14,7 @@ namespace Funcs
 	struct ThreeStruct { ThreeStruct() : x(1), y(2), z(3) { } char x, y, z; };
 	struct DoubleStruct { DoubleStruct() : x(1) { } double x; };
 	struct OddStruct { OddStruct() { data[10] = 11; } char data[11]; };
-	struct BigStruct { BigStruct() { data[127] = 128; } char data[128]; };
+	struct BigStruct { BigStruct() { data[127] = 126; } char data[128]; };
 	#pragma pack(pop)
 
 

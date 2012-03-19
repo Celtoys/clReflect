@@ -207,11 +207,16 @@ static bool CallFunction_x86_32_msvc(const clcpp::Function* function, const clut
 	{
 		const clutl::ParameterData::ParamDesc& param = parameters.GetParameter(0);
 		void* param_object = *(void**)param.object;
-		__asm
+
+		// Only call if this pointer is valid
+		if (param_object)
 		{
-			mov ecx, param_object
-			mov ebx, function_address
-			call ebx
+			__asm
+			{
+				mov ecx, param_object
+				mov ebx, function_address
+				call ebx
+			}
 		}
 	}
 	else
