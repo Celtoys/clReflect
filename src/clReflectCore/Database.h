@@ -692,25 +692,25 @@ namespace cldb
     // A compile-time map to runtime data stores for each primitive type
     // This is moved out of class to obey C++ standard, MSVC allows this extention,
     // but g++ does not.
-    template <typename TYPE> DBMap<TYPE>& Database::GetDBMap() { }
-    template <> DBMap<Namespace>& Database::GetDBMap() { return m_Namespaces; }
-    template <> DBMap<Type>& Database::GetDBMap() { return m_Types; }
-    template <> DBMap<Template>& Database::GetDBMap() { return m_Templates; }
-    template <> DBMap<TemplateType>& Database::GetDBMap() { return m_TemplateTypes; }
-    template <> DBMap<Class>& Database::GetDBMap() { return m_Classes; }
-    template <> DBMap<Enum>& Database::GetDBMap() { return m_Enums; }
-    template <> DBMap<EnumConstant>& Database::GetDBMap() { return m_EnumConstants; }
-    template <> DBMap<Function>& Database::GetDBMap() { return m_Functions; }
-    template <> DBMap<Field>& Database::GetDBMap() { return m_Fields; }
+    template <typename TYPE> inline DBMap<TYPE>& Database::GetDBMap() { }
+    template <> inline DBMap<Namespace>& Database::GetDBMap() { return m_Namespaces; }
+    template <> inline DBMap<Type>& Database::GetDBMap() { return m_Types; }
+    template <> inline DBMap<Template>& Database::GetDBMap() { return m_Templates; }
+    template <> inline DBMap<TemplateType>& Database::GetDBMap() { return m_TemplateTypes; }
+    template <> inline DBMap<Class>& Database::GetDBMap() { return m_Classes; }
+    template <> inline DBMap<Enum>& Database::GetDBMap() { return m_Enums; }
+    template <> inline DBMap<EnumConstant>& Database::GetDBMap() { return m_EnumConstants; }
+    template <> inline DBMap<Function>& Database::GetDBMap() { return m_Functions; }
+    template <> inline DBMap<Field>& Database::GetDBMap() { return m_Fields; }
 
     // Attribute maps
-    template <> DBMap<FlagAttribute>& Database::GetDBMap() { return m_FlagAttributes; }
-    template <> DBMap<IntAttribute>& Database::GetDBMap() { return m_IntAttributes; }
-    template <> DBMap<FloatAttribute>& Database::GetDBMap() { return m_FloatAttributes; }
-    template <> DBMap<PrimitiveAttribute>& Database::GetDBMap() { return m_PrimitiveAttributes; }
-    template <> DBMap<TextAttribute>& Database::GetDBMap() { return m_TextAttributes; }
+    template <> inline DBMap<FlagAttribute>& Database::GetDBMap() { return m_FlagAttributes; }
+    template <> inline DBMap<IntAttribute>& Database::GetDBMap() { return m_IntAttributes; }
+    template <> inline DBMap<FloatAttribute>& Database::GetDBMap() { return m_FloatAttributes; }
+    template <> inline DBMap<PrimitiveAttribute>& Database::GetDBMap() { return m_PrimitiveAttributes; }
+    template <> inline DBMap<TextAttribute>& Database::GetDBMap() { return m_TextAttributes; }
 
     // Non-primitives
-    template <> DBMap<ContainerInfo>& Database::GetDBMap() { return m_ContainerInfos; }
-    template <> DBMap<TypeInheritance>& Database::GetDBMap() { return m_TypeInheritances; }
+    template <> inline DBMap<ContainerInfo>& Database::GetDBMap() { return m_ContainerInfos; }
+    template <> inline DBMap<TypeInheritance>& Database::GetDBMap() { return m_TypeInheritances; }
 }

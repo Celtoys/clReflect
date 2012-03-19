@@ -32,6 +32,49 @@
 #include "Database.h"
 
 
+#ifdef __GNUC__
+
+	// The offsetof macro of g++ version does not work with pointer to members.
+	//
+	// First g++ would expand
+	// offset(type, field)
+	// macro into:
+	// ((size_t)(&((type *)0)-> field))
+	//
+	// Note that with g++ whose version is later than 3.5, offsetof would actually
+	// expand to __builtin_offsetof, the behaviour remains the same
+	//
+	// So if we feed in data like following(example taken from line 86
+	// in DatabaseMetadata.h):
+	//
+	// offsetof(CONTAINER_TYPE, *member)
+	// It would expand to:
+	// ((size_t)(&((CONTAINER_TYPE *)0)-> *member))
+	//
+	// First, with default macro expansion rule, g++ would add a space between
+	// "->" and "*member", causing "->*" operator to become two operators, thus
+	// breaking our code
+	// Second, even if we eliminate the space some how, according to c++ operator
+	// precedence, & is first evaluated on ((CONTAINER_TYPE *)0), then the result
+	// is evaluated on ->*member, which is the wrong order.
+	//
+	// Considering all these cases, we provide a custom offsetof macro here which
+	// is compatible with pointer to member given our requirements.
+	//
+	// TODO: We could've moved this into clReflectCore, but this macro is used in
+	// clReflectCore, clReflectExport as well as clReflectTest. And currently we do
+	// not have a header in clReflectCore for containing this sort of util macros(like
+	// the Core.h here). Anyway, we may move this when we have such a header.
+	#define POINTER_OFFSETOF(type, field) ((size_t)(&(((type *)0)->##field)))
+
+#else
+
+	// For MSVC, we can just use official offsetof macro
+	#define POINTER_OFFSETOF(type, field) offsetof(type, field)
+
+#endif  /* __GNUC__ */
+
+
 namespace cldb
 {
 	namespace meta
@@ -204,23 +247,23 @@ namespace cldb
 		};
 
         // A compile-time map to runtime data for each database type
-        template <typename TYPE> const DatabaseType& DatabaseTypes::GetType() const { }
-        template <> const DatabaseType& DatabaseTypes::GetType<Type>() const { return m_TypeType; }
-        template <> const DatabaseType& DatabaseTypes::GetType<EnumConstant>() const { return m_EnumConstantType; }
-        template <> const DatabaseType& DatabaseTypes::GetType<Enum>() const { return m_EnumType; }
-        template <> const DatabaseType& DatabaseTypes::GetType<Field>() const { return m_FieldType; }
-        template <> const DatabaseType& DatabaseTypes::GetType<Function>() const { return m_FunctionType; }
-        template <> const DatabaseType& DatabaseTypes::GetType<Class>() const { return m_ClassType; }
-        template <> const DatabaseType& DatabaseTypes::GetType<Template>() const { return m_TemplateType; }
-        template <> const DatabaseType& DatabaseTypes::GetType<TemplateType>() const { return m_TemplateTypeType; }
-        template <> const DatabaseType& DatabaseTypes::GetType<Namespace>() const { return m_NamespaceType; }
-        template <> const DatabaseType& DatabaseTypes::GetType<FlagAttribute>() const { return m_FlagAttributeType; }
-        template <> const DatabaseType& DatabaseTypes::GetType<IntAttribute>() const { return m_IntAttributeType; }
-        template <> const DatabaseType& DatabaseTypes::GetType<FloatAttribute>() const { return m_FloatAttributeType; }
-        template <> const DatabaseType& DatabaseTypes::GetType<PrimitiveAttribute>() const { return m_PrimitiveAttributeType; }
-        template <> const DatabaseType& DatabaseTypes::GetType<TextAttribute>() const { return m_TextAttributeType; }
-        template <> const DatabaseType& DatabaseTypes::GetType<ContainerInfo>() const { return m_ContainerInfoType; }
-        template <> const DatabaseType& DatabaseTypes::GetType<TypeInheritance>() const { return m_InheritanceType; }
+        template <typename TYPE> inline const DatabaseType& DatabaseTypes::GetType() const { }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<Type>() const { return m_TypeType; }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<EnumConstant>() const { return m_EnumConstantType; }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<Enum>() const { return m_EnumType; }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<Field>() const { return m_FieldType; }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<Function>() const { return m_FunctionType; }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<Class>() const { return m_ClassType; }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<Template>() const { return m_TemplateType; }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<TemplateType>() const { return m_TemplateTypeType; }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<Namespace>() const { return m_NamespaceType; }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<FlagAttribute>() const { return m_FlagAttributeType; }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<IntAttribute>() const { return m_IntAttributeType; }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<FloatAttribute>() const { return m_FloatAttributeType; }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<PrimitiveAttribute>() const { return m_PrimitiveAttributeType; }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<TextAttribute>() const { return m_TextAttributeType; }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<ContainerInfo>() const { return m_ContainerInfoType; }
+        template <> inline const DatabaseType& DatabaseTypes::GetType<TypeInheritance>() const { return m_InheritanceType; }
 
 	}
 }
