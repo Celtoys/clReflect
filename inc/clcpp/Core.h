@@ -29,38 +29,38 @@
 #pragma once
 
 
-// cross platform type definitions
-#if defined(_MSC_VER) || defined(__clang__)
-
-	typedef unsigned int size_type;
-
-	typedef __int64 int64_t;
-	typedef unsigned __int64 uint64_t;
-
-#else
-
-	typedef unsigned long size_type;
-
-	typedef long long int64_t;
-	typedef unsigned long long uint64_t;
-
-#endif // _MSC_VER
-
-
-//
-// The C++ standard specifies that use of default placement new does not require inclusion of <new>.
-// However, MSVC2005 disagrees and requires this. Since I don't want any CRT dependencies in the library,
-// I don't want to include that. However, the C++ standard also states that implementing your own
-// default new is illegal.
-//
-// I could just be pragmatic and ignore that (I have done for as long as I've known of the existence
-// of placement new). Or I could do this... wrap pointers in a specific type that forwards to its own
-// placement new, treating it like an allocator that returns the wrapped pointer.
-//
 namespace clcpp
 {
+	// cross platform type definitions
+	#if defined(_MSC_VER) || defined(__clang__)
+
+		typedef unsigned int size_type;
+
+		typedef __int64 int64;
+		typedef unsigned __int64 uint64;
+
+	#else
+
+		typedef unsigned long size_type;
+
+		typedef long long int64_t;
+		typedef unsigned long long uint64_t;
+
+	#endif // _MSC_VER
+
+
 	namespace internal
 	{
+		//
+		// The C++ standard specifies that use of default placement new does not require inclusion of <new>.
+		// However, MSVC2005 disagrees and requires this. Since I don't want any CRT dependencies in the library,
+		// I don't want to include that. However, the C++ standard also states that implementing your own
+		// default new is illegal.
+		//
+		// I could just be pragmatic and ignore that (I have done for as long as I've known of the existence
+		// of placement new). Or I could do this... wrap pointers in a specific type that forwards to its own
+		// placement new, treating it like an allocator that returns the wrapped pointer.
+		//
 		struct PtrWrapper
 		{
 		};
@@ -70,7 +70,7 @@ namespace clcpp
 //
 // Placement new for the PtrWrapper logic specified above, which required matching delete
 //
-inline void* operator new (size_type size, const clcpp::internal::PtrWrapper& p)
+inline void* operator new (clcpp::size_type size, const clcpp::internal::PtrWrapper& p)
 {
 	return (void*)&p;
 }

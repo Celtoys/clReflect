@@ -92,8 +92,8 @@ void cldb::Database::AddBaseTypePrimitives()
 	AddPrimitive(Type(GetName("double"), parent, sizeof(double)));
 
 	// 64-bit types as clang sees them
-	AddPrimitive(Type(GetName("long long"), parent, sizeof(int64_t)));
-	AddPrimitive(Type(GetName("unsigned long long"), parent, sizeof(uint64_t)));
+	AddPrimitive(Type(GetName("long long"), parent, sizeof(clcpp::int64)));
+	AddPrimitive(Type(GetName("unsigned long long"), parent, sizeof(clcpp::uint64)));
 }
 
 
