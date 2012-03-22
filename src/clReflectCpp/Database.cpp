@@ -97,7 +97,7 @@ namespace
 
 
 
-	void RebaseFunctions(clcpp::internal::DatabaseMem& dbmem, unsigned int base_address)
+    void RebaseFunctions(clcpp::internal::DatabaseMem& dbmem, clcpp::pointer_type base_address)
 	{
 		// Move all function addresses from their current location to their new location
 		for (int i = 0; i < dbmem.functions.size(); i++)
@@ -130,7 +130,8 @@ namespace
 			{
 				unsigned char* mov_instruction = (unsigned char*)f.get_typename_address;
 				clcpp::internal::Assert(*mov_instruction == 0xA1);
-				unsigned int* hash_address = *(unsigned int**)(mov_instruction + 1);
+                // TODO: check if 64 bit assembly follows the same encoding scheme with 32 bit assembly
+                unsigned int* hash_address = *(unsigned int**)(mov_instruction + 1);
 				*hash_address = db.GetName(f.type_hash).hash;
 			}
 
@@ -190,7 +191,7 @@ clcpp::Database::~Database()
 }
 
 
-bool clcpp::Database::Load(IFile* file, IAllocator* allocator, unsigned int base_address, unsigned int options)
+bool clcpp::Database::Load(IFile* file, IAllocator* allocator, clcpp::pointer_type base_address, unsigned int options)
 {
 	// Load the database
 	internal::Assert(m_DatabaseMem == 0 && "Database already loaded");

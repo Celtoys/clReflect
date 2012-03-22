@@ -194,6 +194,7 @@ namespace clcpp
 	// code is predictable and doesn't vary between builds.
 	//
 
+    // TODO: implement 64 bit version here
 	template <typename TYPE>
 	__declspec(noinline) __declspec(naked) unsigned int GetTypeNameHash()
 	{

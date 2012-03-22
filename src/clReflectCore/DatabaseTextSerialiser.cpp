@@ -375,7 +375,7 @@ namespace
 		tok.GetNameAndParent(name, parent);
 
 		// Type parsing
-		cldb::u32 size = tok.GetHexInt();
+		clcpp::size_type size = tok.GetHexInt();
 
 		// Add a new primitive to the database
 		cldb::Type primitive(

@@ -33,16 +33,16 @@ namespace
 {
 	struct PtrSchema
 	{
-		int stride;
-		int ptrs_offset;
-		int nb_ptrs;
+        clcpp::size_type stride;
+		clcpp::size_type ptrs_offset;
+		clcpp::size_type nb_ptrs;
 	};
 
 	
 	struct PtrRelocation
 	{
 		int schema_handle;
-		int offset;
+        clcpp::size_type offset;
 		int nb_objects;
 	};
 }
@@ -83,7 +83,7 @@ clcpp::internal::DatabaseMem* clcpp::internal::LoadMemoryMappedDatabase(IFile* f
 		return 0;
 
 	// Read the pointer offsets for all the schemas
-	CArray<int> ptr_offsets(file_header.nb_ptr_offsets, allocator);
+	CArray<clcpp::size_type> ptr_offsets(file_header.nb_ptr_offsets, allocator);
 	if (!file->Read(ptr_offsets))
 		return 0;
 
@@ -99,25 +99,25 @@ clcpp::internal::DatabaseMem* clcpp::internal::LoadMemoryMappedDatabase(IFile* f
 		PtrSchema& schema = schemas[reloc.schema_handle];
 
 		// Take a weak C-array pointer to the schema's pointer offsets (for bounds checking)
-		CArray<int> schema_ptr_offsets(&ptr_offsets[schema.ptrs_offset], schema.nb_ptrs);
+		CArray<clcpp::size_type> schema_ptr_offsets(&ptr_offsets[schema.ptrs_offset], schema.nb_ptrs);
 
 		// Iterate over all objects in the instruction
 		for (int j = 0; j < reloc.nb_objects; j++)
 		{
-			int object_offset = reloc.offset + j * schema.stride;
+            clcpp::size_type object_offset = reloc.offset + j * schema.stride;
 
 			// All pointers in the schema
-			for (int k = 0; k < schema.nb_ptrs; k++)
+			for (clcpp::size_type k = 0; k < schema.nb_ptrs; k++)
 			{
-				unsigned int ptr_offset = object_offset + schema_ptr_offsets[k];
-				unsigned int& ptr = (unsigned int&)*(base_data + ptr_offset);
+                clcpp::size_type ptr_offset = object_offset + schema_ptr_offsets[k];
+                clcpp::size_type& ptr = (clcpp::size_type&)*(base_data + ptr_offset);
 
 				// Ensure the pointer relocation is within range of the memory map before patching
 				internal::Assert(ptr <= file_header.data_size);
 
 				// Only patch non-null
 				if (ptr != 0)
-					ptr += (size_type)base_data;
+					ptr += (clcpp::size_type)base_data;
 			}
 		}
 	}

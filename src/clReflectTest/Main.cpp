@@ -76,7 +76,7 @@ public:
 		return m_FP != 0;
 	}
 
-	bool Read(void* dest, int size)
+	bool Read(void* dest, clcpp::size_type size)
 	{
 		return fread(dest, 1, size, m_FP) == size;
 	}

@@ -261,7 +261,7 @@ namespace cldb
 			, size(0)
 		{
 		}
-		Type(Name n, Name p, u32 s)
+        Type(Name n, Name p, clcpp::size_type s)
 			: Primitive(Primitive::KIND_TYPE, n, p)
 			, size(s)
 		{
@@ -279,7 +279,7 @@ namespace cldb
 		}
 
 		// Total size of the type, including alignment
-		u32 size;
+        clcpp::size_type size;
 
 	};
 
@@ -413,7 +413,7 @@ namespace cldb
 		// The address of the function is only used during C++ export at the moment and
 		// is not serialised to disk or involved in merging. If at a later date this becomes
 		// more tightly integrated to clang/llvm then this will need to be serialised.
-		u32 address;
+        clcpp::pointer_type address;
 	};
 
 

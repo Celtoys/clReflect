@@ -30,6 +30,8 @@
 #pragma once
 
 
+#include <clcpp/Core.h>
+
 namespace clcpp
 {
 	struct IFile;
@@ -46,6 +48,8 @@ namespace clcpp
 			DatabaseFileHeader();
 
 			// Signature and version numbers for verifying header integrity
+            // TODO: add check to pervent loading a 64-bit database from 32-bit
+            // runtime system, or vice versa
 			unsigned int signature0;
 			unsigned int signature1;
 			unsigned int version;
@@ -54,7 +58,7 @@ namespace clcpp
 			int nb_ptr_offsets;
 			int nb_ptr_relocations;
 
-			unsigned int data_size;
+            clcpp::size_type data_size;
 
 			// TODO: CRC verify?
 		};

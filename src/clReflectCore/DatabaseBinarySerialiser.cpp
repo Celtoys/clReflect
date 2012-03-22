@@ -59,6 +59,7 @@ namespace
 	}
 
 
+    // TODO: This files contains lots of size variable using int type, check if we need to change this
 	template <typename TYPE, int SIZE>
 	void CopyInteger(const cldb::Database&, char* dest, const char* source, int)
 	{

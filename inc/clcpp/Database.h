@@ -310,7 +310,7 @@ namespace clcpp
 		inline const Class* AsClass() const;
 
 		// Size of the type in bytes
-		unsigned int size;
+        clcpp::size_type size;
 
 		// Types this one derives from. Can be either a Class or TemplateType.
 		CArray<const Type*> base_types;
@@ -420,7 +420,7 @@ namespace clcpp
 		}
 
 		// Callable address
-		unsigned int address;
+        clcpp::pointer_type address;
 
 		// An ID unique to this function among other functions that have the same name
 		// This is not really useful at runtime and exists purely to make the database
@@ -618,7 +618,7 @@ namespace clcpp
 		Database();
 		~Database();
 
-		bool Load(IFile* file, IAllocator* allocator, unsigned int base_address, unsigned int options);
+		bool Load(IFile* file, IAllocator* allocator, clcpp::pointer_type base_address, unsigned int options);
 
 		// This returns the name as it exists in the name database, with the text pointer
 		// pointing to within the database's allocated name data
@@ -665,8 +665,8 @@ namespace clcpp
 		struct GetTypeFunctions
 		{
 			unsigned int type_hash;
-			unsigned int get_typename_address;
-			unsigned int get_type_address;
+            clcpp::pointer_type get_typename_address;
+            clcpp::pointer_type get_type_address;
 		};
 
 
@@ -682,7 +682,7 @@ namespace clcpp
 			}
 
 			// The address to subtract when rebasing function addresses
-			unsigned int function_base_address;
+            clcpp::pointer_type function_base_address;
 
 			// Raw allocation of all null-terminated name strings
 			const char* name_text_data;
