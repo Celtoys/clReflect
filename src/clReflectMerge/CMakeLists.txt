@@ -1,4 +1,3 @@
-project(clReflectMerge)
 add_clreflect_executable(clReflectMerge
   DatabaseMerge.cpp
   Main.cpp

@@ -15,6 +15,12 @@ include_directories(
   "${PROJECT_SOURCE_DIR}/inc"
   )
 
+# Sets binary output direcotry to cmake-build/bin, sets lib output directory
+# to cmake-build/lib
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/cmake-build/bin")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/cmake-build/lib")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/cmake-build/lib")
+
 if(MSVC)
   add_definitions(
     /D_SCL_SECURE_NO_WARNINGS
@@ -33,4 +39,9 @@ if(MSVC)
 endif()
 
 
+# TODO: When we add this sub-directory, cmake on windows would actuall generate
+# two directories, one is msvc(suppose we start generation in msvc),
+# the other is msvcsrc, and the actual sub projects are in msvcsrc directory.
+#
+# Currently I do not know why, will come back to this later.
 add_subdirectory(src)

@@ -1,4 +1,3 @@
-project(clReflectExport)
 add_clreflect_executable(clReflectExport
   CppExport.cpp
   Main.cpp

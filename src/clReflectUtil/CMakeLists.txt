@@ -1,4 +1,3 @@
-project(clReflectUtil)
 add_clreflect_library(clReflectUtil
   FieldVisitor.cpp
   JSONLexer.cpp
