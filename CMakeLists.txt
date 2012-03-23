@@ -15,11 +15,15 @@ include_directories(
   "${PROJECT_SOURCE_DIR}/inc"
   )
 
+set(CL_REFLECT_BIN_DIRECTORY "${PROJECT_SOURCE_DIR}/cmake-build/bin")
+set(CL_REFLECT_LIB_DIRECTORY "${PROJECT_SOURCE_DIR}/cmake-build/lib")
+set(CL_REFLECT_GEN_DIRECTORY "${PROJECT_SOURCE_DIR}/cmake-build/gen")
+
 # Sets binary output direcotry to cmake-build/bin, sets lib output directory
 # to cmake-build/lib
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/cmake-build/bin")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/cmake-build/lib")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/cmake-build/lib")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CL_REFLECT_BIN_DIRECTORY}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CL_REFLECT_LIB_DIRECTORY}")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CL_REFLECT_LIB_DIRECTORY}")
 
 if(MSVC)
   add_definitions(
