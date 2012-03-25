@@ -21,6 +21,23 @@ target_link_libraries(clReflectTest
   clReflectUtil
   )
 
+option(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST "Generate map file for test" ON)
+if(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
+  # generates map file
+  # TODO: currently we would generate map file for both Debug and Release
+  # configurations, we need to find a way to stop it from generating map
+  # file in release mode
+  if (MSVC)
+    # From what I see, currently cmake can set the map link flags,
+    # but cmake does not support appending customized map file name(I may
+    # be wrong on this). Luckily, by using default options of MSVC
+    # we can generate a map file with same name and same path as exe file.
+    # We will simply use this map file.
+    set_target_properties(clReflectTest PROPERTIES LINK_FLAGS
+      /MAP)
+  endif()
+endif()
+
 # add project include path
 get_property(inc_dirs DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
 foreach(inc ${inc_dirs})
@@ -71,7 +88,10 @@ add_custom_command(
   ${GEN_FILE_LIST}
   DEPENDS clReflectMerge ${GEN_FILE_LIST})
 
-# TODO: add mapper file generation
+# map file
+if (CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
+  set(GEN_MAP_ARGUMENTS -map ${CL_REFLECT_BIN_DIRECTORY}/Debug/clReflectTest.map)
+endif()
 
 # exports cppbin file
 add_custom_command(
@@ -79,11 +99,13 @@ add_custom_command(
   COMMAND clReflectExport ${GEN_MERGED_CSV_FILE}
   -cpp ${GEN_CPPBIN_FILE}
   -cpp_log ${GEN_CPPBIN_FILE}.log
+  ${GEN_MAP_ARGUMENTS}
   DEPENDS clReflectExport ${GEN_MERGED_CSV_FILE})
 
 # This is a fake target to ensure when compiling clReflectTest,
 # we also generate the corresponding cppbin file for testing.
-add_custom_target(clReflect_gen_cppbin DEPENDS
+add_custom_target(clReflectGenCppbin DEPENDS
   ${GEN_CPPBIN_FILE})
 
-add_dependencies(clReflectTest clReflect_gen_cppbin)
+# clReflectGenCppbin should depends on clReflectTest since it may need map file
+add_dependencies(clReflectGenCppbin clReflectTest)
