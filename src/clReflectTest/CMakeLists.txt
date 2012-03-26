@@ -24,9 +24,6 @@ target_link_libraries(clReflectTest
 option(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST "Generate map file for test" ON)
 if(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
   # generates map file
-  # TODO: currently we would generate map file for both Debug and Release
-  # configurations, we need to find a way to stop it from generating map
-  # file in release mode
   if (MSVC)
     # From what I see, currently cmake can set the map link flags,
     # but cmake does not support appending customized map file name(I may
@@ -89,8 +86,15 @@ add_custom_command(
   DEPENDS clReflectMerge ${GEN_FILE_LIST})
 
 # map file
-if (CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
-  set(GEN_MAP_ARGUMENTS -map ${CL_REFLECT_BIN_DIRECTORY}/Debug/clReflectTest.map)
+if(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
+  if(MSVC)
+    get_property(CL_REFLECT_TEST_EXECUTABLE TARGET clReflectTest PROPERTY LOCATION)
+    string(REPLACE ".exe" ".map" CL_REFLECT_TEST_EXECUTABLE ${CL_REFLECT_TEST_EXECUTABLE})
+
+    set(GEN_MAP_ARGUMENTS -map ${CL_REFLECT_TEST_EXECUTABLE})
+  endif()
+
+  # TODO: add gcc part when we got it compiling
 endif()
 
 # exports cppbin file
