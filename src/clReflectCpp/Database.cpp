@@ -121,9 +121,6 @@ namespace
 
 #if defined(CLCPP_USING_GNUC)
 
-    // Max length to search for instructions to patch
-    #define MAX_PATCH_SEARCH_LENGTH 0x20
-
     // GCC specific patch functions
     template<typename T>
     void GccPatchFunction(clcpp::pointer_type function_address,
