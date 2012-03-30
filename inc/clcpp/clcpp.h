@@ -225,14 +225,14 @@ namespace clcpp
     template <typename TYPE>
 	__attribute__((noinline)) unsigned int GetTypeNameHash()
 	{
-		static unsigned int hash = 0;
+		static unsigned int hash = CLCPP_INVALID_HASH;
         return hash;
 	}
 
 	template <typename TYPE>
 	__attribute__((noinline)) const Type* GetType()
 	{
-		static const Type* type_ptr = 0;
+		static const Type* type_ptr = CLCPP_INVALID_ADDRESS;
         return type_ptr;
 	}
 #endif // CLCPP_USING_GNUC
