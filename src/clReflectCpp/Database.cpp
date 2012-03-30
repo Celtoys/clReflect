@@ -184,8 +184,10 @@ namespace
 
 	void PatchGetTypeAddresses(clcpp::Database& db, clcpp::internal::DatabaseMem& dbmem)
 	{
+#if defined(CLCPP_USING_GNUC)
         unsigned int original_hash = CLCPP_INVALID_HASH;
         const clcpp::Type* original_type = (const clcpp::Type*) CLCPP_INVALID_ADDRESS;
+#endif // CLCPP_USING_GNUC
 
 		for (int i = 0; i < dbmem.get_type_functions.size(); i++)
 		{
