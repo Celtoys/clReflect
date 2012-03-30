@@ -36,6 +36,11 @@
 #define CLCPP_USING_MSVC
 #else
 #define CLCPP_USING_GNUC
+
+#if defined(__APPLE__)
+#define CLCPP_USING_GNUC_MAC
+#endif // __APPLE__
+
 #endif // _MSC_VER
 
 // checking if we are running on 32 bit or 64 bit
@@ -104,13 +109,35 @@ namespace clcpp
 
 		typedef __int64 int64;
 		typedef unsigned __int64 uint64;
+        typedef unsigned __int32 uint32;
 
     #else
 
 		typedef long long int64;
 		typedef unsigned long long uint64;
+        typedef unsigned int uint32;
 
 	#endif // _MSC_VER
+
+    #if defined(CLCPP_USING_GNUC)
+        // When we patch GetType and GetTypeNameHash functions, we first search for
+        // specific mov instructions, and when we found them, we would read the value
+        // at the address calculated from the instruction. If the value equals the
+        // identifier here, we would assume we find the location to patch.
+        // This would require the following value will not be identical with any
+        // other valid address used. That's why we use odd-ended values here, hoping
+        // memory alignment will help us reduce the chance of being the same with
+        // other addresses.
+
+    #define CLCPP_INVALID_HASH (0xfefe012f)
+
+    #if defined(CLCPP_USING_64_BIT)
+    #define CLCPP_INVALID_ADDRESS (0xffee01ef12349007)
+    #else
+    #define CLCPP_INVALID_ADDRESS (0xffee6753)
+    #endif // CLCPP_USING_64_BIT
+
+    #endif // CLCPP_USING_GNUC
 
 	namespace internal
 	{

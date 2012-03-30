@@ -119,8 +119,77 @@ namespace
 	}
 
 
+#if defined(CLCPP_USING_GNUC)
+
+    // Max length to search for instructions to patch
+    #define MAX_PATCH_SEARCH_LENGTH 0x20
+
+    // GCC specific patch functions
+    template<typename T>
+    void GccPatchFunction(clcpp::pointer_type function_address,
+        const T& patch_value, const T& original_value)
+    {
+        unsigned char* function_pointer = (unsigned char*) function_address;
+
+        // searches for 0x20 instruction headers at most
+        for (int i = 0; i < 0x20; i++)
+        {
+#if defined(CLCPP_USING_64_BIT)
+            // 64 bit patch starts here
+            if (function_pointer[i] == 0x8B) {
+                // MOV instruction
+                // this may be what we are looking for
+                clcpp::uint32 target_offset = *((clcpp::uint32*) &function_pointer[i + 2]);
+                T* target_ptr = (T*) (&function_pointer[i + 6] + target_offset);
+
+                // although we get the real target address here, we still cannot
+                // say immediately if this is our target pointer to patch. On
+                // Mac OS X, this pointer would first point to a stub, which
+                // then points to the real pointer, so we may have two levels
+                // of pointers here. In this case, we would test for both cases.
+                if (*target_ptr == original_value) {
+                    // there's no stubs, this is the pointer we are looking for
+                    *target_ptr = patch_value;
+                    return;
+                }
+
+#if defined(CLCPP_USING_GNUC_MAC)
+                // we test for stub pointer on mac
+                // TODO: check if other compiler has the same behaviour
+                T* target_stub = *((T**) target_ptr);
+                if (*target_stub == original_value) {
+                    *target_stub = patch_value;
+                    return;
+                }
+#endif // CLCPP_USING_GNUC_MAC
+
+            }
+            // 64 bit patch ends here
+#else
+            // 32 bit patch starts here
+            if (function_pointer[i] == 0xA1) {
+                T* target_addr = *((T**) (&function_pointer[i + 1]));
+
+                if (*target_addr == original_value) {
+                    *target_addr = patch_value;
+                    return;
+                }
+            }
+            // 32 bit patch ends here
+#endif // CLCPP_USING_64_BIT
+        }
+        // TODO: we may want to add error raising code here since we failed to do the patch
+        return;
+    }
+
+#endif // CLCPP_USING_GNUC
+
+
 	void PatchGetTypeAddresses(clcpp::Database& db, clcpp::internal::DatabaseMem& dbmem)
 	{
+        unsigned int original_hash = CLCPP_INVALID_HASH;
+        const clcpp::Type* original_type = (const clcpp::Type*) CLCPP_INVALID_ADDRESS;
+
 		for (int i = 0; i < dbmem.get_type_functions.size(); i++)
 		{
 			clcpp::internal::GetTypeFunctions& f = dbmem.get_type_functions[i];
@@ -128,20 +197,39 @@ namespace
 			// Patch up the type name hash static variable
 			if (f.get_typename_address)
 			{
+                unsigned int hash = db.GetName(f.type_hash).hash;
+
+#if defined(CLCPP_USING_MSVC)
 				unsigned char* mov_instruction = (unsigned char*)f.get_typename_address;
 				clcpp::internal::Assert(*mov_instruction == 0xA1);
-                // TODO: check if 64 bit assembly follows the same encoding scheme with 32 bit assembly
                 unsigned int* hash_address = *(unsigned int**)(mov_instruction + 1);
-				*hash_address = db.GetName(f.type_hash).hash;
+				*hash_address = hash;
+#endif // CLCPP_USING_MSVC
+
+#if defined(CLCPP_USING_GNUC)
+                GccPatchFunction<unsigned int>(f.get_typename_address,
+                    hash,
+                    original_hash);
+#endif // CLCPP_USING_GNUC
 			}
 
 			// Patch up the type pointer static variable
 			if (f.get_type_address)
 			{
+                const clcpp::Type* type = db.GetType(f.type_hash);
+
+#if defined(CLCPP_USING_MSVC)
 				unsigned char* mov_instruction = (unsigned char*)f.get_type_address;
 				clcpp::internal::Assert(*mov_instruction == 0xA1);
 				const clcpp::Type** type_address = *(const clcpp::Type***)(mov_instruction + 1);
-				*type_address = db.GetType(f.type_hash);
+				*type_address = type;
+#endif // CLCPP_USING_MSVC
+
+#if defined(CLCPP_USING_GNUC)
+                GccPatchFunction<const clcpp::Type*>(f.get_type_address,
+                    type,
+                    original_type);
+#endif // CLCPP_USING_GNUC
 			}
 		}
 	}

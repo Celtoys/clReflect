@@ -194,7 +194,7 @@ namespace clcpp
 	// code is predictable and doesn't vary between builds.
 	//
 
-    // TODO: implement 64 bit version here
+#if defined(CLCPP_USING_MSVC)
 	template <typename TYPE>
 	__declspec(noinline) __declspec(naked) unsigned int GetTypeNameHash()
 	{
@@ -216,4 +216,25 @@ namespace clcpp
 			ret
 		}
 	}
+#endif // CLCPP_USING_MSVC
+
+#if defined(CLCPP_USING_GNUC)
+
+    // There's no naked attributed for gcc on x86, so we will use different
+    // way to patch function here.
+    template <typename TYPE>
+	__attribute__((noinline)) unsigned int GetTypeNameHash()
+	{
+		static unsigned int hash = 0;
+        return hash;
+	}
+
+	template <typename TYPE>
+	__attribute__((noinline)) const Type* GetType()
+	{
+		static const Type* type_ptr = 0;
+        return type_ptr;
+	}
+#endif // CLCPP_USING_GNUC
+
 }
