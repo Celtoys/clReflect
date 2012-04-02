@@ -232,7 +232,7 @@ namespace clcpp
 	template <typename TYPE>
 	__attribute__((noinline)) const Type* GetType()
 	{
-		static const Type* type_ptr = CLCPP_INVALID_ADDRESS;
+		static const Type* type_ptr = (Type*)CLCPP_INVALID_ADDRESS;
         return type_ptr;
 	}
 #endif // CLCPP_USING_GNUC
