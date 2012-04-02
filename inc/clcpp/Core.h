@@ -31,38 +31,76 @@
 
 // Unified platform determining interface
 
+//
 // checking for compiler type
+//
 #if defined(_MSC_VER)
-#define CLCPP_USING_MSVC
-#else
-#define CLCPP_USING_GNUC
 
-#if defined(__APPLE__)
-#define CLCPP_USING_GNUC_MAC
-#endif // __APPLE__
+	#define CLCPP_USING_MSVC
+
+#else
+
+	#define CLCPP_USING_GNUC
+
+	#if defined(__APPLE__)
+		#define CLCPP_USING_GNUC_MAC
+	#endif // __APPLE__
 
 #endif // _MSC_VER
 
+
+//
 // checking if we are running on 32 bit or 64 bit
+//
 #if defined(CLCPP_USING_MSVC)
 
-// checking for windows platform
-#if defined(_WIN64)
-#define CLCPP_USING_64_BIT
-#else
-#define CLCPP_USING_32_BIT
-#endif // _WIN64
+	// checking for windows platform
+	#if defined(_WIN64)
+		#define CLCPP_USING_64_BIT
+	#else
+		#define CLCPP_USING_32_BIT
+	#endif // _WIN64
 
 #else
 
-// checking for g++ and clang
-#if defined(__LP64__)
-#define CLCPP_USING_64_BIT
-#else
-#define CLCPP_USING_32_BIT
-#endif // __LP64__
+	// checking for g++ and clang
+	#if defined(__LP64__)
+		#define CLCPP_USING_64_BIT
+	#else
+		#define CLCPP_USING_32_BIT
+	#endif // __LP64__
 
 #endif // CLCPP_USING_MSVC
+
+
+//
+// Join two symbols together, ensuring any macro arguments are evaluated before the join
+//
+#define CLCPP_JOIN2(x, y) x ## y
+#define CLCPP_JOIN(x, y) CLCPP_JOIN2(x, y)
+
+
+//
+// Generate a unique symbol with the given prefix
+//
+#define CLCPP_UNIQUE(x) CLCPP_JOIN(x, __COUNTER__)
+
+
+
+//
+// Compiler-specific attributes
+//
+#if defined(CLCPP_USING_MSVC)
+
+	#define CLCPP_EXPORT __declspec(dllexport)
+	#define CLCPP_NOINLINE __declspec(noinline)
+
+#elif defined(CLCPP_USING_GNUC)
+
+	#define CLCPP_EXPORT
+	#define CLCPP_NOINLINE __attribute__((noinline))
+
+#endif
 
 
 namespace clcpp
@@ -119,25 +157,6 @@ namespace clcpp
 
 	#endif // _MSC_VER
 
-    #if defined(CLCPP_USING_GNUC)
-        // When we patch GetType and GetTypeNameHash functions, we first search for
-        // specific mov instructions, and when we found them, we would read the value
-        // at the address calculated from the instruction. If the value equals the
-        // identifier here, we would assume we find the location to patch.
-        // This would require the following value will not be identical with any
-        // other valid address used. That's why we use odd-ended values here, hoping
-        // memory alignment will help us reduce the chance of being the same with
-        // other addresses.
-
-    #define CLCPP_INVALID_HASH (0xfefe012f)
-
-    #if defined(CLCPP_USING_64_BIT)
-    #define CLCPP_INVALID_ADDRESS (0xffee01ef12349007)
-    #else
-    #define CLCPP_INVALID_ADDRESS (0xffee6753)
-    #endif // CLCPP_USING_64_BIT
-
-    #endif // CLCPP_USING_GNUC
 
 	namespace internal
 	{
@@ -180,14 +199,14 @@ namespace clcpp
 		{
 			if (expression == false)
 			{
-#ifdef CLCPP_USING_MSVC
+			#ifdef CLCPP_USING_MSVC
 				__asm
 				{
 					int 3h
 				}
-#else
+			#else
                 asm("int $0x3\n");
-#endif // CLCPP_USING_MSVC
+			#endif // CLCPP_USING_MSVC
 			}
 		}
 

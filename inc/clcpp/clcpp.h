@@ -36,33 +36,6 @@
 #include "Database.h"
 
 
-//
-// Force an extra level of indirection for the preprocessor when expanding macros
-//
-#define clcpp_expand(x) x
-
-
-//
-// Join two symbols together, ensuring any macro arguments are evaluated before the join
-//
-#define clcpp_join2(x, y) x ## y
-#define clcpp_join(x, y) clcpp_join2(x, y)
-
-
-//
-// Generate a unique symbol with the given prefix
-//
-#define clcpp_unique(x) clcpp_join(x, __COUNTER__)
-
-
-
-//
-// Export function signature
-//
-#define clcpp_export __declspec(dllexport)
-
-
-
 #ifdef __clang__
 
 
@@ -77,7 +50,7 @@
 		namespace clcpp_internal					\
 		{											\
 			__attribute__((annotate("full-"#name)))	\
-			struct clcpp_unique(cldb_reflect) { };	\
+			struct CLCPP_UNIQUE(cldb_reflect) { };	\
 		}
 
 
@@ -91,7 +64,7 @@
 		namespace clcpp_internal					\
 		{											\
 			__attribute__((annotate("part-"#name)))	\
-			struct clcpp_unique(cldb_reflect) { };	\
+			struct CLCPP_UNIQUE(cldb_reflect) { };	\
 		}
 
 
@@ -106,13 +79,13 @@
 		namespace clcpp_internal																					\
 		{																											\
 			__attribute__((annotate("container-" #container "-" #read_iterator "-" #write_iterator "-" #keyinfo)))	\
-			struct clcpp_unique(container_info) { };																\
+			struct CLCPP_UNIQUE(container_info) { };																\
 		}
 
 
 	#define clcpp_attr(...) __attribute__((annotate("attr:" #__VA_ARGS__)))
-	#define clcpp_push_attr(...) struct clcpp_unique(push_attr) { } __attribute__((annotate(#__VA_ARGS__)));
-	#define clcpp_pop_attr(...) struct clcpp_unique(pop_attr) { } __attribute__((annotate(#__VA_ARGS__)));
+	#define clcpp_push_attr(...) struct CLCPP_UNIQUE(push_attr) { } __attribute__((annotate(#__VA_ARGS__)));
+	#define clcpp_pop_attr(...) struct CLCPP_UNIQUE(pop_attr) { } __attribute__((annotate(#__VA_ARGS__)));
 
 
 	//
@@ -147,11 +120,11 @@
 		{														\
 			namespace internal									\
 			{													\
-				clcpp_export void ConstructObject(type* object)	\
+				CLCPP_EXPORT void ConstructObject(type* object)	\
 				{												\
 					CallConstructor(object);					\
 				}												\
-				clcpp_export void DestructObject(type* object)	\
+				CLCPP_EXPORT void DestructObject(type* object)	\
 				{												\
 					CallDestructor(object);						\
 				}												\
@@ -178,7 +151,9 @@ namespace clcpp
 	// pointer returned belongs to the database which was loaded by the module the call
 	// resides in.
 	//
-	// ----- IMPLEMENTATION DETAILS -----
+	// ---------------------------------------------------------------------------------
+	// IMPLEMENTATION DETAILS
+	// ---------------------------------------------------------------------------------
 	//
 	// These functions are specified as no-inline so that they are embedded in your
 	// module where clExport can pickup and store their addresses. These are recorded in
@@ -190,51 +165,35 @@ namespace clcpp
 	// finds the address of the variables that they use and patches them with whatever
 	// values are stored in the database.
 	//
-	// The functions are specified as naked and implemented in inline asm so that the generated
-	// code is predictable and doesn't vary between builds.
+	// When we patch GetType and GetTypeNameHash functions, we first search for
+	// specific mov instructions, and when we find them, we would read the value
+	// at the address calculated from the instruction. If the value equals the
+	// identifier here, we would assume we find the location to patch.
+	// This would require the following value will not be identical with any
+	// other valid address used. That's why we use odd-ended values here, hoping
+	// memory alignment will help us reduce the chance of being the same with
+	// other addresses.
 	//
+   	#define CLCPP_INVALID_HASH (0xfefe012f)
 
-#if defined(CLCPP_USING_MSVC)
-	template <typename TYPE>
-	__declspec(noinline) __declspec(naked) unsigned int GetTypeNameHash()
-	{
-		static unsigned int hash = 0;
-		__asm
-		{
-			mov eax, dword ptr [hash]
-			ret
-		}
-	}
+    #if defined(CLCPP_USING_64_BIT)
+	    #define CLCPP_INVALID_ADDRESS (0xffee01ef12349007)
+    #else
+    	#define CLCPP_INVALID_ADDRESS (0xffee6753)
+    #endif // CLCPP_USING_64_BIT
+
 
 	template <typename TYPE>
-	__declspec(noinline) __declspec(naked) const Type* GetType()
-	{
-		static const Type* type_ptr = 0;
-		__asm
-		{
-			mov eax, dword ptr [type_ptr]
-			ret
-		}
-	}
-#endif // CLCPP_USING_MSVC
-
-#if defined(CLCPP_USING_GNUC)
-
-    // There's no naked attributed for gcc on x86, so we will use different
-    // way to patch function here.
-    template <typename TYPE>
-	__attribute__((noinline)) unsigned int GetTypeNameHash()
+	CLCPP_NOINLINE unsigned int GetTypeNameHash()
 	{
 		static unsigned int hash = CLCPP_INVALID_HASH;
-        return hash;
+		return hash;
 	}
 
 	template <typename TYPE>
-	__attribute__((noinline)) const Type* GetType()
+	CLCPP_NOINLINE const Type* GetType()
 	{
 		static const Type* type_ptr = (Type*)CLCPP_INVALID_ADDRESS;
-        return type_ptr;
+		return type_ptr;
 	}
-#endif // CLCPP_USING_GNUC
-
 }
