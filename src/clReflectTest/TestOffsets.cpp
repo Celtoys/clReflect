@@ -4,8 +4,9 @@
 #include <stdio.h>
 
 
+#define EXPAND(x) x
 #define VA_NARGS_IMPL(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, NARGS, ...) NARGS
-#define VA_NARGS(...) clcpp_expand(VA_NARGS_IMPL(__VA_ARGS__, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
+#define VA_NARGS(...) EXPAND(VA_NARGS_IMPL(__VA_ARGS__, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
 
 #define BEGIN_TEST(name)									\
 		typedef name TestType;								\
@@ -21,26 +22,26 @@
 #define TEST(name) GetTester(db).Test(#name, &TestType::name)
 
 #define TESTS_1(a, ...)		TEST(a);
-#define TESTS_2(a, ...)		TEST(a); clcpp_expand(TESTS_1(__VA_ARGS__))
-#define TESTS_3(a, ...)		TEST(a); clcpp_expand(TESTS_2(__VA_ARGS__))
-#define TESTS_4(a, ...)		TEST(a); clcpp_expand(TESTS_3(__VA_ARGS__));
-#define TESTS_5(a, ...)		TEST(a); clcpp_expand(TESTS_4(__VA_ARGS__));
-#define TESTS_6(a, ...)		TEST(a); clcpp_expand(TESTS_5(__VA_ARGS__));
-#define TESTS_7(a, ...)		TEST(a); clcpp_expand(TESTS_6(__VA_ARGS__));
-#define TESTS_8(a, ...)		TEST(a); clcpp_expand(TESTS_7(__VA_ARGS__));
-#define TESTS_9(a, ...)		TEST(a); clcpp_expand(TESTS_8(__VA_ARGS__));
-#define TESTS_10(a, ...)	TEST(a); clcpp_expand(TESTS_9(__VA_ARGS__));
-#define TESTS_11(a, ...)	TEST(a); clcpp_expand(TESTS_10(__VA_ARGS__));
-#define TESTS_12(a, ...)	TEST(a); clcpp_expand(TESTS_11(__VA_ARGS__));
-#define TESTS_13(a, ...)	TEST(a); clcpp_expand(TESTS_12(__VA_ARGS__));
-#define TESTS_14(a, ...)	TEST(a); clcpp_expand(TESTS_13(__VA_ARGS__));
-#define TESTS_15(a, ...)	TEST(a); clcpp_expand(TESTS_14(__VA_ARGS__));
-#define TESTS_16(a, ...)	TEST(a); clcpp_expand(TESTS_15(__VA_ARGS__));
-#define TESTS_17(a, ...)	TEST(a); clcpp_expand(TESTS_16(__VA_ARGS__));
-#define TESTS_18(a, ...)	TEST(a); clcpp_expand(TESTS_17(__VA_ARGS__));
-#define TESTS_19(a, ...)	TEST(a); clcpp_expand(TESTS_18(__VA_ARGS__));
-#define TESTS_20(a, ...)	TEST(a); clcpp_expand(TESTS_19(__VA_ARGS__));
-#define TESTS(name, ...)	BEGIN_TEST(name) { clcpp_expand(clcpp_join(TESTS_, VA_NARGS(__VA_ARGS__))(__VA_ARGS__)) }
+#define TESTS_2(a, ...)		TEST(a); EXPAND(TESTS_1(__VA_ARGS__))
+#define TESTS_3(a, ...)		TEST(a); EXPAND(TESTS_2(__VA_ARGS__))
+#define TESTS_4(a, ...)		TEST(a); EXPAND(TESTS_3(__VA_ARGS__));
+#define TESTS_5(a, ...)		TEST(a); EXPAND(TESTS_4(__VA_ARGS__));
+#define TESTS_6(a, ...)		TEST(a); EXPAND(TESTS_5(__VA_ARGS__));
+#define TESTS_7(a, ...)		TEST(a); EXPAND(TESTS_6(__VA_ARGS__));
+#define TESTS_8(a, ...)		TEST(a); EXPAND(TESTS_7(__VA_ARGS__));
+#define TESTS_9(a, ...)		TEST(a); EXPAND(TESTS_8(__VA_ARGS__));
+#define TESTS_10(a, ...)	TEST(a); EXPAND(TESTS_9(__VA_ARGS__));
+#define TESTS_11(a, ...)	TEST(a); EXPAND(TESTS_10(__VA_ARGS__));
+#define TESTS_12(a, ...)	TEST(a); EXPAND(TESTS_11(__VA_ARGS__));
+#define TESTS_13(a, ...)	TEST(a); EXPAND(TESTS_12(__VA_ARGS__));
+#define TESTS_14(a, ...)	TEST(a); EXPAND(TESTS_13(__VA_ARGS__));
+#define TESTS_15(a, ...)	TEST(a); EXPAND(TESTS_14(__VA_ARGS__));
+#define TESTS_16(a, ...)	TEST(a); EXPAND(TESTS_15(__VA_ARGS__));
+#define TESTS_17(a, ...)	TEST(a); EXPAND(TESTS_16(__VA_ARGS__));
+#define TESTS_18(a, ...)	TEST(a); EXPAND(TESTS_17(__VA_ARGS__));
+#define TESTS_19(a, ...)	TEST(a); EXPAND(TESTS_18(__VA_ARGS__));
+#define TESTS_20(a, ...)	TEST(a); EXPAND(TESTS_19(__VA_ARGS__));
+#define TESTS(name, ...)	BEGIN_TEST(name) { EXPAND(CLCPP_JOIN(TESTS_, VA_NARGS(__VA_ARGS__))(__VA_ARGS__)) }
 
 
 // Different from the classic offsetoff macro in that it produces reproduceable behaviour per platform/compiler
