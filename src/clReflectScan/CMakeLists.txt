@@ -26,8 +26,8 @@ if (MSVC)
   # But our MSVC proj file is at cmake-build/msvcsrc/clReflectScan, which
   # has one more level of directory, so we add another directory-up action
   # for library linking.
-  set(LLVM_DEBUG_LIB_DIR "../${LLVM_BASE_LIB_DIR}/Debug")
-  set(LLVM_RELEASE_LIB_DIR "../${LLVM_BASE_LIB_DIR}/Release")
+  set(LLVM_DEBUG_LIB_DIR "../../${LLVM_BASE_LIB_DIR}/Debug")
+  set(LLVM_RELEASE_LIB_DIR "../../${LLVM_BASE_LIB_DIR}/Release")
 endif (MSVC)
 
 add_clreflect_executable(clReflectScan
