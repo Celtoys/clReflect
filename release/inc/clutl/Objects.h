@@ -52,8 +52,13 @@ namespace clutl
 		//
 		virtual ~Object() { }
 
-		// Shortcut for calling DestroyObject on this object in its owning group
-		void Delete() const;
+		template <typename TYPE>
+		TYPE* Cast()
+		{
+			if (type == clcpp::GetType<TYPE>())
+				return (TYPE*)this;
+			return 0;
+		}
 
 		// Type of the object
 		const clcpp::Type* type;
@@ -90,25 +95,24 @@ namespace clutl
 		// Destroy named/anonymous object or an object group
 		void DestroyObject(const Object* object);
 
-		// Find a created object by name
-		Object* FindObject(unsigned int name_hash) const;
+		// Find a created object by unique ID
+		Object* FindObject(unsigned int unique_id) const;
 
-		// Template helpers for acquring the required typename and correctly casting during creation
-		template <typename TYPE> TYPE* CreateObject()
-		{
-			return static_cast<TYPE*>(CreateObject(clcpp::GetTypeNameHash<TYPE>()));
-		}
-		template <typename TYPE> TYPE* CreateObject(unsigned int unique_id)
-		{
-			return static_cast<TYPE*>(CreateObject(clcpp::GetTypeNameHash<TYPE>(), unique_id));
-		}
+		// Set whether searches for objects in this group are allowed to walk up
+		// the hierarchy looking for matches
+		// TEMPORARY SOLUTION for multi-threaded access and locking of various object groups
+		// This concept of tree-based access doesn't work well with MPP so will be replaced with something simpler
+		// and more adaptable.
+		void AllowFindInParent(bool allow) { m_AllowFindInParent = allow; }
+
+		const clcpp::Database* GetReflectionDB() const { return m_ReflectionDB; }
 
 	private:
 		struct HashEntry;
 
 		void AddHashEntry(Object* object);
 		void RemoveHashEntry(const Object* object);
-		void Resize();
+		void Resize(bool increase);
 
 		// Reflection database to use for type access
 		const clcpp::Database* m_ReflectionDB;
@@ -117,7 +121,11 @@ namespace clutl
 		// hashes of pointers that may suffer from clustering.
 		unsigned int m_MaxNbObjects;
 		unsigned int m_NbObjects;
+		unsigned int m_NbOccupiedEntries;
 		HashEntry* m_NamedObjects;
+
+		// Allow FindObject to recurse into the parent object group?
+		bool m_AllowFindInParent;
 
 		friend class ObjectIterator;
 		friend class ObjectDatabase;
@@ -166,4 +174,36 @@ namespace clutl
 		const ObjectGroup* m_ObjectGroup;
 		unsigned int m_Position;
 	};
+
+
+	//
+	// Helper for safely deleting an object and nulling the pointer.
+	// Needs to be templated so that a pointer reference can be passed.
+	//
+	template <typename TYPE>
+	inline void Delete(TYPE*& object)
+	{
+		if (object != 0)
+		{
+			clcpp::internal::Assert(object->object_group != 0);
+			object->object_group->DestroyObject(object);
+			object = 0;
+		}
+	}
+}
+
+
+//
+// Helpers for creating typed objects in object groups.
+// Exposed publically as Koenig lookup doesn't apply to template parameters.
+//
+template <typename TYPE>
+inline TYPE* New(clutl::ObjectGroup* group)
+{
+	return static_cast<TYPE*>(group->CreateObject(clcpp::GetTypeNameHash<TYPE>()));
+}
+template <typename TYPE>
+inline TYPE* New(clutl::ObjectGroup* group, unsigned int unique_id)
+{
+	return static_cast<TYPE*>(group->CreateObject(clcpp::GetTypeNameHash<TYPE>(), unique_id));
 }

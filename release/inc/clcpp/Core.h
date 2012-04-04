@@ -29,31 +29,157 @@
 #pragma once
 
 
+// Unified platform determining interface
+
 //
-// The C++ standard specifies that use of default placement new does not require inclusion of <new>.
-// However, MSVC2005 disagrees and requires this. Since I don't want any CRT dependencies in the library,
-// I don't want to include that. However, the C++ standard also states that implementing your own
-// default new is illegal.
+// checking for compiler type
 //
-// I could just be pragmatic and ignore that (I have done for as long as I've known of the existence
-// of placement new). Or I could do this... wrap pointers in a specific type that forwards to its own
-// placement new, treating it like an allocator that returns the wrapped pointer.
+#if defined(_MSC_VER)
+
+	#define CLCPP_USING_MSVC
+
+#else
+
+	#define CLCPP_USING_GNUC
+
+	#if defined(__APPLE__)
+		#define CLCPP_USING_GNUC_MAC
+	#endif // __APPLE__
+
+#endif // _MSC_VER
+
+
 //
+// checking if we are running on 32 bit or 64 bit
+//
+#if defined(CLCPP_USING_MSVC)
+
+	// checking for windows platform
+	#if defined(_WIN64)
+		#define CLCPP_USING_64_BIT
+	#else
+		#define CLCPP_USING_32_BIT
+	#endif // _WIN64
+
+#else
+
+	// checking for g++ and clang
+	#if defined(__LP64__)
+		#define CLCPP_USING_64_BIT
+	#else
+		#define CLCPP_USING_32_BIT
+	#endif // __LP64__
+
+#endif // CLCPP_USING_MSVC
+
+
+//
+// Join two symbols together, ensuring any macro arguments are evaluated before the join
+//
+#define CLCPP_JOIN2(x, y) x ## y
+#define CLCPP_JOIN(x, y) CLCPP_JOIN2(x, y)
+
+
+//
+// Generate a unique symbol with the given prefix
+//
+#define CLCPP_UNIQUE(x) CLCPP_JOIN(x, __COUNTER__)
+
+
+
+//
+// Compiler-specific attributes
+//
+#if defined(CLCPP_USING_MSVC)
+
+	#define CLCPP_EXPORT __declspec(dllexport)
+	#define CLCPP_NOINLINE __declspec(noinline)
+
+#elif defined(CLCPP_USING_GNUC)
+
+	#define CLCPP_EXPORT
+	#define CLCPP_NOINLINE __attribute__((noinline))
+
+#endif
+
+
 namespace clcpp
 {
+    // Defining cross platform size type and pointer type
+    //
+    // TL;DR version: use pointer_type to holding value casted from a pointer
+    // use size_type to hold memory index, offset, length, etc.
+    //
+    //
+    // size_type is a type that can hold any array index, i.e. size_type
+    // is used to hold size of a memory block. It is also used to hold the
+    // offset of one address from a base address. Remember size_type is an
+    // unsigned type, so it only can hold positive offsets.
+    //
+    // pointer_type is a type for holding address value casting from a pointer.
+    //
+    // In C99, size_type is exactly size_t, and pointer_type is exactly intptr_t
+    // (or uintptr_t), we provide a different name and put it in clcpp here
+    // so as not to pollute default namespace.
+    //
+    // Although the actual types here are the same, the c standard
+    // does not enforce these two data to be the same. So we separate them in case
+    // we met some platforms fof which these two have different type widths.
+    //
+    // Since all offsets used in clReflect are positive offsets from a base
+    // address, we do not provide ptrdiff_t type here for simplicity. Instead
+    // we merge the use cases of ptrdiff_t into size_type(comparing
+    // a negative ptrdiff_t type variable with a size_t will be a disaster).
+    #if defined(CLCPP_USING_64_BIT)
+
+        typedef unsigned long size_type;
+        typedef unsigned long pointer_type;
+
+    #else
+
+        typedef unsigned int size_type;
+        typedef unsigned int pointer_type;
+
+    #endif // CLCPP_USING_64_BIT
+
+	// cross platform type definitions
+	#if defined(CLCPP_USING_MSVC)
+
+		typedef __int64 int64;
+		typedef unsigned __int64 uint64;
+        typedef unsigned __int32 uint32;
+
+    #else
+
+		typedef long long int64;
+		typedef unsigned long long uint64;
+        typedef unsigned int uint32;
+
+	#endif // _MSC_VER
+
+
 	namespace internal
 	{
+		//
+		// The C++ standard specifies that use of default placement new does not require inclusion of <new>.
+		// However, MSVC2005 disagrees and requires this. Since I don't want any CRT dependencies in the library,
+		// I don't want to include that. However, the C++ standard also states that implementing your own
+		// default new is illegal.
+		//
+		// I could just be pragmatic and ignore that (I have done for as long as I've known of the existence
+		// of placement new). Or I could do this... wrap pointers in a specific type that forwards to its own
+		// placement new, treating it like an allocator that returns the wrapped pointer.
+		//
 		struct PtrWrapper
 		{
 		};
 	}
 }
 
-
 //
 // Placement new for the PtrWrapper logic specified above, which required matching delete
 //
-inline void* operator new (unsigned int size, const clcpp::internal::PtrWrapper& p)
+inline void* operator new (clcpp::size_type size, const clcpp::internal::PtrWrapper& p)
 {
 	return (void*)&p;
 }
@@ -73,10 +199,14 @@ namespace clcpp
 		{
 			if (expression == false)
 			{
+			#ifdef CLCPP_USING_MSVC
 				__asm
 				{
 					int 3h
 				}
+			#else
+                asm("int $0x3\n");
+			#endif // CLCPP_USING_MSVC
 			}
 		}
 
@@ -101,13 +231,13 @@ namespace clcpp
 		//
 		// Hashes the specified data into a 32-bit value
 		//
-		unsigned HashData(const void* data, int length);
+		unsigned HashData(const void* data, int length, unsigned int seed = 0);
 
 
 		//
 		// Hashes the full string into a 32-bit value
 		//
-		unsigned int HashNameString(const char* name_string);
+		unsigned int HashNameString(const char* name_string, unsigned int seed = 0);
 
 
 		//
@@ -122,7 +252,7 @@ namespace clcpp
 	//
 	struct IAllocator
 	{
-		virtual void* Alloc(unsigned int size) = 0;
+		virtual void* Alloc(size_type size) = 0;
 		virtual void Free(void* ptr) = 0;
 	};
 
@@ -237,6 +367,7 @@ namespace clcpp
 		CArray(const CArray& rhs);
 		CArray& operator= (const CArray& rhs);
 
+        // TODO: This size is actually count here, so we may not need to convert it to size_type?
 		unsigned int m_Size;
 		TYPE* m_Data;
 		IAllocator* m_Allocator;
@@ -263,7 +394,7 @@ namespace clcpp
 
 		// Derived classes must implement just the read function, returning
 		// true on success, false otherwise.
-		virtual bool Read(void* dest, int size) = 0;
+		virtual bool Read(void* dest, size_type size) = 0;
 	};
 
 
@@ -280,3 +411,5 @@ namespace clcpp
 		int last;
 	};
 }
+
+

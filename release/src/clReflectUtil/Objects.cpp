@@ -14,18 +14,13 @@ struct clutl::ObjectGroup::HashEntry
 
 
 
-void clutl::Object::Delete() const
-{
-	if (object_group)
-		object_group->DestroyObject(this);
-}
-
-
 clutl::ObjectGroup::ObjectGroup()
 	: m_ReflectionDB(0)
 	, m_MaxNbObjects(8)
 	, m_NbObjects(0)
+	, m_NbOccupiedEntries(0)
 	, m_NamedObjects(0)
+	, m_AllowFindInParent(true)
 {
 	// Allocate the hash table
 	m_NamedObjects = new HashEntry[m_MaxNbObjects];
@@ -129,22 +124,22 @@ void clutl::ObjectGroup::DestroyObject(const Object* object)
 }
 
 
-clutl::Object* clutl::ObjectGroup::FindObject(unsigned int name_hash) const
+clutl::Object* clutl::ObjectGroup::FindObject(unsigned int unique_id) const
 {
 	// Search up through the object group hierarchy
 	const ObjectGroup* group = this;
 	Object* object = 0;
-	while (object == 0 && group != 0)
+	while (group != 0)
 	{
 		HashEntry* named_objects = group->m_NamedObjects;
 
 		// Linear probe from the natural hash location for matching hash
 		const unsigned int index_mask = group->m_MaxNbObjects - 1;
-		unsigned int index = name_hash & index_mask;
+		unsigned int index = unique_id & index_mask;
 		while (named_objects[index].hash)
 		{
 			// Ensure dummy objects are skipped
-			if (named_objects[index].hash == name_hash &&
+			if (named_objects[index].hash == unique_id &&
 				named_objects[index].object != 0)
 				break;
 
@@ -154,6 +149,13 @@ clutl::Object* clutl::ObjectGroup::FindObject(unsigned int name_hash) const
 		// Get the object here
 		HashEntry& he = group->m_NamedObjects[index];
 		object = he.object;
+		if (object != 0)
+			break;
+
+		// Check to see if this group allows finds to walk up the hierarchy
+		if (!group->m_AllowFindInParent)
+			break;
+
 		group = group->object_group;
 	}
 
@@ -175,10 +177,16 @@ void clutl::ObjectGroup::AddHashEntry(Object* object)
 	he.hash = hash;
 	he.object = object;
 	m_NbObjects++;
+	m_NbOccupiedEntries++;
 
 	// Resize when load factor is greather than 2/3
 	if (m_NbObjects > (m_MaxNbObjects * 2) / 3)
-		Resize();
+		Resize(true);
+	
+	// Or flush dummy objects so that there is always at least on empty slot
+	// This is required for the FindObject loop to terminate when an object can't be find
+	else if (m_NbOccupiedEntries == m_MaxNbObjects)
+		Resize(false);
 }
 
 
@@ -198,19 +206,25 @@ void clutl::ObjectGroup::RemoveHashEntry(const Object* object)
 }
 
 
-void clutl::ObjectGroup::Resize()
+void clutl::ObjectGroup::Resize(bool increase)
 {
-	// Make a bigger, empty table
+	// Backup existing table
 	unsigned int old_max_nb_objects = m_MaxNbObjects;
 	HashEntry* old_named_objects = m_NamedObjects;
-	if (m_MaxNbObjects < 8192 * 4)
-		m_MaxNbObjects *= 4;
-	else
-		m_MaxNbObjects *= 2;
+
+	// Either make the table bigger or leave it the same size to flush all dummy objects
+	if (increase)
+	{
+		if (m_MaxNbObjects < 8192 * 4)
+			m_MaxNbObjects *= 4;
+		else
+			m_MaxNbObjects *= 2;
+	}
 	m_NamedObjects = new HashEntry[m_MaxNbObjects];
 
 	// Reinsert all objects into the new hash table
 	m_NbObjects = 0;
+	m_NbOccupiedEntries = 0;
 	for (unsigned int i = 0; i < old_max_nb_objects; i++)
 	{
 		HashEntry& he = old_named_objects[i];

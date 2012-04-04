@@ -56,11 +56,11 @@ public:
 private:
 	// Construction values
 	const char* m_ArrayData;
-	unsigned int m_ElementSize;
+    clcpp::size_type m_ElementSize;
 
 	// Iteration values
-	unsigned int m_Position;
-	unsigned int m_Size;
+    clcpp::size_type m_Position;
+    clcpp::size_type m_Size;
 };
 
 
@@ -117,11 +117,11 @@ public:
 private:
 	// Construction values
 	char* m_ArrayData;
-	unsigned int m_ElementSize;
+    clcpp::size_type m_ElementSize;
 
 	// Iteration values
-	unsigned int m_Position;
-	unsigned int m_Size;
+    clcpp::size_type m_Position;
+    clcpp::size_type m_Size;
 };
 
 

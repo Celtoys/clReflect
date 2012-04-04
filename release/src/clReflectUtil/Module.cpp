@@ -1,25 +1,7 @@
 
 #include <clutl/Module.h>
 #include <clcpp/Database.h>
-
-
-#if defined(_WINDOWS) || defined(_WIN32)
-
-	// Windows-specific module loading and inspection functions
-	// TODO: Create a single IHost interface in clcpp and stick all this kind of stuff in there?
-	typedef int (__stdcall *FunctionPtr)();
-	extern "C" __declspec(dllimport) void* __stdcall LoadLibraryA(const char* lpLibFileName);
-	extern "C" __declspec(dllimport) FunctionPtr __stdcall GetProcAddress(void* module, const char* lpProcName);
-	extern "C" __declspec(dllimport) int __stdcall FreeLibrary(void* hLibModule);
-
-#else
-
-	// Non-functioning implementations for all other platforms
-	void* LoadLibraryA(const char*) { return 0; }
-	void* GetProcAddress(void*, const char*) { return 0; }
-	int FreeLibrary(void*);
-
-#endif
+#include "Platform.h"
 
 
 clutl::Module::Module()
@@ -33,14 +15,14 @@ clutl::Module::Module()
 clutl::Module::~Module()
 {
 	if (m_Handle != 0)
-		FreeLibrary(m_Handle);
+		FreeSharedLibrary(m_Handle);
 }
 
 
 bool clutl::Module::Load(clcpp::Database* host_db, const char* filename)
 {
 	// Load the DLL
-	m_Handle = LoadLibraryA(filename);
+	m_Handle = LoadSharedLibrary(filename);
 	if (m_Handle == 0)
 		return false;
 
@@ -50,13 +32,13 @@ bool clutl::Module::Load(clcpp::Database* host_db, const char* filename)
 
 	// Get the module reflection database
 	typedef clcpp::Database* (*GetReflectionDatabaseFunc)();
-	GetReflectionDatabaseFunc GetReflectionDatabase = (GetReflectionDatabaseFunc)GetProcAddress(m_Handle, "GetReflectionDatabase");
+	GetReflectionDatabaseFunc GetReflectionDatabase = (GetReflectionDatabaseFunc)GetSharedLibraryFunction(m_Handle, "GetReflectionDatabase");
 	if (GetReflectionDatabase)
 		m_ReflectionDB = GetReflectionDatabase();
 
 	// Ask the DLL to register and interface implementations it has
 	typedef void (*AddReflectionImplsFunc)(Module*);
-	AddReflectionImplsFunc AddReflectionImpls = (AddReflectionImplsFunc)GetProcAddress(m_Handle, "AddReflectionImpls");
+	AddReflectionImplsFunc AddReflectionImpls = (AddReflectionImplsFunc)GetSharedLibraryFunction(m_Handle, "AddReflectionImpls");
 	if (AddReflectionImpls)
 		AddReflectionImpls(this);
 

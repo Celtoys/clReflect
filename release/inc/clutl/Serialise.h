@@ -36,6 +36,7 @@ clcpp_reflect_part(clutl)
 namespace clutl
 {
 	struct Object;
+	class JSONContext;
 
 
 	//
@@ -151,67 +152,9 @@ namespace clutl
 	};
 
 
-	enum JSONTokenType
-	{
-		JSON_TOKEN_NONE,
-
-		// Single character tokens match their character values for simpler switch code
-		JSON_TOKEN_LBRACE = '{',
-		JSON_TOKEN_RBRACE = '}',
-		JSON_TOKEN_COMMA = ',',
-		JSON_TOKEN_COLON = ':',
-		JSON_TOKEN_LBRACKET = '[',
-		JSON_TOKEN_RBRACKET = ']',
-
-		JSON_TOKEN_STRING,
-
-		JSON_TOKEN_TRUE,
-		JSON_TOKEN_FALSE,
-		JSON_TOKEN_NULL,
-
-		JSON_TOKEN_INTEGER,
-		JSON_TOKEN_DECIMAL,
-	};
-
-
-	// Partially reflected so that it can be used for reflecting custom serialisation functions
-	clcpp_attr(reflect_part)
-	struct JSONToken
-	{
-		JSONToken()
-			: type(JSON_TOKEN_NONE)
-			, length(0)
-		{
-		}
-
-		explicit JSONToken(JSONTokenType type, int length)
-			: type(type)
-			, length(length)
-		{
-		}
-
-		bool IsValid() const
-		{
-			return type != JSON_TOKEN_NONE;
-		}
-
-		JSONTokenType type;
-		int length;
-
-		// All possible token value representations
-		struct
-		{
-			union
-			{
-				const char* string;
-				__int64 integer;
-				double decimal;
-			};
-		} val;
-	};
-
-
 	// JSON serialisation
 	JSONError LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type);
+	JSONError LoadJSON(JSONContext& ctx, void* object, const clcpp::Field* field);
 	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags = 0);
+	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Field* field, unsigned int flags = 0);
 }

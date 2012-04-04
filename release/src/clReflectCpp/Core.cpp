@@ -107,15 +107,15 @@ namespace
 }
 
 
-unsigned int clcpp::internal::HashData(const void* data, int length)
+unsigned int clcpp::internal::HashData(const void* data, int length, unsigned int seed)
 {
-	return MurmurHash3(data, length, 0);
+	return MurmurHash3(data, length, seed);
 }
 
 
-unsigned int clcpp::internal::HashNameString(const char* name_string)
+unsigned int clcpp::internal::HashNameString(const char* name_string, unsigned int seed)
 {
-	return MurmurHash3(name_string, strlen(name_string), 0);
+	return MurmurHash3(name_string, strlen(name_string), seed);
 }
 
 
