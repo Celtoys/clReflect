@@ -9,3 +9,4 @@ cmake-build/*
 *.vcproj
 .svn/*
 extern/llvm-build/*
+extern/llvm-build-gnu/*

@@ -65,7 +65,11 @@ namespace
 			char buffer[512];
 			va_list args;
 			va_start(args, format);
+#if defined (CLCPP_USING_MSVC)
 			vsnprintf_s(buffer, sizeof(buffer), _TRUNCATE, format, args);
+#else
+			vsnprintf(buffer, sizeof(buffer), format, args);
+#endif	// CLCPP_USING_MSVC
 			va_end(args);
 			text = buffer;
 		}
@@ -413,7 +417,7 @@ namespace
 	{
 		// Only add the attribute if its unique
 		const cldb::DBMap<TYPE>& store = db.GetDBMap<TYPE>();
-		cldb::DBMap<TYPE>::const_iterator i = store.find(attribute->name.hash);
+		typename cldb::DBMap<TYPE>::const_iterator i = store.find(attribute->name.hash);
 		if (i == store.end() || !i->second.Equals(*attribute))
 		{
 			LOG(ast, INFO, "attribute %s\n", attribute->name.text.c_str());

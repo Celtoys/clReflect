@@ -30,6 +30,7 @@
 
 
 #include <map>
+#include <string>
 
 
 namespace clang

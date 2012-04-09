@@ -259,11 +259,11 @@ void logging::Log(StreamHandle handle, Tag tag, bool do_prefix, const char* form
 	char buffer[512];
 	va_list args;
 	va_start(args, format);
-// #ifdef _MSC_VER
-// 	vsnprintf_s(buffer, sizeof(buffer), _TRUNCATE, format, args);
-// #else
+#ifdef _MSC_VER
+	vsnprintf_s(buffer, sizeof(buffer), _TRUNCATE, format, args);
+#else
     vsnprintf(buffer, sizeof(buffer), format, args);
-// #endif  // _MSC_VER
+#endif  // _MSC_VER
 	va_end(args);
 
 	char prefix[128] = { 0 };
