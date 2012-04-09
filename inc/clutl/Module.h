@@ -2,6 +2,11 @@
 #pragma once
 
 
+#include <clcpp/Core.h>
+#include <clcpp/Database.h>
+#include <clcpp/clcpp.h>
+
+
 namespace clcpp
 {
 	class Database;

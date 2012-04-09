@@ -59,7 +59,7 @@ namespace
 
 
 	typedef void (*SaveNumberFunc)(clutl::WriteBuffer&, const char*, unsigned int flags);
-	typedef void (*LoadIntegerFunc)(char*, __int64);
+	typedef void (*LoadIntegerFunc)(char*, clcpp::int64);
 	typedef void (*LoadDecimalFunc)(char*, double);
 
 
@@ -154,11 +154,11 @@ namespace
 
 
 	template <typename TYPE>
-	void LoadIntegerWithCast(char* dest, __int64 integer)
+	void LoadIntegerWithCast(char* dest, clcpp::int64 integer)
 	{
 		*(TYPE*)dest = (TYPE)integer;
 	}
-	void LoadIntegerBool(char* dest, __int64 integer)
+	void LoadIntegerBool(char* dest, clcpp::int64 integer)
 	{
 		*(bool*)dest = integer != 0;
 	}
@@ -175,7 +175,7 @@ namespace
 	}
 
 
-	void LoadInteger(clutl::JSONContext& ctx, __int64 integer, char* object, const clcpp::Type* type, clcpp::Qualifier::Operator op)
+	void LoadInteger(clutl::JSONContext& ctx, clcpp::int64 integer, char* object, const clcpp::Type* type, clcpp::Qualifier::Operator op)
 	{
 		if (type == 0)
 			return;
@@ -467,7 +467,7 @@ namespace
 	}
 
 
-	void SaveInteger(clutl::WriteBuffer& out, __int64 integer)
+	void SaveInteger(clutl::WriteBuffer& out, clcpp::int64 integer)
 	{
 		// Enough to store a 64-bit int
 		static const int MAX_SZ = 20;
@@ -489,7 +489,7 @@ namespace
 		// Loop through the value with radix 10
 		do 
 		{
-			__int64 next_integer = integer / 10;
+			clcpp::int64 next_integer = integer / 10;
 			*--tptr = char('0' + (integer - next_integer * 10));
 			integer = next_integer;
 		} while (integer);
@@ -502,7 +502,7 @@ namespace
 	}
 
 
-	void SaveUnsignedInteger(clutl::WriteBuffer& out, unsigned __int64 integer)
+	void SaveUnsignedInteger(clutl::WriteBuffer& out, clcpp::uint64 integer)
 	{
 		// Enough to store a 64-bit int + null
 		static const int MAX_SZ = 21;
@@ -516,7 +516,7 @@ namespace
 		// Loop through the value with radix 10
 		do 
 		{
-			unsigned __int64 next_integer = integer / 10;
+			clcpp::uint64 next_integer = integer / 10;
 			*--tptr = char('0' + (integer - next_integer * 10));
 			integer = next_integer;
 		} while (integer);
@@ -525,7 +525,7 @@ namespace
 	}
 
 
-	void SaveHexInteger(clutl::WriteBuffer& out, unsigned __int64 integer)
+	void SaveHexInteger(clutl::WriteBuffer& out, clcpp::uint64 integer)
 	{
 		// Enough to store a 64-bit int + null
 		static const int MAX_SZ = 21;
@@ -539,7 +539,7 @@ namespace
 		// Loop through the value with radix 16
 		do 
 		{
-			unsigned __int64 next_integer = integer / 16;
+			clcpp::uint64 next_integer = integer / 16;
 			*--tptr = "0123456789ABCDEF"[integer - next_integer * 16];
 			integer = next_integer;
 		} while (integer);
@@ -568,7 +568,7 @@ namespace
 		{
 			// Use a specific prefix to inform the lexer to alias as a decimal
 			out.WriteStr("0d");
-			SaveHexInteger(out, (unsigned __int64&)decimal);
+			SaveHexInteger(out, (clcpp::uint64&)decimal);
 			return;
 		}
 

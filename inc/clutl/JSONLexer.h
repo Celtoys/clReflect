@@ -61,7 +61,7 @@ namespace clutl
 			union
 			{
 				const char* string;
-				__int64 integer;
+				clcpp::int64 integer;
 				double decimal;
 			};
 		} val;

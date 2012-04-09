@@ -54,11 +54,11 @@ namespace
 		const cldb::DBMap<TYPE>& src_store = src_db.GetDBMap<TYPE>();
 
 		// Add primitives that don't already exist for primitives where the symbol name can't be overloaded
-		for (cldb::DBMap<TYPE>::const_iterator src = src_store.begin();
+		for (typename cldb::DBMap<TYPE>::const_iterator src = src_store.begin();
 			src != src_store.end();
 			++src)
 		{
-			cldb::DBMap<TYPE>::const_iterator dest = dest_map.find(src->first);
+			typename cldb::DBMap<TYPE>::const_iterator dest = dest_map.find(src->first);
 			if (dest == dest_map.end())
 				dest_db.AddPrimitive(src->second);
 
@@ -77,11 +77,11 @@ namespace
 		const cldb::DBMap<TYPE>& src_map = src_db.GetDBMap<TYPE>();
 
 		// Unconditionally add primitives that don't already exist
-		for (cldb::DBMap<TYPE>::const_iterator src = src_map.begin();
+		for (typename cldb::DBMap<TYPE>::const_iterator src = src_map.begin();
 			src != src_map.end();
 			++src)
 		{
-			cldb::DBMap<TYPE>::const_iterator dest = dest_map.find(src->first);
+			typename cldb::DBMap<TYPE>::const_iterator dest = dest_map.find(src->first);
 			if (dest == dest_map.end())
 			{
 				dest_db.AddPrimitive(src->second);
@@ -91,8 +91,8 @@ namespace
 			{
 				// A primitive of the same name exists so double-check all existing entries for a matching primitives before adding
 				bool add = true;
-				cldb::DBMap<TYPE>::const_range dest_range = dest_map.equal_range(src->first);
-				for (cldb::DBMap<TYPE>::const_iterator i = dest_range.first; i != dest_range.second; ++i)
+				typename cldb::DBMap<TYPE>::const_range dest_range = dest_map.equal_range(src->first);
+				for (typename cldb::DBMap<TYPE>::const_iterator i = dest_range.first; i != dest_range.second; ++i)
 				{
 					if (i->second.Equals(src->second))
 					{
