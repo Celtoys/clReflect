@@ -47,8 +47,8 @@ template <> inline bool is_builtin<long>() { return true; }
 template <> inline bool is_builtin<unsigned long>() { return true; }
 template <> inline bool is_builtin<float>() { return true; }
 template <> inline bool is_builtin<double>() { return true; }
-template <> inline bool is_builtin<__int64>() { return true; }
-template <> inline bool is_builtin<unsigned __int64>() { return true; }
+template <> inline bool is_builtin<clcpp::int64>() { return true; }
+template <> inline bool is_builtin<clcpp::uint64>() { return true; }
 
 
 //
@@ -95,7 +95,8 @@ public:
 	{
 		// Direct member copy of an array constructed with pre-allocated data
 		TYPE* data = Alloc<TYPE>(size);
-		array.shallow_copy(clcpp::CArray<TYPE>(data, size));
+		clcpp::CArray<TYPE> temp_array(data, size);
+		array.shallow_copy(temp_array);
 	}
 
 	const void* GetData() const { return m_Data; }

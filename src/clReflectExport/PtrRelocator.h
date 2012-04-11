@@ -31,6 +31,7 @@
 
 #include <vector>
 #include <list>
+#include <clReflectCore/DatabaseMetadata.h>
 #include <clcpp/Core.h>
 
 
@@ -50,7 +51,7 @@ struct PtrSchema
 	template <typename MEMBER_TYPE, typename OBJECT_TYPE>
 	PtrSchema& operator () (MEMBER_TYPE (OBJECT_TYPE::*ptr), size_t offset = 0)
 	{
-		size_t ptr_offset = offsetof(OBJECT_TYPE, *ptr);
+		size_t ptr_offset = POINTER_OFFSETOF(OBJECT_TYPE, *ptr);
 		ptr_offsets.push_back(ptr_offset + offset);
 		return *this;
 	}

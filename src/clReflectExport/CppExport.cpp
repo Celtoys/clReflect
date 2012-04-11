@@ -43,15 +43,31 @@
 #include <clcpp/Database.h>
 
 #include <algorithm>
+
+#if defined(CLCPP_USING_MSVC)
 #include <malloc.h>
+#else
+#include <stdlib.h>
+#endif
 
 
 namespace
 {
+	// When copying from cldb::Database into clcpp::Database, we copy the 
+	// hash values instead of primitive pointers. This requires us to do
+	// casting between pointers and hash values.
+	// Since in the current
+	// implementation, all hash values are 32-bit long, while pointers may
+	// be either 32-bit or 64-bit long.  We provide following macros to do
+	// casting job.
+	#define POINTER_TO_HASH(p) ((cldb::u32) ((clcpp::pointer_type) (p)))
+
+	#define HASH_TO_POINTER(h) ((void*) (h))
+
 	// A basic malloc allocator implementation
 	class Malloc : public clcpp::IAllocator
 	{
-		void* Alloc(unsigned int size)
+		void* Alloc(clcpp::size_type size)
 		{
 			return malloc(size);
 		}
@@ -101,7 +117,7 @@ namespace
 	void CopyPrimitive(clcpp::Primitive& dest, const cldb::Primitive& src, clcpp::Primitive::Kind kind)
 	{
 		dest.kind = kind;
-		dest.parent = (clcpp::Primitive*)src.parent.hash;
+		dest.parent = (clcpp::Primitive*) HASH_TO_POINTER(src.parent.hash);
 	}
 	void CopyPrimitive(clcpp::EnumConstant& dest, const cldb::EnumConstant& src, clcpp::Primitive::Kind kind)
 	{
@@ -117,7 +133,7 @@ namespace
 	void CopyPrimitive(clcpp::Field& dest, const cldb::Field& src, clcpp::Primitive::Kind kind)
 	{
 		CopyPrimitive((clcpp::Primitive&)dest, src, kind);
-		dest.type = (clcpp::Type*)src.type.hash;
+		dest.type = (clcpp::Type*) HASH_TO_POINTER(src.type.hash);
 		dest.qualifier.is_const = src.qualifier.is_const;
 		dest.offset = src.offset;
 		dest.parent_unique_id = src.parent_unique_id;
@@ -139,7 +155,7 @@ namespace
 		CopyPrimitive((clcpp::Type&)dest, src, kind);
 		for (int i = 0; i < cldb::TemplateType::MAX_NB_ARGS; i++)
 		{
-			dest.parameter_types[i] = (clcpp::Type*)src.parameter_types[i].hash;
+			dest.parameter_types[i] = (clcpp::Type*) HASH_TO_POINTER(src.parameter_types[i].hash);
 			dest.parameter_ptrs[i] = src.parameter_ptrs[i];
 		}
 	}
@@ -156,7 +172,7 @@ namespace
 	void CopyPrimitive(clcpp::PrimitiveAttribute& dest, const cldb::PrimitiveAttribute& src, clcpp::Primitive::Kind kind)
 	{
 		CopyPrimitive((clcpp::Primitive&)dest, src, kind);
-		dest.primitive = (clcpp::Primitive*)src.value.hash;
+		dest.primitive = (clcpp::Primitive*) HASH_TO_POINTER(src.value.hash);
 	}
 	void CopyPrimitive(clcpp::TextAttribute& dest, const cldb::TextAttribute& src, clcpp::Primitive::Kind kind)
 	{
@@ -178,8 +194,8 @@ namespace
 	template <>
 	void CopyObject(clcpp::ContainerInfo& dest, const cldb::ContainerInfo& src)
 	{
-		dest.read_iterator_type = (clcpp::Type*)src.read_iterator_type.hash;
-		dest.write_iterator_type = (clcpp::Type*)src.write_iterator_type.hash;
+		dest.read_iterator_type = (clcpp::Type*) HASH_TO_POINTER(src.read_iterator_type.hash);
+		dest.write_iterator_type = (clcpp::Type*) HASH_TO_POINTER(src.write_iterator_type.hash);
 		dest.flags = src.flags;
 		dest.count = src.count;
 	}
@@ -194,7 +210,7 @@ namespace
 
 		// Copy individually
 		int index = 0;
-		for (cldb::DBMap<CLDB_TYPE>::const_iterator i = src.begin(); i != src.end(); ++i)
+		for (typename cldb::DBMap<CLDB_TYPE>::const_iterator i = src.begin(); i != src.end(); ++i)
 		{
 			CLCPP_TYPE& dest_prim = dest[index++];
 			const CLDB_TYPE& src_prim = i->second;
@@ -229,25 +245,7 @@ namespace
 			for (int i = 0; i < parents.size(); i++)
 			{
 				PARENT_TYPE& parent = parents[i];
-				map.insert(MapType::value_type(parent.name.hash, EntryType(&parent, 0)));
-			}
-
-			src_start = parents.data();
-			src_end = parents.data() + parents.size();
-		}
-
-		template <>
-		ParentMap(clcpp::CArray<clcpp::Field>& parents)
-		{
-			// This specialisation creates a lookup table specific to fields. Given that field names are
-			// not fully-scoped, this makes it impossible to parent them unless their names are combined
-			// with their parent's.
-			for (int i = 0; i < parents.size(); i++)
-			{
-				clcpp::Field& field = parents[i];
-				std::string field_name = std::string(field.parent->name.text) + "::" + std::string(field.name.text);
-				unsigned int field_hash = clcpp::internal::HashNameString(field_name.c_str());
-				map.insert(MapType::value_type(field_hash, EntryType(&field, 0)));
+				map.insert(typename MapType::value_type(parent.name.hash, EntryType(&parent, 0)));
 			}
 
 			src_start = parents.data();
@@ -256,7 +254,7 @@ namespace
 
 		void ResetRefCount()
 		{
-			for (MapType::iterator i = map.begin(); i != map.end(); ++i)
+			for (typename MapType::iterator i = map.begin(); i != map.end(); ++i)
 				i->second.second = 0;
 		}
 
@@ -266,6 +264,26 @@ namespace
 		const PARENT_TYPE* src_start;
 		const PARENT_TYPE* src_end;
 	};
+
+	// TODO: check if this specialization works
+	template <>
+	template <>
+	ParentMap<clcpp::Field>::ParentMap(clcpp::CArray<clcpp::Field>& parents)
+	{
+		// This specialisation creates a lookup table specific to fields. Given that field names are
+		// not fully-scoped, this makes it impossible to parent them unless their names are combined
+		// with their parent's.
+		for (int i = 0; i < parents.size(); i++)
+		{
+			clcpp::Field& field = parents[i];
+			std::string field_name = std::string(field.parent->name.text) + "::" + std::string(field.name.text);
+			unsigned int field_hash = clcpp::internal::HashNameString(field_name.c_str());
+			map.insert(MapType::value_type(field_hash, EntryType(&field, 0)));
+		}
+
+		src_start = parents.data();
+		src_end = parents.data() + parents.size();
+	}
 
 
 	bool ParentAndChildMatch(const clcpp::Primitive&, const clcpp::Primitive&)
@@ -289,11 +307,11 @@ namespace
 			CHILD_TYPE* child = children[i];
 
 			// Iterate over all matches
-			unsigned int hash = (unsigned int)child->parent;
-			ParentMap<PARENT_TYPE>::Range range = parents.map.equal_range(hash);
-			for (ParentMap<PARENT_TYPE>::Iterator j = range.first; j != range.second; ++j)
+			unsigned int hash = POINTER_TO_HASH(child->parent);
+			typename ParentMap<PARENT_TYPE>::Range range = parents.map.equal_range(hash);
+			for (typename ParentMap<PARENT_TYPE>::Iterator j = range.first; j != range.second; ++j)
 			{
-				ParentMap<PARENT_TYPE>::EntryType& parc = j->second;
+				typename ParentMap<PARENT_TYPE>::EntryType& parc = j->second;
 				if (ParentAndChildMatch(*parc.first, *child))
 				{
 					child->parent = parc.first;
@@ -304,7 +322,7 @@ namespace
 		}
 
 		// Allocate the arrays in the parent
-		for (ParentMap<PARENT_TYPE>::Iterator i = parents.map.begin(); i != parents.map.end(); ++i)
+		for (typename ParentMap<PARENT_TYPE>::Iterator i = parents.map.begin(); i != parents.map.end(); ++i)
 		{
 			if (int nb_refs = i->second.second)
 			{
@@ -328,8 +346,9 @@ namespace
 			{
 				// Locate the current constant count at the end of the array and add this constant
 				// to its parent
+				// TODO: check for 64-bit(we would only need this when CArray is bigger than ~2GB)
 				int nb_constants = (parent->*carray).size();
-				int cur_count = (int)(parent->*carray)[nb_constants - 1];
+				int cur_count = (int) ((clcpp::pointer_type)(parent->*carray)[nb_constants - 1]);
 				(parent->*carray)[cur_count++] = child;
 
 				// When the last constant gets written, the constant count gets overwritten with
@@ -415,20 +434,20 @@ namespace
 	{
 		// Create a lookup table from hash ID to child
 		typedef std::multimap<unsigned int, const CHILD_TYPE*> ChildMap;
-		typedef std::pair<ChildMap::iterator, ChildMap::iterator> ChildMapRange;
+		typedef std::pair<typename ChildMap::iterator, typename ChildMap::iterator> ChildMapRange;
 		ChildMap child_map;
 		for (int i = 0; i < children.size(); i++)
 		{
 			const CHILD_TYPE* child = children[i];
-			child_map.insert(ChildMap::value_type(child->name.hash, child));
+			child_map.insert(typename ChildMap::value_type(child->name.hash, child));
 		}
 
 		// Link up the pointers
 		for (int i = 0; i < parents.size(); i++)
 		{
 			PARENT_TYPE& parent = parents[i];
-			unsigned int hash_id = (unsigned int)(parent.*field);
-			ChildMap::iterator j = child_map.find(hash_id);
+			unsigned int hash_id = POINTER_TO_HASH(parent.*field);
+			typename ChildMap::iterator j = child_map.find(hash_id);
 			if (j != child_map.end())
 				(parent.*field) = (FIELD_TYPE*)j->second;
 		}
@@ -441,12 +460,12 @@ namespace
 	{
 		// Create a lookup table from hash ID to child
 		typedef std::multimap<unsigned int, const CHILD_TYPE*> ChildMap;
-		typedef std::pair<ChildMap::iterator, ChildMap::iterator> ChildMapRange;
+		typedef std::pair<typename ChildMap::iterator, typename ChildMap::iterator> ChildMapRange;
 		ChildMap child_map;
 		for (int i = 0; i < children.size(); i++)
 		{
 			const CHILD_TYPE* child = children[i];
-			child_map.insert(ChildMap::value_type(child->name.hash, child));
+			child_map.insert(typename ChildMap::value_type(child->name.hash, child));
 		}
 
 		// Link up the pointers
@@ -455,8 +474,8 @@ namespace
 			PARENT_TYPE& parent = parents[i];
 			for (int j = 0; j < N; j++)
 			{
-				unsigned int hash_id = (unsigned int)(parent.*field)[j];
-				ChildMap::iterator k = child_map.find(hash_id);
+				unsigned int hash_id = POINTER_TO_HASH((parent.*field)[j]);
+				typename ChildMap::iterator k = child_map.find(hash_id);
 				if (k != child_map.end())
 					(parent.*field)[j] = (FIELD_TYPE*)k->second;
 			}
@@ -469,7 +488,7 @@ namespace
 			return 0;
 
 		// Alias the type pointer as its hash and lookup the name
-		CppExport::NameMap::iterator name = cppexp.name_map.find((unsigned int)iterator_type);
+		CppExport::NameMap::iterator name = cppexp.name_map.find(POINTER_TO_HASH(iterator_type));
 		if (name == cppexp.name_map.end())
 		{
 			LOG(main, WARNING, "Couldn't find iterator name for '%s'\n", container_name);
@@ -871,7 +890,7 @@ namespace
 		for (int i = 0; i < cppexp.db->primitive_attributes.size(); i++)
 		{
 			clcpp::PrimitiveAttribute& attr = cppexp.db->primitive_attributes[i];
-			PrimitiveMap::iterator prim_i = primitives.find((cldb::u32)attr.primitive);
+			PrimitiveMap::iterator prim_i = primitives.find(POINTER_TO_HASH(attr.primitive));
 			if (prim_i != primitives.end())
 				attr.primitive = prim_i->second;
 		}
@@ -899,7 +918,7 @@ namespace
 	const char* VerifyPtr(CppExport& cppexp, const TYPE* const & ptr)
 	{
 		// Cast to a hash value
-		unsigned int hash = (unsigned int)ptr;
+		unsigned int hash = POINTER_TO_HASH(ptr);
 
 		// Set the reference to null if it hasn't been resolved
 		CppExport::NameMap::const_iterator i = cppexp.name_map.find(hash);
@@ -1209,6 +1228,22 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 	// The position of the data member within a CArray is fixed, independent of type
 	size_t array_data_offset = clcpp::CArray<int>::data_offset();
 
+	// ISO C++ 98 standard does not specify the result of applying offsetof on non-POD types,
+	// and MSVC and G++ do treat it differently. We need to provide different implementation here.
+	#if defined(CLCPP_USING_MSVC)
+		size_t global_namespace_offset = offsetof(clcpp::internal::DatabaseMem, global_namespace);
+		size_t name_offset_in_primitive = offsetof(clcpp::Primitive, name);
+		size_t name_offset_in_container_info = offsetof(clcpp::Primitive, name);
+	#else
+		clcpp::internal::DatabaseMem dummyDatabaseMem;
+		clcpp::Primitive dummyPrimitive(clcpp::Primitive::KIND_NONE);
+		clcpp::ContainerInfo dummyContainerInfo;
+
+		size_t global_namespace_offset = ((size_t) (&(dummyDatabaseMem.global_namespace))) - ((size_t) (&dummyDatabaseMem));
+		size_t name_offset_in_primitive = ((size_t) (&(dummyPrimitive.name))) - ((size_t) (&dummyPrimitive));
+		size_t name_offset_in_container_info = ((size_t) (&(dummyContainerInfo.name))) - ((size_t) (&dummyContainerInfo));
+	#endif
+
 	// Construct schemas for all memory-mapped clcpp types
 
 	PtrSchema& schema_database = relocator.AddSchema<clcpp::internal::DatabaseMem>()
@@ -1232,17 +1267,17 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		(&clcpp::internal::DatabaseMem::type_primitives, array_data_offset)
 		(&clcpp::internal::DatabaseMem::get_type_functions, array_data_offset)
 		(&clcpp::internal::DatabaseMem::container_infos, array_data_offset)
-		(&clcpp::Namespace::namespaces, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace))
-		(&clcpp::Namespace::types, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace))
-		(&clcpp::Namespace::enums, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace))
-		(&clcpp::Namespace::classes, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace))
-		(&clcpp::Namespace::functions, array_data_offset + offsetof(clcpp::internal::DatabaseMem, global_namespace));
+		(&clcpp::Namespace::namespaces, array_data_offset + global_namespace_offset)
+		(&clcpp::Namespace::types, array_data_offset + global_namespace_offset)
+		(&clcpp::Namespace::enums, array_data_offset + global_namespace_offset)
+		(&clcpp::Namespace::classes, array_data_offset + global_namespace_offset)
+		(&clcpp::Namespace::functions, array_data_offset + global_namespace_offset);
 
 	PtrSchema& schema_name = relocator.AddSchema<clcpp::Name>()
 		(&clcpp::Name::text);
 
 	PtrSchema& schema_primitive = relocator.AddSchema<clcpp::Primitive>()
-		(&clcpp::Name::text, offsetof(clcpp::Primitive, name))
+		(&clcpp::Name::text, name_offset_in_primitive)
 		(&clcpp::Primitive::parent);
 
 	PtrSchema& schema_type = relocator.AddSchema<clcpp::Type>(&schema_primitive)
@@ -1304,7 +1339,7 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 	PtrSchema& schema_ptr = relocator.AddSchema<void*>()(0);
 
 	PtrSchema& schema_container_info = relocator.AddSchema<clcpp::ContainerInfo>()
-		(&clcpp::Name::text, offsetof(clcpp::ContainerInfo, name))
+		(&clcpp::Name::text, name_offset_in_container_info)
 		(&clcpp::ContainerInfo::read_iterator_type)
 		(&clcpp::ContainerInfo::write_iterator_type);
 

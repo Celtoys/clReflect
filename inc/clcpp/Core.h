@@ -357,9 +357,15 @@ namespace clcpp
 			return m_Data[index];
 		}
 
-		static unsigned int data_offset()
+		static clcpp::size_type data_offset()
 		{
-			return (unsigned int)&(((CArray<TYPE>*)0)->m_Data);
+			#if defined(CLCPP_USING_MSVC)
+			    return (clcpp::size_type) (&(((CArray<TYPE>*)0)->m_Data));
+			#else
+				// GCC does not support applying offsetof on non-POD types
+				CArray dummy;
+				return ((clcpp::size_type) (&(dummy.m_Data))) - ((clcpp::size_type) (&dummy));
+			#endif	// CLCPP_USING_MSVC
 		}
 
 	private:
