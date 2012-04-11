@@ -52,6 +52,8 @@ if (MSVC)
   endif()
 endif()
 
+set(sys_inc_dirs "/usr/lib/gcc/i686-apple-darwin11/4.2.1/include")
+
 foreach(sys_inc ${sys_inc_dirs})
   set(GEN_CPPBIN_INCLUDE_PATH ${GEN_CPPBIN_INCLUDE_PATH} -isystem ${sys_inc})
 endforeach(sys_inc)
@@ -69,7 +71,7 @@ foreach(src_file ${CL_REFLECT_TEST_SOURCES})
     -ast_log ${CL_REFLECT_GEN_DIRECTORY}/${astlog_file}
     -spec_log ${CL_REFLECT_GEN_DIRECTORY}/${speclog_file}
     ${GEN_CPPBIN_INCLUDE_PATH}
-    DEPENDS clReflectScan ${csv_file})
+    DEPENDS clReflectScan ${src_file})
 
   # adds to gen file list
   set(GEN_FILE_LIST ${GEN_FILE_LIST} ${CL_REFLECT_GEN_DIRECTORY}/${csv_file})

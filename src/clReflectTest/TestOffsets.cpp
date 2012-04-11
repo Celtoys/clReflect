@@ -158,7 +158,7 @@ namespace Offsets
 	{
 		virtual void Empty() { }
 		int a;
-		__int64 b;
+		clcpp::int64 b;
 		TESTS(Int64InPolymorphicStruct, a, b)
 	};
 

@@ -42,7 +42,10 @@ namespace Funcs
 			printf("   FAILED\n");
 		else
 		{
-			clutl::CallFunction_x86_32_msvc_cdecl(function, poc.GetParameters());
+			// Currently, call function only exists for MSVC on 32-bit machine
+			#if defined(CLCPP_USING_MSVC) && defined(CLCPP_USING_32BIT)
+				clutl::CallFunction_x86_32_msvc_cdecl(function, poc.GetParameters());
+			#endif
 		}
 	}
 

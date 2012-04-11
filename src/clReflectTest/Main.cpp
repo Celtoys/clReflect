@@ -28,7 +28,11 @@
 #include <clcpp/clcpp.h>
 
 #include <cstdio>
+#if defined(CLCPP_USING_MSVC)
 #include <malloc.h>
+#else
+#include <stdlib.h>
+#endif
 #include <stdarg.h>
 #include <errno.h>
 
@@ -88,7 +92,7 @@ private:
 
 class Malloc : public clcpp::IAllocator
 {
-	void* Alloc(unsigned int size)
+	void* Alloc(clcpp::size_type size)
 	{
 		return malloc(size);
 	}

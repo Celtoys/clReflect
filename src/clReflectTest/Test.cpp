@@ -40,7 +40,7 @@ enum NamedGlobalEnum
 	VALUE_ONE = 1,
 	VALUE_THREE = 3,
 
-	VALUE_64_BITS_UNSIGNED_MAX = (1LL << 64) - 1,
+	VALUE_64_BITS_UNSIGNED_MAX = 4294967295,
 	VALUE_32_BITS_SIGNED_MAX = (1LL << 31) - 1,
 	VALUE_32_BITS_SIGNED_MAX_PLUS_ONE = (1LL << 31),
 	VALUE_32_BITS_UNSIGNED_MAX = (1LL << 32) - 1,
@@ -194,8 +194,8 @@ class FieldTypes
 	unsigned long UnsignedLong;
 	float Float;
 	double Double;
-	__int64 Int64;
-	unsigned __int64 UnsignedInt64;
+	clcpp::int64 Int64;
+	clcpp::uint64 UnsignedInt64;
 	// --- Pointers
 	bool* BoolPtr;
 	char* CharPtr;
@@ -209,8 +209,8 @@ class FieldTypes
 	unsigned long* UnsignedLongPtr;
 	float* FloatPtr;
 	double* DoublePtr;
-	__int64* Int64Ptr;
-	unsigned __int64* UnsignedInt64Ptr;
+	clcpp::int64* Int64Ptr;
+	clcpp::uint64* UnsignedInt64Ptr;
 
 	const bool* ConstBoolPtr;
 	const char* ConstCharPtr;
@@ -224,8 +224,8 @@ class FieldTypes
 	const unsigned long* ConstUnsignedLongPtr;
 	const float* ConstFloatPtr;
 	const double* ConstDoublePtr;
-	const __int64* ConstInt64Ptr;
-	const unsigned __int64* ConstUnsignedInt64Ptr;
+	const clcpp::int64* ConstInt64Ptr;
+	const clcpp::uint64* ConstUnsignedInt64Ptr;
 	// --- References
 	bool& BoolRef;
 	char& CharRef;
@@ -239,8 +239,8 @@ class FieldTypes
 	unsigned long& UnsignedLongRef;
 	float& FloatRef;
 	double& DoubleRef;
-	__int64& Int64Ref;
-	unsigned __int64& UnsignedInt64Ref;
+	clcpp::int64& Int64Ref;
+	clcpp::uint64& UnsignedInt64Ref;
 
 	const bool& ConstBoolRef;
 	const char& ConstCharRef;
@@ -254,8 +254,8 @@ class FieldTypes
 	const unsigned long& ConstUnsignedLongRef;
 	const float& ConstFloatRef;
 	const double& ConstDoubleRef;
-	const __int64& ConstInt64Ref;
-	const unsigned __int64& ConstUnsignedInt64Ref;
+	const clcpp::int64& ConstInt64Ref;
+	const clcpp::uint64& ConstUnsignedInt64Ref;
 };
 
 
@@ -278,8 +278,8 @@ namespace FuncParams
 		unsigned long j,
 		float k,
 		double l,
-		__int64 m,
-		unsigned __int64 n) { }
+		clcpp::int64 m,
+		clcpp::uint64 n) { }
 	void FunctionTypesPtr(
 		bool* a,
 		char* b,
@@ -293,8 +293,8 @@ namespace FuncParams
 		unsigned long* j,
 		float* k,
 		double* l,
-		__int64* m,
-		unsigned __int64* n) { }
+		clcpp::int64* m,
+		clcpp::uint64* n) { }
 	void FunctionTypesConstPtr(
 		const bool* a,
 		const char* b,
@@ -308,8 +308,8 @@ namespace FuncParams
 		const unsigned long* j,
 		const float* k,
 		const double* l,
-		const __int64* m,
-		const unsigned __int64* n) { }
+		const clcpp::int64* m,
+		const clcpp::uint64* n) { }
 	void FunctionTypesRef(
 		bool& a,
 		char& b,
@@ -323,8 +323,8 @@ namespace FuncParams
 		unsigned long& j,
 		float& k,
 		double& l,
-		__int64& m,
-		unsigned __int64& n) { }
+		clcpp::int64& m,
+		clcpp::uint64& n) { }
 	void FunctionTypesConstRef(
 		const bool& a,
 		const char& b,
@@ -338,8 +338,8 @@ namespace FuncParams
 		const unsigned long& j,
 		const float& k,
 		const double& l,
-		const __int64& m,
-		const unsigned __int64& n) { }
+		const clcpp::int64& m,
+		const clcpp::uint64& n) { }
 }
 
 
@@ -361,8 +361,8 @@ namespace FuncReturns
 	unsigned long FunctionRetUnsignedLong() { return 0; }
 	float FunctionRetFloat() { return 0; }
 	double FunctionRetDouble() { return 0; }
-	__int64 FunctionRetInt64() { return 0; }
-	unsigned __int64 FunctionRetUnsignedInt64() { return 0; }
+	clcpp::int64 FunctionRetInt64() { return 0; }
+	clcpp::uint64 FunctionRetUnsignedInt64() { return 0; }
 
 	// --- Pointers
 	bool* FunctionRetBoolPtr() { return 0; }
@@ -377,8 +377,8 @@ namespace FuncReturns
 	unsigned long* FunctionRetUnsignedLongPtr() { return 0; }
 	float* FunctionRetFloatPtr() { return 0; }
 	double* FunctionRetDoublePtr() { return 0; }
-	__int64* FunctionRetInt64Ptr() { return 0; }
-	unsigned __int64* FunctionRetUnsignedInt64Ptr() { return 0; }
+	clcpp::int64* FunctionRetInt64Ptr() { return 0; }
+	clcpp::uint64* FunctionRetUnsignedInt64Ptr() { return 0; }
 
 	// --- Const Pointers
 	const bool* FunctionRetBoolConstPtr() { return 0; }
@@ -393,8 +393,8 @@ namespace FuncReturns
 	const unsigned long* FunctionRetUnsignedLongConstPtr() { return 0; }
 	const float* FunctionRetFloatConstPtr() { return 0; }
 	const double* FunctionRetDoubleConstPtr() { return 0; }
-	const __int64* FunctionRetConstInt64Ptr() { return 0; }
-	const unsigned __int64* FunctionRetConstUnsignedInt64Ptr() { return 0; }
+	const clcpp::int64* FunctionRetConstInt64Ptr() { return 0; }
+	const clcpp::uint64* FunctionRetConstUnsignedInt64Ptr() { return 0; }
 
 	// --- References
 	bool& FunctionRetBoolRef() { return *(bool*)0; }
@@ -409,8 +409,8 @@ namespace FuncReturns
 	unsigned long& FunctionRetUnsignedLongRef() { return *(unsigned long*)0; }
 	float& FunctionRetFloatRef() { return *(float*)0; }
 	double& FunctionRetDoubleRef() { return *(double*)0; }
-	__int64& FunctionRetInt64Ref() { return *(__int64*)0; }
-	unsigned __int64& FunctionRetUnsignedInt64Ref() { return *(unsigned __int64*)0; }
+	clcpp::int64& FunctionRetInt64Ref() { return *(clcpp::int64*)0; }
+	clcpp::uint64& FunctionRetUnsignedInt64Ref() { return *(clcpp::uint64*)0; }
 
 	// --- Const References
 	const bool& FunctionRetBoolConstRef() { return *(bool*)0; }
@@ -425,8 +425,8 @@ namespace FuncReturns
 	const unsigned long& FunctionRetUnsignedLongConstRef() { return *(unsigned long*)0; }
 	const float& FunctionRetFloatConstRef() { return *(float*)0; }
 	const double& FunctionRetDoubleConstRef() { return *(double*)0; }
-	const __int64& FunctionRetConstInt64Ref() { return *(__int64*)0; }
-	const unsigned __int64& FunctionRetConstUnsignedInt64Ref() { return *(const unsigned __int64*)0; }
+	const clcpp::int64& FunctionRetConstInt64Ref() { return *(clcpp::int64*)0; }
+	const clcpp::uint64& FunctionRetConstUnsignedInt64Ref() { return *(const clcpp::uint64*)0; }
 }
 
 

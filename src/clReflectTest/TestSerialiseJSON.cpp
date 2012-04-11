@@ -205,9 +205,9 @@ namespace jsontest
 		long f11;
 		long f12;
 
-		__int64 f13;
-		__int64 f14;
-		__int64 f15;
+		clcpp::int64 f13;
+		clcpp::int64 f14;
+		clcpp::int64 f15;
 
 		float f16;
 		float f17;
@@ -229,7 +229,7 @@ namespace jsontest
 		unsigned short f27;
 		unsigned int f28;
 		unsigned long f29;
-		unsigned __int64 f30;
+		clcpp::uint64 f30;
 
 		Value e0;
 		Value e1;
