@@ -38,7 +38,7 @@
 #pragma warning(disable:4345)
 
 #include <clang/AST/Decl.h>
-#include <clang/AST/DeclCxx.h>
+#include <clang/AST/DeclCXX.h>
 #include <clang/AST/DeclGroup.h>
 #include <clang/AST/DeclTemplate.h>
 #include <clang/AST/RecordLayout.h>

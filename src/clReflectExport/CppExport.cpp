@@ -43,6 +43,7 @@
 #include <clcpp/Database.h>
 
 #include <algorithm>
+#include <string.h>
 
 #if defined(CLCPP_USING_MSVC)
 #include <malloc.h>

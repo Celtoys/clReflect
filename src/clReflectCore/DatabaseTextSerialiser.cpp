@@ -33,6 +33,7 @@
 #include "FileUtils.h"
 
 #include <stdio.h>
+#include <string.h>
 
 
 namespace

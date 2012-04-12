@@ -29,6 +29,8 @@
 #include "Database.h"
 #include "DatabaseMetadata.h"
 
+#include <memory.h>
+#include <stdio.h>
 #include <vector>
 
 

@@ -37,9 +37,7 @@ add_clreflect_executable(clReflectScan
   ReflectionSpecs.cpp
   )
 
-target_link_libraries(clReflectScan
-  clReflectCore
-  clReflectCpp
+set(CL_REFLECT_SCAN_LIBS
   clangParse
   clangSema
   clangAnalysis
@@ -52,4 +50,16 @@ target_link_libraries(clReflectScan
   LLVMSupport
   LLVMCore
   LLVMMC
+  )
+
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+  # Linux version needs to be linked against pthread
+  set(CL_REFLECT_SCAN_LIBS
+    ${CL_REFLECT_SCAN_LIBS} pthread)
+endif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+
+target_link_libraries(clReflectScan
+  clReflectCore
+  clReflectCpp
+  ${CL_REFLECT_SCAN_LIBS}
   )

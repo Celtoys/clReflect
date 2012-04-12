@@ -31,7 +31,7 @@
 #include <clReflectCore/Logging.h>
 
 #include <clang/AST/Decl.h>
-#include <clang/AST/DeclCxx.h>
+#include <clang/AST/DeclCXX.h>
 #include <clang/AST/DeclGroup.h>
 
 

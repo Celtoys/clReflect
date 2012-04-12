@@ -32,6 +32,7 @@
 #include <clReflectCore/FileUtils.h>
 
 #include <ctype.h>
+#include <string.h>
 
 
 namespace
