@@ -1234,7 +1234,7 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 	#if defined(CLCPP_USING_MSVC)
 		size_t global_namespace_offset = offsetof(clcpp::internal::DatabaseMem, global_namespace);
 		size_t name_offset_in_primitive = offsetof(clcpp::Primitive, name);
-		size_t name_offset_in_container_info = offsetof(clcpp::Primitive, name);
+		size_t name_offset_in_container_info = offsetof(clcpp::ContainerInfo, name);
 	#else
 		clcpp::internal::DatabaseMem dummyDatabaseMem;
 		clcpp::Primitive dummyPrimitive(clcpp::Primitive::KIND_NONE);

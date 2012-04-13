@@ -301,59 +301,79 @@ namespace
 	}
 
 
+	// A wrapper around a clang's CV-qualified types
+	struct ClangASTType
+	{
+		ClangASTType(clang::QualType& qt)
+		{
+			Set(qt);
+		}
+
+		void Set(clang::QualType& qt)
+		{
+			qual_type = qt;
+			split_qual_type = qual_type.split();
+			type = split_qual_type.first;
+		}
+
+		void UpdateTypedefOrElaborated()
+		{
+			clang::Type::TypeClass tc = type->getTypeClass();
+			if (tc == clang::Type::Typedef || tc == clang::Type::Elaborated)
+				Set(qual_type.getCanonicalType());
+		}
+
+		clang::QualType qual_type;
+		clang::SplitQualType split_qual_type;
+		const clang::Type* type;
+	};
+
+
 	Status GetParameterInfo(ASTConsumer& consumer, clang::QualType qual_type, ParameterInfo& info, int flags)
 	{
 		// Get type info for the parameter
-		clang::SplitQualType sqt = qual_type.split();
-		const clang::Type* type = sqt.first;
+		ClangASTType ctype(qual_type);
 
 		// If this is an array of constant size, strip the size from the type and store it in the parameter info
-		if (const clang::ConstantArrayType* array_type = llvm::dyn_cast<clang::ConstantArrayType>(type))
+		if (const clang::ConstantArrayType* array_type = llvm::dyn_cast<clang::ConstantArrayType>(ctype.type))
 		{
 			uint64_t size = *array_type->getSize().getRawData();
 			if (size > UINT_MAX)
 				return Status::Warn(va("Array size too big (%d)", size));
 			info.array_count = (cldb::u32)size;
-			qual_type = array_type->getElementType();
-			sqt = qual_type.split();
-			type = sqt.first;
+			ctype.Set(array_type->getElementType());
 		}
-
-		// If this is a typedef, get the aliased type
-		if (type->getTypeClass() == clang::Type::Typedef)
-		{
-			qual_type = qual_type.getCanonicalType();
-			sqt = qual_type.split();
-			type = sqt.first;
-		}
+		
+		// If this is an elaborated type, get the canonical type (includes typedefs)
+		ctype.UpdateTypedefOrElaborated();
 
 		// Only handle one level of recursion for pointers and references
 
 		// Get pointee type info if this is a pointer
-		if (const clang::PointerType* ptr_type = llvm::dyn_cast<clang::PointerType>(type))
+		if (const clang::PointerType* ptr_type = llvm::dyn_cast<clang::PointerType>(ctype.type))
 		{
 			info.qualifer.op = cldb::Qualifier::POINTER;
-			qual_type = ptr_type->getPointeeType();
-			sqt = qual_type.split();
+			ctype.Set(ptr_type->getPointeeType());
 		}
 
 		// Get pointee type info if this is a reference
-		else if (const clang::LValueReferenceType* ref_type = llvm::dyn_cast<clang::LValueReferenceType>(type))
+		else if (const clang::LValueReferenceType* ref_type = llvm::dyn_cast<clang::LValueReferenceType>(ctype.type))
 		{
 			info.qualifer.op = cldb::Qualifier::REFERENCE;
-			qual_type = ref_type->getPointeeType();
-			sqt = qual_type.split();
+			ctype.Set(ref_type->getPointeeType());
 		}
 
+		// Do another pass on the elaborated/typedef types that may have been pulled from the pointer/reference types
+		ctype.UpdateTypedefOrElaborated();
+
 		// Record the qualifiers before stripping them and generating the type name
-		clang::Qualifiers qualifiers = clang::Qualifiers::fromFastMask(sqt.second);
-		qual_type.removeLocalFastQualifiers();
-		info.type_name = qual_type.getAsString(consumer.GetASTContext().getLangOptions());
+		clang::Qualifiers qualifiers = clang::Qualifiers::fromFastMask(ctype.split_qual_type.second);
+		ctype.qual_type.removeLocalFastQualifiers();
+		info.type_name = ctype.qual_type.getAsString(consumer.GetASTContext().getLangOptions());
 		info.qualifer.is_const = qualifiers.hasConst();
 
 		// Is this a field that can be safely recorded?
-		type = sqt.first;
-		clang::Type::TypeClass tc = type->getTypeClass();
+		clang::Type::TypeClass tc = ctype.type->getTypeClass();
 		switch (tc)
 		{
 		case clang::Type::TemplateSpecialization:
@@ -367,7 +387,7 @@ namespace
 		}
 
 		// Discover any new template types
-		Status status = ParseTemplateSpecialisation(consumer, type, info.type_name);
+		Status status = ParseTemplateSpecialisation(consumer, ctype.type, info.type_name);
 		if (status.HasWarnings())
 			return status;
 
