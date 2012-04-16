@@ -132,6 +132,13 @@ bool ClangParser::ParseAST(const char* filename)
 	m_CompilerInstance.createPreprocessor();
 	m_CompilerInstance.createASTContext();
 
+	// Initialize builtins
+	if (m_CompilerInstance.hasPreprocessor()) {
+		clang::Preprocessor& preprocessor = m_CompilerInstance.getPreprocessor();
+		preprocessor.getBuiltinInfo().InitializeBuiltins(preprocessor.getIdentifierTable(),
+			preprocessor.getLangOptions());
+	}
+
 	// Get the file  from the file system
 	const clang::FileEntry* file = m_CompilerInstance.getFileManager().getFile(filename);
 	m_CompilerInstance.getSourceManager().createMainFileID(file);

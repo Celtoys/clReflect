@@ -309,7 +309,12 @@ namespace
 			Set(qt);
 		}
 
-		void Set(clang::QualType& qt)
+		// For each invocation of this function, we are passing in the returned
+		// result of a function with clang::QuadType, this would actually generate
+		// a local variable, if we use reference here, we will be referencing a
+		// local temporary variable! Even if we copy the actual QualType in this
+		// function, we do not want this to happen
+		void Set(clang::QualType qt)
 		{
 			qual_type = qt;
 			split_qual_type = qual_type.split();

@@ -21,10 +21,16 @@ target_link_libraries(clReflectTest
   clReflectUtil
   )
 
+# Map file handling
 option(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST "Generate map file for test" ON)
 if(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
+  get_property(CL_REFLECT_TEST_EXECUTABLE TARGET clReflectTest PROPERTY LOCATION)
+
   # generates map file
   if (MSVC)
+    # Generates path for map file
+    string(REPLACE ".exe" ".map" CL_REFLECT_TEST_MAP ${CL_REFLECT_TEST_EXECUTABLE})
+
     # From what I see, currently cmake can set the map link flags,
     # but cmake does not support appending customized map file name(I may
     # be wrong on this). Luckily, by using default options of MSVC
@@ -33,6 +39,17 @@ if(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
     set_target_properties(clReflectTest PROPERTIES LINK_FLAGS
       /MAP)
   endif()
+
+  if (CMAKE_COMPILER_IS_GNUCXX)
+    # On Linux/Mac, executables have no extensions
+    set(CL_REFLECT_TEST_MAP "${CL_REFLECT_TEST_EXECUTABLE}.map")
+
+    set_target_properties(clReflectTest PROPERTIES LINK_FLAGS
+      "-Wl,-map,${CL_REFLECT_TEST_MAP}")
+  endif (CMAKE_COMPILER_IS_GNUCXX)
+
+  # uses map file during exporting
+  set(GEN_MAP_ARGUMENTS -map ${CL_REFLECT_TEST_MAP})
 endif()
 
 # add project include path
@@ -52,7 +69,9 @@ if (MSVC)
   endif()
 endif()
 
-set(sys_inc_dirs "/usr/lib/gcc/i686-apple-darwin11/4.2.1/include")
+if ((${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
+  set(sys_inc_dirs "/usr/lib/gcc/i686-apple-darwin11/4.2.1/include")
+endif ()
 
 foreach(sys_inc ${sys_inc_dirs})
   set(GEN_CPPBIN_INCLUDE_PATH ${GEN_CPPBIN_INCLUDE_PATH} -isystem ${sys_inc})
@@ -86,18 +105,6 @@ add_custom_command(
   COMMAND clReflectMerge ${GEN_MERGED_CSV_FILE}
   ${GEN_FILE_LIST}
   DEPENDS clReflectMerge ${GEN_FILE_LIST})
-
-# map file
-if(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
-  if(MSVC)
-    get_property(CL_REFLECT_TEST_EXECUTABLE TARGET clReflectTest PROPERTY LOCATION)
-    string(REPLACE ".exe" ".map" CL_REFLECT_TEST_EXECUTABLE ${CL_REFLECT_TEST_EXECUTABLE})
-
-    set(GEN_MAP_ARGUMENTS -map ${CL_REFLECT_TEST_EXECUTABLE})
-  endif()
-
-  # TODO: add gcc part when we got it compiling
-endif()
 
 # exports cppbin file
 add_custom_command(
