@@ -44,8 +44,14 @@ if(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
     # On Linux/Mac, executables have no extensions
     set(CL_REFLECT_TEST_MAP "${CL_REFLECT_TEST_EXECUTABLE}.map")
 
+    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+      set(CL_REFLECT_TEST_MAP_CMD_ARGUMENT "-Wl,-map,${CL_REFLECT_TEST_MAP}")
+    else ()
+      set(CL_REFLECT_TEST_MAP_CMD_ARGUMENT "-Wl,-Map,${CL_REFLECT_TEST_MAP}")
+    endif()
+
     set_target_properties(clReflectTest PROPERTIES LINK_FLAGS
-      "-Wl,-map,${CL_REFLECT_TEST_MAP}")
+      "${CL_REFLECT_TEST_MAP_CMD_ARGUMENT}")
   endif (CMAKE_COMPILER_IS_GNUCXX)
 
   # uses map file during exporting
