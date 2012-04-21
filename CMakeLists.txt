@@ -15,15 +15,18 @@ include_directories(
   "${PROJECT_SOURCE_DIR}/inc"
   )
 
-set(CL_REFLECT_BIN_DIRECTORY "${PROJECT_SOURCE_DIR}/cmake-build/bin")
-set(CL_REFLECT_LIB_DIRECTORY "${PROJECT_SOURCE_DIR}/cmake-build/lib")
-set(CL_REFLECT_GEN_DIRECTORY "${PROJECT_SOURCE_DIR}/cmake-build/gen")
+set(CL_REFLECT_BIN_DIRECTORY "${PROJECT_SOURCE_DIR}/cmake-build/${CMAKE_SYSTEM}/bin")
+set(CL_REFLECT_LIB_DIRECTORY "${PROJECT_SOURCE_DIR}/cmake-build/${CMAKE_SYSTEM}/lib")
+set(CL_REFLECT_GEN_DIRECTORY "${PROJECT_SOURCE_DIR}/cmake-build/${CMAKE_SYSTEM}/gen")
 
-# Sets binary output direcotry to cmake-build/bin, sets lib output directory
-# to cmake-build/lib
+# Sets binary output direcotry to cmake-build/${CMAKE_SYSTEM}/bin, sets lib output directory
+# to cmake-build/${CMAKE_SYSTEM}/lib
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CL_REFLECT_BIN_DIRECTORY}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CL_REFLECT_LIB_DIRECTORY}")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CL_REFLECT_LIB_DIRECTORY}")
+
+# Creates gen directory manually
+file(MAKE_DIRECTORY "${CL_REFLECT_GEN_DIRECTORY}")
 
 if(MSVC)
   add_definitions(
