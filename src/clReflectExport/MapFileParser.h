@@ -30,6 +30,9 @@
 #pragma once
 
 
+#include <clcpp/Core.h>
+
+
 namespace cldb
 {
 	class Database;
@@ -40,5 +43,5 @@ struct MapFileParser
 {
 public:
 	MapFileParser(cldb::Database& db, const char* filename);
-	unsigned int m_PreferredLoadAddress;
+	clcpp::pointer_type m_PreferredLoadAddress;
 };

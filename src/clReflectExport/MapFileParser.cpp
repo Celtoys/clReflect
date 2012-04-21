@@ -27,9 +27,19 @@
 
 #include "MapFileParser.h"
 
+#if defined(CLCPP_USING_MSVC)
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <DbgHelp.h>
+
+#else
+
+// For GCC and clang, use cxxabi to demangle names
+#include <cxxabi.h>
+#include <stack>
+
+#endif	// CLCPP_USING_MSVC
 
 #include <clReflectCore/Database.h>
 #include <clReflectCore/FileUtils.h>
@@ -41,68 +51,6 @@
 
 namespace
 {
-	bool InitialiseSymbolHandler()
-	{
-		SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS);
-		if (!SymInitialize(GetCurrentProcess(), 0, TRUE))
-		{
-			LOG(main, ERROR, "Couldn't initialise symbol handler - no function addresses will be available!");
-			return false;
-		}
-
-		return true;
-	}
-
-
-	void ShutdownSymbolHandler()
-	{
-		SymCleanup(GetCurrentProcess());
-	}
-
-
-	std::string UndecorateFunctionName(const char* token)
-	{
-		char function_name[1024];
-		UnDecorateSymbolName(token, function_name, sizeof(function_name), UNDNAME_NAME_ONLY);
-		return function_name;
-	}
-
-
-	std::string UndecorateFunctionSignature(const char* token)
-	{
-		char function_signature[1024];
-		UnDecorateSymbolName(token, function_signature, sizeof(function_signature),
-			UNDNAME_COMPLETE |
-			UNDNAME_NO_ACCESS_SPECIFIERS |
-			UNDNAME_NO_ALLOCATION_MODEL |
-			UNDNAME_NO_MEMBER_TYPE |
-			UNDNAME_NO_SPECIAL_SYMS |
-			UNDNAME_NO_THROW_SIGNATURES
-			);
-		return function_signature;
-	}
-
-
-	unsigned int ParseAddressField(const char* line, const char* function_name)
-	{
-		// First parse the address as hex
-		char token[1024];
-		line = SkipWhitespace(line);
-		line = ConsumeToken(line, ' ', token, sizeof(token));
-		unsigned int function_address = hextoi(token);
-
-		// Double-check that the map file knows this is a function
-		line = SkipWhitespace(line);
-		if (line[0] != 'f')
-		{
-			LOG(main, ERROR, "Function '%s' is not a function symbol in the map file", function_name);
-			return 0;
-		}
-
-		return function_address;
-	}
-
-
 	const char* ConsumeParameterToken(const char* text, char* dest, int dest_size)
 	{
 		char* end = dest + dest_size;
@@ -437,93 +385,418 @@ namespace
 	{
 		AddClassImplFunction(db, function_signature, function_address, false);
 	}
+
+
+	// MSVC map parsing functions
+	#if defined(CLCPP_USING_MSVC)
+		bool InitialiseSymbolHandler()
+		{
+			SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS);
+			if (!SymInitialize(GetCurrentProcess(), 0, TRUE))
+			{
+				LOG(main, ERROR, "Couldn't initialise symbol handler - no function addresses will be available!");
+				return false;
+			}
+	
+			return true;
+		}
+	
+	
+		void ShutdownSymbolHandler()
+		{
+			SymCleanup(GetCurrentProcess());
+		}
+	
+	
+		std::string UndecorateFunctionName(const char* token)
+		{
+			char function_name[1024];
+			UnDecorateSymbolName(token, function_name, sizeof(function_name), UNDNAME_NAME_ONLY);
+			return function_name;
+		}
+	
+	
+		std::string UndecorateFunctionSignature(const char* token)
+		{
+			char function_signature[1024];
+			UnDecorateSymbolName(token, function_signature, sizeof(function_signature),
+				UNDNAME_COMPLETE |
+				UNDNAME_NO_ACCESS_SPECIFIERS |
+				UNDNAME_NO_ALLOCATION_MODEL |
+				UNDNAME_NO_MEMBER_TYPE |
+				UNDNAME_NO_SPECIAL_SYMS |
+				UNDNAME_NO_THROW_SIGNATURES
+				);
+			return function_signature;
+		}
+
+
+		unsigned int ParseAddressField(const char* line, const char* function_name)
+		{
+			// First parse the address as hex
+			char token[1024];
+			line = SkipWhitespace(line);
+			line = ConsumeToken(line, ' ', token, sizeof(token));
+			unsigned int function_address = hextoi(token);
+	
+			// Double-check that the map file knows this is a function
+			line = SkipWhitespace(line);
+			if (line[0] != 'f')
+			{
+				LOG(main, ERROR, "Function '%s' is not a function symbol in the map file", function_name);
+				return 0;
+			}
+	
+			return function_address;
+		}
+
+
+		void ParseMSVCMapFile(const char* filename, cldb::Database& db, clcpp::pointer_type& base_address)
+		{
+			static const char* construct_object = "clcpp::internal::ConstructObject";
+			static const char* destruct_object = "clcpp::internal::DestructObject";
+			static const char* get_typename = "clcpp::GetTypeNameHash<";
+			static const char* get_type = "clcpp::GetType<";
+
+			if (!InitialiseSymbolHandler())
+			{
+				return;
+			}
+
+			FILE* fp = fopen(filename, "rb");
+			if (fp == 0)
+			{
+				return;
+			}
+	
+			bool public_symbols = false;
+			while (const char* line = ReadLine(fp))
+			{
+				if (public_symbols)
+				{
+					char token[1024];
+	
+					// Consume everything up to the function name
+					line = SkipWhitespace(line);
+					line = ConsumeToken(line, ' ', token, sizeof(token));
+					line = SkipWhitespace(line);
+					line = ConsumeToken(line, ' ', token, sizeof(token));
+	
+					// Undecorate the symbol name alone and see if it's a known clcpp function
+					std::string function_name = UndecorateFunctionName(token);
+					if (function_name == construct_object)
+					{
+						std::string function_signature = UndecorateFunctionSignature(token);
+						unsigned int function_address = ParseAddressField(line, function_name.c_str());
+						AddConstructFunction(db, function_signature, function_address);
+					}
+					else if (function_name == destruct_object)
+					{
+						std::string function_signature = UndecorateFunctionSignature(token);
+						unsigned int function_address = ParseAddressField(line, function_name.c_str());
+						AddDestructFunction(db, function_signature, function_address);
+					}
+					else if (startswith(function_name, get_type))
+					{
+						unsigned int function_address = ParseAddressField(line, function_name.c_str());
+						AddGetTypeAddress(db, function_name, function_address, true);
+					}
+					else if (startswith(function_name, get_typename))
+					{
+						unsigned int function_address = ParseAddressField(line, function_name.c_str());
+						AddGetTypeAddress(db, function_name, function_address, false);
+					}
+	
+					// Otherwise see if it's a function in the database
+					else if (const cldb::Function* function = db.GetFirstPrimitive<cldb::Function>(function_name.c_str()))
+					{
+						std::string function_signature = UndecorateFunctionSignature(token);
+						unsigned int function_address = ParseAddressField(line, function_name.c_str());
+						AddFunctionAddress(db, function_name, function_signature, function_address);
+					}
+				}
+	
+				// Look for the start of the public symbols descriptors
+				else if (strstr(line, "  Address"))
+				{
+					ReadLine(fp);
+					public_symbols = true;
+				}
+	
+				// Parse the preferred load address
+				if (base_address == 0 && strstr(line, "Preferred load address is "))
+				{
+					line += sizeof("Preferred load address is ");
+					char token[32];
+					ConsumeToken(line , '\r', token, sizeof(token));
+	
+					#if defined(CLCPP_USING_64_BIT)
+						base_address = hextoi64(token);
+					#else
+						base_address = hextoi(token);
+					#endif
+				}
+			}
+			fclose(fp);
+			ShutdownSymbolHandler();
+		}
+	#endif	// CLCPP_USING_MSVC
+
+
+	// GCC/clang parsing functions
+	// For GCC/clang, we can use abi::__cxa_demangle to do name demangling, but the result
+	// is the whole function signature, so we provide hand-written functions to parse function
+	// name from signature here.
+	#if defined(CLCPP_USING_GNUC)
+		// Finds a sequence such that it will not appear in given function signature
+		std::string FindRandomString(const std::string& signature)
+		{
+			static const char* NUMBER_TABLE = "0123456789";
+			std::string res = "r?An_D";
+	
+			while (signature.find(res) != std::string::npos)
+			{
+				res += NUMBER_TABLE[rand() % 10];
+			}
+	
+			return res;
+		}
+	
+		// Appends a number as a substring to a given string
+		std::string AppendNumberToString(const std::string& str, unsigned int num)
+		{
+			return str + itoa(num);
+		}
+	
+		// Replaces all occurences of src to dst in original_string
+		void ReplaceAll(std::string& original_string, const std::string& src, const std::string& dst)
+		{
+			size_t start_pos = 0;
+			size_t find_pos = original_string.find(src, start_pos);
+			while (find_pos != std::string::npos)
+			{
+				original_string.replace(find_pos, src.size(), dst);
+				start_pos = find_pos + dst.size();
+	
+				find_pos = original_string.find(src, start_pos);
+			}
+		}
+	
+		// Replaces all occurences of original_string to a unique, newly generated string in function signature
+		void ReplaceOccurence(std::string& signature,
+			std::stack<std::pair<std::string, std::string> >& replace_stack,
+			const std::string& base_replace_string,
+			const std::string& original_string)
+		{
+			std::string replaced_string = AppendNumberToString(base_replace_string, replace_stack.size());
+	
+			ReplaceAll(signature, original_string, replaced_string);
+			replace_stack.push(std::make_pair(original_string, replaced_string));
+		}
+	
+		// Replaces all string pieces that starts with left_pattern, and ends with right_pattern using
+		// a newly generated string in function signature
+		void ReplacePattern(std::string& signature,
+			std::stack<std::pair<std::string, std::string> >& replace_stack,
+			const std::string& base_replace_string,
+			const std::string& left_pattern,
+			const std::string& right_pattern)
+		{
+			size_t end_pos = std::string::npos;
+			size_t find_pos = signature.rfind(left_pattern, end_pos);
+			while (find_pos != std::string::npos)
+			{
+				size_t closing_pos = signature.find(right_pattern, find_pos + left_pattern.size());
+				if (closing_pos == std::string::npos)
+				{
+					// no ending position, error occurs
+					return;
+				}
+				std::string original_string = signature.substr(find_pos, closing_pos + right_pattern.size() - find_pos);
+				ReplaceOccurence(signature, replace_stack, base_replace_string, original_string);
+	
+				end_pos = find_pos - 1;
+	
+				find_pos = signature.rfind(left_pattern, end_pos);
+			}
+		}
+	
+		// Restores all previously replaced string pieces
+		std::string RestoreReplacedString(std::string str,
+			std::stack<std::pair<std::string, std::string> >& replace_stack)
+		{
+			while (!replace_stack.empty())
+			{
+				const std::pair<std::string, std::string>& pair = replace_stack.top();
+				ReplaceAll(str, pair.second, pair.first);
+	
+				replace_stack.pop();
+			}
+			return str;
+		}
+	
+		// Parses function name from a function signature following Itanium C++ ABI
+		std::string ParseFunctionName(std::string signature)
+		{
+			std::stack<std::pair<std::string, std::string> > replace_stack;
+			std::string base_replace_string = FindRandomString(signature);
+	
+			// Replaces all occurances of "(anonymous namespace)"
+			ReplaceOccurence(signature, replace_stack, base_replace_string, "(anonymous namespace)");
+	
+			// TODO: in the next two patterns, the "..." field can not contain any parentheses, fix this.
+	
+			// Replaces "&(...(...))" types of strings
+			// This is the function specialization in templates, an example of this is:
+			// (anonymous namespace)::BinarySearch<clcpp::Primitive const*, clcpp::Primitive const*,
+			//   &((anonymous namespace)::GetPrimitivePtrHash(clcpp::Primitive const*))>
+			ReplacePattern(signature, replace_stack, base_replace_string, "&(", "))");
+	
+			// Replaces "(*)(...)" types of strings
+			// This is the function pointer types, an example is:
+			// (anonymous namespace)::AddTypeDispatch(char const*, void (*)(clutl::WriteBuffer&, char const*, unsigned int),
+			//     void (*)(char*, long long), void (*)(char*, double))
+			ReplacePattern(signature, replace_stack, base_replace_string, "(*)(", ")");
+	
+			// Replaces all template arguments
+			ReplacePattern(signature, replace_stack, base_replace_string, "<", ">");
+	
+			// Now searches for starting of parameter list
+			size_t parenth_pos = signature.find('(');
+			if (parenth_pos == std::string::npos)
+			{
+				parenth_pos = signature.size() + 1;
+			}
+	
+			// Since templates are all gone, now the last whitespace preceeding
+			// left ( should be the one to separate return type with function name
+			size_t return_ending_pos = signature.rfind(' ', parenth_pos);
+			if (return_ending_pos == std::string::npos)
+			{
+				// no return type(void)
+				return_ending_pos = -1;
+			}
+	
+			return RestoreReplacedString(signature.substr(return_ending_pos + 1, parenth_pos - return_ending_pos - 1),
+				replace_stack);
+		}
+
+
+		void ProcessFunctionItem(cldb::Database& db, const std::string& function_signature,
+			clcpp::pointer_type function_address)
+		{
+			static const char* construct_object = "clcpp::internal::ConstructObject";
+			static const char* destruct_object = "clcpp::internal::DestructObject";
+			static const char* get_typename = "clcpp::GetTypeNameHash<";
+			static const char* get_type = "clcpp::GetType<";
+
+			std::string function_name = ParseFunctionName(function_signature);
+			if (function_name.size() == 0) {
+				LOG(main, ERROR, "Cannot parse function name from function signature '%s'", function_signature.c_str());
+				return;
+			}
+
+			if (function_name == construct_object)
+			{
+				AddConstructFunction(db, function_signature, function_address);
+			}
+			else if (function_name == destruct_object)
+			{
+				AddDestructFunction(db, function_signature, function_address);
+			}
+			else if (startswith(function_name, get_type))
+			{
+				AddGetTypeAddress(db, function_name, function_address, true);
+			}
+			else if (startswith(function_name, get_typename))
+			{
+				AddGetTypeAddress(db, function_name, function_address, false);
+			}
+			// Otherwise see if it's a function in the database
+			else if (const cldb::Function* function = db.GetFirstPrimitive<cldb::Function>(function_name.c_str()))
+			{
+				AddFunctionAddress(db, function_name, function_signature, function_address);
+			}
+		}
+
+
+		void ParseGCCMapFile(const char* filename, cldb::Database& db, clcpp::pointer_type& base_address)
+		{
+			FILE* fp = fopen(filename, "rb");
+			if (fp == 0)
+			{
+				return;
+			}
+
+			bool section_region = false;
+			bool symbol_region = false;
+
+			clcpp::pointer_type function_address;
+			clcpp::size_type function_size;
+			int file_id;
+			char segment_buffer[1024];
+			char signature_buffer[1024];
+
+			while (const char* line = ReadLine(fp))
+			{
+				if (section_region)
+				{
+					if (sscanf(line, "0x%" CLCPP_POINTER_TYPE_HEX_FORMAT " 0x%" CLCPP_SIZE_TYPE_HEX_FORMAT " %s %s",
+							&function_address, &function_size, segment_buffer, signature_buffer) == 4)
+					{
+						if (strcmp(signature_buffer, "__text") == 0)
+						{
+							base_address = function_address;
+						}
+					}
+				}
+				else if (symbol_region)
+				{
+					if (sscanf(line, "0x%" CLCPP_POINTER_TYPE_HEX_FORMAT " 0x%" CLCPP_SIZE_TYPE_HEX_FORMAT " [%d] %s",
+							&function_address, &function_size, &file_id, signature_buffer) == 4) {
+						if (startswith(signature_buffer, "__")) {
+							// function name starts with __
+							int status;
+							char* demangle_signature = abi::__cxa_demangle(signature_buffer + 1, 0, 0, &status);
+							if (status == 0) {
+								// In generated map some items are noisy data, for example:
+								// "vtable for ArrayReadIterator"
+								// We do not need such lines
+								if (!strstr(demangle_signature, " for "))
+								{
+										ProcessFunctionItem(db, demangle_signature, function_address);
+								}
+							}
+							if (demangle_signature != NULL) {
+								free(demangle_signature);
+							}
+						}
+					}
+				}
+
+				if (strstr(line, "# Sections:")) {
+					// section region
+					ReadLine(fp);
+					section_region = true;
+					symbol_region = false;
+				} else if (strstr(line, "# Symbols:")) {
+					// symbol region
+					ReadLine(fp);
+					section_region = false;
+					symbol_region = true;
+				}
+			}
+		}
+	#endif	// CLCPP_USING_GNUC
 }
 
 
 MapFileParser::MapFileParser(cldb::Database& db, const char* filename)
 	: m_PreferredLoadAddress(0)
 {
-	static const char* construct_object = "clcpp::internal::ConstructObject";
-	static const char* destruct_object = "clcpp::internal::DestructObject";
-	static const char* get_typename = "clcpp::GetTypeNameHash<";
-	static const char* get_type = "clcpp::GetType<";
-
-	if (!InitialiseSymbolHandler())
-	{
-		return;
-	}
-
-	FILE* fp = fopen(filename, "rb");
-	if (fp == 0)
-	{
-		return;
-	}
-
-	bool public_symbols = false;
-	while (const char* line = ReadLine(fp))
-	{
-		if (public_symbols)
-		{
-			char token[1024];
-
-			// Consume everything up to the function name
-			line = SkipWhitespace(line);
-			line = ConsumeToken(line, ' ', token, sizeof(token));
-			line = SkipWhitespace(line);
-			line = ConsumeToken(line, ' ', token, sizeof(token));
-
-			// Undecorate the symbol name alone and see if it's a known clcpp function
-			std::string function_name = UndecorateFunctionName(token);
-			if (function_name == construct_object)
-			{
-				std::string function_signature = UndecorateFunctionSignature(token);
-				unsigned int function_address = ParseAddressField(line, function_name.c_str());
-				AddConstructFunction(db, function_signature, function_address);
-			}
-			else if (function_name == destruct_object)
-			{
-				std::string function_signature = UndecorateFunctionSignature(token);
-				unsigned int function_address = ParseAddressField(line, function_name.c_str());
-				AddDestructFunction(db, function_signature, function_address);
-			}
-			else if (startswith(function_name, get_type))
-			{
-				unsigned int function_address = ParseAddressField(line, function_name.c_str());
-				AddGetTypeAddress(db, function_name, function_address, true);
-			}
-			else if (startswith(function_name, get_typename))
-			{
-				unsigned int function_address = ParseAddressField(line, function_name.c_str());
-				AddGetTypeAddress(db, function_name, function_address, false);
-			}
-
-			// Otherwise see if it's a function in the database
-			else if (const cldb::Function* function = db.GetFirstPrimitive<cldb::Function>(function_name.c_str()))
-			{
-				std::string function_signature = UndecorateFunctionSignature(token);
-				unsigned int function_address = ParseAddressField(line, function_name.c_str());
-				AddFunctionAddress(db, function_name, function_signature, function_address);
-			}
-		}
-
-		// Look for the start of the public symbols descriptors
-		else if (strstr(line, "  Address"))
-		{
-			ReadLine(fp);
-			public_symbols = true;
-		}
-
-		// Parse the preferred load address
-		if (m_PreferredLoadAddress == 0 && strstr(line, "Preferred load address is "))
-		{
-			line += sizeof("Preferred load address is ");
-			char token[32];
-			ConsumeToken(line , '\r', token, sizeof(token));
-			m_PreferredLoadAddress = hextoi(token);
-		}
-	}
-
-	fclose(fp);
-
-	ShutdownSymbolHandler();
+	#if defined(CLCPP_USING_MSVC)
+		ParseMSVCMapFile(filename, db, m_PreferredLoadAddress);
+	#else
+		ParseGCCMapFile(filename, db, m_PreferredLoadAddress);
+	#endif	// CLCPP_USING_MSVC
 }

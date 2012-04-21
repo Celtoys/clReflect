@@ -29,6 +29,9 @@
 #pragma once
 
 
+#include <clcpp/Core.h>
+
+
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -46,6 +49,9 @@ const char* itohex(unsigned int value);
 
 
 unsigned int hextoi(const char* text);
+#if defined(CLCPP_USING_64_BIT)
+unsigned long hextoi64(const char* text);
+#endif	// CLCPP_USING_64_BIT
 
 
 bool startswith(const char* text, const char* cmp);

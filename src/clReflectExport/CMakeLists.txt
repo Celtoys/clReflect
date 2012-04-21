@@ -2,13 +2,10 @@ set(CL_REFLECT_EXPORT_SOURCES
   CppExport.cpp
   Main.cpp
   PtrRelocator.cpp
+  MapFileParser.cpp
   )
 
 if (MSVC)
-  # TODO: merge this with sources when implementing map file parser on gcc
-  set(CL_REFLECT_EXPORT_SOURCES
-    ${CL_REFLECT_EXPORT_SOURCES} MapFileParser.cpp)
-
   set(CL_REFLECT_EXPORT_LIBS
     dbghelp.lib)
 endif (MSVC)

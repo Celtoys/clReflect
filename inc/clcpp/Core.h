@@ -135,10 +135,17 @@ namespace clcpp
         typedef unsigned long size_type;
         typedef unsigned long pointer_type;
 
+		// type field used in printf/scanf
+		#define CLCPP_SIZE_TYPE_HEX_FORMAT "lX"
+		#define CLCPP_POINTER_TYPE_HEX_FORMAT "lX"
+
     #else
 
         typedef unsigned int size_type;
         typedef unsigned int pointer_type;
+
+		#define CLCPP_SIZE_TYPE_HEX_FORMAT "X"
+		#define CLCPP_POINTER_TYPE_HEX_FORMAT "X"
 
     #endif // CLCPP_USING_64_BIT
 

@@ -61,16 +61,14 @@ int main(int argc, const char* argv[])
 
 	// Add function address information from any specified map files
 	std::string map_file = args.GetProperty("-map");
-	unsigned int function_base_address = 0;
-	// TODO: remove #if macros here when we finish implementing map file parse for GCC
-#if defined(CLCPP_USING_MSVC)
+	clcpp::pointer_type function_base_address = 0;
+
 	if (map_file != "")
 	{
 		LOG(main, INFO, "Parsing map file: %s\n", map_file.c_str());
 		MapFileParser parser(db, map_file.c_str());
 		function_base_address = parser.m_PreferredLoadAddress;
 	}
-#endif // CLCPP_USING_MSVC
 
 	std::string cpp_export = args.GetProperty("-cpp");
 	if (cpp_export != "")

@@ -43,7 +43,7 @@ namespace cldb
 
 struct CppExport
 {
-	CppExport(unsigned int function_base_address)
+	CppExport(clcpp::pointer_type function_base_address)
 		: allocator(5 * 1024 * 1024)	// 5MB should do for now
 		, function_base_address(function_base_address)
 		, db(0)
@@ -52,7 +52,7 @@ struct CppExport
 
 	StackAllocator allocator;
 
-	unsigned int function_base_address;
+	clcpp::pointer_type function_base_address;
 	clcpp::internal::DatabaseMem* db;
 
 	// Hash of names for easier debugging

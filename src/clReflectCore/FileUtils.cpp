@@ -108,12 +108,31 @@ unsigned int hextoi(const char* text)
 	for (const char* tptr = text, *end = text + strlen(text); tptr != end; ++tptr)
 	{
 		val *= 16;
-		int v = *tptr >= 'a' ? *tptr - 'a' + 10 : *tptr - '0';
+		char ch = tolower(*tptr);
+		int v = ch >= 'a' ? ch - 'a' + 10 : ch - '0';
 		val += v;
 	}
 
 	return val;
 }
+
+
+#if defined(CLCPP_USING_64_BIT)
+unsigned long hextoi64(const char* text)
+{
+	// Sum each radix 16 element
+	unsigned long val = 0;
+	for (const char* tptr = text, *end = text + strlen(text); tptr != end; ++tptr)
+	{
+		val *= 16;
+		char ch = tolower(*tptr);
+		int v = ch >= 'a' ? ch - 'a' + 10 : ch - '0';
+		val += v;
+	}
+
+	return val;
+}
+#endif	// CLCPP_USING_64_BIT
 
 
 bool startswith(const char* text, const char* cmp)
