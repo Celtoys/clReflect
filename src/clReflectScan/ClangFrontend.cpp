@@ -68,10 +68,12 @@ ClangParser::ClangParser(Arguments& args)
 	m_CompilerInvocation->setLangDefaults(lang_options, clang::IK_CXX, clang::LangStandard::lang_cxx03);
 	lang_options.CPlusPlus = 1;
 	lang_options.Bool = 1;
+	lang_options.RTTI = 0;
+
+#if defined(CLCPP_USING_MSVC)
 	lang_options.MicrosoftExt = 1;
 	lang_options.MicrosoftMode = 1;
 	lang_options.MSBitfields = 1;
-	lang_options.RTTI = 0;
 
 	//
 	// This is MSVC specific to get STL compiling with clang. MSVC doesn't do semantic analysis
@@ -88,6 +90,7 @@ ClangParser::ClangParser(Arguments& args)
 	//    void B() { }
 	//
 	lang_options.DelayedTemplateParsing = 1;
+#endif	// CLCPP_USING_MSVC
 
 	// Gather C++ header searches from the command-line
 	clang::HeaderSearchOptions& header_search_options = m_CompilerInvocation->getHeaderSearchOpts();
@@ -107,7 +110,11 @@ ClangParser::ClangParser(Arguments& args)
 	}
 
 	// Setup diagnostics output; MSVC line-clicking and suppress warnings from system headers
+#if defined(CLCPP_USING_MSVC)
 	m_DiagnosticOptions.Format = m_DiagnosticOptions.Msvc;
+#else
+	m_DiagnosticOptions.Format = m_DiagnosticOptions.Clang;
+#endif	// CLCPP_USING_MSVC
 	clang::TextDiagnosticPrinter *client = new clang::TextDiagnosticPrinter(m_OutputStream, m_DiagnosticOptions);
 	m_CompilerInstance.createDiagnostics(0, NULL, client);
 	m_CompilerInstance.getDiagnostics().setSuppressSystemWarnings(true);
@@ -115,7 +122,11 @@ ClangParser::ClangParser(Arguments& args)
 	// Setup target options - ensure record layout calculations use the MSVC C++ ABI
 	clang::TargetOptions& target_options = m_CompilerInvocation->getTargetOpts();
 	target_options.Triple = llvm::sys::getHostTriple();
+#if defined(CLCPP_USING_MSVC)
 	target_options.CXXABI = "microsoft";
+#else
+	target_options.CXXABI = "itanium";
+#endif	// CLCPP_USING_MSVC
 	m_TargetInfo.reset(clang::TargetInfo::CreateTargetInfo(m_CompilerInstance.getDiagnostics(), target_options));
 	m_CompilerInstance.setTarget(m_TargetInfo.take());
 
