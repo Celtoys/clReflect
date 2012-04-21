@@ -670,14 +670,27 @@ namespace
 	
 			// Since templates are all gone, now the last whitespace preceeding
 			// left ( should be the one to separate return type with function name
-			size_t return_ending_pos = signature.rfind(' ', parenth_pos);
-			if (return_ending_pos == std::string::npos)
+			size_t function_name_start_pos = signature.rfind(' ', parenth_pos);
+			if (function_name_start_pos == std::string::npos)
 			{
 				// no return type(void)
-				return_ending_pos = -1;
+				function_name_start_pos = 0;
+			}
+			else
+			{
+				// move start position from ' ' to the first character of function
+				function_name_start_pos++;
+			}
+
+			// searches for preceding "operator" keyword
+			if ((function_name_start_pos >= 9)
+				&& (signature.compare(function_name_start_pos - 9, 9, "operator ") == 0))
+			{
+				// includes preceding "operator " keyword in function name
+				function_name_start_pos -= 9;
 			}
 	
-			return RestoreReplacedString(signature.substr(return_ending_pos + 1, parenth_pos - return_ending_pos - 1),
+			return RestoreReplacedString(signature.substr(function_name_start_pos, parenth_pos - function_name_start_pos),
 				replace_stack);
 		}
 
@@ -720,14 +733,8 @@ namespace
 		}
 
 
-		void ParseGCCMapFile(const char* filename, cldb::Database& db, clcpp::pointer_type& base_address)
+		void ParseMacGCCMapFile(FILE* fp, cldb::Database& db, clcpp::pointer_type& base_address)
 		{
-			FILE* fp = fopen(filename, "rb");
-			if (fp == 0)
-			{
-				return;
-			}
-
 			bool section_region = false;
 			bool symbol_region = false;
 
@@ -786,6 +793,73 @@ namespace
 					symbol_region = true;
 				}
 			}
+		}
+
+
+		void ParseLinuxGCCMapFile(FILE* fp, cldb::Database& db, clcpp::pointer_type& base_address) 
+		{
+			bool text_region = false;
+
+			unsigned long function_address, function_size;
+			char signature_buffer[1024];
+
+			while (const char* line = ReadLine(fp))
+			{
+				if (text_region)
+				{
+					if ((sscanf(line, " 0x%" CLCPP_POINTER_TYPE_HEX_FORMAT " %s", &function_address, signature_buffer) == 2)
+						&& (signature_buffer[0] == '-'))
+					{
+						int status;
+						char* demangle_signature = abi::__cxa_demangle(signature_buffer, 0, 0, &status);
+						if (status == 0)
+						{
+							if (!strstr(demangle_signature, " for "))
+							{
+								ProcessFunctionItem(db, demangle_signature, function_address);
+							}
+						}
+						if (demangle_signature != 0)
+						{
+							free(demangle_signature);
+						}
+					}
+				} else if (strstr(line, ".text") == line)
+				{
+					if (sscanf(line, ".text 0x%" CLCPP_POINTER_TYPE_HEX_FORMAT " 0x%" CLCPP_POINTER_TYPE_HEX_FORMAT,
+							&function_address, &function_size) == 2)
+					{
+						// text section start address
+						base_address = function_address;
+						text_region = true;
+					}
+				}
+			}
+		}
+
+
+		void ParseGCCMapFile(const char* filename, cldb::Database& db, clcpp::pointer_type& base_address)
+		{
+			FILE* fp = fopen(filename, "rb");
+			if (fp == 0)
+			{
+				return;
+			}
+
+			const char* first_line = ReadLine(fp);
+			if (startswith(first_line, "# Path:")) {
+				ParseMacGCCMapFile(fp, db, base_address);
+			}
+			else if (startswith(first_line, "Archive member included because of file (symbol)"))
+			{
+				ParseLinuxGCCMapFile(fp, db, base_address);
+			}
+			else
+			{
+				LOG(main, ERROR, "Unknown format of gcc map file!");
+			}
+
+			fclose(fp);
 		}
 	#endif	// CLCPP_USING_GNUC
 }
