@@ -704,7 +704,8 @@ namespace
 			static const char* get_type = "clcpp::GetType<";
 
 			std::string function_name = ParseFunctionName(function_signature);
-			if (function_name.size() == 0) {
+			if (function_name.size() == 0)
+			{
 				LOG(main, ERROR, "Cannot parse function name from function signature '%s'", function_signature.c_str());
 				return;
 			}
@@ -760,12 +761,15 @@ namespace
 				else if (symbol_region)
 				{
 					if (sscanf(line, "0x%" CLCPP_POINTER_TYPE_HEX_FORMAT " 0x%" CLCPP_SIZE_TYPE_HEX_FORMAT " [%d] %s",
-							&function_address, &function_size, &file_id, signature_buffer) == 4) {
-						if (startswith(signature_buffer, "__")) {
+							&function_address, &function_size, &file_id, signature_buffer) == 4)
+					{
+						if (startswith(signature_buffer, "__"))
+						{
 							// function name starts with __
 							int status;
 							char* demangle_signature = abi::__cxa_demangle(signature_buffer + 1, 0, 0, &status);
-							if (status == 0) {
+							if (status == 0)
+							{
 								// In generated map some items are noisy data, for example:
 								// "vtable for ArrayReadIterator"
 								// We do not need such lines
@@ -774,19 +778,23 @@ namespace
 										ProcessFunctionItem(db, demangle_signature, function_address);
 								}
 							}
-							if (demangle_signature != NULL) {
+							if (demangle_signature != NULL)
+							{
 								free(demangle_signature);
 							}
 						}
 					}
 				}
 
-				if (strstr(line, "# Sections:")) {
+				if (strstr(line, "# Sections:"))
+				{
 					// section region
 					ReadLine(fp);
 					section_region = true;
 					symbol_region = false;
-				} else if (strstr(line, "# Symbols:")) {
+				}
+				else if (strstr(line, "# Symbols:"))
+				{
 					// symbol region
 					ReadLine(fp);
 					section_region = false;
@@ -824,7 +832,8 @@ namespace
 							free(demangle_signature);
 						}
 					}
-				} else if (strstr(line, ".text") == line)
+				}
+				else if (strstr(line, ".text") == line)
 				{
 					if (sscanf(line, ".text 0x%" CLCPP_POINTER_TYPE_HEX_FORMAT " 0x%" CLCPP_POINTER_TYPE_HEX_FORMAT,
 							&function_address, &function_size) == 2)
@@ -847,7 +856,8 @@ namespace
 			}
 
 			const char* first_line = ReadLine(fp);
-			if (startswith(first_line, "# Path:")) {
+			if (startswith(first_line, "# Path:"))
+			{
 				ParseMacGCCMapFile(fp, db, base_address);
 			}
 			else if (startswith(first_line, "Archive member included because of file (symbol)"))
