@@ -101,7 +101,7 @@ const char* itohex(unsigned int value)
 }
 
 
-unsigned int hextoi(const char* text)
+clcpp::uint32 hextoi(const char* text)
 {
 	// Sum each radix 16 element
 	unsigned int val = 0;
@@ -117,11 +117,10 @@ unsigned int hextoi(const char* text)
 }
 
 
-#if defined(CLCPP_USING_64_BIT)
-unsigned long hextoi64(const char* text)
+clcpp::uint64 hextoi64(const char* text)
 {
 	// Sum each radix 16 element
-	unsigned long val = 0;
+	clcpp::uint64 val = 0;
 	for (const char* tptr = text, *end = text + strlen(text); tptr != end; ++tptr)
 	{
 		val *= 16;
@@ -132,7 +131,6 @@ unsigned long hextoi64(const char* text)
 
 	return val;
 }
-#endif	// CLCPP_USING_64_BIT
 
 
 bool startswith(const char* text, const char* cmp)

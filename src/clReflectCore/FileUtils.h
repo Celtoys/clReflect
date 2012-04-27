@@ -48,10 +48,8 @@ const char* itoa(unsigned int value);
 const char* itohex(unsigned int value);
 
 
-unsigned int hextoi(const char* text);
-#if defined(CLCPP_USING_64_BIT)
-unsigned long hextoi64(const char* text);
-#endif	// CLCPP_USING_64_BIT
+clcpp::uint32 hextoi(const char* text);
+clcpp::uint64 hextoi64(const char* text);
 
 
 bool startswith(const char* text, const char* cmp);
