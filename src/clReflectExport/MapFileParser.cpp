@@ -166,13 +166,13 @@ namespace
 
 	bool IsConstructFunction(const std::string& function_name)
 	{
-		return function_name == "clcpp::internal::ConstructObject";
+		return startswith(function_name, "clcppConstructObject");
 	}
 
 
 	bool IsDestructFunction(const std::string& function_name)
 	{
-		return function_name == "clcpp::internal::DestructObject";
+		return startswith(function_name, "clcppDestructObject");
 	}
 
 

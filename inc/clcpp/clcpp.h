@@ -116,20 +116,14 @@
 	//
 	#define clcpp_impl_class(type)								\
 																\
-		namespace clcpp											\
+		CLCPP_EXPORT void clcppConstructObject(type* object)	\
 		{														\
-			namespace internal									\
-			{													\
-				CLCPP_EXPORT void ConstructObject(type* object)	\
-				{												\
-					CallConstructor(object);					\
-				}												\
-				CLCPP_EXPORT void DestructObject(type* object)	\
-				{												\
-					CallDestructor(object);						\
-				}												\
-			}													\
-		}
+			clcpp::internal::CallConstructor(object);			\
+		}														\
+		CLCPP_EXPORT void clcppDestructObject(type* object)		\
+		{														\
+			clcpp::internal::CallDestructor(object);			\
+		}														\
 
 
 #endif
