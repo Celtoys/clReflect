@@ -164,6 +164,30 @@ namespace
 	}
 
 
+	bool IsConstructFunction(const std::string& function_name)
+	{
+		return function_name == "clcpp::internal::ConstructObject";
+	}
+
+
+	bool IsDestructFunction(const std::string& function_name)
+	{
+		return function_name == "clcpp::internal::DestructObject";
+	}
+
+
+	bool IsGetTypeNameHashFunction(const std::string& function_name)
+	{
+		return startswith(function_name, "clcpp::GetTypeNameHash<");
+	}
+
+
+	bool IsGetTypeFunction(const std::string& function_name)
+	{
+		return startswith(function_name, "clcpp::GetType<");
+	}
+
+	
 	void AddFunctionAddress(cldb::Database& db, const std::string& function_name, const std::string& function_signature, unsigned int function_address)
 	{
 		if (function_address == 0)
@@ -453,11 +477,6 @@ namespace
 
 		void ParseMSVCMapFile(const char* filename, cldb::Database& db, clcpp::pointer_type& base_address)
 		{
-			static const char* construct_object = "clcpp::internal::ConstructObject";
-			static const char* destruct_object = "clcpp::internal::DestructObject";
-			static const char* get_typename = "clcpp::GetTypeNameHash<";
-			static const char* get_type = "clcpp::GetType<";
-
 			if (!InitialiseSymbolHandler())
 			{
 				return;
@@ -484,24 +503,24 @@ namespace
 	
 					// Undecorate the symbol name alone and see if it's a known clcpp function
 					std::string function_name = UndecorateFunctionName(token);
-					if (function_name == construct_object)
+					if (IsConstructFunction(function_name))
 					{
 						std::string function_signature = UndecorateFunctionSignature(token);
 						unsigned int function_address = ParseAddressField(line, function_name.c_str());
 						AddConstructFunction(db, function_signature, function_address);
 					}
-					else if (function_name == destruct_object)
+					else if (IsDestructFunction(function_name))
 					{
 						std::string function_signature = UndecorateFunctionSignature(token);
 						unsigned int function_address = ParseAddressField(line, function_name.c_str());
 						AddDestructFunction(db, function_signature, function_address);
 					}
-					else if (startswith(function_name, get_type))
+					else if (IsGetTypeFunction(function_name))
 					{
 						unsigned int function_address = ParseAddressField(line, function_name.c_str());
 						AddGetTypeAddress(db, function_name, function_address, true);
 					}
-					else if (startswith(function_name, get_typename))
+					else if (IsGetTypeNameHashFunction(function_name))
 					{
 						unsigned int function_address = ParseAddressField(line, function_name.c_str());
 						AddGetTypeAddress(db, function_name, function_address, false);
@@ -698,11 +717,6 @@ namespace
 		void ProcessFunctionItem(cldb::Database& db, const std::string& function_signature,
 			clcpp::pointer_type function_address)
 		{
-			static const char* construct_object = "clcpp::internal::ConstructObject";
-			static const char* destruct_object = "clcpp::internal::DestructObject";
-			static const char* get_typename = "clcpp::GetTypeNameHash<";
-			static const char* get_type = "clcpp::GetType<";
-
 			std::string function_name = ParseFunctionName(function_signature);
 			if (function_name.size() == 0)
 			{
@@ -710,19 +724,19 @@ namespace
 				return;
 			}
 
-			if (function_name == construct_object)
+			if (IsConstructFunction(function_name))
 			{
 				AddConstructFunction(db, function_signature, function_address);
 			}
-			else if (function_name == destruct_object)
+			else if (IsDestructFunction(function_name))
 			{
 				AddDestructFunction(db, function_signature, function_address);
 			}
-			else if (startswith(function_name, get_type))
+			else if (IsGetTypeFunction(function_name))
 			{
 				AddGetTypeAddress(db, function_name, function_address, true);
 			}
-			else if (startswith(function_name, get_typename))
+			else if (IsGetTypeNameHashFunction(function_name))
 			{
 				AddGetTypeAddress(db, function_name, function_address, false);
 			}
