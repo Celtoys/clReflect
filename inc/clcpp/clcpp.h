@@ -36,7 +36,11 @@
 #include "Database.h"
 
 
-#ifdef __clang__
+// This is a customized macro added into clReflectScan, we use this to distinguish a clReflect scanning
+// from a normal compiling using clang as compiler.
+// This can help cut normal compiling time since starting from XCode 4.3, clang has become the official
+// compiler on Mac OS X
+#ifdef __clcpp_parse__
 
 
 	//

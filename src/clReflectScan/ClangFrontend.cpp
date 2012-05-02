@@ -64,6 +64,10 @@ ClangParser::ClangParser(Arguments& args)
 {
 	m_CompilerInvocation.reset(new clang::CompilerInvocation);
 
+	// we add a customized macro here to distinguish a clreflect parsing process from a compling using clang
+	clang::PreprocessorOptions& preprocessor_options = m_CompilerInvocation->getPreprocessorOpts();
+	preprocessor_options.addMacroDef("__clcpp_parse__");
+
 	// Setup the language parsing options for C++
 	clang::LangOptions& lang_options = m_CompilerInvocation->getLangOpts();
 	m_CompilerInvocation->setLangDefaults(lang_options, clang::IK_CXX, clang::LangStandard::lang_cxx03);
