@@ -1487,6 +1487,17 @@ namespace
 	}
 
 
+	// forward declarations
+	void LogPrimitive(const clcpp::Field& field);
+	void LogPrimitive(const clcpp::Function& func);
+	void LogPrimitive(const clcpp::EnumConstant& constant);
+	void LogPrimitive(const clcpp::Enum& e);
+	void LogPrimitive(const clcpp::TemplateType& tt);
+	void LogPrimitive(const clcpp::Template& t);
+	void LogPrimitive(const clcpp::Class& cls);
+	void LogPrimitive(const clcpp::Namespace& ns);
+
+
 	template <typename TYPE>
 	void LogPrimitives(const clcpp::CArray<const TYPE*>& primitives)
 	{

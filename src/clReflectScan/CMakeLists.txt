@@ -5,9 +5,9 @@ set(LLVM_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../extern/llvm"
   CACHE PATH "Path to LLVM source.")
 
 set(LLVM_BUILD_DIR_PREDICTION "${CMAKE_CURRENT_SOURCE_DIR}/../../extern/llvm-build")
-if (CMAKE_COMPILER_IS_GNUCXX)
+if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
   set(LLVM_BUILD_DIR_PREDICTION "${CMAKE_CURRENT_SOURCE_DIR}/../../extern/llvm-build-gnu")
-endif (CMAKE_COMPILER_IS_GNUCXX)
+endif (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
 
 set(LLVM_BUILD_DIR ${LLVM_BUILD_DIR_PREDICTION}
   CACHE PATH "Path to LLVM build.")
@@ -17,10 +17,10 @@ include_directories("${LLVM_INSTALL_DIR}/tools/clang/include")
 include_directories("${LLVM_BUILD_DIR}/include/")
 include_directories("${LLVM_BUILD_DIR}/tools/clang/include")
 
-if (CMAKE_COMPILER_IS_GNUCXX)
-  # GCC flags for stdint.h types
+if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
+  # GCC/Clang flags for stdint.h types
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -fno-rtti")
-endif (CMAKE_COMPILER_IS_GNUCXX)
+endif (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
 
 set(LLVM_BASE_LIB_DIR "${LLVM_BUILD_DIR}/lib")
 if (MSVC)
