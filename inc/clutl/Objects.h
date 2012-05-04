@@ -73,6 +73,19 @@ namespace clutl
 
 
 	//
+	// Create an object of the given type by allocating and constructing it.
+	// This function has 3 possible modes of operation, based on which parameters you specify:
+	//
+	//    1. Create an anonymous object.
+	//    2. Create a named object.
+	//    3. Create a named object that is also tracked in an object group.
+	//
+	Object* CreateObject(const clcpp::Type* type, unsigned int unique_id = 0, ObjectGroup* object_group = 0);
+
+	void DestroyObject(const Object* object);
+
+
+	//
 	// Hash table based storage of collections of objects.
 	// The ObjectGroup is an object itself, allowing groups to be nested within other groups.
 	//
@@ -82,18 +95,6 @@ namespace clutl
 	public:
 		ObjectGroup();
 		~ObjectGroup();
-
-		// Create a nested group within this one
-		ObjectGroup* CreateObjectGroup(unsigned int unique_id);
-
-		// Create an anonymous object which doesn't get tracked by the database
-		Object* CreateObject(unsigned int type_hash);
-
-		// Create a named object that is internally tracked by name and can be found at a later point
-		Object* CreateObject(unsigned int type_hash, unsigned int unique_id);
-
-		// Destroy named/anonymous object or an object group
-		void DestroyObject(const Object* object);
 
 		// Find a created object by unique ID
 		Object* FindObject(unsigned int unique_id) const;
@@ -105,17 +106,17 @@ namespace clutl
 		// and more adaptable.
 		void AllowFindInParent(bool allow) { m_AllowFindInParent = allow; }
 
-		const clcpp::Database* GetReflectionDB() const { return m_ReflectionDB; }
+		friend Object* clutl::CreateObject(const clcpp::Type*, unsigned int, ObjectGroup*);
+		friend void clutl::DestroyObject(const Object*);
 
 	private:
 		struct HashEntry;
 
+		void AddObject(Object* object);
+		void RemoveObject(const Object* object);
 		void AddHashEntry(Object* object);
-		void RemoveHashEntry(const Object* object);
+		void RemoveHashEntry(unsigned int hash);
 		void Resize(bool increase);
-
-		// Reflection database to use for type access
-		const clcpp::Database* m_ReflectionDB;
 
 		// An open-addressed hash table with linear probing - good cache behaviour for storing
 		// hashes of pointers that may suffer from clustering.
@@ -139,7 +140,7 @@ namespace clutl
 	class ObjectDatabase
 	{
 	public:
-		ObjectDatabase(const clcpp::Database* reflection_db);
+		ObjectDatabase();
 		~ObjectDatabase();
 
 		ObjectGroup* GetRootGroup() const { return m_RootGroup; }
@@ -185,8 +186,7 @@ namespace clutl
 	{
 		if (object != 0)
 		{
-			clcpp::internal::Assert(object->object_group != 0);
-			object->object_group->DestroyObject(object);
+			DestroyObject(object);
 			object = 0;
 		}
 	}
@@ -194,16 +194,16 @@ namespace clutl
 
 
 //
-// Helpers for creating typed objects in object groups.
+// Helpers for creating typed objects.
 // Exposed publically as Koenig lookup doesn't apply to template parameters.
 //
 template <typename TYPE>
-inline TYPE* New(clutl::ObjectGroup* group)
+inline TYPE* New()
 {
-	return static_cast<TYPE*>(group->CreateObject(clcpp::GetTypeNameHash<TYPE>()));
+	return static_cast<TYPE*>(clutl::CreateObject(clcpp::GetType<TYPE>()));
 }
 template <typename TYPE>
-inline TYPE* New(clutl::ObjectGroup* group, unsigned int unique_id)
+inline TYPE* New(clutl::ObjectGroup* group, unsigned int unique_id = 0)
 {
-	return static_cast<TYPE*>(group->CreateObject(clcpp::GetTypeNameHash<TYPE>(), unique_id));
+	return static_cast<TYPE*>(clutl::CreateObject(clcpp::GetType<TYPE>(), unique_id, group));
 }
