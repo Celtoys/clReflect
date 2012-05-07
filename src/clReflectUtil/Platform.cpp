@@ -2,18 +2,6 @@
 #include "Platform.h"
 
 
-// check for operating systems
-#if defined(_WINDOWS) || defined(_WIN32)
-
-	#define CLUTL_PLATFORM_WINDOWS
-
-#elif defined(__linux__) || defined(__APPLE__)
-
-	#define CLUTL_PLATFORM_POSIX
-
-#endif
-
-
 #if defined(CLUTL_PLATFORM_WINDOWS)
 	// Windows-specific module loading and inspection functions
 	typedef int (__stdcall *FunctionPtr)();
