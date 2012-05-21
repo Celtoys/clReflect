@@ -1,5 +1,17 @@
 
+//
+// ===============================================================================
+// clReflect, Module.h - Interface/implementation support
+// -------------------------------------------------------------------------------
+// Copyright (c) 2011-2012 Don Williamson & clReflect Authors (see AUTHORS file)
+// Released under MIT License (see LICENSE file)
+// ===============================================================================
+//
+
 #pragma once
+
+
+#include <clcpp/clcpp.h>
 
 
 namespace clcpp

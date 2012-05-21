@@ -1,8 +1,16 @@
 
+//
+// ===============================================================================
+// clReflect
+// -------------------------------------------------------------------------------
+// Copyright (c) 2011-2012 Don Williamson & clReflect Authors (see AUTHORS file)
+// Released under MIT License (see LICENSE file)
+// ===============================================================================
+//
+
 #include <clutl/SerialiseFunction.h>
 #include <clutl/JSONLexer.h>
 #include <clcpp/FunctionCall.h>
-#include "Platform.h"
 
 
 namespace

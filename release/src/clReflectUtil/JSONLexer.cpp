@@ -1,6 +1,19 @@
 
+//
+// ===============================================================================
+// clReflect
+// -------------------------------------------------------------------------------
+// Copyright (c) 2011-2012 Don Williamson & clReflect Authors (see AUTHORS file)
+// Released under MIT License (see LICENSE file)
+// ===============================================================================
+//
+
 #include <clutl/JSONLexer.h>
-#include "Platform.h"
+
+
+// Standard C library function, convert string to double-precision number
+// http://pubs.opengroup.org/onlinepubs/007904975/functions/strtod.html
+extern "C" double strtod(const char* s00, char** se);
 
 
 namespace
@@ -118,7 +131,7 @@ namespace
 	//
 	// This will return an integer in the range [-9,223,372,036,854,775,808:9,223,372,036,854,775,807]
 	//
-	bool LexerInteger(clutl::JSONContext& ctx, unsigned __int64& uintval)
+	bool LexerInteger(clutl::JSONContext& ctx, clcpp::uint64& uintval)
 	{
 		// Consume the first digit
 		if (ctx.ReadOverflows(0))
@@ -149,7 +162,7 @@ namespace
 
 	clutl::JSONToken LexerHexInteger(clutl::JSONContext& ctx, clutl::JSONToken& token)
 	{
-		unsigned __int64& uintval = (unsigned __int64&)token.val.integer;
+		clcpp::uint64& uintval = (clcpp::uint64&)token.val.integer;
 
 		// Consume the first digit
 		if (ctx.ReadOverflows(0))
@@ -166,7 +179,7 @@ namespace
 		{
 			// Consume and accumulate the digit
 			ctx.ConsumeChar();
-			unsigned __int64 digit = 0;
+			clcpp::uint64 digit = 0;
 			if (c < 'A')
 				digit = c - '0';
 			else
@@ -243,7 +256,7 @@ namespace
 		clutl::JSONToken token(clutl::JSON_TOKEN_INTEGER, 0);
 
 		// Is this a hex integer?
-		unsigned __int64 uintval;
+		clcpp::uint64 uintval;
 		if (ctx.PeekChar() == '0')
 		{
 			if (ctx.ReadOverflows(1))

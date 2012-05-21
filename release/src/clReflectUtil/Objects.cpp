@@ -1,4 +1,13 @@
 
+//
+// ===============================================================================
+// clReflect
+// -------------------------------------------------------------------------------
+// Copyright (c) 2011-2012 Don Williamson & clReflect Authors (see AUTHORS file)
+// Released under MIT License (see LICENSE file)
+// ===============================================================================
+//
+
 // TODO: Lots of stuff happening in here that needs logging
 
 #include <clutl/Objects.h>
@@ -14,9 +23,74 @@ struct clutl::ObjectGroup::HashEntry
 
 
 
+
+clutl::Object* clutl::CreateObject(const clcpp::Type *type, unsigned int unique_id, ObjectGroup* object_group)
+{
+	if (type == 0)
+		return 0;
+
+	// Can only create class objects
+	if (type->kind != clcpp::Primitive::KIND_CLASS)
+		return 0;
+	const clcpp::Class* class_type = type->AsClass();
+
+	// The object group has no registered constructor so construct manually
+	// if it comes through
+	Object* object = 0;
+	if (type->name.hash == clcpp::GetTypeNameHash<ObjectGroup>())
+	{
+		object = new ObjectGroup();
+	}
+	else
+	{
+		// Need a constructor to new and a destructor to delete at a later point
+		if (class_type->constructor == 0 || class_type->destructor == 0)
+			return 0;
+		object = (Object*)new char[type->size];
+		CallFunction(class_type->constructor, object);
+	}
+
+	// Construct the object and add to its object group
+	object->type = type;
+	object->unique_id = unique_id;
+	if (object_group)
+		object_group->AddObject(object);
+
+	return object;
+}
+
+
+void clutl::DestroyObject(const Object* object)
+{
+	// These represent fatal code errors
+	clcpp::internal::Assert(object != 0);
+	clcpp::internal::Assert(object->type != 0);
+
+	// Remove from any attached object group
+	if (object->object_group != 0)
+		object->object_group->RemoveObject(object);
+
+	if (object->type->name.hash == clcpp::GetTypeNameHash<ObjectGroup>())
+	{
+		// ObjecGroup class does not have a registered destructor
+		delete (ObjectGroup*)object;
+	}
+
+	else
+	{
+		// Call the destructor and release the memory
+		const clcpp::Class* class_type = object->type->AsClass();
+		clcpp::internal::Assert(class_type->destructor != 0);
+		CallFunction(class_type->destructor, object);
+		delete [] (char*)object;
+	}
+}
+
+
+
+
 clutl::ObjectGroup::ObjectGroup()
-	: m_ReflectionDB(0)
-	, m_MaxNbObjects(8)
+	: m_MaxNbObjects(8)
 	, m_NbObjects(0)
 	, m_NbOccupiedEntries(0)
 	, m_NamedObjects(0)
@@ -34,93 +108,19 @@ clutl::ObjectGroup::~ObjectGroup()
 }
 
 
-clutl::ObjectGroup* clutl::ObjectGroup::CreateObjectGroup(unsigned int unique_id)
+void clutl::ObjectGroup::AddObject(Object* object)
 {
-	return (ObjectGroup*)CreateObject(clcpp::GetTypeNameHash<ObjectGroup>(), unique_id);
-}
-
-
-clutl::Object* clutl::ObjectGroup::CreateObject(unsigned int type_hash)
-{
-	// Can the type be located?
-	const clcpp::Type* type = m_ReflectionDB->GetType(type_hash);
-	if (type == 0)
-		return 0;
-
-	// Can only create class objects
-	if (type->kind != clcpp::Primitive::KIND_CLASS)
-		return 0;
-	const clcpp::Class* class_type = type->AsClass();
-
-	// The object group has no registered constructor so construct manually
-	// if it comes through
-	Object* object = 0;
-	if (type_hash == clcpp::GetTypeNameHash<ObjectGroup>())
-	{
-		object = new ObjectGroup();
-	}
-	else
-	{
-		// Need a constructor to new and a destructor to delete at a later point
-		if (class_type->constructor == 0 || class_type->destructor == 0)
-			return 0;
-		object = (Object*)new char[type->size];
-		CallFunction(class_type->constructor, object);
-	}
-
-	// Construct the object and pass on any reflection DB pointer to derivers
-	// of the object group type
 	object->object_group = this;
-	object->type = type;
-	if (class_type->flag_attributes & FLAG_ATTR_IS_OBJECT_GROUP)
-		((ObjectGroup*)object)->m_ReflectionDB = m_ReflectionDB;
-
-	return object;
-}
-
-
-clutl::Object* clutl::ObjectGroup::CreateObject(unsigned int type_hash, unsigned int unique_id)
-{
-	// Create the object
-	Object* object = CreateObject(type_hash);
-	if (object == 0)
-		return 0;
-
-	// Add to the hash table if there is a unique ID assigned
-	if (unique_id != 0)
-	{
-		object->unique_id = unique_id;
+	if (object->unique_id != 0)
 		AddHashEntry(object);
-	}
-
-	return object;
 }
 
 
-void clutl::ObjectGroup::DestroyObject(const Object* object)
+void clutl::ObjectGroup::RemoveObject(const Object* object)
 {
 	// Remove from the hash table if it's named
 	if (object->unique_id != 0)
-		RemoveHashEntry(object);
-
-	// These represent fatal code errors
-	clcpp::internal::Assert(object != 0);
-	clcpp::internal::Assert(object->type != 0);
-
-	if (object->type->name.hash == clcpp::GetTypeNameHash<ObjectGroup>())
-	{
-		// ObjecGroup class does not have a registered destructor
-		delete (ObjectGroup*)object;
-	}
-
-	else
-	{
-		// Call the destructor and release the memory
-		const clcpp::Class* class_type = object->type->AsClass();
-		clcpp::internal::Assert(class_type->destructor != 0);
-		CallFunction(class_type->destructor, object);
-		delete [] (char*)object;
-	}
+		RemoveHashEntry(object->unique_id);
 }
 
 
@@ -190,10 +190,9 @@ void clutl::ObjectGroup::AddHashEntry(Object* object)
 }
 
 
-void clutl::ObjectGroup::RemoveHashEntry(const Object* object)
+void clutl::ObjectGroup::RemoveHashEntry(unsigned int hash)
 {
 	// Linear probe from the natural hash location for matching hash
-	unsigned int hash = object->unique_id;
 	const unsigned int index_mask = m_MaxNbObjects - 1;
 	unsigned int index = hash & index_mask;
 	while (m_NamedObjects[index].hash && m_NamedObjects[index].hash != hash)
@@ -236,11 +235,10 @@ void clutl::ObjectGroup::Resize(bool increase)
 }
 
 
-clutl::ObjectDatabase::ObjectDatabase(const clcpp::Database* reflection_db)
+clutl::ObjectDatabase::ObjectDatabase()
 	: m_RootGroup(0)
 {
 	m_RootGroup = new ObjectGroup();
-	m_RootGroup->m_ReflectionDB = reflection_db;
 }
 
 

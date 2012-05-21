@@ -6,6 +6,7 @@ md release\bin
 
 copy README release
 copy LICENSE release
+copy AUTHORS release
 copy build\bin\release\clscan.exe* release\bin
 copy build\bin\release\clmerge.exe* release\bin
 copy build\bin\release\clexport.exe* release\bin

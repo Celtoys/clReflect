@@ -3,25 +3,8 @@
 // ===============================================================================
 // clReflect
 // -------------------------------------------------------------------------------
-// Copyright (c) 2011 Don Williamson
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy of
-// this software and associated documentation files (the "Software"), to deal in
-// the Software without restriction, including without limitation the rights to
-// use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-// of the Software, and to permit persons to whom the Software is furnished to do
-// so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// Copyright (c) 2011-2012 Don Williamson & clReflect Authors (see AUTHORS file)
+// Released under MIT License (see LICENSE file)
 // ===============================================================================
 //
 // TODO:
@@ -36,16 +19,22 @@
 #include <clutl/Objects.h>
 #include <clcpp/Containers.h>
 #include <clcpp/FunctionCall.h>
-#include "Platform.h"
+
+
+// Explicitly stated dependencies in stdlib.h
+// Non-standard, writes at most n bytes to dest with printf formatting
+#if defined(CLCPP_PLATFORM_WINDOWS)
+	extern "C" int _snprintf(char* dest, unsigned int n, const char* fmt, ...);
+	#define snprintf _snprintf
+#else
+	extern "C" int snprintf(char* dest, unsigned int n, const char* fmt, ...);
+#endif
 
 
 // Pointers are serialised in hash values in hexadecimal format, which isn't compliant with
 // the JSON format.
 // Undef this if you want pointers to be serialised as base 10 unsigned integers, instead.
 #define SAVE_POINTER_HASH_AS_HEX
-
-
-// Explicitly stated dependencies in stdlib.h
 
 
 static void SetupTypeDispatchLUT();
@@ -59,7 +48,7 @@ namespace
 
 
 	typedef void (*SaveNumberFunc)(clutl::WriteBuffer&, const char*, unsigned int flags);
-	typedef void (*LoadIntegerFunc)(char*, __int64);
+	typedef void (*LoadIntegerFunc)(char*, clcpp::int64);
 	typedef void (*LoadDecimalFunc)(char*, double);
 
 
@@ -154,11 +143,11 @@ namespace
 
 
 	template <typename TYPE>
-	void LoadIntegerWithCast(char* dest, __int64 integer)
+	void LoadIntegerWithCast(char* dest, clcpp::int64 integer)
 	{
 		*(TYPE*)dest = (TYPE)integer;
 	}
-	void LoadIntegerBool(char* dest, __int64 integer)
+	void LoadIntegerBool(char* dest, clcpp::int64 integer)
 	{
 		*(bool*)dest = integer != 0;
 	}
@@ -175,7 +164,7 @@ namespace
 	}
 
 
-	void LoadInteger(clutl::JSONContext& ctx, __int64 integer, char* object, const clcpp::Type* type, clcpp::Qualifier::Operator op)
+	void LoadInteger(clutl::JSONContext& ctx, clcpp::int64 integer, char* object, const clcpp::Type* type, clcpp::Qualifier::Operator op)
 	{
 		if (type == 0)
 			return;
@@ -467,7 +456,7 @@ namespace
 	}
 
 
-	void SaveInteger(clutl::WriteBuffer& out, __int64 integer)
+	void SaveInteger(clutl::WriteBuffer& out, clcpp::int64 integer)
 	{
 		// Enough to store a 64-bit int
 		static const int MAX_SZ = 20;
@@ -489,7 +478,7 @@ namespace
 		// Loop through the value with radix 10
 		do 
 		{
-			__int64 next_integer = integer / 10;
+			clcpp::int64 next_integer = integer / 10;
 			*--tptr = char('0' + (integer - next_integer * 10));
 			integer = next_integer;
 		} while (integer);
@@ -502,7 +491,7 @@ namespace
 	}
 
 
-	void SaveUnsignedInteger(clutl::WriteBuffer& out, unsigned __int64 integer)
+	void SaveUnsignedInteger(clutl::WriteBuffer& out, clcpp::uint64 integer)
 	{
 		// Enough to store a 64-bit int + null
 		static const int MAX_SZ = 21;
@@ -516,7 +505,7 @@ namespace
 		// Loop through the value with radix 10
 		do 
 		{
-			unsigned __int64 next_integer = integer / 10;
+			clcpp::uint64 next_integer = integer / 10;
 			*--tptr = char('0' + (integer - next_integer * 10));
 			integer = next_integer;
 		} while (integer);
@@ -525,7 +514,7 @@ namespace
 	}
 
 
-	void SaveHexInteger(clutl::WriteBuffer& out, unsigned __int64 integer)
+	void SaveHexInteger(clutl::WriteBuffer& out, clcpp::uint64 integer)
 	{
 		// Enough to store a 64-bit int + null
 		static const int MAX_SZ = 21;
@@ -539,7 +528,7 @@ namespace
 		// Loop through the value with radix 16
 		do 
 		{
-			unsigned __int64 next_integer = integer / 16;
+			clcpp::uint64 next_integer = integer / 16;
 			*--tptr = "0123456789ABCDEF"[integer - next_integer * 16];
 			integer = next_integer;
 		} while (integer);
@@ -568,7 +557,7 @@ namespace
 		{
 			// Use a specific prefix to inform the lexer to alias as a decimal
 			out.WriteStr("0d");
-			SaveHexInteger(out, (unsigned __int64&)decimal);
+			SaveHexInteger(out, (clcpp::uint64&)decimal);
 			return;
 		}
 

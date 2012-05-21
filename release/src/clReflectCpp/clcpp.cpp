@@ -3,34 +3,131 @@
 // ===============================================================================
 // clReflect
 // -------------------------------------------------------------------------------
-// Copyright (c) 2011 Don Williamson
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy of
-// this software and associated documentation files (the "Software"), to deal in
-// the Software without restriction, including without limitation the rights to
-// use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-// of the Software, and to permit persons to whom the Software is furnished to do
-// so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+// Copyright (c) 2011-2012 Don Williamson & clReflect Authors (see AUTHORS file)
+// Released under MIT License (see LICENSE file)
 // ===============================================================================
 //
 
 #include <clcpp/clcpp.h>
-#include "DatabaseLoader.h"
+
+
+#if defined(CLCPP_PLATFORM_WINDOWS)
+	// Windows-specific module loading and inspection functions
+	typedef int (__stdcall *FunctionPtr)();
+	extern "C" __declspec(dllimport) void* __stdcall LoadLibraryA(const char* lpLibFileName);
+	extern "C" __declspec(dllimport) FunctionPtr __stdcall GetProcAddress(void* module, const char* lpProcName);
+	extern "C" __declspec(dllimport) int __stdcall FreeLibrary(void* hLibModule);
+	extern "C" __declspec(dllimport) void* __stdcall GetModuleHandleA(const char* lpModuleName);
+#endif
+
+
+#if defined(CLCPP_PLATFORM_POSIX)
+	// We use POSIX-compatible dynamic linking loader interface, which
+	// should be present on both Mac and Linux
+	extern "C" int dlclose(void * __handle);
+	extern "C" void * dlopen(const char * __path, int __mode);
+	extern "C" void * dlsym(void * __handle, const char * __symbol);
+
+	// TODO: check the loading flags when we can get this running, current
+	// flag indicates RTLD_LAZY
+	#define LOADING_FLAGS 0x1
+#endif
 
 
 namespace
 {
+	struct PtrSchema
+	{
+		clcpp::size_type stride;
+		clcpp::size_type ptrs_offset;
+		clcpp::size_type nb_ptrs;
+	};
+
+	
+	struct PtrRelocation
+	{
+		int schema_handle;
+		clcpp::size_type offset;
+		int nb_objects;
+	};
+
+
+	// Rotate left - some compilers can optimise this to a single rotate!
+	unsigned int rotl(unsigned int v, unsigned int bits)
+	{
+		return (v << bits) | (v >> (32 - bits));
+	}
+
+
+	unsigned int fmix(unsigned int h)
+	{
+		// Finalisation mix - force all bits of a hash block to avalanche
+		h ^= h >> 16;
+		h *= 0x85ebca6b;
+		h ^= h >> 13;
+		h *= 0xc2b2ae35;
+		h ^= h >> 16;
+		return h;
+	}
+
+
+	//
+	// Austin Appleby's MurmurHash 3: http://code.google.com/p/smhasher
+	//
+	unsigned int MurmurHash3(const void* key, int len, unsigned int seed)
+	{
+		const unsigned char* data = (const unsigned char*)key;
+		int nb_blocks = len / 4;
+
+		unsigned int h1 = seed;
+		unsigned int c1 = 0xcc9e2d51;
+		unsigned int c2 = 0x1b873593;
+
+		// Body
+		const unsigned int* blocks = (const unsigned int*)(data + nb_blocks * 4);
+		for (int i = -nb_blocks; i; i++)
+		{
+			unsigned int k1 = blocks[i];
+
+			k1 *= c1;
+			k1 = rotl(k1, 15);
+			k1 *= c2;
+
+			h1 ^= k1;
+			h1 = rotl(h1, 13);
+			h1 = h1 * 5 + 0xe6546b64;
+		}
+
+		// Tail
+		const unsigned char* tail = (const unsigned char*)(data + nb_blocks * 4);
+		unsigned int k1 = 0;
+		switch (len & 3)
+		{
+		case (3): k1 ^= tail[2] << 16;
+		case (2): k1 ^= tail[1] << 8;
+		case (1): k1 ^= tail[0];
+			k1 *= c1;
+			k1 = rotl(k1, 15);
+			k1 *= c2;
+			h1 ^= k1;
+		}
+
+		// Finalisation
+		h1 ^= len;
+		h1 = fmix(h1);
+		return h1;
+	}
+
+
+	int strlen(const char* str)
+	{
+		int len = 0;
+		while (*str++)
+			len++;
+		return len;
+	}
+
+
 	unsigned int GetNameHash(clcpp::Name name)
 	{
 		return name.hash;
@@ -96,8 +193,73 @@ namespace
 	}
 
 
+	clcpp::internal::DatabaseMem* LoadMemoryMappedDatabase(clcpp::IFile* file, clcpp::IAllocator* allocator)
+	{
+		// Read the header and verify the version and signature
+		clcpp::internal::DatabaseFileHeader file_header, cmp_header;
+		if (!file->Read(file_header))
+			return 0;
+		if (file_header.version != cmp_header.version)
+			return 0;
+		if (file_header.signature0 != cmp_header.signature0 || file_header.signature1 != cmp_header.signature1)
+			return 0;
 
-    void RebaseFunctions(clcpp::internal::DatabaseMem& dbmem, clcpp::pointer_type base_address)
+		// Read the memory mapped data
+		char* base_data = (char*)allocator->Alloc(file_header.data_size);
+		clcpp::internal::DatabaseMem* database_mem = (clcpp::internal::DatabaseMem*)base_data;
+		if (!file->Read(base_data, file_header.data_size))
+			return 0;
+
+		// Read the schema descriptions
+		clcpp::CArray<PtrSchema> schemas(file_header.nb_ptr_schemas, allocator);
+		if (!file->Read(schemas))
+			return 0;
+
+		// Read the pointer offsets for all the schemas
+		clcpp::CArray<clcpp::size_type> ptr_offsets(file_header.nb_ptr_offsets, allocator);
+		if (!file->Read(ptr_offsets))
+			return 0;
+
+		// Read the pointer relocation instructions
+		clcpp::CArray<PtrRelocation> relocations(file_header.nb_ptr_relocations, allocator);
+		if (!file->Read(relocations))
+			return 0;
+
+		// Iterate over every relocation instruction
+		for (int i = 0; i < file_header.nb_ptr_relocations; i++)
+		{
+			PtrRelocation& reloc = relocations[i];
+			PtrSchema& schema = schemas[reloc.schema_handle];
+
+			// Take a weak C-array pointer to the schema's pointer offsets (for bounds checking)
+			clcpp::CArray<clcpp::size_type> schema_ptr_offsets(&ptr_offsets[schema.ptrs_offset], schema.nb_ptrs);
+
+			// Iterate over all objects in the instruction
+			for (int j = 0; j < reloc.nb_objects; j++)
+			{
+	            clcpp::size_type object_offset = reloc.offset + j * schema.stride;
+
+				// All pointers in the schema
+				for (clcpp::size_type k = 0; k < schema.nb_ptrs; k++)
+				{
+	                clcpp::size_type ptr_offset = object_offset + schema_ptr_offsets[k];
+	                clcpp::size_type& ptr = (clcpp::size_type&)*(base_data + ptr_offset);
+
+					// Ensure the pointer relocation is within range of the memory map before patching
+					clcpp::internal::Assert(ptr <= file_header.data_size);
+
+					// Only patch non-null
+					if (ptr != 0)
+						ptr += (clcpp::size_type)base_data;
+				}
+			}
+		}
+
+		return database_mem;
+	}
+
+
+	void RebaseFunctions(clcpp::internal::DatabaseMem& dbmem, clcpp::pointer_type base_address)
 	{
 		// Move all function addresses from their current location to their new location
 		for (int i = 0; i < dbmem.functions.size(); i++)
@@ -186,8 +348,8 @@ namespace
 
 	void PatchGetTypeAddresses(clcpp::Database& db, clcpp::internal::DatabaseMem& dbmem)
 	{
-        unsigned int original_hash = CLCPP_INVALID_HASH;
-        const clcpp::Type* original_type = (const clcpp::Type*)CLCPP_INVALID_ADDRESS;
+		unsigned int original_hash = CLCPP_INVALID_HASH;
+		const clcpp::Type* original_type = (const clcpp::Type*)CLCPP_INVALID_ADDRESS;
 
 		for (int i = 0; i < dbmem.get_type_functions.size(); i++)
 		{
@@ -196,19 +358,19 @@ namespace
 			// Patch up the type name hash static variable
 			if (f.get_typename_address)
 			{
-                unsigned int hash = db.GetName(f.type_hash).hash;
-                PatchFunction<unsigned int>(f.get_typename_address,
-                    hash,
-                    original_hash);
+				unsigned int hash = db.GetName(f.type_hash).hash;
+				PatchFunction<unsigned int>(f.get_typename_address,
+					hash,
+					original_hash);
 			}
 
 			// Patch up the type pointer static variable
 			if (f.get_type_address)
 			{
-                const clcpp::Type* type = db.GetType(f.type_hash);
-                PatchFunction<const clcpp::Type*>(f.get_type_address,
-                    type,
-                    original_type);
+				const clcpp::Type* type = db.GetType(f.type_hash);
+				PatchFunction<const clcpp::Type*>(f.get_type_address,
+					type,
+					original_type);
 			}
 		}
 	}
@@ -220,6 +382,64 @@ namespace
 		for (int i = 0; i < primitives.size(); i++)
 			primitives[i].database = database;
 	}
+}
+
+
+void* clcpp::internal::LoadSharedLibrary(const char* filename)
+{
+#if defined(CLCPP_PLATFORM_WINDOWS)
+	return LoadLibraryA(filename);
+#elif defined(CLCPP_PLATFORM_POSIX)
+	return dlopen(filename, LOADING_FLAGS);
+#endif
+}
+
+
+void* clcpp::internal::GetSharedLibraryFunction(void* handle, const char* function_name)
+{
+#if defined(CLCPP_PLATFORM_WINDOWS)
+	return GetProcAddress(handle, function_name);
+#elif defined(CLCPP_PLATFORM_POSIX)
+	return dlsym(handle, function_name);
+#endif
+}
+
+
+void clcpp::internal::FreeSharedLibrary(void* handle)
+{
+#if defined(CLCPP_PLATFORM_WINDOWS)
+	FreeLibrary(handle);
+#elif defined(CLCPP_PLATFORM_POSIX)
+	dlclose(handle);
+#endif
+}
+
+
+clcpp::pointer_type clcpp::internal::GetLoadAddress()
+{
+#if defined(CLCPP_PLATFORM_WINDOWS)
+	return (clcpp::pointer_type)GetModuleHandleA(0);
+#elif defined(CLCPP_PLATFORM_POSIX)
+	return (clcpp::pointer_type)dlopen(0, 0);
+#endif
+}
+
+
+unsigned int clcpp::internal::HashData(const void* data, int length, unsigned int seed)
+{
+	return MurmurHash3(data, length, seed);
+}
+
+
+unsigned int clcpp::internal::HashNameString(const char* name_string, unsigned int seed)
+{
+	return MurmurHash3(name_string, strlen(name_string), seed);
+}
+
+
+unsigned int clcpp::internal::MixHashes(unsigned int a, unsigned int b)
+{
+	return MurmurHash3(&b, sizeof(unsigned int), a);
 }
 
 
@@ -258,20 +478,22 @@ clcpp::Database::~Database()
 }
 
 
-bool clcpp::Database::Load(IFile* file, IAllocator* allocator, clcpp::pointer_type base_address, unsigned int options)
+bool clcpp::Database::Load(IFile* file, IAllocator* allocator, unsigned int options)
 {
 	// Load the database
 	internal::Assert(m_DatabaseMem == 0 && "Database already loaded");
 	m_Allocator = allocator;
-	m_DatabaseMem = internal::LoadMemoryMappedDatabase(file, m_Allocator);
+	m_DatabaseMem = LoadMemoryMappedDatabase(file, m_Allocator);
 
 	if (m_DatabaseMem != 0)
 	{
-		// If no base address is provided, rebasing will not occur and it is assumed the addresses
-		// loaded are already correct. Rebasing is usually only needed for DLLs that have been moved
-		// by the OS due to another DLL occupying its preferred load address.
-		if (base_address != 0)
+		// Rebasing functions is required mainly for DLLs and executables that run under Windows 7
+		// using its Address Space Layout Randomisation security feature.
+		if ((options & OPT_DONT_REBASE_FUNCTIONS) == 0)
+		{
+			clcpp::pointer_type base_address = internal::GetLoadAddress();
 			RebaseFunctions(*m_DatabaseMem, base_address);
+		}
 
 		if ((options & OPT_DONT_PATCH_GETTYPE) == 0)
 			PatchGetTypeAddresses(*this, *m_DatabaseMem);
