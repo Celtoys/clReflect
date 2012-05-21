@@ -34,8 +34,7 @@
 #include <vector>
 #include <map>
 #include <cassert>
-#include <clcpp/Core.h>
-
+#include <clcpp/clcpp.h>
 
 namespace cldb
 {

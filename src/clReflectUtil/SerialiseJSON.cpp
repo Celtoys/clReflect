@@ -36,16 +36,22 @@
 #include <clutl/Objects.h>
 #include <clcpp/Containers.h>
 #include <clcpp/FunctionCall.h>
-#include "Platform.h"
+
+
+// Explicitly stated dependencies in stdlib.h
+// Non-standard, writes at most n bytes to dest with printf formatting
+#if defined(CLCPP_PLATFORM_WINDOWS)
+	extern "C" int _snprintf(char* dest, unsigned int n, const char* fmt, ...);
+	#define snprintf _snprintf
+#else
+	extern "C" int snprintf(char* dest, unsigned int n, const char* fmt, ...);
+#endif
 
 
 // Pointers are serialised in hash values in hexadecimal format, which isn't compliant with
 // the JSON format.
 // Undef this if you want pointers to be serialised as base 10 unsigned integers, instead.
 #define SAVE_POINTER_HASH_AS_HEX
-
-
-// Explicitly stated dependencies in stdlib.h
 
 
 static void SetupTypeDispatchLUT();

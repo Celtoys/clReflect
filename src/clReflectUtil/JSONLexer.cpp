@@ -1,6 +1,10 @@
 
 #include <clutl/JSONLexer.h>
-#include "Platform.h"
+
+
+// Standard C library function, convert string to double-precision number
+// http://pubs.opengroup.org/onlinepubs/007904975/functions/strtod.html
+extern "C" double strtod(const char* s00, char** se);
 
 
 namespace

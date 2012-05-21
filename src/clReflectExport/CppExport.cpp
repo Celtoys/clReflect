@@ -38,9 +38,8 @@
 #include <clReflectCore/Database.h>
 #include <clReflectCore/Logging.h>
 #include <clReflectCore/FileUtils.h>
-#include <clReflectCpp/DatabaseLoader.h>
 
-#include <clcpp/Database.h>
+#include <clcpp/clcpp.h>
 
 #include <algorithm>
 #include <string.h>

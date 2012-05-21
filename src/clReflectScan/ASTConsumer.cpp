@@ -29,7 +29,7 @@
 #include "ReflectionSpecs.h"
 #include "AttributeParser.h"
 
-#include <clcpp/Core.h>
+#include <clcpp/clcpp.h>
 
 #include <clReflectCore/Logging.h>
 #include <clReflectCore/FileUtils.h>

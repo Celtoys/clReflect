@@ -2,7 +2,6 @@
 #include <clutl/SerialiseFunction.h>
 #include <clutl/JSONLexer.h>
 #include <clcpp/FunctionCall.h>
-#include "Platform.h"
 
 
 namespace

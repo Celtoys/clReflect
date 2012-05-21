@@ -1,7 +1,6 @@
 
 #include <clutl/Module.h>
-#include <clcpp/Database.h>
-#include "Platform.h"
+#include <clcpp/clcpp.h>
 
 
 clutl::Module::Module()
@@ -15,14 +14,14 @@ clutl::Module::Module()
 clutl::Module::~Module()
 {
 	if (m_Handle != 0)
-		FreeSharedLibrary(m_Handle);
+		clcpp::internal::FreeSharedLibrary(m_Handle);
 }
 
 
 bool clutl::Module::Load(clcpp::Database* host_db, const char* filename)
 {
 	// Load the DLL
-	m_Handle = LoadSharedLibrary(filename);
+	m_Handle = clcpp::internal::LoadSharedLibrary(filename);
 	if (m_Handle == 0)
 		return false;
 
@@ -32,13 +31,13 @@ bool clutl::Module::Load(clcpp::Database* host_db, const char* filename)
 
 	// Get the module reflection database
 	typedef clcpp::Database* (*GetReflectionDatabaseFunc)();
-	GetReflectionDatabaseFunc GetReflectionDatabase = (GetReflectionDatabaseFunc)GetSharedLibraryFunction(m_Handle, "GetReflectionDatabase");
+	GetReflectionDatabaseFunc GetReflectionDatabase = (GetReflectionDatabaseFunc)clcpp::internal::GetSharedLibraryFunction(m_Handle, "GetReflectionDatabase");
 	if (GetReflectionDatabase)
 		m_ReflectionDB = GetReflectionDatabase();
 
 	// Ask the DLL to register and interface implementations it has
 	typedef void (*AddReflectionImplsFunc)(Module*);
-	AddReflectionImplsFunc AddReflectionImpls = (AddReflectionImplsFunc)GetSharedLibraryFunction(m_Handle, "AddReflectionImpls");
+	AddReflectionImplsFunc AddReflectionImpls = (AddReflectionImplsFunc)clcpp::internal::GetSharedLibraryFunction(m_Handle, "AddReflectionImpls");
 	if (AddReflectionImpls)
 		AddReflectionImpls(this);
 

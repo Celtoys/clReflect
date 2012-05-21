@@ -29,7 +29,7 @@
 
 
 #include <cassert>
-#include <clcpp/Core.h>
+#include <clcpp/clcpp.h>
 
 
 //

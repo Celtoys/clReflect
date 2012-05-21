@@ -30,7 +30,7 @@
 #pragma once
 
 
-#include <clcpp/Core.h>
+#include <clcpp/clcpp.h>
 
 
 namespace cldb

@@ -27,7 +27,7 @@
 
 #include "Database.h"
 
-#include <clcpp/Core.h>
+#include <clcpp/clcpp.h>
 
 #include <stdlib.h>
 #include <assert.h>

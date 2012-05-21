@@ -27,7 +27,7 @@
 
 #include "ClangFrontend.h"
 
-#include <clcpp/Core.h>
+#include <clcpp/clcpp.h>
 #include <clReflectCore/Arguments.h>
 
 #include "llvm/Support/Host.h"

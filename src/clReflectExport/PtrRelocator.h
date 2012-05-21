@@ -32,7 +32,7 @@
 #include <vector>
 #include <list>
 #include <clReflectCore/DatabaseMetadata.h>
-#include <clcpp/Core.h>
+#include <clcpp/clcpp.h>
 
 
 //

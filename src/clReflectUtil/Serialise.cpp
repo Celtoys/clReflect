@@ -26,7 +26,6 @@
 //
 
 #include <clutl/Serialise.h>
-#include "Platform.h"
 
 
 // Explicit dependency
