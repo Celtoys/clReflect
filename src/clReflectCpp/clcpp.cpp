@@ -480,6 +480,13 @@ clcpp::Database::~Database()
 
 bool clcpp::Database::Load(IFile* file, IAllocator* allocator, unsigned int options)
 {
+	clcpp::pointer_type base_address = internal::GetLoadAddress();
+	return Load(file, allocator, base_address, options);
+}
+
+
+bool clcpp::Database::Load(IFile* file, IAllocator* allocator, pointer_type base_address, unsigned int options)
+{
 	// Load the database
 	internal::Assert(m_DatabaseMem == 0 && "Database already loaded");
 	m_Allocator = allocator;
@@ -490,10 +497,7 @@ bool clcpp::Database::Load(IFile* file, IAllocator* allocator, unsigned int opti
 		// Rebasing functions is required mainly for DLLs and executables that run under Windows 7
 		// using its Address Space Layout Randomisation security feature.
 		if ((options & OPT_DONT_REBASE_FUNCTIONS) == 0)
-		{
-			clcpp::pointer_type base_address = internal::GetLoadAddress();
 			RebaseFunctions(*m_DatabaseMem, base_address);
-		}
 
 		if ((options & OPT_DONT_PATCH_GETTYPE) == 0)
 			PatchGetTypeAddresses(*this, *m_DatabaseMem);
