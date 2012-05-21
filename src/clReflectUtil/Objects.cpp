@@ -1,4 +1,13 @@
 
+//
+// ===============================================================================
+// clReflect
+// -------------------------------------------------------------------------------
+// Copyright (c) 2011-2012 Don Williamson & clReflect Authors (see AUTHORS file)
+// Released under MIT License (see LICENSE file)
+// ===============================================================================
+//
+
 // TODO: Lots of stuff happening in here that needs logging
 
 #include <clutl/Objects.h>

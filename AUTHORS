@@ -1,0 +1,15 @@
+=================
+clReflect Authors
+=================
+
+Don Williamson (https://bitbucket.org/dwilliamson)
+	Primary author and project owner.
+
+Xuejie Xiao (https://bitbucket.org/xxuejie)
+	64-bit, MacOSX/Linux/GCC port, CMake build enhancements on multiple platforms.
+
+Rui Figueira (https://bitbucket.org/ruifig)
+	Multiple inheritance support, bug fixing and Visual Studio debug helpers.
+
+Paul Holden (https://bitbucket.org/hulkholden)
+	Initial CMake build port.

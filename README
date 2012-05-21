@@ -7,14 +7,12 @@ C++ Reflection using clang
 Please see the project homepage for more details: http://donw.org/b/?d=clReflect
 
 
-
 Installation Instructions
 -------------------------
 
 The executables in the "bin" directory can be run directly but require the MSVC 2005 SP1 redistributables:
 
 	http://www.microsoft.com/download/en/details.aspx?id=5638
-
 
 
 Quick Tour
@@ -38,17 +36,6 @@ Some points:
 	  with your database.
 	* Only primitives specified by clcpp_reflect will be included in the output databases.
 	* Pay attention to all reported warnings and be sure to inspect all output logs if you suspect there is a problem.
-
-
-
-Authors
--------
-
-Don Williamson (https://bitbucket.org/dwilliamson)	Primary author and project owner.
-Xuejie Xiao (https://bitbucket.org/xxuejie)			64-bit and GCC port, CMake build enhancements on multiple platforms.
-Rui Figueira (https://bitbucket.org/ruifig)			Multiple inheritance support and bug fixing.
-Paul Holden (https://bitbucket.org/hulkholden)		Initial CMake build port.
-
 
 
 Release notes

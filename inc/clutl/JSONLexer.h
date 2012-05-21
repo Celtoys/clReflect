@@ -1,4 +1,13 @@
 
+//
+// ===============================================================================
+// clReflect, JSONLexer.h - A fast, self-contained JSON lexer
+// -------------------------------------------------------------------------------
+// Copyright (c) 2011-2012 Don Williamson & clReflect Authors (see AUTHORS file)
+// Released under MIT License (see LICENSE file)
+// ===============================================================================
+//
+
 #pragma once
 
 

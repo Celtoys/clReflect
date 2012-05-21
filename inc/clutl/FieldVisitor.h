@@ -1,4 +1,13 @@
 
+//
+// ===============================================================================
+// clReflect, FieldVisitor.h - Abstracts walking data structures via field members
+// -------------------------------------------------------------------------------
+// Copyright (c) 2011-2012 Don Williamson & clReflect Authors (see AUTHORS file)
+// Released under MIT License (see LICENSE file)
+// ===============================================================================
+//
+
 #pragma once
 
 
