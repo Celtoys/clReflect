@@ -414,7 +414,7 @@ void TestSerialiseJSON(clcpp::Database& db)
 
 	clutl::WriteBuffer write_buffer;
 	jsontest::AllFields a;
-	clutl::SaveJSON(write_buffer, &a, clcpp::GetType<jsontest::AllFields>(), clutl::JSONFlags::EMIT_HEX_FLOATS);
+	clutl::SaveJSON(write_buffer, &a, clcpp::GetType<jsontest::AllFields>(), 0, clutl::JSONFlags::EMIT_HEX_FLOATS);
 	clutl::ReadBuffer read_buffer(write_buffer);
 	jsontest::AllFields b(jsontest::NO_INIT);
 	clutl::LoadJSON(read_buffer, &b, clcpp::GetType<jsontest::AllFields>());

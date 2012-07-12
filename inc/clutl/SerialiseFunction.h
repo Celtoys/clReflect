@@ -60,14 +60,13 @@ namespace clutl
 		// Adds parameters, in left-to-right call order
 		void PushParameter(const clcpp::Type* type, clcpp::Qualifier::Operator op, void* object);
 
-		unsigned int GetNbParameters() const { return m_NbParameters; }
-		ParamDesc& GetParameter(unsigned int index) { return m_Parameters[index]; }
-		const ParamDesc& GetParameter(unsigned int index) const { return m_Parameters[index]; }
+		unsigned int GetNbParameters() const;
+		ParamDesc& GetParameter(unsigned int index);
+		const ParamDesc& GetParameter(unsigned int index) const;
 
 	private:
 		// Parameter array allocated locally
 		char m_ParameterData[MAX_NB_FIELDS * sizeof(ParamDesc)];
-		clcpp::CArray<ParamDesc> m_Parameters;
 		unsigned int m_NbParameters;
 	};
 

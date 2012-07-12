@@ -76,7 +76,7 @@ namespace
 		//       They're currently sorted by name...
 		int value = *(int*)object;
 		clcpp::Name enum_name;
-		for (int i = 0; i < enum_type->constants.size(); i++)
+		for (unsigned int i = 0; i < enum_type->constants.size; i++)
 		{
 			if (enum_type->constants[i]->value == value)
 			{
@@ -96,7 +96,7 @@ namespace
 	{
 		// Save each non-transient field in the class
 		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
-		for (int i = 0; i < fields.size(); i++)
+		for (unsigned int i = 0; i < fields.size; i++)
 		{
 			const clcpp::Field* field = fields[i];
 			if (!(field->flag_attributes & clcpp::FlagAttribute::TRANSIENT))

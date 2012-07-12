@@ -94,7 +94,6 @@ clutl::ObjectGroup::ObjectGroup()
 	, m_NbObjects(0)
 	, m_NbOccupiedEntries(0)
 	, m_NamedObjects(0)
-	, m_AllowFindInParent(true)
 {
 	// Allocate the hash table
 	m_NamedObjects = new HashEntry[m_MaxNbObjects];
@@ -126,40 +125,65 @@ void clutl::ObjectGroup::RemoveObject(const Object* object)
 
 clutl::Object* clutl::ObjectGroup::FindObject(unsigned int unique_id) const
 {
+	// Linear probe from the natural hash location for matching hash
+	const unsigned int index_mask = m_MaxNbObjects - 1;
+	unsigned int index = unique_id & index_mask;
+	while (m_NamedObjects[index].hash)
+	{
+		// Ensure dummy objects are skipped
+		if (m_NamedObjects[index].hash == unique_id &&
+			m_NamedObjects[index].object != 0)
+			break;
+
+		index = (index + 1) & index_mask;
+	}
+
+	// Get the object here
+	HashEntry& he = m_NamedObjects[index];
+	return he.object;
+}
+
+
+clutl::Object* clutl::ObjectGroup::FindObjectSearchParents(unsigned int unique_id) const
+{
 	// Search up through the object group hierarchy
 	const ObjectGroup* group = this;
 	Object* object = 0;
 	while (group != 0)
 	{
-		HashEntry* named_objects = group->m_NamedObjects;
-
-		// Linear probe from the natural hash location for matching hash
-		const unsigned int index_mask = group->m_MaxNbObjects - 1;
-		unsigned int index = unique_id & index_mask;
-		while (named_objects[index].hash)
-		{
-			// Ensure dummy objects are skipped
-			if (named_objects[index].hash == unique_id &&
-				named_objects[index].object != 0)
-				break;
-
-			index = (index + 1) & index_mask;
-		}
-
-		// Get the object here
-		HashEntry& he = group->m_NamedObjects[index];
-		object = he.object;
+		object = group->FindObject(unique_id);
 		if (object != 0)
-			break;
-
-		// Check to see if this group allows finds to walk up the hierarchy
-		if (!group->m_AllowFindInParent)
 			break;
 
 		group = group->object_group;
 	}
 
 	return object;
+}
+
+
+clutl::Object* clutl::ObjectGroup::FindObjectRelative(unsigned int* unique_ids, unsigned int nb_ids) const
+{
+	// Locate the containing object group
+	const ObjectGroup* object_group = this;
+	while (nb_ids - 1 > 0)
+	{
+		Object* object = FindObject(*unique_ids++);
+		if (object == 0)
+			return 0;
+
+		// Ensure this is an object group
+		if (object->type->kind != clcpp::Primitive::KIND_CLASS)
+			return 0;
+		const clcpp::Class* class_type = (clcpp::Class*)object->type;
+		if (!(class_type->flag_attributes & FLAG_ATTR_IS_OBJECT_GROUP))
+			return 0;
+
+		object_group = (ObjectGroup*)object;
+		nb_ids--;
+	}
+
+	return object_group->FindObject(*unique_ids);
 }
 
 
@@ -238,13 +262,13 @@ void clutl::ObjectGroup::Resize(bool increase)
 clutl::ObjectDatabase::ObjectDatabase()
 	: m_RootGroup(0)
 {
-	m_RootGroup = new ObjectGroup();
+	m_RootGroup = New<ObjectGroup>();
 }
 
 
 clutl::ObjectDatabase::~ObjectDatabase()
 {
-	delete m_RootGroup;
+	Delete(m_RootGroup);
 }
 
 

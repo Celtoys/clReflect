@@ -174,9 +174,7 @@ namespace clcpp
 		// forwards to its own placement new, treating it like an allocator that returns the wrapped
 		// pointer.
 		//
-		struct PtrWrapper
-		{
-		};
+		struct PtrWrapper { };
 	}
 }
 
@@ -205,22 +203,9 @@ namespace clcpp
 	namespace internal
 	{
 		//
-		// Trivial assert for PC only, currently
+		// Trivial assert
 		//
-		inline void Assert(bool expression)
-		{
-			if (expression == false)
-			{
-			#ifdef CLCPP_USING_MSVC
-				__asm
-				{
-					int 3h
-				}
-			#else
-                asm("int $0x3\n");
-			#endif // CLCPP_USING_MSVC
-			}
-		}
+		void Assert(bool expression);
 
 
 		//
@@ -228,13 +213,11 @@ namespace clcpp
 		// debugging and letting the compiler do the type deduction. Makes it a little easier
 		// to use the PtrWrapper abstraction.
 		//
-		template <typename TYPE>
-		inline void CallConstructor(TYPE* object)
+		template <typename TYPE> inline void CallConstructor(TYPE* object)
 		{
 			new (*(PtrWrapper*)object) TYPE;
 		}
-		template <typename TYPE>
-		inline void CallDestructor(TYPE* object)
+		template <typename TYPE> inline void CallDestructor(TYPE* object)
 		{
 			object->~TYPE();
 		}
@@ -271,124 +254,29 @@ namespace clcpp
 
 	//
 	// Wrapper around a classic C-style array.
+	// This is the client version that is stripped of all mutable functionality. It's designed to be
+	// used as part of a memory map, supporting no C++ destructor logic.
 	//
-	template <typename TYPE>
-	class CArray
+	template <typename TYPE> struct CArray
 	{
-	public:
-		// Initialise an empty array
-		CArray()
-			: m_Size(0)
-			, m_Data(0)
-			, m_Allocator(0)
+		CArray() : size(0), data(0), allocator(0)
 		{
-		}
-
-		// Initialise with array count and allocator
-		CArray(unsigned int size, IAllocator* allocator)
-			: m_Size(size)
-			, m_Data(0)
-			, m_Allocator(allocator)
-		{
-			// Allocate and call the constructor for each element
-			m_Data = (TYPE*)m_Allocator->Alloc(m_Size * sizeof(TYPE));
-			for (unsigned int i = 0; i < m_Size; i++)
-				internal::CallConstructor(m_Data + i);
-		}
-
-		// Initialise with pre-allocated data
-		CArray(void* data, unsigned int size)
-			: m_Size(size)
-			, m_Data((TYPE*)data)
-			, m_Allocator(0)
-		{
-		}
-
-		~CArray()
-		{
-			if (m_Allocator)
-			{
-				// Call the destructor on each element and free the allocated memory
-				for (unsigned int i = 0; i < m_Size; i++)
-					internal::CallDestructor(m_Data + i);
-				m_Allocator->Free(m_Data);
-			}
-		}
-
-		// A shallow copy of each member in the array
-		void shallow_copy(const CArray<TYPE>& rhs)
-		{
-			m_Size = rhs.m_Size;
-			m_Data = rhs.m_Data;
-			m_Allocator = rhs.m_Allocator;
-		}
-
-		void deep_copy(const CArray<TYPE>& rhs, IAllocator* allocator)
-		{
-			m_Allocator = allocator;
-			internal::Assert(m_Allocator != 0);
-
-			// Allocate and copy each entry
-			m_Size = rhs.m_Size;
-			m_Data = (TYPE*)m_Allocator->Alloc(m_Size * sizeof(TYPE));
-			for (unsigned int i = 0; i < m_Size; i++)
-				m_Data[i] = rhs.m_Data[i];
-		}
-
-		// Removes an element from the list without reallocating any memory
-		// Causes the order of the entries in the list to change
-		void unstable_remove(unsigned int index)
-		{
-			internal::Assert(index < m_Size);
-			m_Data[index] = m_Data[m_Size - 1];
-			m_Size--;
-		}
-
-		int size() const
-		{
-			return m_Size;
-		}
-
-		TYPE* data()
-		{
-			return m_Data;
-		}
-		const TYPE* data() const
-		{
-			return m_Data;
 		}
 
 		TYPE& operator [] (unsigned int index)
 		{
-			internal::Assert(index < m_Size);
-			return m_Data[index];
+			internal::Assert(index < size);
+			return data[index];
 		}
 		const TYPE& operator [] (unsigned int index) const
 		{
-			internal::Assert(index < m_Size);
-			return m_Data[index];
+			internal::Assert(index < size);
+			return data[index];
 		}
 
-		static clcpp::size_type data_offset()
-		{
-			#if defined(CLCPP_USING_MSVC)
-			    return (clcpp::size_type) (&(((CArray<TYPE>*)0)->m_Data));
-			#else
-				// GCC does not support applying offsetof on non-POD types
-				CArray dummy;
-				return ((clcpp::size_type) (&(dummy.m_Data))) - ((clcpp::size_type) (&dummy));
-			#endif	// CLCPP_USING_MSVC
-		}
-
-	private:
-		// No need to implement if it's not used - private to ensure they don't get called by accident
-		CArray(const CArray& rhs);
-		CArray& operator= (const CArray& rhs);
-
-        // TODO: This size is actually count here, so we may not need to convert it to size_type?
-		unsigned int m_Size;
-		TYPE* m_Data;
-		IAllocator* m_Allocator;
+		unsigned int size;
+		TYPE* data;
+		IAllocator* allocator;
 	};
 
 
@@ -398,18 +286,6 @@ namespace clcpp
 	//
 	struct IFile
 	{
-		// Type and size implied from destination type
-		template <typename TYPE> bool Read(TYPE& dest)
-		{
-			return Read(&dest, sizeof(TYPE));
-		}
-
-		// Reads data into an array that has been already allocated
-		template <typename TYPE> bool Read(CArray<TYPE>& dest)
-		{
-			return Read(dest.data(), dest.size() * sizeof(TYPE));
-		}
-
 		// Derived classes must implement just the read function, returning
 		// true on success, false otherwise.
 		virtual bool Read(void* dest, size_type size) = 0;
@@ -421,12 +297,9 @@ namespace clcpp
 	//
 	struct Range
 	{
-		Range() : first(0), last(0)
-		{
-		}
-
-		int first;
-		int last;
+		Range();
+		unsigned int first;
+		unsigned int last;
 	};
 }
 
@@ -446,10 +319,6 @@ namespace clcpp
 	struct Enum;
 	struct TemplateType;
 	struct Class;
-	struct IntAttribute;
-	struct FloatAttribute;
-	struct PrimitiveAttribute;
-	struct TextAttribute;
 
 
 	namespace internal
@@ -475,7 +344,7 @@ namespace clcpp
 	//
 	struct Name
 	{
-		Name() : hash(0), text(0) { }
+		Name();
 		bool operator == (const Name& rhs) const { return hash == rhs.hash; }
 		unsigned int hash;
 		const char* text;
@@ -496,16 +365,8 @@ namespace clcpp
 			REFERENCE
 		};
 
-		Qualifier()
-			: op(VALUE)
-			, is_const(false)
-		{
-		}
-		Qualifier(Operator op, bool is_const)
-			: op(op)
-			, is_const(is_const)
-		{
-		}
+		Qualifier();
+		Qualifier(Operator op, bool is_const);
 
 		bool operator == (const Qualifier& rhs) const
 		{
@@ -528,12 +389,7 @@ namespace clcpp
 			IS_C_ARRAY = 2
 		};
 
-		ContainerInfo()
-			: read_iterator_type(0)
-			, write_iterator_type(0)
-			, flags(0)
-		{
-		}
+		ContainerInfo();
 
 		// Name of the parent type or field
 		Name name;
@@ -574,12 +430,7 @@ namespace clcpp
 			KIND_NAMESPACE,
 		};
 
-		Primitive(Kind k)
-			: kind(k)
-			, parent(0)
-			, database(0)
-		{
-		}
+		Primitive(Kind k);
 
 		Kind kind;
 		Name name;
@@ -597,21 +448,14 @@ namespace clcpp
 	{
 		static const Kind KIND = KIND_ATTRIBUTE;
 
-		Attribute()
-			: Primitive(KIND)
-		{
-		}
-
-		Attribute(Kind k)
-			: Primitive(k)
-		{
-		}
+		Attribute();
+		Attribute(Kind k);
 
 		// Safe utility functions for casting to derived types
-		inline const IntAttribute* AsIntAttribute() const;
-		inline const FloatAttribute* AsFloatAttribute() const;
-		inline const PrimitiveAttribute* AsPrimitiveAttribute() const;
-		inline const TextAttribute* AsTextAttribute() const;
+		const struct IntAttribute* AsIntAttribute() const;
+		const struct FloatAttribute* AsFloatAttribute() const;
+		const struct PrimitiveAttribute* AsPrimitiveAttribute() const;
+		const struct TextAttribute* AsTextAttribute() const;
 	};
 
 
@@ -676,44 +520,16 @@ namespace clcpp
 	{
 		static const Kind KIND = KIND_TYPE;
 
-		Type()
-			: Primitive(KIND)
-			, size(0)
-			, ci(0)
-		{
-		}
-
-		Type(Kind k)
-			: Primitive(k)
-			, size(0)
-			, ci(0)
-		{
-		}
+		Type();
+		Type(Kind k);
 
 		// Does this type derive from the specified type, by hash?
-		bool DerivesFrom(unsigned int type_name_hash) const
-		{
-			// Search in immediate bases
-			for (int i = 0; i < base_types.size(); i++)
-			{
-				if (base_types[i]->name.hash == type_name_hash)
-					return true;
-			}
-
-			// Search up the inheritance tree
-			for (int i = 0; i < base_types.size(); i++)
-			{
-				if (base_types[i]->DerivesFrom(type_name_hash))
-					return true;
-			}
-
-			return false;
-		}
+		bool DerivesFrom(unsigned int type_name_hash) const;
 
 		// Safe utility functions for casting to derived types
-		inline const Enum* AsEnum() const;
-		inline const TemplateType* AsTemplateType() const;
-		inline const Class* AsClass() const;
+		const Enum* AsEnum() const;
+		const TemplateType* AsTemplateType() const;
+		const Class* AsClass() const;
 
 		// Size of the type in bytes
         clcpp::size_type size;
@@ -733,11 +549,7 @@ namespace clcpp
 	{
 		static const Kind KIND = KIND_ENUM_CONSTANT;
 
-		EnumConstant()
-			: Primitive(KIND)
-			, value(0)
-		{
-		}
+		EnumConstant();
 
 		int value;
 	};
@@ -750,11 +562,7 @@ namespace clcpp
 	{
 		static const Kind KIND = KIND_ENUM;
 
-		Enum()
-			: Type(KIND)
-			, flag_attributes(0)
-		{
-		}
+		Enum();
 
 		// All sorted by name
 		CArray<const EnumConstant*> constants;
@@ -772,20 +580,9 @@ namespace clcpp
 	{
 		static const Kind KIND = KIND_FIELD;
 
-		Field()
-			: Primitive(KIND)
-			, type(0)
-			, offset(0)
-			, parent_unique_id(0)
-			, flag_attributes(0)
-			, ci(0)
-		{
-		}
+		Field();
 
-		bool IsFunctionParameter() const
-		{
-			return parent_unique_id != 0;
-		}
+		bool IsFunctionParameter() const;
 
 		// Type info
 		const Type* type;
@@ -817,13 +614,7 @@ namespace clcpp
 	{
 		static const Kind KIND = KIND_FUNCTION;
 
-		Function()
-			: Primitive(KIND)
-			, unique_id(0)
-			, return_parameter(0)
-			, flag_attributes(0)
-		{
-		}
+		Function();
 
 		// Callable address
         clcpp::pointer_type address;
@@ -855,15 +646,7 @@ namespace clcpp
 
 		static const int MAX_NB_ARGS = 4;
 
-		TemplateType()
-			: Type(KIND)
-		{
-			for (int i = 0; i < MAX_NB_ARGS; i++)
-			{
-				parameter_types[i] = 0;
-				parameter_ptrs[i] = false;
-			}
-		}
+		TemplateType();
 
 		// A pointer to the type of each template argument
 		const Type* parameter_types[MAX_NB_ARGS];
@@ -881,10 +664,7 @@ namespace clcpp
 	{
 		static const Kind KIND = KIND_TEMPLATE;
 
-		Template()
-			: Primitive(KIND)
-		{
-		}
+		Template();
 
 		// All sorted by name
 		CArray<const TemplateType*> instances;
@@ -898,13 +678,7 @@ namespace clcpp
 	{
 		static const Kind KIND = KIND_CLASS;
 
-		Class()
-			: Type(KIND)
-			, constructor(0)
-			, destructor(0)
-			, flag_attributes(0)
-		{
-		}
+		Class();
 
 		const Function* constructor;
 		const Function* destructor;
@@ -929,10 +703,7 @@ namespace clcpp
 	{
 		static const Kind KIND = KIND_NAMESPACE;
 
-		Namespace()
-			: Primitive(KIND)
-		{
-		}
+		Namespace();
 
 		// All sorted by name
 		CArray<const Namespace*> namespaces;
@@ -942,51 +713,6 @@ namespace clcpp
 		CArray<const Function*> functions;
 		CArray<const Template*> templates;
 	};
-
-
-	//
-	// Safe utility functions for casting from const Type* to derived types
-	//
-	inline const Enum* Type::AsEnum() const
-	{
-		internal::Assert(kind == Enum::KIND);
-		return (const Enum*)this;
-	}
-	inline const TemplateType* Type::AsTemplateType() const
-	{
-		internal::Assert(kind == TemplateType::KIND);
-		return (const TemplateType*)this;
-	}
-	inline const Class* Type::AsClass() const
-	{
-		internal::Assert(kind == Class::KIND);
-		return (const Class*)this;
-	}
-
-
-	//
-	// Safe utility functions for casting from const Attribute* to derived types
-	//
-	inline const IntAttribute* Attribute::AsIntAttribute() const
-	{
-		internal::Assert(kind == IntAttribute::KIND);
-		return (const IntAttribute*)this;
-	}
-	inline const FloatAttribute* Attribute::AsFloatAttribute() const
-	{
-		internal::Assert(kind == FloatAttribute::KIND);
-		return (const FloatAttribute*)this;
-	}
-	inline const PrimitiveAttribute* Attribute::AsPrimitiveAttribute() const
-	{
-		internal::Assert(kind == PrimitiveAttribute::KIND);
-		return (const PrimitiveAttribute*)this;
-	}
-	inline const TextAttribute* Attribute::AsTextAttribute() const
-	{
-		internal::Assert(kind == TextAttribute::KIND);
-		return (const TextAttribute*)this;
-	}
 
 
 	//
@@ -1066,111 +792,6 @@ namespace clcpp
 		// Allocator used to load the database
 		IAllocator* m_Allocator;
 	};
-
-
-	namespace internal
-	{
-		//
-		// Point to the runtime addresses of the GetType family of functions so that
-		// the values that they return can be patched at runtime.
-		//
-		struct GetTypeFunctions
-		{
-			unsigned int type_hash;
-            clcpp::pointer_type get_typename_address;
-            clcpp::pointer_type get_type_address;
-		};
-
-
-		//
-		// Memory-mapped representation of the entire reflection database
-		//
-		struct DatabaseMem
-		{
-			DatabaseMem()
-				: function_base_address(0)
-				, name_text_data(0)
-			{
-			}
-
-			// The address to subtract when rebasing function addresses
-            clcpp::pointer_type function_base_address;
-
-			// Raw allocation of all null-terminated name strings
-			const char* name_text_data;
-
-			// Mapping from hash to text string
-			CArray<Name> names;
-
-			// Ownership storage of all referenced primitives
-			CArray<Type> types;
-			CArray<EnumConstant> enum_constants;
-			CArray<Enum> enums;
-			CArray<Field> fields;
-			CArray<Function> functions;
-			CArray<Class> classes;
-			CArray<Template> templates;
-			CArray<TemplateType> template_types;
-			CArray<Namespace> namespaces;
-
-			// Raw allocation of all null-terminated text attribute strings
-			const char* text_attribute_data;
-
-			// Ownership storage of all attributes
-			CArray<FlagAttribute> flag_attributes;
-			CArray<IntAttribute> int_attributes;
-			CArray<FloatAttribute> float_attributes;
-			CArray<PrimitiveAttribute> primitive_attributes;
-			CArray<TextAttribute> text_attributes;
-
-			// A list of references to all types, enums and classes for potentially quicker
-			// searches during serialisation
-			CArray<const Type*> type_primitives;
-
-			// A list of all GetType function addresses paired to their type
-			CArray<GetTypeFunctions> get_type_functions;
-
-			// A list of all registered containers
-			CArray<ContainerInfo> container_infos;
-
-			// The root namespace that allows you to reach every referenced primitive
-			Namespace global_namespace;
-		};
-
-
-		//
-		// Header for binary database file
-		//
-		struct DatabaseFileHeader
-		{
-			// Initialises the file header to the current supported version
-			DatabaseFileHeader()
-				: signature0('pclc')
-				, signature1('\0bdp')
-				, version(2)
-				, nb_ptr_schemas(0)
-				, nb_ptr_offsets(0)
-				, nb_ptr_relocations(0)
-				, data_size(0)
-			{
-			}
-
-			// Signature and version numbers for verifying header integrity
-			// TODO: add check to pervent loading a 64-bit database from 32-bit
-			// runtime system, or vice versa
-			unsigned int signature0;
-			unsigned int signature1;
-			unsigned int version;
-
-			int nb_ptr_schemas;
-			int nb_ptr_offsets;
-			int nb_ptr_relocations;
-
-			clcpp::size_type data_size;
-
-			// TODO: CRC verify?
-		};
-	}
 }
 
 
@@ -1287,6 +908,15 @@ namespace clcpp
 
 namespace clcpp
 {
+   	#define CLCPP_INVALID_HASH (0xfefe012f)
+
+    #if defined(CLCPP_USING_64_BIT)
+	    #define CLCPP_INVALID_ADDRESS (0xffee01ef12349007)
+    #else
+    	#define CLCPP_INVALID_ADDRESS (0xffee6753)
+    #endif // CLCPP_USING_64_BIT
+
+
 	//
 	// GetTypeNameHash and GetType are clReflect's implementation of a constant-time,
 	// string-less typeof operator that would appear no different had it been implemented
@@ -1301,38 +931,9 @@ namespace clcpp
 	// pointer returned belongs to the database which was loaded by the module the call
 	// resides in.
 	//
-	// ---------------------------------------------------------------------------------
-	// IMPLEMENTATION DETAILS
-	// ---------------------------------------------------------------------------------
+	// See the clReflect wiki for implementation details.
 	//
-	// These functions are specified as no-inline so that they are embedded in your
-	// module where clExport can pickup and store their addresses. These are recorded in
-	// the exported database and are then inspected at runtime when the database is
-	// loaded.
 	//
-	// Each type has its own implementation of the functions and thus the static variables
-	// that they use. The database loader partially disassembles the function implementations,
-	// finds the address of the variables that they use and patches them with whatever
-	// values are stored in the database.
-	//
-	// When we patch GetType and GetTypeNameHash functions, we first search for
-	// specific mov instructions, and when we find them, we would read the value
-	// at the address calculated from the instruction. If the value equals the
-	// identifier here, we would assume we find the location to patch.
-	// This would require the following value will not be identical with any
-	// other valid address used. That's why we use odd-ended values here, hoping
-	// memory alignment will help us reduce the chance of being the same with
-	// other addresses.
-	//
-   	#define CLCPP_INVALID_HASH (0xfefe012f)
-
-    #if defined(CLCPP_USING_64_BIT)
-	    #define CLCPP_INVALID_ADDRESS (0xffee01ef12349007)
-    #else
-    	#define CLCPP_INVALID_ADDRESS (0xffee6753)
-    #endif // CLCPP_USING_64_BIT
-
-
 	template <typename TYPE>
 	CLCPP_NOINLINE unsigned int GetTypeNameHash()
 	{

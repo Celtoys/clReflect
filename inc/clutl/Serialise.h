@@ -90,6 +90,16 @@ namespace clutl
 	};
 
 
+	// TODO: Try to merge into one function to cut down on call overhead?
+	struct IPtrSave
+	{
+		// Normally, type is the same as field->type
+		// In the case of a container, however, field points to the container and type is the value type
+		virtual bool CanSavePtr(void* ptr, const clcpp::Field* field, const clcpp::Type* type) = 0;
+		virtual unsigned int SavePtr(void* ptr) = 0;
+	};
+
+
 	// Binary serialisation
 	void SaveVersionedBinary(WriteBuffer& out, const void* object, const clcpp::Type* type);
 	void LoadVersionedBinary(ReadBuffer& in, void* object, const clcpp::Type* type);
@@ -143,6 +153,12 @@ namespace clutl
 	// JSON serialisation
 	JSONError LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type);
 	JSONError LoadJSON(JSONContext& ctx, void* object, const clcpp::Field* field);
-	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags = 0);
-	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Field* field, unsigned int flags = 0);
+
+	// Save an object of a given type to the write buffer.
+	// If ptr_save is null, no pointers are serialised.
+	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, IPtrSave* ptr_save, unsigned int flags = 0);
+
+	// Save an object described by the given field to the write buffer.
+	// If ptr_save is null, no pointers are serialised.
+	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Field* field, IPtrSave* ptr_save, unsigned int flags = 0);
 }

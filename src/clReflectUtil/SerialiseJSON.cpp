@@ -16,7 +16,6 @@
 
 #include <clutl/Serialise.h>
 #include <clutl/JSONLexer.h>
-#include <clutl/Objects.h>
 #include <clcpp/Containers.h>
 #include <clcpp/FunctionCall.h>
 
@@ -336,7 +335,7 @@ namespace
 		if (field == 0)
 		{
 			// Search up through the inheritance hierarchy
-			for (int i = 0; i < type->base_types.size(); i++)
+			for (unsigned int i = 0; i < type->base_types.size; i++)
 			{
 				field = FindFieldsRecursive(type->base_types[i], hash);
 				if (field)
@@ -437,7 +436,7 @@ namespace
 	// ----------------------------------------------------------------------------------------------------
 
 
-	void SaveObject(clutl::WriteBuffer& out, const char* object, const clcpp::Type* type, unsigned int flags);
+	void SaveObject(clutl::WriteBuffer& out, const char* object, const clcpp::Field* field, const clcpp::Type* type, clutl::IPtrSave* ptr_save, unsigned int flags);
 
 
 	void SaveString(clutl::WriteBuffer& out, const char* start, const char* end)
@@ -593,7 +592,7 @@ namespace
 		// Do a linear search for an enum with a matching value
 		int value = *(int*)object;
 		const char* enum_name = "clReflect_JSON_EnumValueNotFound";
-		for (int i = 0; i < enum_type->constants.size(); i++)
+		for (unsigned int i = 0; i < enum_type->constants.size; i++)
 		{
 			if (enum_type->constants[i]->value == value)
 			{
@@ -607,8 +606,12 @@ namespace
 	}
 
 
-	void SavePtr(clutl::WriteBuffer& out, unsigned int hash)
+	void SavePtr(clutl::WriteBuffer& out, const void* object, clutl::IPtrSave* ptr_save)
 	{
+		// Get the filtered pointer from the caller
+		void* ptr = *(void**)object;
+		unsigned int hash = ptr_save->SavePtr(ptr);
+
 	#ifdef SAVE_POINTER_HASH_AS_HEX
 		out.WriteStr("0x");
 		SaveHexInteger(out, hash);
@@ -618,88 +621,45 @@ namespace
 	}
 
 
-	void SavePtr(clutl::WriteBuffer& out, const void* object)
+	void SaveContainer(clutl::WriteBuffer& out, clcpp::ReadIterator& reader, const clcpp::Field* field, clutl::IPtrSave* ptr_save, unsigned int flags)
 	{
-		clutl::Object* named_object = *((clutl::Object**)object);
-		unsigned int hash = 0;
-		if (named_object != 0)
-			hash = named_object->unique_id;
-
-		SavePtr(out, hash);
-	}
-
-
-	bool CanSaveObjectPtr(const void* object)
-	{
-		// Only use the hash if the pointer is non-null
-		clutl::Object* named_object = *((clutl::Object**)object);
-		if (named_object != 0)
-		{
-			// If the target object has no unique ID then its pointer is not meant for serialisation
-			if (named_object->unique_id == 0)
-				return false;
-		}
-
-		return true;
-	}
-
-
-	void SaveContainer(clutl::WriteBuffer& out, clcpp::ReadIterator& reader, unsigned int flags)
-	{
-		// TODO: If the iterator has a key, save a dictionary instead
+		// TODO: If the iterator has a key, save a dictionary instead.
+		// TODO: The reader knows its type and if its a pointer for all entries. Can early out on unwanted pointer saves, etc.
 
 		out.WriteChar('[');
 
-		// Figure out if this an iterator over named object pointers
-		if (reader.m_ValueIsPtr)
+		// Save comma-separated objects
+		bool written = false;
+		for (unsigned int i = 0; i < reader.m_Count; i++)
 		{
-			if (reader.m_ValueType->kind == clcpp::Primitive::KIND_CLASS)
-			{
-				const clcpp::Class* class_type = reader.m_ValueType->AsClass();
-				if (class_type->flag_attributes & clutl::FLAG_ATTR_IS_OBJECT)
-				{
-					// Save comma-separated pointers
-					bool written = false;
-					for (unsigned int i = 0; i < reader.m_Count; i++)
-					{
-						clcpp::ContainerKeyValue kv = reader.GetKeyValue();
-
-						// Only save if the object is named
-						if (CanSaveObjectPtr(kv.value))
-						{
-							if (written)
-								out.WriteChar(',');
-							SavePtr(out, kv.value);
-							written = true;
-						}
-
-						reader.MoveNext();
-					}
-				}
-			}
-		}
-
-		else
-		{
-			// Save comma-separated objects
-			for (unsigned int i = 0; i < reader.m_Count - 1; i++)
-			{
-				clcpp::ContainerKeyValue kv = reader.GetKeyValue();
-				SaveObject(out, (char*)kv.value, reader.m_ValueType, flags);
-				out.WriteChar(',');
-				reader.MoveNext();
-			}
-
-			// Save the final object without a comma
 			clcpp::ContainerKeyValue kv = reader.GetKeyValue();
-			SaveObject(out, (char*)kv.value, reader.m_ValueType, flags);
+
+			if (written)
+				out.WriteChar(',');
+
+			if (reader.m_ValueIsPtr)
+			{
+				// Ask the user if they want to save this pointer
+				void* ptr = *(void**)kv.value;
+				if (ptr_save == 0 || !ptr_save->CanSavePtr(ptr, field, reader.m_ValueType))
+					continue;
+
+				SavePtr(out, kv.value, ptr_save);
+			}
+			else
+			{
+				SaveObject(out, (char*)kv.value, field, reader.m_ValueType, ptr_save, flags);
+			}
+
+			reader.MoveNext();
+			written = true;
 		}
 
 		out.WriteChar(']');
 	}
 
 
-	void SaveFieldArray(clutl::WriteBuffer& out, const char* object, const clcpp::Field* field, unsigned int flags)
+	void SaveFieldArray(clutl::WriteBuffer& out, const char* object, const clcpp::Field* field, clutl::IPtrSave* ptr_save, unsigned int flags)
 	{
 		// Construct a read iterator and leave early if there are no elements
 		clcpp::ReadIterator reader(field, object);
@@ -709,7 +669,7 @@ namespace
 			return;
 		}
 
-		SaveContainer(out, reader, flags);
+		SaveContainer(out, reader, field, ptr_save, flags);
 	}
 
 
@@ -767,23 +727,23 @@ namespace
 	}
 
 
-	void SaveFieldObject(clutl::WriteBuffer& out, const char* object, const clcpp::Field* field, unsigned int& flags)
+	void SaveFieldObject(clutl::WriteBuffer& out, const char* object, const clcpp::Field* field, clutl::IPtrSave* ptr_save, unsigned int& flags)
 	{
 		if (field->ci != 0)
-			SaveFieldArray(out, object, field, flags);
+			SaveFieldArray(out, object, field, ptr_save, flags);
 		else if (field->qualifier.op == clcpp::Qualifier::POINTER)
-			SavePtr(out, object);
+			SavePtr(out, object, ptr_save);
 		else
-			SaveObject(out, object, field->type, flags);
+			SaveObject(out, object, field, field->type, ptr_save, flags);
 	}
 
 
-	void SaveClassFields(clutl::WriteBuffer& out, const char* object, const clcpp::Class* class_type, unsigned int& flags, bool& field_written)
+	void SaveClassFields(clutl::WriteBuffer& out, const char* object, const clcpp::Class* class_type, clutl::IPtrSave* ptr_save, unsigned int& flags, bool& field_written)
 	{
 		// Save each field in the class
 		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
-		int nb_fields = fields.size();
-		for (int i = 0; i < nb_fields; i++)
+		unsigned int nb_fields = fields.size;
+		for (unsigned int i = 0; i < nb_fields; i++)
 		{
 			// Don't save values for transient fields
 			const clcpp::Field* field = fields[i];
@@ -792,17 +752,9 @@ namespace
 
 			if (field->qualifier.op == clcpp::Qualifier::POINTER)
 			{
-				// Don't save raw pointers
-				if (field->type->kind != clcpp::Primitive::KIND_CLASS)
-					continue;
-
-				// Don't save values for pointer fields that aren't derived from Object
-				const clcpp::Class* field_class_type = field->type->AsClass();
-				if (!(field_class_type->flag_attributes & clutl::FLAG_ATTR_IS_OBJECT))
-					continue;
-
-				// Don't save pointers to unnamed objects
-				if (!CanSaveObjectPtr(object + field->offset))
+				// Ask the caller if they want to save this pointer
+				void* ptr = *(void**)(object + field->offset);
+				if (ptr_save == 0 || !ptr_save->CanSavePtr(ptr, field, field->type))
 					continue;
 			}
 
@@ -816,29 +768,29 @@ namespace
 			// Write the field name and object
 			SaveString(out, field->name.text);
 			out.WriteChar(':');
-			SaveFieldObject(out, object + field->offset, field, flags);
+			SaveFieldObject(out, object + field->offset, field, ptr_save, flags);
 			field_written = true;
 		}
 
 	}
 
 
-	void SaveClass(clutl::WriteBuffer& out, const char* object, const clcpp::Type* type, unsigned int& flags, bool& field_written)
+	void SaveClass(clutl::WriteBuffer& out, const char* object, const clcpp::Type* type, clutl::IPtrSave* ptr_save, unsigned int& flags, bool& field_written)
 	{
 		// Save body of the class
 		if (type->kind == clcpp::Primitive::KIND_CLASS)
-			SaveClassFields(out, object, type->AsClass(), flags, field_written);
+			SaveClassFields(out, object, type->AsClass(), ptr_save, flags, field_written);
 
 		// Recurse into base types
-		for (int i = 0; i < type->base_types.size(); i++)
+		for (unsigned int i = 0; i < type->base_types.size; i++)
 		{
 			const clcpp::Type* base_type = type->base_types[i];
-			SaveClass(out, object, base_type, flags, field_written);
+			SaveClass(out, object, base_type, ptr_save, flags, field_written);
 		}
 	}
 
 
-	void SaveClass(clutl::WriteBuffer& out, const char* object, const clcpp::Class* class_type, unsigned int flags)
+	void SaveClass(clutl::WriteBuffer& out, const char* object, const clcpp::Class* class_type, clutl::IPtrSave* ptr_save, unsigned int flags)
 	{
 		// Is there a custom loading function for this class?
 		if (class_type->flag_attributes & clcpp::FlagAttribute::CUSTOM_SAVE)
@@ -875,12 +827,12 @@ namespace
 
 		bool field_written = false;
 		OpenScope(out, flags);
-		SaveClass(out, object, class_type, flags, field_written);
+		SaveClass(out, object, class_type, ptr_save, flags, field_written);
 		CloseScope(out, flags);
 	}
 
 
-	void SaveTemplateType(clutl::WriteBuffer& out, const char* object, const clcpp::TemplateType* template_type, unsigned int flags)
+	void SaveTemplateType(clutl::WriteBuffer& out, const char* object, const clcpp::Field* field, const clcpp::TemplateType* template_type, clutl::IPtrSave* ptr_save, unsigned int flags)
 	{
 		// Construct a read iterator and leave early if there are no elements
 		clcpp::ReadIterator reader(template_type, object);
@@ -890,11 +842,11 @@ namespace
 			return;
 		}
 
-		SaveContainer(out, reader, flags);
+		SaveContainer(out, reader, field, ptr_save, flags);
 	}
 
 
-	void SaveObject(clutl::WriteBuffer& out, const char* object, const clcpp::Type* type, unsigned int flags)
+	void SaveObject(clutl::WriteBuffer& out, const char* object, const clcpp::Field* field, const clcpp::Type* type, clutl::IPtrSave* ptr_save, unsigned int flags)
 	{
 		// Dispatch to a save function based on kind
 		switch (type->kind)
@@ -908,11 +860,11 @@ namespace
 			break;
 
 		case clcpp::Primitive::KIND_CLASS:
-			SaveClass(out, object, type->AsClass(), flags);
+			SaveClass(out, object, type->AsClass(), ptr_save, flags);
 			break;
 
 		case clcpp::Primitive::KIND_TEMPLATE_TYPE:
-			SaveTemplateType(out, object, type->AsTemplateType(), flags);
+			SaveTemplateType(out, object, field, type->AsTemplateType(), ptr_save, flags);
 			break;
 
 		default:
@@ -922,17 +874,17 @@ namespace
 }
 
 
-void clutl::SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, unsigned int flags)
+void clutl::SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, IPtrSave* ptr_save, unsigned int flags)
 {
 	SetupTypeDispatchLUT();
-	SaveObject(out, (char*)object, type, flags);
+	SaveObject(out, (char*)object, 0, type, ptr_save, flags);
 }
 
 
-void clutl::SaveJSON(clutl::WriteBuffer& out, const void* object, const clcpp::Field* field, unsigned int flags)
+void clutl::SaveJSON(WriteBuffer& out, const void* object, const clcpp::Field* field, IPtrSave* ptr_save, unsigned int flags)
 {
 	SetupTypeDispatchLUT();
-	SaveFieldObject(out, (char*)object, field, flags);
+	SaveFieldObject(out, (char*)object, field, ptr_save, flags);
 }
 
 

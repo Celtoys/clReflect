@@ -15,7 +15,7 @@
 #include <vector>
 #include <list>
 #include <clReflectCore/DatabaseMetadata.h>
-#include <clcpp/clcpp.h>
+#include <clReflectCore/Array.h>
 
 
 //
@@ -103,7 +103,7 @@ public:
 	void AddPointers(const PtrSchema& schema, const clcpp::CArray<TYPE>& array)
 	{
 		assert(sizeof(TYPE) == schema.stride);
-		AddPointers(schema, array.data(), array.size());
+		AddPointers(schema, array.data, array.size);
 	}
 
 	// Make all pointers relative to the start memory address

@@ -29,7 +29,7 @@ void TestArraysFunc(clcpp::Database& db)
 	TestArrays::S s;
 
 	const clcpp::Class* type = clcpp::GetType<TestArrays::S>()->AsClass();
-	for (int i = 0; i < type->fields.size(); i++)
+	for (unsigned int i = 0; i < type->fields.size; i++)
 	{
 		const clcpp::Field* field = type->fields[i];
 

@@ -15,7 +15,6 @@
 #include "StackAllocator.h"
 #include <map>
 #include <vector>
-#include <clcpp/clcpp.h>
 
 
 namespace cldb

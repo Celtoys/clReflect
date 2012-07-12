@@ -26,8 +26,7 @@ namespace
 
 
 clutl::ParameterData::ParameterData()
-	: m_Parameters(m_ParameterData, MAX_NB_FIELDS)
-	, m_NbParameters(0)
+	: m_NbParameters(0)
 {
 }
 
@@ -40,10 +39,34 @@ void clutl::ParameterData::Reset()
 
 void clutl::ParameterData::PushParameter(const clcpp::Type* type, clcpp::Qualifier::Operator op, void* object)
 {
-	ParamDesc& param = m_Parameters[m_NbParameters++];
+	clcpp::internal::Assert(m_NbParameters < MAX_NB_FIELDS);
+	ParamDesc& param = (ParamDesc&)m_ParameterData[m_NbParameters * sizeof(ParamDesc)];
 	param.type = type;
 	param.op = op;
 	param.object = object;
+	m_NbParameters++;
+}
+
+
+unsigned int clutl::ParameterData::GetNbParameters() const
+{
+	return m_NbParameters;
+}
+
+
+clutl::ParameterData::ParamDesc& clutl::ParameterData::GetParameter(unsigned int index)
+{
+	clcpp::internal::Assert(m_NbParameters < MAX_NB_FIELDS);
+	ParamDesc& param = (ParamDesc&)m_ParameterData[index * sizeof(ParamDesc)];
+	return param;
+}
+
+
+const clutl::ParameterData::ParamDesc& clutl::ParameterData::GetParameter(unsigned int index) const
+{
+	clcpp::internal::Assert(m_NbParameters < MAX_NB_FIELDS);
+	ParamDesc& param = (ParamDesc&)m_ParameterData[index * sizeof(ParamDesc)];
+	return param;
 }
 
 
@@ -59,7 +82,7 @@ void clutl::ParameterObjectCache::Init(const clcpp::Function* function)
 
 	// Calculate the total space occupied by parameters
 	unsigned int total_param_size = 0;
-	for (int i = 0; i < function->parameters.size(); i++)
+	for (unsigned int i = 0; i < function->parameters.size; i++)
 		total_param_size += ParamAllocSize(function->parameters[i]);
 
 	// Pre-allocate the data for the parameters
@@ -116,14 +139,14 @@ bool clutl::BuildParameterObjectCache_JSON(clutl::ParameterObjectCache& poc, con
 	poc.Init(function);
 
 	// A local cache of all function parameters in their sorted order
-	char sorted_field_data[ParameterData::MAX_NB_FIELDS * sizeof(const clcpp::Field*)];
-	clcpp::CArray<const clcpp::Field*> sorted_fields(sorted_field_data, ParameterData::MAX_NB_FIELDS);
+	const clcpp::Field* sorted_fields[ParameterData::MAX_NB_FIELDS];
 
 	// Sort each parameter into its call order
-	unsigned int nb_fields = function->parameters.size();
+	unsigned int nb_fields = function->parameters.size;
 	for (unsigned int i = 0; i < nb_fields; i++)
 	{
 		const clcpp::Field* field = function->parameters[i];
+		clcpp::internal::Assert(field->offset < ParameterData::MAX_NB_FIELDS);
 		sorted_fields[field->offset] = field;
 	}
 
@@ -157,7 +180,7 @@ bool clutl::BuildParameterObjectCache_JSON(clutl::ParameterObjectCache& poc, con
 static bool CallFunction_x86_32_msvc(const clcpp::Function* function, const clutl::ParameterData& parameters, bool thiscall)
 {
 	// Ensure parameter count matches
-	unsigned int nb_params = function->parameters.size();
+	unsigned int nb_params = function->parameters.size;
 	if (nb_params != parameters.GetNbParameters())
 		return false;
 
@@ -244,7 +267,7 @@ static bool CallFunction_x86_32_msvc(const clcpp::Function* function, const clut
 
 bool clutl::CallFunction_x86_32_msvc_cdecl(const clcpp::Function* function, const ParameterData& parameters)
 {
-	unsigned int nb_params = function->parameters.size();
+	unsigned int nb_params = function->parameters.size;
 	if (nb_params != parameters.GetNbParameters())
 		return false;
 
@@ -254,7 +277,7 @@ bool clutl::CallFunction_x86_32_msvc_cdecl(const clcpp::Function* function, cons
 
 bool clutl::CallFunction_x86_32_msvc_thiscall(const clcpp::Function* function, const clutl::ParameterData& parameters)
 {
-	unsigned int nb_params = function->parameters.size();
+	unsigned int nb_params = function->parameters.size;
 	if (nb_params != parameters.GetNbParameters())
 		return false;
 

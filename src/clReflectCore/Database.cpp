@@ -10,8 +10,6 @@
 
 #include "Database.h"
 
-#include <clcpp/clcpp.h>
-
 #include <stdlib.h>
 #include <assert.h>
 

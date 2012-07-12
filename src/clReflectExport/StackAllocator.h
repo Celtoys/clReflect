@@ -12,7 +12,7 @@
 
 
 #include <cassert>
-#include <clcpp/clcpp.h>
+#include <clReflectCore/Array.h>
 
 
 //
@@ -78,8 +78,8 @@ public:
 	{
 		// Direct member copy of an array constructed with pre-allocated data
 		TYPE* data = Alloc<TYPE>(size);
-		clcpp::CArray<TYPE> temp_array(data, size);
-		array.shallow_copy(temp_array);
+		CArray<TYPE> temp_array(data, size);
+		shallow_copy(array, temp_array);
 	}
 
 	const void* GetData() const { return m_Data; }
