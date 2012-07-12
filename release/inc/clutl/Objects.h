@@ -107,13 +107,8 @@ namespace clutl
 
 		// Find a created object by unique ID
 		Object* FindObject(unsigned int unique_id) const;
-
-		// Set whether searches for objects in this group are allowed to walk up
-		// the hierarchy looking for matches
-		// TEMPORARY SOLUTION for multi-threaded access and locking of various object groups
-		// This concept of tree-based access doesn't work well with MPP so will be replaced with something simpler
-		// and more adaptable.
-		void AllowFindInParent(bool allow) { m_AllowFindInParent = allow; }
+		Object* FindObjectSearchParents(unsigned int unique_id) const;
+		Object* FindObjectRelative(unsigned int* unique_ids, unsigned int nb_ids) const;
 
 		friend Object* clutl::CreateObject(const clcpp::Type*, unsigned int, ObjectGroup*);
 		friend void clutl::DestroyObject(const Object*);
@@ -133,9 +128,6 @@ namespace clutl
 		unsigned int m_NbObjects;
 		unsigned int m_NbOccupiedEntries;
 		HashEntry* m_NamedObjects;
-
-		// Allow FindObject to recurse into the parent object group?
-		bool m_AllowFindInParent;
 
 		friend class ObjectIterator;
 		friend class ObjectDatabase;

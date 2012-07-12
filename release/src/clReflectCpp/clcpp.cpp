@@ -9,6 +9,7 @@
 //
 
 #include <clcpp/clcpp.h>
+#include <clcpp/clcpp_internal.h>
 
 
 #if defined(CLCPP_PLATFORM_WINDOWS)
@@ -146,7 +147,7 @@ namespace
 	int BinarySearch(const clcpp::CArray<ARRAY_TYPE>& entries, unsigned int compare_hash)
 	{
 		int first = 0;
-		int last = entries.size() - 1;
+		int last = entries.size - 1;
 
 		// Binary search
 		while (first <= last)
@@ -186,10 +187,27 @@ namespace
 		// Search either side of the result, gathering further matches
 		while (range.first > 0 && GET_HASH_FUNC(entries[range.first - 1]) == compare_hash)
 			range.first--;
-		while (range.last < entries.size() && GET_HASH_FUNC(entries[range.last]) == compare_hash)
+		while (range.last < entries.size && GET_HASH_FUNC(entries[range.last]) == compare_hash)
 			range.last++;
 
 		return range;
+	}
+
+
+	template <typename TYPE> bool ReadArray(clcpp::IFile* file, clcpp::CArray<TYPE>& array, unsigned int size, clcpp::IAllocator* allocator)
+	{
+		// Allocate space for the data
+		array.size = size;
+		array.data = (TYPE*)allocator->Alloc(size * sizeof(TYPE));
+
+		// Read from the file, deleting on failure
+		if (!file->Read((void*)array.data, array.size * sizeof(TYPE)))
+		{
+			allocator->Free(array.data);
+			return false;
+		}
+
+		return true;
 	}
 
 
@@ -197,7 +215,7 @@ namespace
 	{
 		// Read the header and verify the version and signature
 		clcpp::internal::DatabaseFileHeader file_header, cmp_header;
-		if (!file->Read(file_header))
+		if (!file->Read(&file_header, sizeof(file_header)))
 			return 0;
 		if (file_header.version != cmp_header.version)
 			return 0;
@@ -211,28 +229,30 @@ namespace
 			return 0;
 
 		// Read the schema descriptions
-		clcpp::CArray<PtrSchema> schemas(file_header.nb_ptr_schemas, allocator);
-		if (!file->Read(schemas))
+		clcpp::CArray<PtrSchema> schemas;
+		if (!ReadArray(file, schemas, file_header.nb_ptr_schemas, allocator))
 			return 0;
 
 		// Read the pointer offsets for all the schemas
-		clcpp::CArray<clcpp::size_type> ptr_offsets(file_header.nb_ptr_offsets, allocator);
-		if (!file->Read(ptr_offsets))
+		clcpp::CArray<clcpp::size_type> ptr_offsets;
+		if (!ReadArray(file, ptr_offsets, file_header.nb_ptr_offsets, allocator))
 			return 0;
 
 		// Read the pointer relocation instructions
-		clcpp::CArray<PtrRelocation> relocations(file_header.nb_ptr_relocations, allocator);
-		if (!file->Read(relocations))
+		clcpp::CArray<PtrRelocation> relocations;
+		if (!ReadArray(file, relocations, file_header.nb_ptr_relocations, allocator))
 			return 0;
 
 		// Iterate over every relocation instruction
 		for (int i = 0; i < file_header.nb_ptr_relocations; i++)
 		{
-			PtrRelocation& reloc = relocations[i];
-			PtrSchema& schema = schemas[reloc.schema_handle];
+			PtrRelocation& reloc = (PtrRelocation&)relocations[i];
+			PtrSchema& schema = (PtrSchema&)schemas[reloc.schema_handle];
 
 			// Take a weak C-array pointer to the schema's pointer offsets (for bounds checking)
-			clcpp::CArray<clcpp::size_type> schema_ptr_offsets(&ptr_offsets[schema.ptrs_offset], schema.nb_ptrs);
+			clcpp::CArray<clcpp::size_type> schema_ptr_offsets;
+			schema_ptr_offsets.data = (clcpp::size_type*)&ptr_offsets[schema.ptrs_offset];
+			schema_ptr_offsets.size = schema.nb_ptrs;
 
 			// Iterate over all objects in the instruction
 			for (int j = 0; j < reloc.nb_objects; j++)
@@ -255,6 +275,11 @@ namespace
 			}
 		}
 
+		// Release temporary array memory
+		allocator->Free(relocations.data);
+		allocator->Free(ptr_offsets.data);
+		allocator->Free(schemas.data);
+
 		return database_mem;
 	}
 
@@ -262,17 +287,17 @@ namespace
 	void RebaseFunctions(clcpp::internal::DatabaseMem& dbmem, clcpp::pointer_type base_address)
 	{
 		// Move all function addresses from their current location to their new location
-		for (int i = 0; i < dbmem.functions.size(); i++)
+		for (unsigned int i = 0; i < dbmem.functions.size; i++)
 		{
-			clcpp::Function& f = dbmem.functions[i];
+			clcpp::Function& f = (clcpp::Function&)dbmem.functions[i];
 			if (f.address)
 				f.address = f.address - dbmem.function_base_address + base_address;
 		}
 
 		// Do the same for the GetType family of functions
-		for (int i = 0; i < dbmem.get_type_functions.size(); i++)
+		for (unsigned int i = 0; i < dbmem.get_type_functions.size; i++)
 		{
-			clcpp::internal::GetTypeFunctions& f = dbmem.get_type_functions[i];
+			clcpp::internal::GetTypeFunctions& f = (clcpp::internal::GetTypeFunctions& )dbmem.get_type_functions[i];
 			if (f.get_typename_address)
 				f.get_typename_address = f.get_typename_address - dbmem.function_base_address + base_address;
 			if (f.get_type_address)
@@ -351,9 +376,9 @@ namespace
 		unsigned int original_hash = CLCPP_INVALID_HASH;
 		const clcpp::Type* original_type = (const clcpp::Type*)CLCPP_INVALID_ADDRESS;
 
-		for (int i = 0; i < dbmem.get_type_functions.size(); i++)
+		for (unsigned int i = 0; i < dbmem.get_type_functions.size; i++)
 		{
-			clcpp::internal::GetTypeFunctions& f = dbmem.get_type_functions[i];
+			clcpp::internal::GetTypeFunctions& f = (clcpp::internal::GetTypeFunctions&)dbmem.get_type_functions[i];
 
 			// Patch up the type name hash static variable
 			if (f.get_typename_address)
@@ -379,8 +404,8 @@ namespace
 	template <typename TYPE>
 	void ParentPrimitivesToDatabase(clcpp::CArray<TYPE>& primitives, clcpp::Database* database)
 	{
-		for (int i = 0; i < primitives.size(); i++)
-			primitives[i].database = database;
+		for (unsigned int i = 0; i < primitives.size; i++)
+			((clcpp::Primitive&)primitives[i]).database = database;
 	}
 }
 
@@ -425,6 +450,22 @@ clcpp::pointer_type clcpp::internal::GetLoadAddress()
 }
 
 
+void clcpp::internal::Assert(bool expression)
+{
+	if (expression == false)
+	{
+	#ifdef CLCPP_USING_MSVC
+		__asm
+		{
+			int 3h
+		}
+	#else
+		asm("int $0x3\n");
+	#endif // CLCPP_USING_MSVC
+	}
+}
+
+
 unsigned int clcpp::internal::HashData(const void* data, int length, unsigned int seed)
 {
 	return MurmurHash3(data, length, seed);
@@ -440,6 +481,13 @@ unsigned int clcpp::internal::HashNameString(const char* name_string, unsigned i
 unsigned int clcpp::internal::MixHashes(unsigned int a, unsigned int b)
 {
 	return MurmurHash3(&b, sizeof(unsigned int), a);
+}
+
+
+clcpp::Range::Range()
+	: first(0)
+	, last(0)
+{
 }
 
 
@@ -461,6 +509,212 @@ clcpp::Range clcpp::internal::FindOverloadedPrimitive(const CArray<const Primiti
 
 	// Look at its neighbours to widen the primitives found
 	return SearchNeighbours<const Primitive*, const Primitive*, GetPrimitivePtrHash>(primitives, hash, index);
+}
+
+
+clcpp::Name::Name()
+	: hash(0)
+	, text(0)
+{
+}
+
+
+clcpp::Qualifier::Qualifier()
+	: op(VALUE)
+	, is_const(false)
+{
+}
+
+
+clcpp::Qualifier::Qualifier(Operator op, bool is_const)
+	: op(op)
+	, is_const(is_const)
+{
+}
+
+
+clcpp::ContainerInfo::ContainerInfo()
+	: read_iterator_type(0)
+	, write_iterator_type(0)
+	, flags(0)
+{
+}
+
+
+clcpp::Primitive::Primitive(Kind k)
+	: kind(k)
+	, parent(0)
+	, database(0)
+{
+}
+
+
+clcpp::Attribute::Attribute()
+	: Primitive(KIND)
+{
+}
+
+
+clcpp::Attribute::Attribute(Kind k)
+	: Primitive(k)
+{
+}
+
+
+const clcpp::IntAttribute* clcpp::Attribute::AsIntAttribute() const
+{
+	internal::Assert(kind == IntAttribute::KIND);
+	return (const IntAttribute*)this;
+}
+
+
+const clcpp::FloatAttribute* clcpp::Attribute::AsFloatAttribute() const
+{
+	internal::Assert(kind == FloatAttribute::KIND);
+	return (const FloatAttribute*)this;
+}
+
+
+const clcpp::PrimitiveAttribute* clcpp::Attribute::AsPrimitiveAttribute() const
+{
+	internal::Assert(kind == PrimitiveAttribute::KIND);
+	return (const PrimitiveAttribute*)this;
+}
+
+
+const clcpp::TextAttribute* clcpp::Attribute::AsTextAttribute() const
+{
+	internal::Assert(kind == TextAttribute::KIND);
+	return (const TextAttribute*)this;
+}
+
+
+clcpp::Type::Type()
+	: Primitive(KIND)
+	, size(0)
+	, ci(0)
+{
+}
+
+
+clcpp::Type::Type(Kind k)
+	: Primitive(k)
+	, size(0)
+	, ci(0)
+{
+}
+
+
+bool clcpp::Type::DerivesFrom(unsigned int type_name_hash) const
+{
+	// Search in immediate bases
+	for (unsigned int i = 0; i < base_types.size; i++)
+	{
+		if (base_types[i]->name.hash == type_name_hash)
+			return true;
+	}
+
+	// Search up the inheritance tree
+	for (unsigned int i = 0; i < base_types.size; i++)
+	{
+		if (base_types[i]->DerivesFrom(type_name_hash))
+			return true;
+	}
+
+	return false;
+}
+
+
+const clcpp::Enum* clcpp::Type::AsEnum() const
+{
+	internal::Assert(kind == Enum::KIND);
+	return (const Enum*)this;
+}
+
+
+const clcpp::TemplateType* clcpp::Type::AsTemplateType() const
+{
+	internal::Assert(kind == TemplateType::KIND);
+	return (const TemplateType*)this;
+}
+
+
+const clcpp::Class* clcpp::Type::AsClass() const
+{
+	internal::Assert(kind == Class::KIND);
+	return (const Class*)this;
+}
+
+
+clcpp::EnumConstant::EnumConstant()
+	: Primitive(KIND)
+	, value(0)
+{
+}
+
+
+clcpp::Enum::Enum()
+	: Type(KIND)
+	, flag_attributes(0)
+{
+}
+
+
+clcpp::Field::Field()
+	: Primitive(KIND)
+	, type(0)
+	, offset(0)
+	, parent_unique_id(0)
+	, flag_attributes(0)
+	, ci(0)
+{
+}
+
+
+bool clcpp::Field::IsFunctionParameter() const
+{
+	return parent_unique_id != 0;
+}
+
+
+clcpp::Function::Function()
+	: Primitive(KIND)
+	, unique_id(0)
+	, return_parameter(0)
+	, flag_attributes(0)
+{
+}
+
+
+clcpp::TemplateType::TemplateType()
+	: Type(KIND)
+{
+	for (int i = 0; i < MAX_NB_ARGS; i++)
+	{
+		parameter_types[i] = 0;
+		parameter_ptrs[i] = false;
+	}
+}
+
+
+clcpp::Template::Template()
+	: Primitive(KIND)
+{
+}
+
+
+clcpp::Class::Class()
+	: Type(KIND)
+	, constructor(0)
+	, destructor(0)
+	, flag_attributes(0)
+{
+}
+
+
+clcpp::Namespace::Namespace()
+	: Primitive(KIND)
+{
 }
 
 
@@ -596,4 +850,23 @@ clcpp::Range clcpp::Database::GetOverloadedFunction(unsigned int hash) const
 
 	// Functions can be overloaded so look at the neighbours to widen the primitives found
 	return SearchNeighbours<Function, const Primitive&, GetPrimitiveHash>(m_DatabaseMem->functions, hash, index);
+}
+
+
+clcpp::internal::DatabaseMem::DatabaseMem()
+	: function_base_address(0)
+	, name_text_data(0)
+{
+}
+
+
+clcpp::internal::DatabaseFileHeader::DatabaseFileHeader()
+	: signature0('pclc')
+	, signature1('\0bdp')
+	, version(2)
+	, nb_ptr_schemas(0)
+	, nb_ptr_offsets(0)
+	, nb_ptr_relocations(0)
+	, data_size(0)
+{
 }
