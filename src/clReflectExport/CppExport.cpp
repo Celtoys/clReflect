@@ -1492,6 +1492,69 @@ namespace
 	}
 
 
+	void LogPrimitive(const clcpp::FlagAttribute& attr)
+	{
+		LOG(cppexp, INFO, "flag: %s", attr.name.text);
+	}
+	void LogPrimitive(const clcpp::IntAttribute& attr)
+	{
+		LOG(cppexp, INFO, "int: %s = %d", attr.name.text, attr.value);
+	}
+	void LogPrimitive(const clcpp::FloatAttribute& attr)
+	{
+		LOG(cppexp, INFO, "float: %s = %f", attr.name.text, attr.value);
+	}
+	void LogPrimitive(const clcpp::PrimitiveAttribute& attr)
+	{
+		if (attr.primitive != 0)
+		{
+			LOG(cppexp, INFO, "primitive: %s = %s", attr.name.text, attr.primitive->name.text);
+		}
+		else
+		{
+			LOG(cppexp, INFO, "primitive: %s = <<UNRESOLVED>>", attr.name.text);
+		}
+	}
+	void LogPrimitive(const clcpp::TextAttribute& attr)
+	{
+		LOG(cppexp, INFO, "text: %s = %s", attr.name.text, attr.value);
+	}
+	void LogPrimitive(const clcpp::Attribute& attr)
+	{
+		switch (attr.kind)
+		{
+			case clcpp::Primitive::KIND_FLAG_ATTRIBUTE:
+				LogPrimitive((clcpp::FlagAttribute&)attr);
+				break;
+			case clcpp::Primitive::KIND_INT_ATTRIBUTE:
+				LogPrimitive((clcpp::IntAttribute&)attr);
+				break;
+			case clcpp::Primitive::KIND_FLOAT_ATTRIBUTE:
+				LogPrimitive((clcpp::FloatAttribute&)attr);
+				break;
+			case clcpp::Primitive::KIND_PRIMITIVE_ATTRIBUTE:
+				LogPrimitive((clcpp::PrimitiveAttribute&)attr);
+				break;
+			case clcpp::Primitive::KIND_TEXT_ATTRIBUTE:
+				LogPrimitive((clcpp::TextAttribute&)attr);
+				break;
+		}
+	}
+
+
+	void LogAttributes(const char* name, const clcpp::CArray<const clcpp::Attribute*>& attributes)
+	{
+		if (attributes.size())
+		{
+			LOG(cppexp, INFO, "Attributes for %s", name);
+			LOG_NEWLINE(cppexp)
+			LOG_PUSH_INDENT(cppexp)
+			LogPrimitives(attributes);
+			LOG_POP_INDENT(cppexp)
+		}
+	}
+
+
 	void LogField(const clcpp::Field& field, bool name = true)
 	{
 		LOG_APPEND(cppexp, INFO, "%s", field.qualifier.is_const ? "const " : "");
@@ -1506,6 +1569,8 @@ namespace
 
 	void LogPrimitive(const clcpp::Field& field)
 	{
+		LogAttributes(field.name.text, field.attributes);
+
 		LOG(cppexp, INFO, "");
 		LogField(field);
 		LOG_APPEND(cppexp, INFO, ";");
@@ -1514,6 +1579,8 @@ namespace
 
 	void LogPrimitive(const clcpp::Function& func)
 	{
+		LogAttributes(func.name.text, func.attributes);
+
 		if (func.return_parameter)
 		{
 			LOG(cppexp, INFO, "");
@@ -1554,6 +1621,8 @@ namespace
 
 	void LogPrimitive(const clcpp::Enum& e)
 	{
+		LogAttributes(e.name.text, e.attributes);
+
 		LOG(cppexp, INFO, "enum %s\n", e.name.text);
 		LOG(cppexp, INFO, "{\n");
 		LOG_PUSH_INDENT(cppexp);
@@ -1598,6 +1667,8 @@ namespace
 
 	void LogPrimitive(const clcpp::Class& cls)
 	{
+		LogAttributes(cls.name.text, cls.attributes);
+
 		LOG(cppexp, INFO, "class %s", cls.name.text);
 
 		for (int i=0; i < cls.base_types.size(); i++)
