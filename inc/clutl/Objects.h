@@ -16,8 +16,7 @@
 
 //
 // This is an example object management API that you can use, ignore or base your own
-// designs upon. It is required by the serialisation API in this library which would need
-// to be branched/copied should you want to use your own object management API.
+// designs upon.
 //
 clcpp_reflect_part(clutl)
 namespace clutl
