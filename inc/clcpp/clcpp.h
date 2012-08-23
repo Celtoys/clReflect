@@ -938,7 +938,6 @@ namespace clcpp
 	CLCPP_NOINLINE unsigned int GetTypeNameHash()
 	{
 		static unsigned int hash = CLCPP_INVALID_HASH;
-		internal::Assert(hash != CLCPP_INVALID_HASH);
 		return hash;
 	}
 
@@ -946,7 +945,6 @@ namespace clcpp
 	CLCPP_NOINLINE const Type* GetType()
 	{
 		static const Type* type_ptr = (Type*)CLCPP_INVALID_ADDRESS;
-		internal::Assert(type_ptr != (Type*)CLCPP_INVALID_ADDRESS);
 		return type_ptr;
 	}
 }

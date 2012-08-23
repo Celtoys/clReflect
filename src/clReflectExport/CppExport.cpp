@@ -1566,6 +1566,9 @@ namespace
 
 		if (name)
 			LOG_APPEND(cppexp, INFO, " %s", field.name.text);
+
+		if (field.ci != 0)
+			LOG_APPEND(cppexp, INFO, "[%d]", field.ci->count);
 	}
 
 

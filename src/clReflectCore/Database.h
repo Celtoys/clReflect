@@ -415,8 +415,8 @@ namespace cldb
 			for (int i = 0; i < MAX_NB_ARGS; i++)
 				parameter_ptrs[i] = false;
 		}
-		TemplateType(Name n, Name p)
-			: Type(KIND_TEMPLATE_TYPE, n, p, 0)
+		TemplateType(Name n, Name p, u32 size)
+			: Type(KIND_TEMPLATE_TYPE, n, p, size)
 		{
 			for (int i = 0; i < MAX_NB_ARGS; i++)
 				parameter_ptrs[i] = false;

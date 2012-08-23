@@ -511,11 +511,11 @@ namespace
 		cldb::u32 name, parent;
 		tok.GetNameAndParent(name, parent);
 
-		// Type parsing - discard size
-		tok.GetHexInt();
+		// Type parsing
+		cldb::u32 size = tok.GetHexInt();
 
 		// Template type argument parsing
-		cldb::TemplateType primitive(db.GetName(name), db.GetName(parent));
+		cldb::TemplateType primitive(db.GetName(name), db.GetName(parent), size);
 		for (int i = 0; i < cldb::TemplateType::MAX_NB_ARGS; i++)
 		{
 			cldb::u32 type = tok.GetHexInt();

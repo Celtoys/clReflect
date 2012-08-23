@@ -235,7 +235,10 @@ namespace
 				base_names.push_back(base_name);
 			}
 
-			cldb::TemplateType type(type_name, parent_name);
+			// Construct the template type with a size, even though we're not populating its members
+			const clang::ASTRecordLayout& layout = consumer.GetASTContext().getASTRecordLayout(cts_decl);
+			cldb::u32 size = layout.getSize().getQuantity();
+			cldb::TemplateType type(type_name, parent_name, size);
 
 			// Populate the template argument list
 			for (unsigned int i = 0; i < list.size(); i++)
