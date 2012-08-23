@@ -17,7 +17,7 @@
 
 // Standard C library function, copy bytes
 // http://pubs.opengroup.org/onlinepubs/009695399/functions/memcpy.html
-extern "C" void* memcpy(void* dst, const void* src, unsigned int size);
+extern "C" void* CLCPP_CDECL memcpy(void* dst, const void* src, unsigned int size);
 
 
 clcpp_reflect_part(clutl)

@@ -79,11 +79,13 @@
 //
 #if defined(CLCPP_USING_MSVC)
 
+	#define CLCPP_CDECL __cdecl
 	#define CLCPP_EXPORT __declspec(dllexport)
 	#define CLCPP_NOINLINE __declspec(noinline)
 
 #elif defined(CLCPP_USING_GNUC)
 
+	#define CLCPP_CDECL
 	#define CLCPP_EXPORT
 	#define CLCPP_NOINLINE __attribute__((noinline))
 
@@ -119,8 +121,8 @@ namespace clcpp
     // a negative ptrdiff_t type variable with a size_t will be a disaster).
     #if defined(CLCPP_USING_64_BIT)
 
-		typedef unsigned long size_type;
-		typedef unsigned long pointer_type;
+		typedef unsigned long long size_type;
+		typedef unsigned long long pointer_type;
 
 		// type field used in printf/scanf
 		#define CLCPP_SIZE_TYPE_HEX_FORMAT "lX"
@@ -154,15 +156,6 @@ namespace clcpp
 
 	namespace internal
 	{
-		// Share library (DLL/SO) implementations
-		void* LoadSharedLibrary(const char* filename);
-		void* GetSharedLibraryFunction(void* handle, const char* function_name);
-		void FreeSharedLibrary(void* handle);
-
-		// Gets the load address for the calling module
-		clcpp::pointer_type GetLoadAddress();		
-
-
 		//
 		// The C++ standard specifies that use of default placement new does not require inclusion
 		// of <new>. However, MSVC2005 disagrees and requires this. Since I don't want any CRT

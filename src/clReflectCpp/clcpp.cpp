@@ -13,25 +13,14 @@
 
 
 #if defined(CLCPP_PLATFORM_WINDOWS)
-	// Windows-specific module loading and inspection functions
-	typedef int (__stdcall *FunctionPtr)();
-	extern "C" __declspec(dllimport) void* __stdcall LoadLibraryA(const char* lpLibFileName);
-	extern "C" __declspec(dllimport) FunctionPtr __stdcall GetProcAddress(void* module, const char* lpProcName);
-	extern "C" __declspec(dllimport) int __stdcall FreeLibrary(void* hLibModule);
+
 	extern "C" __declspec(dllimport) void* __stdcall GetModuleHandleA(const char* lpModuleName);
-#endif
+	extern "C" __declspec(dllimport) void __stdcall ExitProcess(unsigned int uExitCode);
 
+#elif defined(CLCPP_PLATFORM_POSIX)
 
-#if defined(CLCPP_PLATFORM_POSIX)
-	// We use POSIX-compatible dynamic linking loader interface, which
-	// should be present on both Mac and Linux
-	extern "C" int dlclose(void * __handle);
 	extern "C" void * dlopen(const char * __path, int __mode);
-	extern "C" void * dlsym(void * __handle, const char * __symbol);
-
-	// TODO: check the loading flags when we can get this running, current
-	// flag indicates RTLD_LAZY
-	#define LOADING_FLAGS 0x1
+	
 #endif
 
 
@@ -407,46 +396,16 @@ namespace
 		for (unsigned int i = 0; i < primitives.size; i++)
 			((clcpp::Primitive&)primitives[i]).database = database;
 	}
-}
 
 
-void* clcpp::internal::LoadSharedLibrary(const char* filename)
-{
-#if defined(CLCPP_PLATFORM_WINDOWS)
-	return LoadLibraryA(filename);
-#elif defined(CLCPP_PLATFORM_POSIX)
-	return dlopen(filename, LOADING_FLAGS);
-#endif
-}
-
-
-void* clcpp::internal::GetSharedLibraryFunction(void* handle, const char* function_name)
-{
-#if defined(CLCPP_PLATFORM_WINDOWS)
-	return GetProcAddress(handle, function_name);
-#elif defined(CLCPP_PLATFORM_POSIX)
-	return dlsym(handle, function_name);
-#endif
-}
-
-
-void clcpp::internal::FreeSharedLibrary(void* handle)
-{
-#if defined(CLCPP_PLATFORM_WINDOWS)
-	FreeLibrary(handle);
-#elif defined(CLCPP_PLATFORM_POSIX)
-	dlclose(handle);
-#endif
-}
-
-
-clcpp::pointer_type clcpp::internal::GetLoadAddress()
-{
-#if defined(CLCPP_PLATFORM_WINDOWS)
-	return (clcpp::pointer_type)GetModuleHandleA(0);
-#elif defined(CLCPP_PLATFORM_POSIX)
-	return (clcpp::pointer_type)dlopen(0, 0);
-#endif
+	clcpp::pointer_type GetLoadAddress()
+	{
+	#if defined(CLCPP_PLATFORM_WINDOWS)
+		return (clcpp::pointer_type)GetModuleHandleA(0);
+	#elif defined(CLCPP_PLATFORM_POSIX)
+		return (clcpp::pointer_type)dlopen(0, 0);
+	#endif
+	}
 }
 
 
@@ -462,6 +421,12 @@ void clcpp::internal::Assert(bool expression)
 	#else
 		asm("int $0x3\n");
 	#endif // CLCPP_USING_MSVC
+
+	// Leave the program with no continuation
+	// Don't want people attaching the debugger and skipping over the break
+	#ifdef CLCPP_PLATFORM_WINDOWS
+		ExitProcess(1);
+	#endif
 	}
 }
 
@@ -734,7 +699,7 @@ clcpp::Database::~Database()
 
 bool clcpp::Database::Load(IFile* file, IAllocator* allocator, unsigned int options)
 {
-	clcpp::pointer_type base_address = internal::GetLoadAddress();
+	clcpp::pointer_type base_address = GetLoadAddress();
 	return Load(file, allocator, base_address, options);
 }
 
