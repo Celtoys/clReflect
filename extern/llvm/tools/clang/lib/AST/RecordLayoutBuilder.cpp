@@ -1044,8 +1044,13 @@ RecordLayoutBuilder::LayoutNonVirtualBases(const CXXRecordDecl *RD) {
     CharUnits PtrAlign = 
       Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerAlign(0));
     EnsureVTablePointerAlignment(PtrAlign);
-    if (isMicrosoftCXXABI())
+    if (isMicrosoftCXXABI()) {
       VFPtrOffset = getSize();
+
+      // MSVC will extend the width of the vftable pointer to the max width
+      // of all fields in the record
+      PtrWidth = std::max(Alignment, PtrWidth);
+    }
     setSize(getSize() + PtrWidth);
     setDataSize(getSize());
   }
@@ -2218,6 +2223,16 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
     // vb-table doesn't need extra padding.
     if (Builder.VBPtrOffset != CharUnits::fromQuantity(-1) &&
         (Builder.VBPtrOffset % Builder.NonVirtualAlignment) != 0) {
+      Builder.resetWithTargetAlignment(Builder.NonVirtualAlignment);
+      Builder.Layout(RD);
+    }
+
+    // The same is true in MSVC when there is a vftable pointer
+    CharUnits PtrWidth = 
+      toCharUnitsFromBits(getTargetInfo().getPointerWidth(0));
+    if (Builder.isMicrosoftCXXABI() &&
+        Builder.VFPtrOffset != CharUnits::fromQuantity(-1) &&
+        Builder.NonVirtualAlignment.getQuantity() > PtrWidth.getQuantity()) {
       Builder.resetWithTargetAlignment(Builder.NonVirtualAlignment);
       Builder.Layout(RD);
     }
