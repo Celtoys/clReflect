@@ -50,9 +50,15 @@ N: Cameron Buschardt
 E: buschard@uiuc.edu
 D: The `mem2reg' pass - promotes values stored in memory to registers
 
+N: Brendon Cahoon
+E: bcahoon@codeaurora.org
+D: Loop unrolling with run-time trip counts.
+
 N: Chandler Carruth
 E: chandlerc@gmail.com
-D: LinkTimeOptimizer for Linux, via binutils integration, and C API
+D: Hashing algorithms and interfaces
+D: Inline cost analysis
+D: Machine block placement pass
 
 N: Casey Carter
 E: ccarter@uiuc.edu
@@ -83,6 +89,10 @@ N: John T. Criswell
 E: criswell@uiuc.edu
 D: Original Autoconf support, documentation improvements, bug fixes
 
+N: Anshuman Dasgupta
+E: adasgupt@codeaurora.org
+D: Deterministic finite automaton based infrastructure for VLIW packetization
+
 N: Stefanus Du Toit
 E: stefanus.dutoit@rapidmind.com
 D: Bug fixes and minor improvements
@@ -94,6 +104,10 @@ D: The ARM backend
 N: Alkis Evlogimenos
 E: alkis@evlogimenos.com
 D: Linear scan register allocator, many codegen improvements, Java frontend
+
+N: Hal Finkel
+E: hfinkel@anl.gov
+D: Basic-block autovectorization, PowerPC backend improvements
 
 N: Ryan Flynn
 E: pizza@parseerror.com
@@ -143,6 +157,8 @@ N: James Grosbach
 E: grosbach@apple.com
 D: SjLj exception handling support
 D: General fixes and improvements for the ARM back-end
+D: MCJIT
+D: ARM integrated assembler and assembly parser
 
 N: Lang Hames
 E: lhames@gmail.com
@@ -200,6 +216,10 @@ N: Benjamin Kramer
 E: benny.kra@gmail.com
 D: Miscellaneous bug fixes
 
+N: Sundeep Kushwaha
+E: sundeepk@codeaurora.org
+D: Implemented DFA-based target independent VLIW packetizer
+
 N: Christopher Lamb
 E: christopher.lamb@gmail.com
 D: aligned load/store support, parts of noalias and restrict support
@@ -235,6 +255,10 @@ N: Nick Lewycky
 E: nicholas@mxc.ca
 D: PredicateSimplifier pass
 
+N: Tony Linthicum, et. al.
+E: tlinth@codeaurora.org
+D: Backend for Qualcomm's Hexagon VLIW processor.
+
 N: Bruno Cardoso Lopes
 E: bruno.cardoso@gmail.com
 W: http://www.brunocardoso.org
@@ -261,10 +285,15 @@ N: Scott Michel
 E: scottm@aero.org
 D: Added STI Cell SPU backend.
 
+N: Kai Nacke
+E: kai@redstar.de
+D: Support for implicit TLS model used with MS VC runtime
+
 N: Takumi Nakamura
 E: geek4civic@gmail.com
 E: chapuni@hf.rim.or.jp
 D: Cygwin and MinGW support.
+D: Win32 tweaks.
 S: Yokohama, Japan
 
 N: Edward O'Callaghan
@@ -312,6 +341,19 @@ N: Vladimir Prus
 W: http://vladimir_prus.blogspot.com
 E: ghost@cs.msu.su
 D: Made inst_iterator behave like a proper iterator, LowerConstantExprs pass
+
+N: Xerxes Ranby
+E: xerxes@zafena.se
+D: Cmake dependency chain and various bug fixes
+
+N: Chad Rosier
+E: mcrosier@apple.com
+D: ARM fast-isel improvements
+D: Performance monitoring
+
+N: Nadav Rotem
+E: nadav.rotem@intel.com
+D: Vector code generation improvements.
 
 N: Roman Samoilov
 E: roman@codedgers.com
@@ -363,12 +405,9 @@ E: lauro.venancio@indt.org.br
 D: ARM backend improvements
 D: Thread Local Storage implementation
 
-N: Xerxes Ranby
-E: xerxes@zafena.se
-D: Cmake dependency chain and various bug fixes
-
 N: Bill Wendling
 E: wendling@apple.com
+D: Exception handling
 D: Bunches of stuff
 
 N: Bob Wilson

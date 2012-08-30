@@ -1,6 +1,6 @@
-@echo off
+
 pushd .
 md llvm-build
 cd llvm-build
-cmake -G "Visual Studio 8 2005" ..\llvm
+cmake %* -G "Visual Studio 10" ..\llvm
 popd

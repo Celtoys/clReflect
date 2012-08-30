@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv7-apple-ios | FileCheck %s
 
 define void @foo(i32 %X, i32 %Y) {
 entry:
@@ -29,13 +29,13 @@ declare i32 @bar(...)
 define fastcc i32 @CountTree(%struct.quad_struct* %tree) {
 entry:
 ; CHECK: CountTree:
-; CHECK: it eq
-; CHECK: cmpeq
-; CHECK: bne
-; CHECK: cmp
 ; CHECK: itt eq
 ; CHECK: moveq
 ; CHECK: popeq
+; CHECK: bne
+; CHECK: cmp
+; CHECK: it eq
+; CHECK: cmpeq
 	br label %tailrecurse
 
 tailrecurse:		; preds = %bb, %entry
@@ -83,7 +83,7 @@ define fastcc void @t2() nounwind {
 entry:
 ; CHECK: t2:
 ; CHECK: cmp r0, #0
-; CHECK: beq
+; CHECK: %growMapping.exit
 	br i1 undef, label %bb.i.i3, label %growMapping.exit
 
 bb.i.i3:		; preds = %entry

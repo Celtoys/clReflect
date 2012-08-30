@@ -65,7 +65,7 @@ namespace noexcept_unevaluated {
   }
 
   template<typename T>
-  void g(T x) noexcept((sizeof(T) == sizeof(int)) || f(x)) { }
+  void g(T x) noexcept((sizeof(T) == sizeof(int)) || noexcept(f(x))) { }
 
   void h() {
     g(1);
@@ -74,8 +74,8 @@ namespace noexcept_unevaluated {
 
 namespace PR11084 {
   template<int X> struct A { 
-    static int f() noexcept(1/X) { return 10; }  // expected-error{{argument to noexcept specifier must be a constant expression}}
+    static int f() noexcept(1/X) { return 10; }  // expected-error{{argument to noexcept specifier must be a constant expression}} expected-note{{division by zero}}
   };
 
-  void g() { A<0>::f(); } // expected-note{{in instantiation of template class 'PR11084::A<0>' requested here}}
+  void g() { A<0>::f(); } // expected-note{{in instantiation of exception specification for 'f' requested here}}
 }

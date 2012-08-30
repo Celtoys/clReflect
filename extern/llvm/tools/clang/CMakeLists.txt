@@ -66,6 +66,10 @@ set(CLANG_RESOURCE_DIR "" CACHE STRING
 set(C_INCLUDE_DIRS "" CACHE STRING
   "Colon separated list of directories clang will search for headers.")
 
+set(GCC_INSTALL_PREFIX "" CACHE PATH "Directory where gcc is installed." )
+set(DEFAULT_SYSROOT "" CACHE PATH
+  "Default <path> to all compiler invocations for --sysroot=<path>." )
+
 set(CLANG_VENDOR "" CACHE STRING
   "Vendor-specific text for showing with version information.")
 
@@ -204,7 +208,8 @@ macro(add_clang_library name)
   endif(MSVC)
   install(TARGETS ${name}
     LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX})
+    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+    RUNTIME DESTINATION bin)
   set_target_properties(${name} PROPERTIES FOLDER "Clang libraries")
 endmacro(add_clang_library)
 
@@ -223,6 +228,7 @@ install(DIRECTORY include/
   FILES_MATCHING
   PATTERN "*.def"
   PATTERN "*.h"
+  PATTERN "config.h" EXCLUDE
   PATTERN ".svn" EXCLUDE
   )
 
@@ -233,7 +239,7 @@ install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/
   PATTERN "*.inc"
   )
 
-add_definitions( -D_GNU_SOURCE -DHAVE_CLANG_CONFIG_H )
+add_definitions( -D_GNU_SOURCE )
 
 # Clang version information
 set(CLANG_EXECUTABLE_VERSION
@@ -246,10 +252,8 @@ mark_as_advanced(CLANG_EXECUTABLE_VERSION LIBCLANG_LIBRARY_VERSION)
 
 add_subdirectory(utils/TableGen)
 
-option(CLANG_BUILD_EXAMPLES "Build CLANG example programs." OFF)
-if(CLANG_BUILD_EXAMPLES)
-  add_subdirectory(examples)
-endif ()
+option(CLANG_BUILD_EXAMPLES "Build CLANG example programs by default." OFF)
+add_subdirectory(examples)
 
 add_subdirectory(include)
 add_subdirectory(lib)

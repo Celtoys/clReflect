@@ -38,4 +38,3 @@ int main()
 {
     array<DefaultOnly, 1> a, b;
 }
-

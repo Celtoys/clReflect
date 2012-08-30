@@ -7,7 +7,6 @@ set(LLVM_USED_LIBS
     clangStaticAnalyzerFrontend
     clangStaticAnalyzerCheckers
     clangStaticAnalyzerCore
-    clangIndex
     clangAnalysis
     clangRewrite
     clangAST
@@ -25,6 +24,7 @@ set(LLVM_LINK_COMPONENTS
     bitwriter
     codegen
     ipo
+    linker
     selectiondag
   )
 

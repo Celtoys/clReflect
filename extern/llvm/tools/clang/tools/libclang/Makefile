@@ -18,9 +18,15 @@ SHARED_LIBRARY = 1
 LINK_COMPONENTS := support mc
 USEDLIBS = clangARCMigrate.a clangRewrite.a clangFrontend.a clangDriver.a \
      clangSerialization.a \
-		 clangParse.a clangSema.a clangAnalysis.a clangAST.a clangLex.a clangBasic.a
+		 clangParse.a clangSema.a clangEdit.a clangAnalysis.a \
+		 clangAST.a clangLex.a clangBasic.a
 
 include $(CLANG_LEVEL)/Makefile
+
+# Add soname to the library.
+ifeq ($(HOST_OS), $(filter $(HOST_OS), Linux FreeBSD GNU))
+        LDFLAGS += -Wl,-soname,lib$(LIBRARYNAME)$(SHLIBEXT)
+endif
 
 ##===----------------------------------------------------------------------===##
 # FIXME: This is copied from the 'lto' makefile.  Should we share this?

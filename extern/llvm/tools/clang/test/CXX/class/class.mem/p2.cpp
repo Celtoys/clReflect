@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 // C++11 [class.mem]p2:
 //   A class is considered a completely-defined object type (or
@@ -28,4 +28,31 @@ namespace test2 {
   template <class T> struct A {
     A<int> x;
   };
+}
+
+namespace test3 {
+  struct A {
+    struct B {
+      void f() throw(A);
+      void g() throw(B);
+    };
+
+    void f() throw(A);
+    void g() throw(B);
+  };
+
+  template<typename T>
+  struct A2 {
+    struct B {
+      void f1() throw(A2);
+      void f2() throw(A2<T>);
+      void g() throw(B);
+    };
+
+    void f1() throw(A2);
+    void f2() throw(A2<T>);
+    void g() throw(B);
+  };
+
+  template struct A2<int>;
 }

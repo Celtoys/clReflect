@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fsyntax-only -Wno-unused-value -Wmicrosoft -verify -fms-extensions -fdelayed-template-parsing
+// RUN: %clang_cc1 %s -std=c++11 -fsyntax-only -Wno-unused-value -Wmicrosoft -verify -fms-extensions -fms-compatibility -fdelayed-template-parsing
 
 /* Microsoft attribute tests */
 [repeatable][source_annotation_attribute( Parameter|ReturnValue )]
@@ -103,7 +103,7 @@ typedef COM_CLASS_TEMPLATE<struct_with_uuid> COM_TYPE_2;
 
 template <class T, const GUID& g>
 class COM_CLASS_TEMPLATE_REF  { };
-typedef COM_CLASS_TEMPLATE<struct_with_uuid, __uuidof(struct_with_uuid)> COM_TYPE_REF;
+typedef COM_CLASS_TEMPLATE_REF<struct_with_uuid, __uuidof(struct_with_uuid)> COM_TYPE_REF;
 
   struct late_defined_uuid;
   template<typename T>
@@ -165,6 +165,11 @@ __interface MicrosoftInterface {
    virtual void foo2() = 0;
 };
 
+void interface_test() {
+  MicrosoftInterface* a;
+  a->foo1();
+}
+
 __int64 x7 = __int64(0);
 
 
@@ -210,6 +215,35 @@ __if_not_exists(IF_EXISTS::Type_not) {
   int var244;
 }
 
+int __if_exists_init_list() {
+
+  int array1[] = {
+    0, 
+    __if_exists(IF_EXISTS::Type) {2, }
+    3
+  };
+
+  int array2[] = {
+    0, 
+    __if_exists(IF_EXISTS::Type_not) { this wont compile }
+    3
+  };
+
+  int array3[] = {
+    0, 
+    __if_not_exists(IF_EXISTS::Type_not) {2, }
+    3
+  };
+
+  int array4[] = {
+    0, 
+    __if_not_exists(IF_EXISTS::Type) { this wont compile }
+    3
+  };
+
+}
+
+
 class IF_EXISTS_CLASS_TEST {
   __if_exists(IF_EXISTS::Type) {
     // __if_exists, __if_not_exists can nest
@@ -250,3 +284,28 @@ int main () {
   missing_template_keyword<int>();
 }
 
+
+
+
+namespace access_protected_PTM {
+
+class A {
+protected:
+  void f(); // expected-note {{must name member using the type of the current context 'access_protected_PTM::B'}}
+};
+
+class B : public A{
+public:
+  void test_access();
+  static void test_access_static();
+};
+
+void B::test_access() {
+  &A::f; // expected-error {{'f' is a protected member of 'access_protected_PTM::A'}}
+}
+
+void B::test_access_static() {
+  &A::f;
+}
+
+}

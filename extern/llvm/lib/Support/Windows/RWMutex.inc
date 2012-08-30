@@ -25,7 +25,7 @@ using namespace sys;
 // will attempt to load the APIs.  If they exist, we will use them, and
 // if not, we will fall back on critical sections.  When we drop support
 // for XP, we can stop lazy-loading these APIs and just use them directly.
-#if defined(__MINGW32__) || _WIN32_WINNT < 0x0600
+#if defined(__MINGW32__)
   // Taken from WinNT.h
   typedef struct _RTL_SRWLOCK {
     PVOID Ptr;

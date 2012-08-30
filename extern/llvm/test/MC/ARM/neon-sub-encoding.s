@@ -1,25 +1,51 @@
 @ RUN: llvm-mc -mcpu=cortex-a8 -triple arm-unknown-unknown -show-encoding < %s | FileCheck %s
 
-@ CHECK: vsub.i8	d16, d17, d16           @ encoding: [0xa0,0x08,0x41,0xf3]
 	vsub.i8	d16, d17, d16
-@ CHECK: vsub.i16	d16, d17, d16   @ encoding: [0xa0,0x08,0x51,0xf3]
 	vsub.i16	d16, d17, d16
-@ CHECK: vsub.i32	d16, d17, d16   @ encoding: [0xa0,0x08,0x61,0xf3]
 	vsub.i32	d16, d17, d16
-@ CHECK: vsub.i64	d16, d17, d16   @ encoding: [0xa0,0x08,0x71,0xf3]
 	vsub.i64	d16, d17, d16
-@ CHECK: vsub.f32	d16, d16, d17   @ encoding: [0xa1,0x0d,0x60,0xf2]
 	vsub.f32	d16, d16, d17
-@ CHECK: vsub.i8	q8, q8, q9              @ encoding: [0xe2,0x08,0x40,0xf3]
 	vsub.i8	q8, q8, q9
-@ CHECK: vsub.i16	q8, q8, q9      @ encoding: [0xe2,0x08,0x50,0xf3]
 	vsub.i16	q8, q8, q9
-@ CHECK: vsub.i32	q8, q8, q9      @ encoding: [0xe2,0x08,0x60,0xf3]
 	vsub.i32	q8, q8, q9
-@ CHECK: vsub.i64	q8, q8, q9      @ encoding: [0xe2,0x08,0x70,0xf3]
 	vsub.i64	q8, q8, q9
-@ CHECK: vsub.f32	q8, q8, q9      @ encoding: [0xe2,0x0d,0x60,0xf2]
 	vsub.f32	q8, q8, q9
+
+	vsub.i8  d13, d21
+	vsub.i16 d14, d22
+	vsub.i32 d15, d23
+	vsub.i64 d16, d24
+	vsub.f32 d17, d25
+	vsub.i8  q1, q10
+	vsub.i16 q2, q9
+	vsub.i32 q3, q8
+	vsub.i64 q4, q7
+	vsub.f32 q5, q6
+
+@ CHECK: vsub.i8	d16, d17, d16   @ encoding: [0xa0,0x08,0x41,0xf3]
+@ CHECK: vsub.i16	d16, d17, d16   @ encoding: [0xa0,0x08,0x51,0xf3]
+@ CHECK: vsub.i32	d16, d17, d16   @ encoding: [0xa0,0x08,0x61,0xf3]
+@ CHECK: vsub.i64	d16, d17, d16   @ encoding: [0xa0,0x08,0x71,0xf3]
+@ CHECK: vsub.f32	d16, d16, d17   @ encoding: [0xa1,0x0d,0x60,0xf2]
+@ CHECK: vsub.i8	q8, q8, q9      @ encoding: [0xe2,0x08,0x40,0xf3]
+@ CHECK: vsub.i16	q8, q8, q9      @ encoding: [0xe2,0x08,0x50,0xf3]
+@ CHECK: vsub.i32	q8, q8, q9      @ encoding: [0xe2,0x08,0x60,0xf3]
+@ CHECK: vsub.i64	q8, q8, q9      @ encoding: [0xe2,0x08,0x70,0xf3]
+@ CHECK: vsub.f32	q8, q8, q9      @ encoding: [0xe2,0x0d,0x60,0xf2]
+
+@ CHECK: vsub.i8	d13, d13, d21   @ encoding: [0x25,0xd8,0x0d,0xf3]
+@ CHECK: vsub.i16	d14, d14, d22   @ encoding: [0x26,0xe8,0x1e,0xf3]
+@ CHECK: vsub.i32	d15, d15, d23   @ encoding: [0x27,0xf8,0x2f,0xf3]
+@ CHECK: vsub.i64	d16, d16, d24   @ encoding: [0xa8,0x08,0x70,0xf3]
+@ CHECK: vsub.f32	d17, d17, d25   @ encoding: [0xa9,0x1d,0x61,0xf2]
+@ CHECK: vsub.i8	q1, q1, q10     @ encoding: [0x64,0x28,0x02,0xf3]
+@ CHECK: vsub.i16	q2, q2, q9      @ encoding: [0x62,0x48,0x14,0xf3]
+@ CHECK: vsub.i32	q3, q3, q8      @ encoding: [0x60,0x68,0x26,0xf3]
+@ CHECK: vsub.i64	q4, q4, q7      @ encoding: [0x4e,0x88,0x38,0xf3]
+@ CHECK: vsub.f32	q5, q5, q6      @ encoding: [0x4c,0xad,0x2a,0xf2]
+
+
+
 @ CHECK: vsubl.s8	q8, d17, d16    @ encoding: [0xa0,0x02,0xc1,0xf2]
 	vsubl.s8	q8, d17, d16
 @ CHECK: vsubl.s16	q8, d17, d16    @ encoding: [0xa0,0x02,0xd1,0xf2]
@@ -106,3 +132,29 @@
 	vrsubhn.i32	d16, q8, q9
 @ CHECK: vrsubhn.i64	d16, q8, q9     @ encoding: [0xa2,0x06,0xe0,0xf3]
 	vrsubhn.i64	d16, q8, q9
+
+	vhsub.s8	d11, d24
+	vhsub.s16	d12, d23
+	vhsub.s32	d13, d22
+	vhsub.u8	d14, d21
+	vhsub.u16	d15, d20
+	vhsub.u32	d16, d19
+	vhsub.s8	q1, q12
+	vhsub.s16	q2, q11
+	vhsub.s32	q3, q10
+	vhsub.u8	q4, q9
+	vhsub.u16	q5, q8
+	vhsub.u32	q6, q7
+
+@ CHECK: vhsub.s8	d11, d11, d24   @ encoding: [0x28,0xb2,0x0b,0xf2]
+@ CHECK: vhsub.s16	d12, d12, d23   @ encoding: [0x27,0xc2,0x1c,0xf2]
+@ CHECK: vhsub.s32	d13, d13, d22   @ encoding: [0x26,0xd2,0x2d,0xf2]
+@ CHECK: vhsub.u8	d14, d14, d21   @ encoding: [0x25,0xe2,0x0e,0xf3]
+@ CHECK: vhsub.u16	d15, d15, d20   @ encoding: [0x24,0xf2,0x1f,0xf3]
+@ CHECK: vhsub.u32	d16, d16, d19   @ encoding: [0xa3,0x02,0x60,0xf3]
+@ CHECK: vhsub.s8	q1, q1, q12     @ encoding: [0x68,0x22,0x02,0xf2]
+@ CHECK: vhsub.s16	q2, q2, q11     @ encoding: [0x66,0x42,0x14,0xf2]
+@ CHECK: vhsub.s32	q3, q3, q10     @ encoding: [0x64,0x62,0x26,0xf2]
+@ CHECK: vhsub.u8	q4, q4, q9      @ encoding: [0x62,0x82,0x08,0xf3]
+@ CHECK: vhsub.u16	q5, q5, q8      @ encoding: [0x60,0xa2,0x1a,0xf3]
+@ CHECK: vhsub.u32	q6, q6, q7      @ encoding: [0x4e,0xc2,0x2c,0xf3]

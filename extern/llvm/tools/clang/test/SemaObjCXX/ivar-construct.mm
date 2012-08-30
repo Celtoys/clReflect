@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-objc-root-class %s
 struct Y { 
   Y(); 
 
@@ -26,4 +26,12 @@ struct Z; // expected-note{{forward declaration}}
 @end
 
 @implementation B
+@end
+
+// <rdar://problem/11284902>
+template<typename T> struct Incomplete; // expected-note{{declared here}}
+
+@interface C {
+  Incomplete<int> a[4][4][4]; // expected-error{{implicit instantiation of undefined template 'Incomplete<int>'}}
+}
 @end

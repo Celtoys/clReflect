@@ -1,15 +1,19 @@
 set(LLVM_TARGET_DEFINITIONS Mips.td)
 
-llvm_tablegen(MipsGenRegisterInfo.inc -gen-register-info)
-llvm_tablegen(MipsGenInstrInfo.inc -gen-instr-info)
-llvm_tablegen(MipsGenCodeEmitter.inc -gen-emitter)
-llvm_tablegen(MipsGenAsmWriter.inc -gen-asm-writer)
-llvm_tablegen(MipsGenDAGISel.inc -gen-dag-isel)
-llvm_tablegen(MipsGenCallingConv.inc -gen-callingconv)
-llvm_tablegen(MipsGenSubtargetInfo.inc -gen-subtarget)
+tablegen(LLVM MipsGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM MipsGenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM MipsGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM MipsGenCodeEmitter.inc -gen-emitter)
+tablegen(LLVM MipsGenMCCodeEmitter.inc -gen-emitter -mc-emitter)
+tablegen(LLVM MipsGenAsmWriter.inc -gen-asm-writer)
+tablegen(LLVM MipsGenDAGISel.inc -gen-dag-isel)
+tablegen(LLVM MipsGenCallingConv.inc -gen-callingconv)
+tablegen(LLVM MipsGenSubtargetInfo.inc -gen-subtarget)
+tablegen(LLVM MipsGenEDInfo.inc -gen-enhanced-disassembly-info)
 add_public_tablegen_target(MipsCommonTableGen)
 
 add_llvm_target(MipsCodeGen
+  MipsAnalyzeImmediate.cpp
   MipsAsmPrinter.cpp
   MipsCodeEmitter.cpp
   MipsDelaySlotFiller.cpp
@@ -21,7 +25,7 @@ add_llvm_target(MipsCodeGen
   MipsISelLowering.cpp
   MipsFrameLowering.cpp
   MipsMCInstLower.cpp
-  MipsMCSymbolRefExpr.cpp
+  MipsMachineFunction.cpp
   MipsRegisterInfo.cpp
   MipsSubtarget.cpp
   MipsTargetMachine.cpp
@@ -29,19 +33,8 @@ add_llvm_target(MipsCodeGen
   MipsSelectionDAGInfo.cpp
   )
 
-add_llvm_library_dependencies(LLVMMipsCodeGen
-  LLVMAsmPrinter
-  LLVMCodeGen
-  LLVMCore
-  LLVMMC
-  LLVMMipsAsmPrinter
-  LLVMMipsDesc
-  LLVMMipsInfo
-  LLVMSelectionDAG
-  LLVMSupport
-  LLVMTarget
-  )
-
 add_subdirectory(InstPrinter)
+add_subdirectory(Disassembler)
 add_subdirectory(TargetInfo)
 add_subdirectory(MCTargetDesc)
+add_subdirectory(AsmParser)

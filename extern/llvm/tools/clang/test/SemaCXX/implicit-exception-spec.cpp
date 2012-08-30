@@ -39,25 +39,51 @@ namespace InClassInitializers {
   bool z = noexcept(Nested::Inner());
 }
 
-// FIXME:
-// The same problem arises in delayed parsing of exception specifications,
-// which clang does not yet support.
 namespace ExceptionSpecification {
+  // A type is permitted to be used in a dynamic exception specification when it
+  // is still being defined, but isn't complete within such an exception
+  // specification.
   struct Nested { // expected-note {{not complete}}
     struct T {
-      T() noexcept(!noexcept(Nested())); // expected-error {{incomplete type}}
+      T() noexcept(!noexcept(Nested())); // expected-error{{incomplete type}}
     } t;
   };
 }
 
-// FIXME:
-// The same problem arises in delayed parsing of default arguments,
-// which clang does not yet support.
 namespace DefaultArgument {
-  // FIXME: this diagnostic is completely wrong.
-  struct Default { // expected-note {{explicitly marked deleted here}}
+  struct Default {
     struct T {
-      T(int = ExceptionIf<noexcept(Default())::f()); // expected-error {{call to deleted constructor}}
-    } t;
+      T(int = ExceptionIf<noexcept(Default())::f()); // expected-error {{call to implicitly-deleted default constructor}}
+    } t; // expected-note {{has no default constructor}}
+  };
+}
+
+namespace ImplicitDtorExceptionSpec {
+  struct A {
+    virtual ~A();
+
+    struct Inner {
+      ~Inner() throw();
+    };
+    Inner inner;
+  };
+
+  struct B {
+    virtual ~B() {} // expected-note {{here}}
+  };
+
+  struct C : B {
+    virtual ~C() {}
+    A a;
+  };
+
+  struct D : B {
+    ~D(); // expected-error {{more lax than base}}
+    struct E {
+      ~E();
+      struct F {
+        ~F() throw(A);
+      } f;
+    } e;
   };
 }
