@@ -15,8 +15,7 @@
 // --------------------------------------------------------------------------------------------
 // Named global enumeration
 // --------------------------------------------------------------------------------------------
-clcpp_reflect(NamedGlobalEnum)
-enum NamedGlobalEnum
+enum clcpp_attr(reflect) NamedGlobalEnum
 {
 	VALUE_UNASSIGNED,
 	VALUE_UNASSIGNED_PLUS_ONE,

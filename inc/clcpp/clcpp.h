@@ -812,8 +812,9 @@ namespace clcpp
 													\
 		namespace clcpp_internal					\
 		{											\
+			struct									\
 			__attribute__((annotate("full-"#name)))	\
-			struct CLCPP_UNIQUE(cldb_reflect) { };	\
+			CLCPP_UNIQUE(cldb_reflect) { };			\
 		}
 
 
@@ -826,8 +827,9 @@ namespace clcpp
 													\
 		namespace clcpp_internal					\
 		{											\
+			struct									\
 			__attribute__((annotate("part-"#name)))	\
-			struct CLCPP_UNIQUE(cldb_reflect) { };	\
+			CLCPP_UNIQUE(cldb_reflect) { };	\
 		}
 
 
@@ -841,8 +843,9 @@ namespace clcpp
 		clcpp_reflect_part(write_iterator)																			\
 		namespace clcpp_internal																					\
 		{																											\
+			struct																									\
 			__attribute__((annotate("container-" #container "-" #read_iterator "-" #write_iterator "-" #keyinfo)))	\
-			struct CLCPP_UNIQUE(container_info) { };																\
+			CLCPP_UNIQUE(container_info) { };																\
 		}
 
 

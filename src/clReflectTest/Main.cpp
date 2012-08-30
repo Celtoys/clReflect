@@ -81,19 +81,16 @@ extern void TestFunctionSerialise(clcpp::Database& db);
 
 int main()
 {
-#ifdef _DEBUG
-	StdFile file("../../build/bin/Debug/clReflectTest.cppbin");
-#else
-	StdFile file("../../build/bin/Release/clReflectTest.cppbin");
-#endif
+	// Ensure the cppbin file is in the same directory as the executable
+	StdFile file("clReflectTest.cppbin");
 	if (!file.IsOpen())
-	{
 		return 1;
-	}
 
 	Malloc allocator;
 	clcpp::Database db;
-	db.Load(&file, &allocator, 0);
+	if (!db.Load(&file, &allocator, 0))
+		return 1;
+
 	TestGetType(db);
 	TestConstructorDestructor(db);
 	TestArraysFunc(db);

@@ -60,7 +60,8 @@ cltest = CppBuild(env, [ "." ], "cltest.exe", libs, build = False)
 cltest.csv_files = [ clReflect.CppScan(sys_include_paths, include_paths, file) for file in cltest.obj_files ]
 cltest.db_file = clReflect.Merge("clReflectTest.csv", cltest.csv_files)
 map_file = cltest.output.GetOutputFiles(env)[1]
-cltest.cppbin_file = clReflect.CppExport("clReflectTest.cppbin", cltest.db_file, map_file)
+map_file_node = env.NewFile(map_file)
+cltest.cppbin_file = clReflect.CppExport("clReflectTest.cppbin", cltest.db_file, map_file_node)
 
 env.Build([ cltest.exe, cltest.cppbin_file ], "cltest")
 

@@ -162,6 +162,14 @@ namespace Offsets
 		TESTS(DoubleInPolymorphicStruct, a, b)
 	};
 
+	struct DoubleInPolymorphincStructWithPODBase : public PODBase
+	{
+		virtual void Empty() { }
+		int a;
+		double b;
+		TESTS(DoubleInPolymorphincStructWithPODBase, a, b)
+	};
+
 	// The addition of a 64-bit type anywhere in this struct forces the vtable ptr to be occupy 8 bytes like previous
 	struct Int64InPolymorphicStruct
 	{
@@ -356,6 +364,7 @@ void TestOffsets(clcpp::Database& db)
 	Offsets::DerivedPolymorphicStruct::Test(db);
 	Offsets::DerivedPolymorphicWithPODBase::Test(db);
 	Offsets::DoubleInPolymorphicStruct::Test(db);
+	Offsets::DoubleInPolymorphincStructWithPODBase::Test(db);
 	Offsets::Int64InPolymorphicStruct::Test(db);
 	Offsets::DoubleStructInPolymorphicStruct::Test(db);
 	Offsets::VirtualInheritance::Test(db);

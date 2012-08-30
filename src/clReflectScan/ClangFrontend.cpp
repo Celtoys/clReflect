@@ -35,7 +35,7 @@ namespace
 	struct EmptyASTConsumer : public clang::ASTConsumer
 	{
 		virtual ~EmptyASTConsumer() { }
-		virtual void HandleTopLevelDecl(clang::DeclGroupRef) { }
+		virtual bool HandleTopLevelDecl(clang::DeclGroupRef) { return true; }
 	};
 }
 
@@ -52,7 +52,7 @@ ClangParser::ClangParser(Arguments& args)
 	preprocessor_options.addMacroDef("__clcpp_parse__");
 
 	// Setup the language parsing options for C++
-	clang::LangOptions& lang_options = m_CompilerInvocation->getLangOpts();
+	clang::LangOptions& lang_options = *m_CompilerInvocation->getLangOpts();
 	m_CompilerInvocation->setLangDefaults(lang_options, clang::IK_CXX, clang::LangStandard::lang_cxx03);
 	lang_options.CPlusPlus = 1;
 	lang_options.Bool = 1;
@@ -109,7 +109,7 @@ ClangParser::ClangParser(Arguments& args)
 
 	// Setup target options - ensure record layout calculations use the MSVC C++ ABI
 	clang::TargetOptions& target_options = m_CompilerInvocation->getTargetOpts();
-	target_options.Triple = llvm::sys::getHostTriple();
+	target_options.Triple = llvm::sys::getDefaultTargetTriple();
 #if defined(CLCPP_USING_MSVC)
 	target_options.CXXABI = "microsoft";
 #else
@@ -135,7 +135,7 @@ bool ClangParser::ParseAST(const char* filename)
 	if (m_CompilerInstance.hasPreprocessor()) {
 		clang::Preprocessor& preprocessor = m_CompilerInstance.getPreprocessor();
 		preprocessor.getBuiltinInfo().InitializeBuiltins(preprocessor.getIdentifierTable(),
-			preprocessor.getLangOptions());
+			preprocessor.getLangOpts());
 	}
 
 	// Get the file  from the file system
@@ -156,29 +156,33 @@ bool ClangParser::ParseAST(const char* filename)
 
 void ClangParser::GetIncludedFiles(std::vector< std::pair<HeaderType,std::string> >& files) const
 {
-	// First need a mapping from unique file ID to the File Entry
-	llvm::SmallVector<const clang::FileEntry*, 0> uid_to_files;
-	m_CompilerInstance.getFileManager().GetUniqueIDMapping(uid_to_files);
+	const clang::HeaderSearch& header_search = m_CompilerInstance.getPreprocessor().getHeaderSearchInfo();
 
-	// Now iterate over every included header file info
-	clang::HeaderSearch& header_search = m_CompilerInstance.getPreprocessor().getHeaderSearchInfo();
-	clang::HeaderSearch::header_file_iterator begin = header_search.header_file_begin();
-	clang::HeaderSearch::header_file_iterator end = header_search.header_file_end();
-	for (clang::HeaderSearch::header_file_iterator i = begin; i != end; ++i)
+	// Get all files loaded during the scan
+	llvm::SmallVector<const clang::FileEntry*, 16> file_uids;
+	header_search.getFileMgr().GetUniqueIDMapping(file_uids);
+
+	for (unsigned uid = 0, last_uid = file_uids.size(); uid != last_uid; ++uid)
 	{
-		// Map from header file info to file entry and add to the filename list
-		// Header file infos are stored in their vector, indexed by file UID and this
-		// is the only way you can get at that index
-		size_t file_uid = std::distance(begin, i);
-		const clang::FileEntry* file_entry = uid_to_files[file_uid];
+		const clang::FileEntry* fe = file_uids[uid];
+		if (fe == 0)
+			continue;
+
+		// Only interested in header files
+		const clang::HeaderFileInfo& hfi = header_search.getFileInfo(fe);
+		if (!hfi.isNonDefault())
+			continue;
+
+		// Classify the kind of include
+		clang::SrcMgr::CharacteristicKind kind = (clang::SrcMgr::CharacteristicKind)hfi.DirInfo;
 		HeaderType header_type;
-		if (header_search.getFileDirFlavor(file_entry)==clang::SrcMgr::C_User)
+		if (kind == clang::SrcMgr::C_User)
 			header_type = HeaderType_User;
-		else if (header_search.getFileDirFlavor(file_entry)==clang::SrcMgr::C_System)
+		else if (kind == clang::SrcMgr::C_System)
 			header_type = HeaderType_System;
 		else
 			header_type = HeaderType_ExternC;
 
-		files.push_back(std::pair<HeaderType,std::string>(header_type,file_entry->getName()));
+		files.push_back(std::pair<HeaderType,std::string>(header_type, fe->getName()));
 	}
 }

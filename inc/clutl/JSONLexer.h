@@ -41,8 +41,7 @@ namespace clutl
 
 
 	// Partially reflected so that it can be used for reflecting custom serialisation functions
-	clcpp_attr(reflect_part)
-	struct JSONToken
+	struct clcpp_attr(reflect_part) JSONToken
 	{
 		JSONToken()
 			: type(JSON_TOKEN_NONE)

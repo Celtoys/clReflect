@@ -16,13 +16,11 @@ namespace TestAttributes
 {
 	// --------------------------------------------------------------------------------------------
 	// Enum attributes
-	// NOTE the syntax difference that is specific to enums!
 	enum clcpp_attr(enum_attr) GlobalEnumAttr { };
 
 	// --------------------------------------------------------------------------------------------
 	// Class attributes and those within its declaration
-	clcpp_attr(class_attr)
-	class ClassAttr
+	class clcpp_attr(class_attr) ClassAttr
 	{
 		enum clcpp_attr(enum_attr) ClassEnumAttr { };
 
@@ -35,8 +33,7 @@ namespace TestAttributes
 
 	// --------------------------------------------------------------------------------------------
 	// Struct attributes and those within its declaration
-	clcpp_attr(struct_attr)
-	struct StructAttr
+	struct clcpp_attr(struct_attr) StructAttr
 	{
 		enum clcpp_attr(enum_attr) ClassEnumAttr { };
 

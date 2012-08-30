@@ -39,6 +39,7 @@ libs = [
     "clangBasic.lib",
     "clangSerialization.lib",
     "clangDriver.lib",
+    "clangEdit.lib",
     "LLVMSupport.lib",
     "LLVMCore.lib",
     "LLVMMC.lib",

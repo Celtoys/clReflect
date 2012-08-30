@@ -147,8 +147,8 @@ namespace
 		// Parse the type name
 		base_name = cldb::Name();
 		clang::QualType base_qual_type = base.getType();
-		const clang::Type* base_type = base_qual_type.split().first;
-		std::string type_name_str = base_qual_type.getAsString(consumer.GetASTContext().getLangOptions());
+		const clang::Type* base_type = base_qual_type.split().Ty;
+		std::string type_name_str = base_qual_type.getAsString(consumer.GetASTContext().getLangOpts());
 		Remove(type_name_str, "struct ");
 		Remove(type_name_str, "class ");
 
@@ -304,7 +304,7 @@ namespace
 		{
 			qual_type = qt;
 			split_qual_type = qual_type.split();
-			type = split_qual_type.first;
+			type = split_qual_type.Ty;
 		}
 
 		void UpdateTypedefOrElaborated()
@@ -358,9 +358,9 @@ namespace
 		ctype.UpdateTypedefOrElaborated();
 
 		// Record the qualifiers before stripping them and generating the type name
-		clang::Qualifiers qualifiers = clang::Qualifiers::fromFastMask(ctype.split_qual_type.second);
+		clang::Qualifiers qualifiers = clang::Qualifiers::fromFastMask(ctype.split_qual_type.Quals);
 		ctype.qual_type.removeLocalFastQualifiers();
-		info.type_name = ctype.qual_type.getAsString(consumer.GetASTContext().getLangOptions());
+		info.type_name = ctype.qual_type.getAsString(consumer.GetASTContext().getLangOpts());
 		info.qualifer.is_const = qualifiers.hasConst();
 
 		// Is this a field that can be safely recorded?
@@ -564,7 +564,7 @@ ASTConsumer::ASTConsumer(clang::ASTContext& context, cldb::Database& db, const R
 	if (ast_log != "")
 		LOG_TO_FILE(ast, ALL, ast_log.c_str());
 
-	m_PrintingPolicy = new clang::PrintingPolicy(m_ASTContext.getLangOptions());
+	m_PrintingPolicy = new clang::PrintingPolicy(m_ASTContext.getLangOpts());
 }
 
 
