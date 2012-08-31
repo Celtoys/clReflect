@@ -121,7 +121,7 @@ namespace clcpp
     // a negative ptrdiff_t type variable with a size_t will be a disaster).
     #if defined(CLCPP_USING_64_BIT)
 
-		typedef unsigned long long size_type;
+		typedef unsigned long size_type;
 		typedef unsigned long long pointer_type;
 
 		// type field used in printf/scanf

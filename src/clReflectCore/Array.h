@@ -14,51 +14,51 @@ public:
 	// Initialise an empty array
 	CArray()
 	{
-		size = 0;
-		data = 0;
-		allocator = 0;
+		this->size = 0;
+		this->data = 0;
+		this->allocator = 0;
 	}
 
 	// Initialise with array count and allocator
 	CArray(unsigned int _size, clcpp::IAllocator* _allocator)
 	{		
-		size = _size;
-		allocator = _allocator;
+		this->size = _size;
+		this->allocator = _allocator;
 
 		// Allocate and call the constructor for each element
-		data = (TYPE*)allocator->Alloc(size * sizeof(TYPE));
-		for (unsigned int i = 0; i < size; i++)
-			clcpp::internal::CallConstructor(data + i);
+		this->data = (TYPE*)this->allocator->Alloc(this->size * sizeof(TYPE));
+		for (unsigned int i = 0; i < this->size; i++)
+			clcpp::internal::CallConstructor(this->data + i);
 	}
 
 	// Initialise with pre-allocated data
 	CArray(TYPE* _data, unsigned int _size)
 	{
-		size = _size;
-		data = _data;
-		allocator = 0;
+		this->size = _size;
+		this->data = _data;
+		this->allocator = 0;
 	}
 
 	~CArray()
 	{
-		if (allocator)
+		if (this->allocator)
 		{
 			// Call the destructor on each element and free the allocated memory
-			for (unsigned int i = 0; i < size; i++)
-				clcpp::internal::CallDestructor(data + i);
-			allocator->Free(data);
+			for (unsigned int i = 0; i < this->size; i++)
+				clcpp::internal::CallDestructor(this->data + i);
+			this->allocator->Free(this->data);
 		}
 	}
 
 	TYPE& operator [] (unsigned int index)
 	{
-		clcpp::internal::Assert(index < size);
-		return data[index];
+		clcpp::internal::Assert(index < this->size);
+		return this->data[index];
 	}
 	const TYPE& operator [] (unsigned int index) const
 	{
-		clcpp::internal::Assert(index < size);
-		return data[index];
+		clcpp::internal::Assert(index < this->size);
+		return this->data[index];
 	}
 };
 

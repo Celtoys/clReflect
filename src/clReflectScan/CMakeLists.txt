@@ -47,6 +47,7 @@ set(CL_REFLECT_SCAN_LIBS
   clangSerialization
   clangDriver
   clangAST
+  clangEdit
   LLVMSupport
   LLVMCore
   LLVMMC

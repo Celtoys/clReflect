@@ -1480,6 +1480,7 @@ namespace
 	void LogPrimitive(const clcpp::Template& t);
 	void LogPrimitive(const clcpp::Class& cls);
 	void LogPrimitive(const clcpp::Namespace& ns);
+	void LogPrimitive(const clcpp::Attribute& attr);
 
 
 	template <typename TYPE>

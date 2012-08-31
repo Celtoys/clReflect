@@ -3,8 +3,6 @@ add_clreflect_library(clReflectUtil
   JSONLexer.cpp
   Module.cpp
   Objects.cpp
-  Platform.cpp
-  Platform.h
   Serialise.cpp
   SerialiseFunction.cpp
   SerialiseJSON.cpp
