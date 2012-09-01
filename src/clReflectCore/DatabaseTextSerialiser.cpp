@@ -87,6 +87,14 @@ namespace
 	}
 
 
+	void WriteClass(FILE* fp, const cldb::Class& primitive, const cldb::Database& db)
+	{
+		WriteType(fp, primitive, db);
+		fputs("\t", fp);
+		fputs(primitive.is_class ? "\t1" : "\t0", fp);
+	}
+
+
 	void WriteEnumConstant(FILE* fp, const cldb::EnumConstant& primitive, const cldb::Database& db)
 	{
 		WritePrimitive(fp, primitive, db);
@@ -254,7 +262,7 @@ void cldb::WriteTextDatabase(const char* filename, const Database& db)
 	WritePrimitives<Enum>(fp, db, WriteType, "Enums", "Name\t\tParent\t\tSize");
 	WritePrimitives<Field>(fp, db, WriteField, "Fields", "Name\t\tParent\t\tType\t\tMod\tCst\tOffs\tUID");
 	WritePrimitives<Function>(fp, db, WriteFunction, "Functions", "Name\t\tParent\t\tUID");
-	WritePrimitives<Class>(fp, db, WriteType, "Classes", "Name\t\tParent\t\tSize\t\tBase");
+	WritePrimitives<Class>(fp, db, WriteClass, "Classes", "Name\t\tParent\t\tSize\t\tBase\t\tIs Class");
 	WritePrimitives<Template>(fp, db, WritePrimitive, "Templates", "Name\t\tParent");
 	WritePrimitives<TemplateType>(fp, db, WriteTemplateType, "Template Types", "Name\t\tParent\t\tArgument type and pointer pairs");
 	WritePrimitives<Namespace>(fp, db, WritePrimitive, "Namespaces", "Name\t\tParent");
@@ -301,10 +309,15 @@ namespace
 		{
 			const char* token = Get();
 			if (token == 0)
-			{
 				return 0;
-			}
 			return hextoi(token);
+		}
+		int GetInt()
+		{
+			const char* token = Get();
+			if (token == 0)
+				return 0;
+			return atoi(token);
 		}
 
 		// Automating the process of getting the common primitive data
@@ -380,7 +393,7 @@ namespace
 		tok.GetNameAndParent(name, parent);
 
 		// Enum constant parsing
-		int value = atoi(tok.Get());
+		int value = tok.GetInt();
 
 		// Add a new enum constant to the database
 		cldb::EnumConstant primitive(
@@ -443,8 +456,7 @@ namespace
 		cldb::u32 type = tok.GetHexInt();
 		cldb::Qualifier qualifier = ParseQualifier(tok);
 
-		const char* idx = tok.Get();
-		int index = atoi(idx);
+		int index = tok.GetInt();
 
 		cldb::u32 parent_unique_id = tok.GetHexInt();
 
@@ -492,12 +504,14 @@ namespace
 
 		// Type parsing
 		cldb::u32 size = tok.GetHexInt();
+		bool is_class = tok.GetInt() != 0;
 
 		// Add a new class to the database
 		cldb::Class primitive(
 			db.GetName(name),
 			db.GetName(parent),
-			size);
+			size,
+			is_class);
 
 		db.AddPrimitive(primitive);
 	}
@@ -525,7 +539,7 @@ namespace
 			}
 
 			primitive.parameter_types[i] = db.GetName(type);
-			primitive.parameter_ptrs[i] = atoi(tok.Get()) != 0;
+			primitive.parameter_ptrs[i] = tok.GetInt() != 0;
 		}
 
 		db.AddPrimitive(primitive);
@@ -541,7 +555,7 @@ namespace
 		tok.GetNameAndParent(name, parent);
 
 		// Int attribute parsing
-		int value = atoi(tok.Get());
+		int value = tok.GetInt() != 0;
 
 		// Add a new attribute to the database
 		cldb::IntAttribute primitive(
@@ -748,11 +762,8 @@ bool cldb::IsTextDatabase(const char* filename)
 		{
 			StringTokeniser tok(line, ":");
 			tok.Get();
-			const char* version = tok.Get();
-			if (atoi(version) != CURRENT_VERSION)
-			{
+			if (tok.GetInt() != CURRENT_VERSION)
 				is_text_db = false;
-			}
 
 			break;
 		}

@@ -78,6 +78,9 @@ extern void TestOffsets(clcpp::Database& db);
 extern void TestTypedefsFunc(clcpp::Database& db);
 extern void TestFunctionSerialise(clcpp::Database& db);
 
+extern void clcppInitGetType(const clcpp::Database* db);
+
+
 
 int main()
 {
@@ -90,6 +93,8 @@ int main()
 	clcpp::Database db;
 	if (!db.Load(&file, &allocator, 0))
 		return 1;
+
+	clcppInitGetType(&db);
 
 	TestGetType(db);
 	TestConstructorDestructor(db);

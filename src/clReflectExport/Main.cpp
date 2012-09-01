@@ -59,16 +59,12 @@ int main(int argc, const char* argv[])
 		// First build the C++ export representation
 		CppExport cppexp(function_base_address);
 		if (!BuildCppExport(db, cppexp))
-		{
 			return 1;
-		}
 
 		// Pretty-print the result to the specified output file
 		std::string cpp_log = args.GetProperty("-cpp_log");
 		if (cpp_log != "")
-		{
 			WriteCppExportAsText(cppexp, cpp_log.c_str());
-		}
 
 		// Save to disk
 		// NOTE: After this point the CppExport object is useless (TODO: fix)

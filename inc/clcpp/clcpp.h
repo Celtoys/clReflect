@@ -81,13 +81,11 @@
 
 	#define CLCPP_CDECL __cdecl
 	#define CLCPP_EXPORT __declspec(dllexport)
-	#define CLCPP_NOINLINE __declspec(noinline)
 
 #elif defined(CLCPP_USING_GNUC)
 
 	#define CLCPP_CDECL
 	#define CLCPP_EXPORT
-	#define CLCPP_NOINLINE __attribute__((noinline))
 
 #endif
 
@@ -734,15 +732,10 @@ namespace clcpp
 	public:
 		enum
 		{
-			// When a database is loaded, the code assumes that the module doing the loading
-			// is the module that generated the database. It will continue to read the GetType
-			// patching addresses and modify the data if this flag isn't passed in.
-			OPT_DONT_PATCH_GETTYPE = 0x00000001,
-
 			// When a database is loaded, the function pointers stored within are rebased
 			// using the load address of the calling module. Use this flag to disable
 			// this behaviour.
-			OPT_DONT_REBASE_FUNCTIONS = 0x00000002,
+			OPT_DONT_REBASE_FUNCTIONS = 0x00000001,
 		};
 
 		Database();
@@ -904,43 +897,14 @@ namespace clcpp
 
 namespace clcpp
 {
-   	#define CLCPP_INVALID_HASH (0xfefe012f)
-
-    #if defined(CLCPP_USING_64_BIT)
-	    #define CLCPP_INVALID_ADDRESS (0xffee01ef12349007)
-    #else
-    	#define CLCPP_INVALID_ADDRESS (0xffee6753)
-    #endif // CLCPP_USING_64_BIT
-
-
 	//
 	// GetTypeNameHash and GetType are clReflect's implementation of a constant-time,
 	// string-less typeof operator that would appear no different had it been implemented
 	// as a core feature of the C++ language itself.
 	//
-	// Use is simple:
-	//
-	//    unsigned int type_hash = clcpp::GetTypeNameHash<MyType>();
-	//    const clcpp::Type* type = clcpp::GetType<MyType>();
-	//
-	// The type hash returned is independent of any loaded database, however, the type
-	// pointer returned belongs to the database which was loaded by the module the call
-	// resides in.
-	//
-	// See the clReflect wiki for implementation details.
+	// THIS IMPLEMENTATION IS CURRENTLY IN DEVELOPMENT AND AWAITING FURTHER DOCUMENTATION
 	//
 	//
-	template <typename TYPE>
-	CLCPP_NOINLINE unsigned int GetTypeNameHash()
-	{
-		static unsigned int hash = CLCPP_INVALID_HASH;
-		return hash;
-	}
-
-	template <typename TYPE>
-	CLCPP_NOINLINE const Type* GetType()
-	{
-		static const Type* type_ptr = (Type*)CLCPP_INVALID_ADDRESS;
-		return type_ptr;
-	}
+	template <typename TYPE> unsigned int GetTypeNameHash();
+	template <typename TYPE> const Type* GetType();
 }

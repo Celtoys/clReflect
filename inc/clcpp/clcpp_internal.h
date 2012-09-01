@@ -7,18 +7,6 @@ namespace clcpp
 	namespace internal
 	{
 		//
-		// Point to the runtime addresses of the GetType family of functions so that
-		// the values that they return can be patched at runtime.
-		//
-		struct GetTypeFunctions
-		{
-			unsigned int type_hash;
-            clcpp::pointer_type get_typename_address;
-            clcpp::pointer_type get_type_address;
-		};
-
-
-		//
 		// Memory-mapped representation of the entire reflection database
 		//
 		struct DatabaseMem
@@ -58,9 +46,6 @@ namespace clcpp
 			// A list of references to all types, enums and classes for potentially quicker
 			// searches during serialisation
 			CArray<const Type*> type_primitives;
-
-			// A list of all GetType function addresses paired to their type
-			CArray<GetTypeFunctions> get_type_functions;
 
 			// A list of all registered containers
 			CArray<ContainerInfo> container_infos;

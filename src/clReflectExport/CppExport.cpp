@@ -882,23 +882,6 @@ namespace
 	}
 
 
-	void AddGetTypeFunctions(CppExport& cppexp, clcpp::CArray<clcpp::internal::GetTypeFunctions>& dest, const cldb::GetTypeFunctions::MapType& src)
-	{
-		// Allocate enough space in the destination
-		cppexp.allocator.Alloc(dest, src.size());
-
-		// Copy all function addresses
-		unsigned int index = 0;
-		for (cldb::GetTypeFunctions::MapType::const_iterator i = src.begin(); i != src.end(); ++i)
-		{
-			clcpp::internal::GetTypeFunctions& d = dest[index++];
-			d.type_hash = i->first;
-			d.get_typename_address = i->second.get_typename_address;
-			d.get_type_address = i->second.get_type_address;
-		}
-	}
-
-
 	template <typename TYPE>
 	const char* VerifyPtr(CppExport& cppexp, const TYPE* const & ptr)
 	{
@@ -1188,8 +1171,6 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	// Ensure any primitive attributes have their pointers patched
 	AssignPrimitiveAttributes(cppexp);
 
-	AddGetTypeFunctions(cppexp, cppexp.db->get_type_functions, db.m_GetTypeFunctions);
-
 	// Primitives reference each other via their names (hash codes). This code first of all copies
 	// hashes into the pointers and then patches them up via lookup. If the input database doesn't
 	// contain primitives that others reference then at this point, certain primitives will contain
@@ -1250,7 +1231,6 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 		(&clcpp::internal::DatabaseMem::primitive_attributes, array_ofs)
 		(&clcpp::internal::DatabaseMem::text_attributes, array_ofs)
 		(&clcpp::internal::DatabaseMem::type_primitives, array_ofs)
-		(&clcpp::internal::DatabaseMem::get_type_functions, array_ofs)
 		(&clcpp::internal::DatabaseMem::container_infos, array_ofs)
 		(&clcpp::Namespace::namespaces, array_ofs + global_namespace_offset)
 		(&clcpp::Namespace::types, array_ofs + global_namespace_offset)

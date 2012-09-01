@@ -671,7 +671,6 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, 
 	if (record_decl->isThisDeclarationADefinition() == clang::VarDecl::DeclarationOnly)
 		return;
 
-
 	if (record_decl->getNumVBases())
 	{
 		Status().Print(record_decl->getLocation(), m_ASTContext.getSourceManager(), va("Class '%s' has an unsupported virtual base class", name.c_str()));
@@ -715,10 +714,11 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, 
 		LOG_NEWLINE(ast);
 		const clang::ASTRecordLayout& layout = m_ASTContext.getASTRecordLayout(record_decl);
 		cldb::u32 size = layout.getSize().getQuantity();
+		bool is_class = record_decl->getTagKind() == clang::TTK_Class;
 		m_DB.AddPrimitive(cldb::Class(
 			m_DB.GetName(name.c_str()),
 			m_DB.GetName(parent_name.c_str()),
-			size));
+			size, is_class));
 		AddContainedDecls(decl, name, &layout);
 	}
 }

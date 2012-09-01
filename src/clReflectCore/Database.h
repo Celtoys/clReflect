@@ -473,10 +473,12 @@ namespace cldb
 		// Constructors for default construction and complete construction
 		Class()
 			: Type(Primitive::KIND_CLASS)
+			, is_class(false)
 		{
 		}
-		Class(Name n, Name p, u32 s)
+		Class(Name n, Name p, u32 s, bool ic)
 			: Type(Primitive::KIND_CLASS, n, p, s)
+			, is_class(ic)
 		{
 		}
 
@@ -484,6 +486,9 @@ namespace cldb
 		{
 			return Type::Equals(rhs);
 		}
+
+		// True for class, false for struct
+		bool is_class;
 	};
 
 

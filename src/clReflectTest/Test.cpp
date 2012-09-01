@@ -557,6 +557,10 @@ int UnnamedParameterFunction(int)
 	return 0;
 }
 
+struct clcpp_attr(reflect) Blah2
+{
+};
+
 
 // --------------------------------------------------------------------------------------------
 // Trigger warnings for unreflected field types
@@ -588,13 +592,13 @@ void TestGetType(clcpp::Database& db)
 
 	const clcpp::Type* e0 = clcpp::GetType<ClassGlobalA>();
 	const clcpp::Class* e1 = clcpp::GetType<Inheritance::DerivedClass>()->AsClass();
-	const clcpp::Enum* e2 = clcpp::GetType<NamespaceA::NamedNSClassA::EnumWithinNamedClassA>()->AsEnum();
+
+	const clcpp::Type* b = clcpp::GetType<Blah2>();
 
 	printf("%x\n", clcpp::GetTypeNameHash<int>());
 	printf("%x\n", clcpp::GetTypeNameHash<unsigned int>());
 	printf("%x\n", clcpp::GetTypeNameHash<char>());
 	printf("%x\n", clcpp::GetTypeNameHash<ClassGlobalA>());
 	printf("%x\n", clcpp::GetTypeNameHash<Inheritance::DerivedClass>());
-	printf("%x\n", clcpp::GetTypeNameHash<NamespaceA::NamedNSClassA::EnumWithinNamedClassA>());
 }
 

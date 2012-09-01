@@ -9,6 +9,7 @@
 //
 
 #include "DatabaseMerge.h"
+#include "CodeGen.h"
 
 #include <clReflectCore/Arguments.h>
 #include <clReflectCore/Logging.h>
@@ -24,7 +25,6 @@ int main(int argc, const char* argv[])
 {
 	LOG_TO_STDOUT(main, ALL);
 
-
 	// Leave early if there aren't enough arguments
 	Arguments args(argc, argv);
 	if (args.Count() < 3)
@@ -33,8 +33,14 @@ int main(int argc, const char* argv[])
 		return 1;
 	}
 
+	// Parse flags and mark where the file list starts
+	size_t arg_start = 2;
+	std::string cpp_codegen = args.GetProperty("-cpp_codegen");
+	if (cpp_codegen != "")
+		arg_start += 2;
+
 	cldb::Database db;
-	for (size_t i = 2; i < args.Count(); i++)
+	for (size_t i = arg_start; i < args.Count(); i++)
 	{
 		const char* filename = args[i].c_str();
 
@@ -56,6 +62,10 @@ int main(int argc, const char* argv[])
 	// Save the result
 	const char* output_filename = args[1].c_str();
 	cldb::WriteTextDatabase(output_filename, db);
+
+	// Generate any required C++ code
+	if (cpp_codegen != "")
+		GenMergedCppImpl(cpp_codegen.c_str(), db);
 
 	return 0;
 }
