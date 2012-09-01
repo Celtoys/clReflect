@@ -12,6 +12,7 @@ set(CL_REFLECT_TEST_SOURCES
   TestSerialiseJSON.cpp
   TestTemplates.cpp
   TestTypedefs.cpp
+  clcppCodeGen.cpp
   )
 
 add_clreflect_executable(clReflectTest ${CL_REFLECT_TEST_SOURCES})
