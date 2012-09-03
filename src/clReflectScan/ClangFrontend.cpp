@@ -51,6 +51,22 @@ ClangParser::ClangParser(Arguments& args)
 	clang::PreprocessorOptions& preprocessor_options = m_CompilerInvocation->getPreprocessorOpts();
 	preprocessor_options.addMacroDef("__clcpp_parse__");
 
+	// Add define/undefine macros to the pre-processor
+	for (int i = 0; ; i++)
+	{
+		std::string macro = args.GetProperty("-D", i);
+		if (macro == "")
+			break;
+		preprocessor_options.addMacroDef(macro.c_str());
+	}
+	for (int i = 0; ; i++)
+	{
+		std::string macro = args.GetProperty("-U", i);
+		if (macro == "")
+			break;
+		preprocessor_options.addMacroUndef(macro.c_str());
+	}
+
 	// Setup the language parsing options for C++
 	clang::LangOptions& lang_options = *m_CompilerInvocation->getLangOpts();
 	m_CompilerInvocation->setLangDefaults(lang_options, clang::IK_CXX, clang::LangStandard::lang_cxx03);
