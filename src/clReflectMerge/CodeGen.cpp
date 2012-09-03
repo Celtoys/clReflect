@@ -132,8 +132,16 @@ namespace
 	};
 	struct Primitive
 	{
+		Primitive()
+			: name(0)
+			, hash(0)
+			, parent(0)
+		{
+		}
+
 		const char* name;
 		unsigned int hash;
+		unsigned int parent;
 		PrimType type;
 	};
 	struct Namespace
@@ -142,7 +150,7 @@ namespace
 
 		Namespace()
 			: name(0)
-			, parent(-1)
+			, parent(0)
 			, nb_primitives(0)
 		{
 		}
@@ -205,6 +213,7 @@ namespace
 				Primitive prim;
 				prim.name = db_cls.name.text.c_str();
 				prim.hash = db_cls.name.hash;
+				prim.parent = db_cls.parent.hash;
 				prim.type = db_cls.is_class ? PT_Class : PT_Struct;
 				j->second.classes.push_back(prim);
 				j->second.nb_primitives++;
@@ -223,6 +232,7 @@ namespace
 				Primitive prim;
 				prim.name = db_en.name.text.c_str();
 				prim.hash = db_en.name.hash;
+				prim.parent = db_en.parent.hash;
 				prim.type = PT_Enum;
 				j->second.enums.push_back(prim);
 				j->second.nb_primitives++;
@@ -325,8 +335,13 @@ namespace
 			const Primitive& prim = primitives[i];
 			if ((prim.type & prim_types) != 0)
 			{
-				cg.Line("template <> const Type* GetType<%s>() { return clcppTypePtrs[%d]; }", prim.name, i);
-				cg.Line("template <> unsigned int GetTypeNameHash<%s>() { return clcppTypeNameHashes[%d]; }", prim.name, i);
+				// Explicitly scope global namespace types so that they don't get confused with the ones in clcpp
+				std::string name = prim.name;
+				if (prim.type != PT_Type && prim.parent == 0)
+					name = "::" + name;
+
+				cg.Line("template <> const Type* GetType< %s >() { return clcppTypePtrs[%d]; }", name.c_str(), i);
+				cg.Line("template <> unsigned int GetTypeNameHash< %s >() { return clcppTypeNameHashes[%d]; }", name.c_str(), i);
 			}
 		}
 	}
