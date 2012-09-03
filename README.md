@@ -7,7 +7,6 @@ Installation Instructions
 
 The executables in the "bin" directory can be run directly but require the [MSVC 2010 x86 redistributables](http://www.microsoft.com/en-us/download/details.aspx?id=5555).
 
-
 Quick Tour
 ----------
 
@@ -15,9 +14,10 @@ Quick Tour
 
 Basic build steps are:
 
-	# Use "bin\clscan" to parse your C++ files and output a readable database of type information.
-	# Use "bin\clmerge" to merge the various output files from clscan into one database file.
-	# Use "bin\clexport" to convert the merged database to a memory-mapped, C++ loadable/queryable database.
+# Use "bin\clscan" to parse your C++ files and output a readable database of type information.
+# Use "bin\clmerge" to merge the various output files from clscan into one database file.
+# Use "bin\clexport" to convert the merged database to a memory-mapped, C++ loadable/queryable database.
+
 
 Use "bin\clscan" to parse your C++ files and output a readable database of type information:
 
