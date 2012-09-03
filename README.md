@@ -14,9 +14,9 @@ Quick Tour
 
 Basic build steps are:
 
-# Use "bin\clscan" to parse your C++ files and output a readable database of type information.
-# Use "bin\clmerge" to merge the various output files from clscan into one database file.
-# Use "bin\clexport" to convert the merged database to a memory-mapped, C++ loadable/queryable database.
+1. Use "bin\clscan" to parse your C++ files and output a readable database of type information.
+2. Use "bin\clmerge" to merge the various output files from clscan into one database file.
+3. Use "bin\clexport" to convert the merged database to a memory-mapped, C++ loadable/queryable database.
 
 
 Use "bin\clscan" to parse your C++ files and output a readable database of type information:
