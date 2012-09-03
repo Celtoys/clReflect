@@ -130,23 +130,6 @@ namespace clutl
 
 
 	//
-	// The main object database, currently just a holder for a root object group.
-	// May be extended at a later date to do scoped named lookup.
-	//
-	class ObjectDatabase
-	{
-	public:
-		ObjectDatabase();
-		~ObjectDatabase();
-
-		ObjectGroup* GetRootGroup() const { return m_RootGroup; }
-
-	private:
-		ObjectGroup* m_RootGroup;
-	};
-
-
-	//
 	// Iterator for visiting all created objects in an object group.
 	// The iterator is invalidated if objects are added/removed from the group.
 	//

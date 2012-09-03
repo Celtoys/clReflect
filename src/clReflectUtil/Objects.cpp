@@ -267,19 +267,6 @@ void clutl::ObjectGroup::Resize(bool increase)
 }
 
 
-clutl::ObjectDatabase::ObjectDatabase()
-	: m_RootGroup(0)
-{
-	m_RootGroup = new ObjectGroup;
-}
-
-
-clutl::ObjectDatabase::~ObjectDatabase()
-{
-	delete m_RootGroup;
-}
-
-
 clutl::ObjectIterator::ObjectIterator(const ObjectGroup* object_group)
 	: m_ObjectGroup(object_group)
 	, m_Position(0)
