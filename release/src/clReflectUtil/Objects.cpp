@@ -11,7 +11,6 @@
 // TODO: Lots of stuff happening in here that needs logging
 
 #include <clutl/Objects.h>
-#include <clcpp/FunctionCall.h>
 
 
 struct clutl::ObjectGroup::HashEntry
@@ -46,8 +45,12 @@ clutl::Object* clutl::CreateObject(const clcpp::Type *type, unsigned int unique_
 		// Need a constructor to new and a destructor to delete at a later point
 		if (class_type->constructor == 0 || class_type->destructor == 0)
 			return 0;
+
+		// Allocate and call the constructor
 		object = (Object*)new char[type->size];
-		CallFunction(class_type->constructor, object);
+		typedef void (*CallFunc)(clutl::Object*);
+		CallFunc call_func = (CallFunc)class_type->constructor->address;
+		call_func(object);
 	}
 
 	// Construct the object and add to its object group
@@ -81,7 +84,9 @@ void clutl::DestroyObject(const Object* object)
 		// Call the destructor and release the memory
 		const clcpp::Class* class_type = object->type->AsClass();
 		clcpp::internal::Assert(class_type->destructor != 0);
-		CallFunction(class_type->destructor, object);
+		typedef void (*CallFunc)(const clutl::Object*);
+		CallFunc call_func = (CallFunc)class_type->destructor->address;
+		call_func(object);
 		delete [] (char*)object;
 	}
 }

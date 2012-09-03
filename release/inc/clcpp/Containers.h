@@ -46,8 +46,7 @@ namespace clcpp
 	// The interface that the various read iterators for containers must
 	// derive from.
 	//
-	clcpp_attr(reflect_part)
-	struct IReadIterator
+	struct clcpp_attr(reflect_part) IReadIterator
 	{
 		virtual ~IReadIterator() { }
 
@@ -67,8 +66,7 @@ namespace clcpp
 	// The interface that the various write iterators for containers must
 	// derive from.
 	//
-	clcpp_attr(reflect_part)
-	struct IWriteIterator
+	struct clcpp_attr(reflect_part) IWriteIterator
 	{
 		virtual ~IWriteIterator() { }
 

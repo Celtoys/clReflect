@@ -13,25 +13,14 @@
 
 
 #if defined(CLCPP_PLATFORM_WINDOWS)
-	// Windows-specific module loading and inspection functions
-	typedef int (__stdcall *FunctionPtr)();
-	extern "C" __declspec(dllimport) void* __stdcall LoadLibraryA(const char* lpLibFileName);
-	extern "C" __declspec(dllimport) FunctionPtr __stdcall GetProcAddress(void* module, const char* lpProcName);
-	extern "C" __declspec(dllimport) int __stdcall FreeLibrary(void* hLibModule);
+
 	extern "C" __declspec(dllimport) void* __stdcall GetModuleHandleA(const char* lpModuleName);
-#endif
+	extern "C" __declspec(dllimport) void __stdcall ExitProcess(unsigned int uExitCode);
 
+#elif defined(CLCPP_PLATFORM_POSIX)
 
-#if defined(CLCPP_PLATFORM_POSIX)
-	// We use POSIX-compatible dynamic linking loader interface, which
-	// should be present on both Mac and Linux
-	extern "C" int dlclose(void * __handle);
 	extern "C" void * dlopen(const char * __path, int __mode);
-	extern "C" void * dlsym(void * __handle, const char * __symbol);
-
-	// TODO: check the loading flags when we can get this running, current
-	// flag indicates RTLD_LAZY
-	#define LOADING_FLAGS 0x1
+	
 #endif
 
 
@@ -293,111 +282,6 @@ namespace
 			if (f.address)
 				f.address = f.address - dbmem.function_base_address + base_address;
 		}
-
-		// Do the same for the GetType family of functions
-		for (unsigned int i = 0; i < dbmem.get_type_functions.size; i++)
-		{
-			clcpp::internal::GetTypeFunctions& f = (clcpp::internal::GetTypeFunctions& )dbmem.get_type_functions[i];
-			if (f.get_typename_address)
-				f.get_typename_address = f.get_typename_address - dbmem.function_base_address + base_address;
-			if (f.get_type_address)
-				f.get_type_address = f.get_type_address - dbmem.function_base_address + base_address;
-		}
-	}
-
-
-	template<typename T>
-	void PatchFunction(clcpp::pointer_type function_address,
-	const T& patch_value, const T& original_value)
-	{
-		unsigned char* function_pointer = (unsigned char*) function_address;
-
-		// searches for 0x20 instruction headers at most
-		for (int i = 0; i < 0x20; i++)
-		{
-		#if defined(CLCPP_USING_64_BIT)
-			// 64 bit patch starts here
-			if (function_pointer[i] == 0x8B)
-			{
-				// MOV instruction
-				// this may be what we are looking for
-				clcpp::uint32 target_offset = *((clcpp::uint32*) &function_pointer[i + 2]);
-				T* target_ptr = (T*) (&function_pointer[i + 6] + target_offset);
-
-				// although we get the real target address here, we still cannot
-				// say immediately if this is our target pointer to patch. On
-				// Mac OS X, this pointer would first point to a stub, which
-				// then points to the real pointer, so we may have two levels
-				// of pointers here. In this case, we would test for both cases.
-				if (*target_ptr == original_value)
-				{
-					// there's no stubs, this is the pointer we are looking for
-					*target_ptr = patch_value;
-					return;
-				}
-
-			#if defined(CLCPP_USING_GNUC_MAC)
-				// we test for stub pointer on mac
-				// TODO: check if other compiler has the same behaviour
-				T* target_stub = *((T**) target_ptr);
-				if (*target_stub == original_value)
-				{
-					*target_stub = patch_value;
-					return;
-				}
-			#endif // CLCPP_USING_GNUC_MAC
-			}
-			// 64 bit patch ends here
-		#else
-			// 32 bit patch starts here
-			if (function_pointer[i] == 0xA1)
-			{
-				T* target_addr = *((T**) (&function_pointer[i + 1]));
-
-				if (*target_addr == original_value)
-				{
-					*target_addr = patch_value;
-					return;
-				}
-			}
-			// 32 bit patch ends here
-		#endif // CLCPP_USING_64_BIT
-		}
-
-		// If this raises, the function has failed to patch
-		// Load the database with OPT_DONT_PATCH_GETTYPE to prevent this
-		clcpp::internal::Assert(false);
-		return;
-	}
-
-
-	void PatchGetTypeAddresses(clcpp::Database& db, clcpp::internal::DatabaseMem& dbmem)
-	{
-		unsigned int original_hash = CLCPP_INVALID_HASH;
-		const clcpp::Type* original_type = (const clcpp::Type*)CLCPP_INVALID_ADDRESS;
-
-		for (unsigned int i = 0; i < dbmem.get_type_functions.size; i++)
-		{
-			clcpp::internal::GetTypeFunctions& f = (clcpp::internal::GetTypeFunctions&)dbmem.get_type_functions[i];
-
-			// Patch up the type name hash static variable
-			if (f.get_typename_address)
-			{
-				unsigned int hash = db.GetName(f.type_hash).hash;
-				PatchFunction<unsigned int>(f.get_typename_address,
-					hash,
-					original_hash);
-			}
-
-			// Patch up the type pointer static variable
-			if (f.get_type_address)
-			{
-				const clcpp::Type* type = db.GetType(f.type_hash);
-				PatchFunction<const clcpp::Type*>(f.get_type_address,
-					type,
-					original_type);
-			}
-		}
 	}
 
 
@@ -407,46 +291,16 @@ namespace
 		for (unsigned int i = 0; i < primitives.size; i++)
 			((clcpp::Primitive&)primitives[i]).database = database;
 	}
-}
 
 
-void* clcpp::internal::LoadSharedLibrary(const char* filename)
-{
-#if defined(CLCPP_PLATFORM_WINDOWS)
-	return LoadLibraryA(filename);
-#elif defined(CLCPP_PLATFORM_POSIX)
-	return dlopen(filename, LOADING_FLAGS);
-#endif
-}
-
-
-void* clcpp::internal::GetSharedLibraryFunction(void* handle, const char* function_name)
-{
-#if defined(CLCPP_PLATFORM_WINDOWS)
-	return GetProcAddress(handle, function_name);
-#elif defined(CLCPP_PLATFORM_POSIX)
-	return dlsym(handle, function_name);
-#endif
-}
-
-
-void clcpp::internal::FreeSharedLibrary(void* handle)
-{
-#if defined(CLCPP_PLATFORM_WINDOWS)
-	FreeLibrary(handle);
-#elif defined(CLCPP_PLATFORM_POSIX)
-	dlclose(handle);
-#endif
-}
-
-
-clcpp::pointer_type clcpp::internal::GetLoadAddress()
-{
-#if defined(CLCPP_PLATFORM_WINDOWS)
-	return (clcpp::pointer_type)GetModuleHandleA(0);
-#elif defined(CLCPP_PLATFORM_POSIX)
-	return (clcpp::pointer_type)dlopen(0, 0);
-#endif
+	clcpp::pointer_type GetLoadAddress()
+	{
+	#if defined(CLCPP_PLATFORM_WINDOWS)
+		return (clcpp::pointer_type)GetModuleHandleA(0);
+	#elif defined(CLCPP_PLATFORM_POSIX)
+		return (clcpp::pointer_type)dlopen(0, 0);
+	#endif
+	}
 }
 
 
@@ -462,6 +316,12 @@ void clcpp::internal::Assert(bool expression)
 	#else
 		asm("int $0x3\n");
 	#endif // CLCPP_USING_MSVC
+
+	// Leave the program with no continuation
+	// Don't want people attaching the debugger and skipping over the break
+	#ifdef CLCPP_PLATFORM_WINDOWS
+		ExitProcess(1);
+	#endif
 	}
 }
 
@@ -734,7 +594,7 @@ clcpp::Database::~Database()
 
 bool clcpp::Database::Load(IFile* file, IAllocator* allocator, unsigned int options)
 {
-	clcpp::pointer_type base_address = internal::GetLoadAddress();
+	clcpp::pointer_type base_address = GetLoadAddress();
 	return Load(file, allocator, base_address, options);
 }
 
@@ -752,9 +612,6 @@ bool clcpp::Database::Load(IFile* file, IAllocator* allocator, pointer_type base
 		// using its Address Space Layout Randomisation security feature.
 		if ((options & OPT_DONT_REBASE_FUNCTIONS) == 0)
 			RebaseFunctions(*m_DatabaseMem, base_address);
-
-		if ((options & OPT_DONT_PATCH_GETTYPE) == 0)
-			PatchGetTypeAddresses(*this, *m_DatabaseMem);
 
 		// Tell each loaded primitive that they belong to this database
 		ParentPrimitivesToDatabase(m_DatabaseMem->types, this);

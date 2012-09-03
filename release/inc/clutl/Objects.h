@@ -16,8 +16,7 @@
 
 //
 // This is an example object management API that you can use, ignore or base your own
-// designs upon. It is required by the serialisation API in this library which would need
-// to be branched/copied should you want to use your own object management API.
+// designs upon.
 //
 clcpp_reflect_part(clutl)
 namespace clutl
@@ -35,8 +34,7 @@ namespace clutl
 	//
 	// Base object class for objects that require runtime knowledge of their type
 	//
-	clcpp_attr(reflect_part, custom_flag = 0x10000000, custom_flag_inherit)
-	struct Object
+	struct clcpp_attr(reflect_part, custom_flag = 0x10000000, custom_flag_inherit) Object
 	{
 		// Default constructor
 		Object()
@@ -98,8 +96,7 @@ namespace clutl
 	// Hash table based storage of collections of objects.
 	// The ObjectGroup is an object itself, allowing groups to be nested within other groups.
 	//
-	clcpp_attr(reflect_part, custom_flag = 0x20000000, custom_flag_inherit)
-	class ObjectGroup : public Object
+	class clcpp_attr(reflect_part, custom_flag = 0x20000000, custom_flag_inherit) ObjectGroup : public Object
 	{
 	public:
 		ObjectGroup();

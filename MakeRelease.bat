@@ -4,7 +4,7 @@ rmdir /s /q release
 md release
 md release\bin
 
-copy README release
+copy README.md release
 copy LICENSE release
 copy AUTHORS release
 copy build\bin\release\clscan.exe* release\bin
