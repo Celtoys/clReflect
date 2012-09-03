@@ -11,14 +11,10 @@
 #include <clutl/Serialise.h>
 
 
-// Explicit dependency
-// TODO: Some how remove the need for this or provide a means of locating it on the target platform
-
-
 clutl::WriteBuffer::WriteBuffer()
-: m_Data(0)
-, m_DataEnd(0)
-, m_DataWrite(0)
+	: m_Data(0)
+	, m_DataEnd(0)
+	, m_DataWrite(0)
 {
 	// Use a default capacity to prevent Write having to do too much checking
 	unsigned int default_capacity = 32;

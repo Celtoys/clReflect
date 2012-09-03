@@ -62,9 +62,7 @@ namespace clutl
 		template <typename TYPE>
 		TYPE* Cast()
 		{
-			if (type == clcpp::GetType<TYPE>())
-				return (TYPE*)this;
-			return 0;
+			return type == clcpp::GetType<TYPE>() ? (TYPE*)this : 0;
 		}
 
 		// Type of the object
