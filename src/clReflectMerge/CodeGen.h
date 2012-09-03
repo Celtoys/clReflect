@@ -31,10 +31,6 @@ public:
 	void EnterScope();
 	void ExitScope();
 
-	void PushUndoPoint();
-	void PopUndoPoint();
-	void Undo();
-
 	unsigned int GenerateHash() const;
 
 	void WriteToFile(const char* filename);
@@ -44,7 +40,6 @@ public:
 private:
 	std::string m_Text;
 	int m_Indent;
-	std::vector<std::string::size_type> m_UndoPoints;
 };
 
 

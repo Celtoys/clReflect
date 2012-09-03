@@ -88,26 +88,6 @@ void CodeGen::ExitScope()
 }
 
 
-void CodeGen::PushUndoPoint()
-{
-	m_UndoPoints.push_back(m_Text.size());
-}
-
-
-void CodeGen::PopUndoPoint()
-{
-	m_UndoPoints.pop_back();
-}
-
-
-void CodeGen::Undo()
-{
-	std::string::size_type undo_point = m_UndoPoints.back();
-	m_UndoPoints.pop_back();
-	m_Text = m_Text.substr(0, undo_point);
-}
-
-
 unsigned int CodeGen::GenerateHash() const
 {
 	return clcpp::internal::HashNameString(m_Text.c_str());
@@ -145,10 +125,10 @@ namespace
 	//
 	enum PrimType
 	{
-		PT_Type,
-		PT_Class,
-		PT_Struct,
-		PT_Enum
+		PT_Type = 1,
+		PT_Class = 2,
+		PT_Struct = 4,
+		PT_Enum = 8
 	};
 	struct Primitive
 	{
@@ -160,12 +140,22 @@ namespace
 	{
 		typedef std::map<unsigned int, Namespace> Map;
 
+		Namespace()
+			: name(0)
+			, parent(-1)
+			, nb_primitives(0)
+		{
+		}
+
 		const char* name;
 		unsigned int parent;
 
 		// Nested primitives
-		std::vector<const Namespace*> namespaces;
-		std::vector<Primitive> primitives;
+		std::vector<Namespace*> namespaces;
+		std::vector<Primitive> types;
+		std::vector<Primitive> classes;
+		std::vector<Primitive> enums;
+		size_t nb_primitives;
 	};
 
 
@@ -182,9 +172,9 @@ namespace
 		}
 
 		// Add all namespaces to their parent namespaces
-		for (Namespace::Map::const_iterator i = namespaces.begin(); i != namespaces.end(); ++i)
+		for (Namespace::Map::iterator i = namespaces.begin(); i != namespaces.end(); ++i)
 		{
-			const Namespace& ns = i->second;
+			Namespace& ns = i->second;
 			Namespace::Map::iterator j = namespaces.find(ns.parent);
 			if (j != namespaces.end())
 				j->second.namespaces.push_back(&ns);
@@ -192,9 +182,9 @@ namespace
 
 		// Build the global namespace
 		Namespace global_ns;
-		for (Namespace::Map::const_iterator i = namespaces.begin(); i != namespaces.end(); ++i)
+		for (Namespace::Map::iterator i = namespaces.begin(); i != namespaces.end(); ++i)
 		{
-			const Namespace& ns = i->second;
+			Namespace& ns = i->second;
 			if (ns.parent == 0)
 				global_ns.namespaces.push_back(&ns);
 		}
@@ -216,7 +206,8 @@ namespace
 				prim.name = db_cls.name.text.c_str();
 				prim.hash = db_cls.name.hash;
 				prim.type = db_cls.is_class ? PT_Class : PT_Struct;
-				j->second.primitives.push_back(prim);
+				j->second.classes.push_back(prim);
+				j->second.nb_primitives++;
 				primitives.push_back(prim);
 			}
 		}
@@ -233,7 +224,8 @@ namespace
 				prim.name = db_en.name.text.c_str();
 				prim.hash = db_en.name.hash;
 				prim.type = PT_Enum;
-				j->second.primitives.push_back(prim);
+				j->second.enums.push_back(prim);
+				j->second.nb_primitives++;
 				primitives.push_back(prim);
 			}
 		}
@@ -247,17 +239,38 @@ namespace
 			prim.name = db_type.name.text.c_str();
 			prim.hash = db_type.name.hash;
 			prim.type = PT_Type;
-			global_ns.primitives.push_back(prim);
+			global_ns.types.push_back(prim);
+			global_ns.nb_primitives++;
 			primitives.push_back(prim);
 		}		
 	}
 
 
+	void RemoveEmptyNamespaces(Namespace* ns)
+	{
+		// Depth-first walk before removing so that we remove bottom-up
+		for (size_t i = 0; i < ns->namespaces.size(); )
+		{
+			Namespace* child = ns->namespaces[i];
+			RemoveEmptyNamespaces(child);
+
+			// Only remove when there are also no namespaces (bottom up will ensure empty
+			// children are removed before this point)
+			if (child->namespaces.size() == 0 && child->nb_primitives == 0)
+			{
+				ns->namespaces[i] = ns->namespaces.back();
+				ns->namespaces.pop_back();
+			}
+			else
+			{
+				i++;
+			}
+		}
+	}
+
+
 	void GenNamespaceForwardDeclare(CodeGen& cg, const Namespace* ns, bool root)
 	{
-		// Any undos will remove everything done in this entire function and below
-		cg.PushUndoPoint();
-
 		if (!root)
 		{
 			std::string name = UnscopeName(ns->name);
@@ -273,17 +286,28 @@ namespace
 		for (size_t i = 0; i < ns->namespaces.size(); i++)
 			GenNamespaceForwardDeclare(cg, ns->namespaces[i], false);
 
-		// Forward declare primitives
-		for (size_t i = 0; i < ns->primitives.size(); i++)
+		// Forward declare enum primitives on supported platforms
+		if (ns->enums.size())
 		{
-			const Primitive& prim = ns->primitives[i];
+			cg.Line("#if defined(CLCPP_USING_MSVC)");
+			for (size_t i = 0; i < ns->enums.size(); i++)
+			{
+				const Primitive& prim = ns->enums[i];
+				std::string name_str = UnscopeName(prim.name);
+				cg.Line("enum %s;", name_str.c_str());
+			}
+			cg.Line("#endif");
+		}
+
+		// Forward declare class primitives
+		for (size_t i = 0; i < ns->classes.size(); i++)
+		{
+			const Primitive& prim = ns->classes[i];
 			std::string name_str = UnscopeName(prim.name);
 			if (prim.type == PT_Class)
 				cg.Line("class %s;", name_str.c_str());
 			else if (prim.type == PT_Struct)
 				cg.Line("struct %s;", name_str.c_str());
-			else if (prim.type == PT_Enum)
-				cg.Line("enum %s;", name_str.c_str());
 		}
 
 		std::string::size_type end_point = cg.Size();
@@ -291,12 +315,20 @@ namespace
 		// Emit the exit scope before undo so that the indentation is restored
 		if (!root)
 			cg.ExitScope();
+	}
 
-		// Either undo or discard the undo point
-		if (start_point == end_point)
-			cg.Undo();
-		else
-			cg.PopUndoPoint();
+
+	void GenGetTypes(CodeGen& cg, const std::vector<Primitive>& primitives, unsigned int prim_types)
+	{
+		for (size_t i = 0; i < primitives.size(); i++)
+		{
+			const Primitive& prim = primitives[i];
+			if ((prim.type & prim_types) != 0)
+			{
+				cg.Line("template <> const Type* GetType<%s>() { return clcppTypePtrs[%d]; }", prim.name, i);
+				cg.Line("template <> unsigned int GetTypeNameHash<%s>() { return clcppTypeNameHashes[%d]; }", prim.name, i);
+			}
+		}
 	}
 }
 
@@ -308,6 +340,7 @@ void GenMergedCppImpl(const char* filename, const cldb::Database& db)
 	std::vector<Primitive> primitives;
 	BuildNamespaces(db, namespaces);
 	BuildNamespaceContents(db, namespaces, primitives);
+	RemoveEmptyNamespaces(&namespaces[0]);
 
 	// Include clcpp headers
 	CodeGen cg;
@@ -347,12 +380,10 @@ void GenMergedCppImpl(const char* filename, const cldb::Database& db)
 	cg.Line("// Specialisations for GetType and GetTypeNameHash");
 	cg.Line("namespace clcpp");
 	cg.EnterScope();
-	for (size_t i = 0; i < primitives.size(); i++)
-	{
-		const char* name = primitives[i].name;
-		cg.Line("template <> const Type* GetType<%s>() { return clcppTypePtrs[%d]; }", name, i);
-		cg.Line("template <> unsigned int GetTypeNameHash<%s>() { return clcppTypeNameHashes[%d]; }", name, i);
-	}
+	GenGetTypes(cg, primitives, PT_Type | PT_Class | PT_Struct);
+	cg.Line("#if defined(CLCPP_USING_MSVC)");
+	GenGetTypes(cg, primitives, PT_Enum);
+	cg.Line("#endif");
 	cg.ExitScope();
 
 	// Generate the hash for the generated code so far

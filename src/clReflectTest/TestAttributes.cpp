@@ -79,11 +79,15 @@ namespace TestAttributes
 
 void TestAttributesFunc(clcpp::Database& db)
 {
+	#if defined(CLCPP_USING_MSVC)
 	const clcpp::Enum* a = clcpp::GetType<TestAttributes::GlobalEnumAttr>()->AsEnum();
+	#endif
+
 	const clcpp::Class* b = clcpp::GetType<TestAttributes::ClassAttr>()->AsClass();
 	const clcpp::Enum* c = b->enums[0];
 	const clcpp::Field* d = b->fields[0];
 	const clcpp::Function* e = b->methods[0];
+
 	const clcpp::Class* f = clcpp::GetType<TestAttributes::StructAttr>()->AsClass();
 	const clcpp::Enum* g = f->enums[0];
 	const clcpp::Field* h = f->fields[0];
