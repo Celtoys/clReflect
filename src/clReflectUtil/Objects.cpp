@@ -13,14 +13,17 @@
 #include <clutl/Objects.h>
 
 
+// Store this here, rather than using GetTypeNameHash so that this library
+// can be used without generating an implementation of GetTypeNameHash.
+static unsigned int g_ObjectGroupHash = clcpp::internal::HashNameString("clutl::ObjectGroup");
+
+
 struct clutl::ObjectGroup::HashEntry
 {
 	HashEntry() : hash(0), object(0) { }
 	unsigned int hash;
 	Object* object;
 };
-
-
 
 
 clutl::Object* clutl::CreateObject(const clcpp::Type *type, unsigned int unique_id, ObjectGroup* object_group)
@@ -36,7 +39,7 @@ clutl::Object* clutl::CreateObject(const clcpp::Type *type, unsigned int unique_
 	// The object group has no registered constructor so construct manually
 	// if it comes through
 	Object* object = 0;
-	if (type->name.hash == clcpp::GetTypeNameHash<ObjectGroup>())
+	if (type->name.hash == g_ObjectGroupHash)
 	{
 		object = new ObjectGroup();
 	}
@@ -73,7 +76,7 @@ void clutl::DestroyObject(const Object* object)
 	if (object->object_group != 0)
 		object->object_group->RemoveObject(object);
 
-	if (object->type->name.hash == clcpp::GetTypeNameHash<ObjectGroup>())
+	if (object->type->name.hash == g_ObjectGroupHash)
 	{
 		// ObjecGroup class does not have a registered destructor
 		delete (ObjectGroup*)object;
@@ -267,13 +270,13 @@ void clutl::ObjectGroup::Resize(bool increase)
 clutl::ObjectDatabase::ObjectDatabase()
 	: m_RootGroup(0)
 {
-	m_RootGroup = New<ObjectGroup>();
+	m_RootGroup = new ObjectGroup;
 }
 
 
 clutl::ObjectDatabase::~ObjectDatabase()
 {
-	Delete(m_RootGroup);
+	delete m_RootGroup;
 }
 
 
