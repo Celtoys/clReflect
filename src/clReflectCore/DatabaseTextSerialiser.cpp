@@ -555,7 +555,7 @@ namespace
 		tok.GetNameAndParent(name, parent);
 
 		// Int attribute parsing
-		int value = tok.GetInt() != 0;
+		int value = tok.GetInt();
 
 		// Add a new attribute to the database
 		cldb::IntAttribute primitive(
