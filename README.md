@@ -49,7 +49,8 @@ Make sure you pay attention to all reported warnings and inspect all output log 
 Release notes - [detailed](https://bitbucket.org/dwilliamson/clreflect/changesets)
 ----------------------------------------------------------------------------------
 
-39/11/2011 - 0.3:
+29.11.2011.0.3
+
 * Updated to use the new clang/LLVM 3.0 release branch, including the source as part of the tree.
 * Added container support with iterator interfaces and a means of registering/parsing the containers in C++.
 * Added support for constant-size arrays as field types (classes, functions, methods).
