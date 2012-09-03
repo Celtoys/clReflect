@@ -55,41 +55,31 @@ config.LinkOptions.LibPaths += lib_paths_release
 config.LinkOptions.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
 config.LinkOptions.MapFile = True
 
-for config in env.Configs.values():
-	config.UpdateCommandLines()
+# 1. clReflectScan on all C++ files, except existing clcppCodeGen.cpp. Outputs database per C++ file.
+# 2. clReflectMerge on output from 1. Outputs a single database and generated C++ file.
+# 3. Compile all C++ files, including the generated one.
+# 4. Link all compiled C++ files. Outputs MAP file.
+# 5. clReflectExport on merged database & linked map file. Outputs final cppbin file.
 
-# scan C++ files
-# merge csv files, generate C++
-# compile generated C++
-# link
-# cppexport
+cltest = CppBuild(env, [ "." ], "cltest.exe", libs, build = False)
 
 cpp_codegen = "clcppCodeGen.cpp"
 
-# Generate a list of C++ files to compile without the generated file
-cpp_files  = Utils.Glob(".", "*.cpp")
-cpp_files += Utils.Glob(".", "*.c")
-cpp_files = [ i for i in cpp_files if not i.lower().endswith(cpp_codegen.lower()) ]
-hpp_files  = Utils.Glob(".", "*.h")
+# Generate the list of C++ files to scan - this excludes the generated C++ file
+# Only add the generated C++ file to the compilation list if it's not already there
+scan_cpp_files = [ i for i in cltest.cpp_files if not i.lower().endswith(cpp_codegen.lower()) ]
+if len(scan_cpp_files) == len(cltest.cpp_files):
+	cltest.obj_files += [ env.CPPFile(cpp_codegen) ]
 
 # Run clscan on all C++ located files, merge the result into one database and generate the C++ file
-clr_scan = [ clReflect.CppScan(sys_include_paths, include_paths, env.NewFile(i)) for i in cpp_files ]
-clr_codegen = env.NewFile(cpp_codegen)
-clr_merge = clReflect.Merge("clRefectTest.csv", clr_scan, clr_codegen)
-
-# Compile all C++ files, including the generated one
-cpp_compile = [ env.CPPFile(file) for file in cpp_files ]
-cpp_compile += [ env.CPPFile(cpp_codegen) ]
-
-# Link
-cpp_lib_files = [ env.NewFile(file) for file in libs ]
-cpp_link = env.Link("cltest.exe", cpp_compile, cpp_lib_files)
+clr_scan = [ clReflect.CppScan(sys_include_paths, include_paths, env.NewFile(i)) for i in scan_cpp_files ]
+clr_merge = clReflect.Merge("clRefectTest.csv", clr_scan, env.NewFile(cpp_codegen))
 
 # Generate the exported reflection database
-cpp_map_file = env.NewFile(cpp_link.GetOutputFiles(env)[1])
+cpp_map_file = env.NewFile(cltest.output.GetOutputFiles(env)[1])
 clr_export = clReflect.CppExport("clReflectTest.cppbin", clr_merge, cpp_map_file)
 
-env.Build([ clr_merge, cpp_link, clr_export ], "cltest")
+env.Build([ clr_merge, cltest.output, clr_export ], "cltest")
 
 pibfile = "clReflectTest.pibfile"
-VCGenerateProjectFile(env, "clReflectTest", cpp_files + hpp_files + [ pibfile ], cpp_link, pibfile = pibfile)
+VCGenerateProjectFile(env, "clReflectTest", cltest.cpp_files + cltest.hpp_files + [ pibfile ], cltest.output, pibfile = pibfile)
