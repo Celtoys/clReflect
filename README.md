@@ -10,26 +10,19 @@ The executables in the "bin" directory can be run directly but require the [MSVC
 Quick Tour
 ----------
 
-[clReflectTest](https://bitbucket.org/dwilliamson/clreflect/src/tip/src/clReflectTest) is an up-to-date test of the clReflect library, showing how to build a database and load it at runtime.
+[clReflectTest](https://bitbucket.org/dwilliamson/clreflect/src/tip/src/clReflectTest) is an up-to-date test of the clReflect library, showing how to build a database and load it at runtime. Basic build steps are...
 
-Basic build steps are:
+Use `bin\clscan` to parse your C++ files and output a readable database of type information:
 
-1. Use "bin\clscan" to parse your C++ files and output a readable database of type information.
 	clscan.exe file_a.cpp -output file_a.csv -ast_log file_a_astlog.txt -spec_log file_a_speclog.txt -i "include_path"
-2. Use "bin\clmerge" to merge the various output files from clscan into one database file.
+
+Use `bin\clmerge` to merge the output of many C++ files into one readable database of type information:
+
 	clmerge.exe module.csv file_a.csv file_b.csv file_c.csv ...
-3. Use "bin\clexport" to convert the merged database to a memory-mapped, C++ loadable/queryable database.
+
+Use `bin\clexport` to convert the readable database to a memory-mapped, C++ loadable/queryable database:
+
 	clexport.exe module.csv -cpp module.cppbin -cpp_log module_cpplog.txt -map module.map
-
-
-Use "bin\clscan" to parse your C++ files and output a readable database of type information:
-
-
-Use "bin\clmerge" to merge the output of many C++ files into one readable database of type information:
-
-
-Use "bin\clexport" to convert the readable database to a memory-mapped, C++ loadable/queryable database:
-
 
 Some points:
 
