@@ -129,7 +129,7 @@ add_custom_command(
 
 # This is a fake target to ensure when compiling clReflectTest,
 # we also generate the corresponding cppbin file for testing.
-add_custom_target(clReflectGenCppbin DEPENDS
+add_custom_target(clReflectGenCppbin ALL DEPENDS
   ${GEN_CPPBIN_FILE})
 
 # clReflectGenCppbin should depends on clReflectTest since it may need map file
