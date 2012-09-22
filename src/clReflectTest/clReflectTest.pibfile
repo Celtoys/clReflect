@@ -63,11 +63,11 @@ config.LinkOptions.MapFile = True
 
 cltest = CppBuild(env, [ "." ], "cltest.exe", libs, build = False)
 
-cpp_codegen = "clcppCodeGen.cpp"
+cpp_codegen = "clcppcodegen.cpp"
 
 # Generate the list of C++ files to scan - this excludes the generated C++ file
 # Only add the generated C++ file to the compilation list if it's not already there
-scan_cpp_files = [ i for i in cltest.cpp_files if not i.lower().endswith(cpp_codegen.lower()) ]
+scan_cpp_files = [ i for i in cltest.cpp_files if not i.lower().endswith(cpp_codegen) ]
 if len(scan_cpp_files) == len(cltest.cpp_files):
 	cltest.obj_files += [ env.CPPFile(cpp_codegen) ]
 
