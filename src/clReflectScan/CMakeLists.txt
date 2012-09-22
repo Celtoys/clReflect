@@ -39,9 +39,9 @@ add_clreflect_executable(clReflectScan
 
 set(CL_REFLECT_SCAN_LIBS
   clangParse
+  clangFrontend
   clangSema
   clangAnalysis
-  clangFrontend
   clangLex
   clangBasic
   clangSerialization
