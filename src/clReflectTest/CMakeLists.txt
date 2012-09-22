@@ -74,6 +74,11 @@ if (MSVC)
   else()
     set(sys_inc_dirs ${sys_inc_dirs} ${MSVC_INSTALL_PATH}/VC/include)
   endif()
+elseif(CMAKE_COMPILER_IS_GNUCXX)
+  # automatically propagate g++ include path to clang
+  EXEC_PROGRAM(sh ARGS -c '`gcc -print-prog-name=cc1plus` -v </dev/null 2>&1 | grep \" /usr\" | sed -e \"s|^[ \t]*||\" | tr \"\\\\n\" \"\;\" \; echo'
+                  OUTPUT_VARIABLE GPP_SYSTEM_INCLUDES)
+  set(sys_inc_dirs ${sys_inc_dirs} ${GPP_SYSTEM_INCLUDES})
 endif()
 
 if ((${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
