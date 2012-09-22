@@ -7,4 +7,5 @@ add_clreflect_executable(clReflectMerge
 target_link_libraries(clReflectMerge
   clReflectCore
   clReflectCpp
+  ${CMAKE_DL_LIBS}
   )

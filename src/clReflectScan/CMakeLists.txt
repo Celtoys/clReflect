@@ -63,4 +63,5 @@ target_link_libraries(clReflectScan
   clReflectCore
   clReflectCpp
   ${CL_REFLECT_SCAN_LIBS}
+  ${CMAKE_DL_LIBS}
   )

@@ -20,6 +20,7 @@ add_clreflect_executable(clReflectTest ${CL_REFLECT_TEST_SOURCES})
 target_link_libraries(clReflectTest
   clReflectCpp
   clReflectUtil
+  ${CMAKE_DL_LIBS}
   )
 
 # Map file handling

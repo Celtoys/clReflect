@@ -17,4 +17,5 @@ target_link_libraries(clReflectExport
   clReflectCore
   clReflectCpp
   ${CL_REFLECT_EXPORT_LIBS}
+  ${CMAKE_DL_LIBS}
   )
