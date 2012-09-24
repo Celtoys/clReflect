@@ -20,7 +20,8 @@
 #elif defined(CLCPP_PLATFORM_POSIX)
 
 	extern "C" void * dlopen(const char * __path, int __mode);
-	
+	extern "C" void * dlsym(void * handle, const char * name);
+
 #endif
 
 
@@ -298,7 +299,8 @@ namespace
 	#if defined(CLCPP_PLATFORM_WINDOWS)
 		return (clcpp::pointer_type)GetModuleHandleA(0);
 	#elif defined(CLCPP_PLATFORM_POSIX)
-		return (clcpp::pointer_type)dlopen(0, 0);
+		void * global_symbols = dlopen(0, 0);
+		return (clcpp::pointer_type)dlsym(global_symbols, "_start");
 	#endif
 	}
 }

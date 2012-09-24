@@ -11,6 +11,20 @@
 #include <clutl/Serialise.h>
 
 
+// Standard C library function, copy bytes
+// http://pubs.opengroup.org/onlinepubs/009695399/functions/memcpy.html
+
+#ifdef __GNUC__
+	#define __THROW	throw ()
+	#define __nonnull(params) __attribute__ ((__nonnull__ params))
+#else
+	#define __THROW
+	#define __nonnull(params)
+#endif
+
+extern "C" void* CLCPP_CDECL memcpy(void* dst, const void* src, clcpp::size_type size) __THROW __nonnull ((1, 2));
+
+
 clutl::WriteBuffer::WriteBuffer()
 	: m_Data(0)
 	, m_DataEnd(0)

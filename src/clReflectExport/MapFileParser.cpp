@@ -813,7 +813,7 @@ namespace
 				if (text_region)
 				{
 					if ((sscanf(line, " 0x%" CLCPP_POINTER_TYPE_HEX_FORMAT " %s", &function_address, signature_buffer) == 2)
-						&& (signature_buffer[0] == '-'))
+						&& (signature_buffer[0] == '_'))
 					{
 						int status;
 						char* demangle_signature = abi::__cxa_demangle(signature_buffer, 0, 0, &status);

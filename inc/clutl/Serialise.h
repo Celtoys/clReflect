@@ -15,11 +15,6 @@
 #include <clcpp/clcpp.h>
 
 
-// Standard C library function, copy bytes
-// http://pubs.opengroup.org/onlinepubs/009695399/functions/memcpy.html
-
-extern "C" void* CLCPP_CDECL memcpy(void* dst, const void* src, clcpp::size_type size);
-
 clcpp_reflect_part(clutl)
 namespace clutl
 {
