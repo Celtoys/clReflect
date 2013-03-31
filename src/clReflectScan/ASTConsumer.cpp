@@ -142,13 +142,49 @@ namespace
 	Status ParseTemplateSpecialisation(ASTConsumer& consumer, const clang::Type* type, std::string& type_name_str);
 
 
+	// A wrapper around a clang's CV-qualified types
+	struct ClangASTType
+	{
+		ClangASTType(clang::QualType& qt)
+		{
+			Set(qt);
+		}
+
+		// For each invocation of this function, we are passing in the returned
+		// result of a function with clang::QuadType, this would actually generate
+		// a local variable, if we use reference here, we will be referencing a
+		// local temporary variable! Even if we copy the actual QualType in this
+		// function, we do not want this to happen
+		void Set(clang::QualType qt)
+		{
+			qual_type = qt;
+			split_qual_type = qual_type.split();
+			type = split_qual_type.Ty;
+		}
+
+		void UpdateTypedefOrElaborated()
+		{
+			clang::Type::TypeClass tc = type->getTypeClass();
+			if (tc == clang::Type::Typedef || tc == clang::Type::Elaborated)
+				Set(qual_type.getCanonicalType());
+		}
+
+		clang::QualType qual_type;
+		clang::SplitQualType split_qual_type;
+		const clang::Type* type;
+	};
+
+
+
 	Status ParseBaseClass(ASTConsumer& consumer, cldb::Name derived_type_name, const clang::CXXBaseSpecifier& base, cldb::Name& base_name)
 	{
+		// Get canonical base type 
+		ClangASTType base_type(base.getType());
+		base_type.UpdateTypedefOrElaborated();
+
 		// Parse the type name
 		base_name = cldb::Name();
-		clang::QualType base_qual_type = base.getType();
-		const clang::Type* base_type = base_qual_type.split().Ty;
-		std::string type_name_str = base_qual_type.getAsString(consumer.GetASTContext().getLangOpts());
+		std::string type_name_str = base_type.qual_type.getAsString(consumer.GetASTContext().getLangOpts());
 		Remove(type_name_str, "struct ");
 		Remove(type_name_str, "class ");
 
@@ -157,7 +193,7 @@ namespace
 			return Status::Warn(va("Class '%s' is an unsupported virtual base class", type_name_str.c_str()));
 
 		// Discover any new template types
-		Status status = ParseTemplateSpecialisation(consumer, base_type, type_name_str);
+		Status status = ParseTemplateSpecialisation(consumer, base_type.type, type_name_str);
 		if (status.HasWarnings())
 			return status;
 
@@ -285,39 +321,6 @@ namespace
 
 		return Status();
 	}
-
-
-	// A wrapper around a clang's CV-qualified types
-	struct ClangASTType
-	{
-		ClangASTType(clang::QualType& qt)
-		{
-			Set(qt);
-		}
-
-		// For each invocation of this function, we are passing in the returned
-		// result of a function with clang::QuadType, this would actually generate
-		// a local variable, if we use reference here, we will be referencing a
-		// local temporary variable! Even if we copy the actual QualType in this
-		// function, we do not want this to happen
-		void Set(clang::QualType qt)
-		{
-			qual_type = qt;
-			split_qual_type = qual_type.split();
-			type = split_qual_type.Ty;
-		}
-
-		void UpdateTypedefOrElaborated()
-		{
-			clang::Type::TypeClass tc = type->getTypeClass();
-			if (tc == clang::Type::Typedef || tc == clang::Type::Elaborated)
-				Set(qual_type.getCanonicalType());
-		}
-
-		clang::QualType qual_type;
-		clang::SplitQualType split_qual_type;
-		const clang::Type* type;
-	};
 
 
 	Status GetParameterInfo(ASTConsumer& consumer, clang::QualType qual_type, ParameterInfo& info, int flags)
