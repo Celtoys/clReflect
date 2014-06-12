@@ -95,6 +95,40 @@ void clutl::DestroyObject(const Object* object)
 }
 
 
+clutl::Object2::Object2()
+	: type(0)
+	, unique_id(0)
+{
+}
+
+
+void clutl::Object2::SetObjectUniqueID(unsigned int unique_id)
+{
+	this->unique_id = unique_id;
+}
+
+
+void clutl::DestroyObject(const clutl::Object2* object)
+{
+	// Skip on null pointer must occur earlier
+	clcpp::internal::Assert(object != 0);
+
+	// Need a valid type pointer in order to call destructor
+	clcpp::internal::Assert(object->type != 0);
+
+	// Call the destructor
+	const clcpp::Class* class_type = object->type->AsClass();
+	clcpp::internal::Assert(class_type->destructor != 0);
+	typedef void (*CallFunc)(const clutl::Object2*);
+	CallFunc call_func = (CallFunc)class_type->destructor->address;
+	call_func(object);
+
+	// Non-vector delete to ensure compiler doesn't think it has allocated extra data beside the object
+	// TODO: Could just drag in free at a later point
+	delete (char*)object;
+}
+
+
 
 
 clutl::ObjectGroup::ObjectGroup()

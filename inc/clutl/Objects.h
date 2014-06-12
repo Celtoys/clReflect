@@ -64,6 +64,11 @@ namespace clutl
 		{
 			return type == clcpp::GetType<TYPE>() ? (TYPE*)this : 0;
 		}
+		template <typename TYPE>
+		const TYPE* Cast() const
+		{
+			return type == clcpp::GetType<TYPE>() ? (TYPE*)this : 0;
+		}
 
 		// Type of the object
 		const clcpp::Type* type;
@@ -78,6 +83,41 @@ namespace clutl
 
 
 	//
+	// Object API 2
+	// A new base object API, for more C++ like construction of objects
+	// Allows direct use of new operator with access to constructors
+	// ObjectGroup types need special construction though, because this API needs to be usable without GetType
+	// Hang on... aren't object groups redundant?
+	// If I have an object with some collections, I should be able to run FindObject/etc on that!
+	// The collection interface will need some form of FindObject by id implementation
+	//
+	struct clcpp_attr(reflect_part, custom_flag = 0x10000000, custom_flag_inherit) Object2
+	{
+		Object2();
+
+		//
+		// Derived type must call this in its constructor. Doing it way means the object doesn't have
+		// to be virtual as CreateObject does not need to assign the type pointer.
+		// What about unique ID? And parent object group? These would need to be assigned using reflection,
+		// rather than casting and directly assigning.
+		//
+		template <typename TYPE>
+		void SetObjectType(const TYPE* this_ptr)
+		{
+			this->type = clcpp::GetType<TYPE>();
+		}
+
+		void SetObjectUniqueID(unsigned int unique_id);
+
+		// Type of the object
+		const clcpp::Type* type;
+
+		// Relative, unique ID for referencing the object within whatever container is tracking it
+		unsigned int unique_id;
+	};
+
+
+	//
 	// Create an object of the given type by allocating and constructing it.
 	// This function has 3 possible modes of operation, based on which parameters you specify:
 	//
@@ -88,6 +128,8 @@ namespace clutl
 	Object* CreateObject(const clcpp::Type* type, unsigned int unique_id = 0, ObjectGroup* object_group = 0);
 
 	void DestroyObject(const Object* object);
+
+	 void DestroyObject(const Object2* object);
 
 
 	//
@@ -108,10 +150,13 @@ namespace clutl
 		friend Object* clutl::CreateObject(const clcpp::Type*, unsigned int, ObjectGroup*);
 		friend void clutl::DestroyObject(const Object*);
 
+		// For manual construction of objects with explicit specification of construction parameters
+		// Object type and ID must be correctly setup before calling this
+		void AddObject(Object* object);
+
 	private:
 		struct HashEntry;
 
-		void AddObject(Object* object);
 		void RemoveObject(const Object* object);
 		void AddHashEntry(Object* object);
 		void RemoveHashEntry(unsigned int hash);
