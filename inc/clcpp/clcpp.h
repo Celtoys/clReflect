@@ -184,605 +184,6 @@ inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
 
 
 // ===============================================================================
-//                Core Functionality Required by the Runtime C++ API
-// ===============================================================================
-
-
-
-namespace clcpp
-{
-	namespace internal
-	{
-		//
-		// Trivial assert
-		//
-		void Assert(bool expression);
-
-
-		//
-		// Functions to abstract the calling of an object's constructor and destructor, for
-		// debugging and letting the compiler do the type deduction. Makes it a little easier
-		// to use the PtrWrapper abstraction.
-		//
-		template <typename TYPE> inline void CallConstructor(TYPE* object)
-		{
-			new (*(PtrWrapper*)object) TYPE;
-		}
-		template <typename TYPE> inline void CallDestructor(TYPE* object)
-		{
-			object->~TYPE();
-		}
-
-
-		//
-		// Hashes the specified data into a 32-bit value
-		//
-		unsigned HashData(const void* data, int length, unsigned int seed = 0);
-
-
-		//
-		// Hashes the full string into a 32-bit value
-		//
-		unsigned int HashNameString(const char* name_string, unsigned int seed = 0);
-
-
-		//
-		// Combines two hashes by using the first one as a seed and hashing the second one
-		//
-		unsigned int MixHashes(unsigned int a, unsigned int b);
-	}
-
-
-	//
-	// Simple allocator interface for abstracting allocations made by the runtime.
-	//
-	struct IAllocator
-	{
-		virtual void* Alloc(size_type size) = 0;
-		virtual void Free(void* ptr) = 0;
-	};
-
-
-	//
-	// Wrapper around a classic C-style array.
-	// This is the client version that is stripped of all mutable functionality. It's designed to be
-	// used as part of a memory map, supporting no C++ destructor logic.
-	//
-	template <typename TYPE> struct CArray
-	{
-		CArray() : size(0), data(0), allocator(0)
-		{
-		}
-
-		TYPE& operator [] (unsigned int index)
-		{
-			internal::Assert(index < size);
-			return data[index];
-		}
-		const TYPE& operator [] (unsigned int index) const
-		{
-			internal::Assert(index < size);
-			return data[index];
-		}
-
-		unsigned int size;
-		TYPE* data;
-		IAllocator* allocator;
-	};
-
-
-	//
-	// A simple file interface that the database loader will use. Clients must
-	// implement this before they can load a reflection database.
-	//
-	struct IFile
-	{
-		// Derived classes must implement just the read function, returning
-		// true on success, false otherwise.
-		virtual bool Read(void* dest, size_type size) = 0;
-	};
-
-
-	//
-	// Represents the range [start, end) for iterating over an array
-	//
-	struct Range
-	{
-		Range();
-		unsigned int first;
-		unsigned int last;
-	};
-}
-
-
-
-// ===============================================================================
-//                    Runtime, Read-Only Reflection Database API
-// ===============================================================================
-
-
-
-namespace clcpp
-{
-	class Database;
-	struct Primitive;
-	struct Type;
-	struct Enum;
-	struct TemplateType;
-	struct Class;
-
-
-	namespace internal
-	{
-		struct DatabaseMem;
-
-		//
-		// All primitive arrays are sorted in order of increasing name hash. This will perform an
-		// O(logN) binary search over the array looking for the name you specify.
-		//
-		const Primitive* FindPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash);
-
-		//
-		// Similar to the previous FindPrimitive, except that it returns a range of matching
-		// primitives - useful for searching primitives with names that can be overloaded.
-		//
-		Range FindOverloadedPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash);
-	}
-
-
-	//
-	// A descriptive text name with a unique 32-bit hash value for mapping primitives.
-	//
-	struct Name
-	{
-		Name();
-		bool operator == (const Name& rhs) const { return hash == rhs.hash; }
-		unsigned int hash;
-		const char* text;
-	};
-
-
-	//
-	// Rather than create a new Type for "X" vs "const X", bloating the database,
-	// this stores the qualifier separately. Additionally, the concept of whether
-	// a type is a pointer, reference or not is folded in here as well.
-	//
-	struct Qualifier
-	{
-		enum Operator
-		{
-			VALUE,
-			POINTER,
-			REFERENCE
-		};
-
-		Qualifier();
-		Qualifier(Operator op, bool is_const);
-
-		bool operator == (const Qualifier& rhs) const
-		{
-			return op == rhs.op && is_const == rhs.is_const;
-		}
-
-		Operator op;
-		bool is_const;
-	};
-
-
-	//
-	// Description of a reflected container
-	//
-	struct ContainerInfo
-	{
-		enum
-		{
-			HAS_KEY = 1,
-			IS_C_ARRAY = 2
-		};
-
-		ContainerInfo();
-
-		// Name of the parent type or field
-		Name name;
-
-		// Pointers to the iterator types responsible for reading and writing elements of the container
-		const Type* read_iterator_type;
-		const Type* write_iterator_type;
-
-		unsigned int flags;
-
-		// In the case of a C-Array, the number of elements in the array
-		unsigned int count;
-	};
-
-
-	//
-	// Base class for all types of C++ primitives that are reflected
-	//
-	struct Primitive
-	{
-		enum Kind
-		{
-			KIND_NONE,
-			KIND_ATTRIBUTE,
-			KIND_FLAG_ATTRIBUTE,
-			KIND_INT_ATTRIBUTE,
-			KIND_FLOAT_ATTRIBUTE,
-			KIND_PRIMITIVE_ATTRIBUTE,
-			KIND_TEXT_ATTRIBUTE,
-			KIND_TYPE,
-			KIND_ENUM_CONSTANT,
-			KIND_ENUM,
-			KIND_FIELD,
-			KIND_FUNCTION,
-			KIND_TEMPLATE_TYPE,
-			KIND_TEMPLATE,
-			KIND_CLASS,
-			KIND_NAMESPACE,
-		};
-
-		Primitive(Kind k);
-
-		Kind kind;
-		Name name;
-		const Primitive* parent;
-
-		// Database this primitive belongs to
-		Database* database;
-	};
-
-
-	//
-	// Base attribute type for collecting different attribute types together
-	//
-	struct Attribute : public Primitive
-	{
-		static const Kind KIND = KIND_ATTRIBUTE;
-
-		Attribute();
-		Attribute(Kind k);
-
-		// Safe utility functions for casting to derived types
-		const struct IntAttribute* AsIntAttribute() const;
-		const struct FloatAttribute* AsFloatAttribute() const;
-		const struct PrimitiveAttribute* AsPrimitiveAttribute() const;
-		const struct TextAttribute* AsTextAttribute() const;
-	};
-
-
-	//
-	// Representations of the different types of attribute available
-	//
-	struct FlagAttribute : public Attribute
-	{
-		static const Kind KIND = KIND_FLAG_ATTRIBUTE;
-		FlagAttribute() : Attribute(KIND) { }
-
-		//
-		// Flag attributes are always stored in an array of Attribute pointers. Checking
-		// to see if an attribute is applied to a primitive involves searching the array
-		// looking for the attribute by hash name.
-		//
-		// For flag attributes that are referenced so often that such a search becomes a
-		// performance issue, they are also stored as bit flags in a 32-bit value.
-		//
-		enum
-		{
-			// "transient" - These primitives are ignored during serialisation
-			TRANSIENT		= 0x01,
-
-			// If an attribute starts with "load_" or "save_" then these flags are set to indicate there
-			// are custom loading functions assigned
-			CUSTOM_LOAD		= 0x02,
-			CUSTOM_SAVE		= 0x04,
-		};
-	};
-	struct IntAttribute : public Attribute
-	{
-		static const Kind KIND = KIND_INT_ATTRIBUTE;
-		IntAttribute() : Attribute(KIND), value(0) { }
-		int value;
-	};
-	struct FloatAttribute : public Attribute
-	{
-		static const Kind KIND = KIND_FLOAT_ATTRIBUTE;
-		FloatAttribute() : Attribute(KIND), value(0) { }
-		float value;
-	};
-	struct PrimitiveAttribute : public Attribute
-	{
-		static const Kind KIND = KIND_PRIMITIVE_ATTRIBUTE;
-		PrimitiveAttribute() : Attribute(KIND), primitive(0) { }
-		const Primitive* primitive;
-	};
-	struct TextAttribute : public Attribute
-	{
-		static const Kind KIND = KIND_TEXT_ATTRIBUTE;
-		TextAttribute() : Attribute(KIND), value(0) { }
-		const char* value;
-	};
-
-
-	//
-	// A basic built-in type that classes/structs can also inherit from
-	// Only one base type is supported until it becomes necessary to do otherwise.
-	//
-	struct Type : public Primitive
-	{
-		static const Kind KIND = KIND_TYPE;
-
-		Type();
-		Type(Kind k);
-
-		// Does this type derive from the specified type, by hash?
-		bool DerivesFrom(unsigned int type_name_hash) const;
-
-		// Safe utility functions for casting to derived types
-		const Enum* AsEnum() const;
-		const TemplateType* AsTemplateType() const;
-		const Class* AsClass() const;
-
-		// Size of the type in bytes
-        clcpp::size_type size;
-
-		// Types this one derives from. Can be either a Class or TemplateType.
-		CArray<const Type*> base_types;
-
-		// This is non-null if the type is a registered container
-		ContainerInfo* ci;
-	};
-
-
-	//
-	// A name/value pair for enumeration constants
-	//
-	struct EnumConstant : public Primitive
-	{
-		static const Kind KIND = KIND_ENUM_CONSTANT;
-
-		EnumConstant();
-
-		int value;
-	};
-
-
-	//
-	// A typed enumeration of name/value constant pairs
-	//
-	struct Enum : public Type
-	{
-		static const Kind KIND = KIND_ENUM;
-
-		Enum();
-
-		// All sorted by name
-		CArray<const EnumConstant*> constants;
-		CArray<const Attribute*> attributes;
-
-		// Bits representing some of the flag attributes in the attribute array
-		unsigned int flag_attributes;
-	};
-
-
-	//
-	// Can be either a class/struct field or a function parameter
-	//
-	struct Field : public Primitive
-	{
-		static const Kind KIND = KIND_FIELD;
-
-		Field();
-
-		bool IsFunctionParameter() const;
-
-		// Type info
-		const Type* type;
-		Qualifier qualifier;
-
-		// Index of the field parameter within its parent function or byte offset within its parent class
-		int offset;
-
-		// If this is set then the field is a function parameter
-		unsigned int parent_unique_id;
-
-		// All sorted by name
-		CArray<const Attribute*> attributes;
-
-		// Bits representing some of the flag attributes in the attribute array
-		unsigned int flag_attributes;
-
-		// This is non-null if the field is a C-Array of constant size
-		ContainerInfo* ci;
-	};
-
-
-	//
-	// A function or class method with a list of parameters and a return value. When this is a method
-	// within a class with calling convention __thiscall, the this parameter is explicitly specified
-	// as the first parameter.
-	//
-	struct Function : public Primitive
-	{
-		static const Kind KIND = KIND_FUNCTION;
-
-		Function();
-
-		// Callable address
-        clcpp::pointer_type address;
-
-		// An ID unique to this function among other functions that have the same name
-		// This is not really useful at runtime and exists purely to make the database
-		// exporting code simpler.
-		unsigned int unique_id;
-
-		const Field* return_parameter;
-
-		// All sorted by name
-		CArray<const Field*> parameters;
-		CArray<const Attribute*> attributes;
-
-		// Bits representing some of the flag attributes in the attribute array
-		unsigned int flag_attributes;
-	};
-
-
-	//
-	// Template types are instantiations of templates with fully specified parameters.
-	// They don't specify the primitives contained within as these can vary between instantiation,
-	// leading to prohibitive memory requirements.
-	//
-	struct TemplateType : public Type
-	{
-		static const Kind KIND = KIND_TEMPLATE_TYPE;
-
-		static const int MAX_NB_ARGS = 4;
-
-		TemplateType();
-
-		// A pointer to the type of each template argument
-		const Type* parameter_types[MAX_NB_ARGS];
-
-		// Specifies whether each argument is a pointer
-		bool parameter_ptrs[MAX_NB_ARGS];
-	};
-
-
-	//
-	// A template is not a type but a record of a template declaration without specified parameters
-	// that instantiations can reference.
-	//
-	struct Template : public Primitive
-	{
-		static const Kind KIND = KIND_TEMPLATE;
-
-		Template();
-
-		// All sorted by name
-		CArray<const TemplateType*> instances;
-	};
-
-
-	//
-	// Description of a C++ struct or class with containing fields, functions, classes, etc.
-	//
-	struct Class : public Type
-	{
-		static const Kind KIND = KIND_CLASS;
-
-		Class();
-
-		const Function* constructor;
-		const Function* destructor;
-
-		// All sorted by name
-		CArray<const Enum*> enums;
-		CArray<const Class*> classes;
-		CArray<const Function*> methods;
-		CArray<const Field*> fields;
-		CArray<const Attribute*> attributes;
-		CArray<const Template*> templates;
-
-		// Bits representing some of the flag attributes in the attribute array
-		unsigned int flag_attributes;
-	};
-
-
-	//
-	// A C++ namespace containing collections of various other reflected C++ primitives
-	//
-	struct Namespace : public Primitive
-	{
-		static const Kind KIND = KIND_NAMESPACE;
-
-		Namespace();
-
-		// All sorted by name
-		CArray<const Namespace*> namespaces;
-		CArray<const Type*> types;
-		CArray<const Enum*> enums;
-		CArray<const Class*> classes;
-		CArray<const Function*> functions;
-		CArray<const Template*> templates;
-	};
-
-
-	//
-	// Typed wrappers for calling FindPrimitive/FindOverloadedPrimitive on arbitrary arrays
-	// of primitives. Ensures the types can be cast to Primitive and aliases the arrays to
-	// cut down on generated code.
-	//
-	template <typename TYPE>
-	inline const TYPE* FindPrimitive(const CArray<const TYPE*>& primitives, unsigned int hash)
-	{
-		// This is both a compile-time and runtime assert
-		internal::Assert(TYPE::KIND != Primitive::KIND_NONE);
-		return (TYPE*)internal::FindPrimitive((const CArray<const Primitive*>&)primitives, hash);
-	}
-	template <typename TYPE>
-	inline Range FindOverloadedPrimitive(const CArray<const TYPE*>& primitives, unsigned int hash)
-	{
-		// This is both a compile-time and runtime assert
-		internal::Assert(TYPE::KIND != Primitive::KIND_NONE);
-		return internal::FindOverloadedPrimitive((const CArray<const Primitive*>&)primitives, hash);
-	}
-
-
-	class Database
-	{
-	public:
-		enum
-		{
-			// When a database is loaded, the function pointers stored within are rebased
-			// using the load address of the calling module. Use this flag to disable
-			// this behaviour.
-			OPT_DONT_REBASE_FUNCTIONS = 0x00000001,
-		};
-
-		Database();
-		~Database();
-
-		bool Load(IFile* file, IAllocator* allocator, unsigned int options);
-		bool Load(IFile* file, IAllocator* allocator, pointer_type base_address, unsigned int options);
-
-		// This returns the name as it exists in the name database, with the text pointer
-		// pointing to within the database's allocated name data
-		Name GetName(unsigned int hash) const;
-		Name GetName(const char* text) const;
-
-		// Return either a type, enum, template type or class by hash
-		const Type* GetType(unsigned int hash) const;
-
-		// Retrieve namespaces using their fully-scoped names
-		const Namespace* GetNamespace(unsigned int hash) const;
-
-		// Retrieve the global namespace, that allows you to reach every primitive
-		const Namespace* GetGlobalNamespace() const;
-
-		// Retrieve templates using their fully-scoped names
-		const Template* GetTemplate(unsigned int hash) const;
-
-		// Retrieve functions by their fully-scoped names, with the option of getting
-		// a range of matching overloaded functions
-		const Function* GetFunction(unsigned int hash) const;
-		Range GetOverloadedFunction(unsigned int hash) const;
-
-		bool IsLoaded() const { return m_DatabaseMem != 0; }
-
-	private:
-		// Disable copying
-		Database(const Database&);
-		Database& operator = (const Database&);
-
-		internal::DatabaseMem* m_DatabaseMem;
-
-		// Allocator used to load the database
-		IAllocator* m_Allocator;
-	};
-}
-
-
-
-// ===============================================================================
 //              Macros for Tagging C++ Code with Reflection Metadata
 // ===============================================================================
 
@@ -850,7 +251,9 @@ namespace clcpp
 	//
 	// Clang does not need to see these
 	//
-	#define clcpp_impl_class(scoped_type)
+	#define clcpp_impl_construct(type)
+	#define clcpp_impl_destruct(type)
+	#define clcpp_impl_class(type)
 
 
 #else
@@ -868,24 +271,638 @@ namespace clcpp
 
 
 	//
-	// Introduces overloaded construction and destruction functions into the clcpp::internal
-	// namespace for the type you specify. These functions end up in the list of methods
-	// in the specified type for easy access.
+	// Introduces overloaded construction function into the clcpp::internal namespace for the type you
+	// specify. This function ends up in the list of methods in the specified type for easy access.
 	// This can only be used from global namespace.
 	//
-	#define clcpp_impl_class(type)								\
-																\
+	#define clcpp_impl_construct(type)							\
 		CLCPP_EXPORT void clcppConstructObject(type* object)	\
 		{														\
 			clcpp::internal::CallConstructor(object);			\
-		}														\
+		}
+
+
+	//
+	// Introduces overloaded destruction function into the clcpp::internal namespace for the type you
+	// specify. This function ends up in the list of methods in the specified type for easy access.
+	// This can only be used from global namespace.
+	//
+	#define clcpp_impl_destruct(type)							\
 		CLCPP_EXPORT void clcppDestructObject(type* object)		\
 		{														\
 			clcpp::internal::CallDestructor(object);			\
 		}														\
 
 
+	//
+	// Introduces construction/destruction functions for the specified type.
+	//
+	#define clcpp_impl_class(type)	\
+		clcpp_impl_construct(type)	\
+		clcpp_impl_destruct(type)
+
+
 #endif
+
+
+
+// ===============================================================================
+//                Core Functionality Required by the Runtime C++ API
+// ===============================================================================
+
+
+
+clcpp_reflect_part(clcpp)
+namespace clcpp
+{
+	namespace internal
+	{
+		//
+		// Trivial assert
+		//
+		void Assert(bool expression);
+
+
+		//
+		// Functions to abstract the calling of an object's constructor and destructor, for
+		// debugging and letting the compiler do the type deduction. Makes it a little easier
+		// to use the PtrWrapper abstraction.
+		//
+		template <typename TYPE> inline void CallConstructor(TYPE* object)
+		{
+			new (*(PtrWrapper*)object) TYPE;
+		}
+		template <typename TYPE> inline void CallDestructor(TYPE* object)
+		{
+			object->~TYPE();
+		}
+
+
+		//
+		// Hashes the specified data into a 32-bit value
+		//
+		unsigned HashData(const void* data, int length, unsigned int seed = 0);
+
+
+		//
+		// Hashes the full string into a 32-bit value
+		//
+		unsigned int HashNameString(const char* name_string, unsigned int seed = 0);
+
+
+		//
+		// Combines two hashes by using the first one as a seed and hashing the second one
+		//
+		unsigned int MixHashes(unsigned int a, unsigned int b);
+	}
+
+
+	//
+	// Simple allocator interface for abstracting allocations made by the runtime.
+	//
+	struct clcpp_attr(reflect_part) IAllocator
+	{
+		virtual void* Alloc(size_type size) = 0;
+		virtual void Free(void* ptr) = 0;
+	};
+
+
+	//
+	// Wrapper around a classic C-style array.
+	// This is the client version that is stripped of all mutable functionality. It's designed to be
+	// used as part of a memory map, supporting no C++ destructor logic.
+	//
+	template <typename TYPE> struct CArray
+	{
+		CArray() : size(0), data(0), allocator(0)
+		{
+		}
+
+		TYPE& operator [] (unsigned int index)
+		{
+			internal::Assert(index < size);
+			return data[index];
+		}
+		const TYPE& operator [] (unsigned int index) const
+		{
+			internal::Assert(index < size);
+			return data[index];
+		}
+
+		unsigned int size;
+		TYPE* data;
+		IAllocator* allocator;
+	};
+
+
+	//
+	// A simple file interface that the database loader will use. Clients must
+	// implement this before they can load a reflection database.
+	//
+	struct clcpp_attr(reflect_part) IFile
+	{
+		// Derived classes must implement just the read function, returning
+		// true on success, false otherwise.
+		virtual bool Read(void* dest, size_type size) = 0;
+	};
+
+
+	//
+	// Represents the range [start, end) for iterating over an array
+	//
+	struct Range
+	{
+		Range();
+		unsigned int first;
+		unsigned int last;
+	};
+}
+
+
+
+// ===============================================================================
+//                    Runtime, Read-Only Reflection Database API
+// ===============================================================================
+
+
+
+namespace clcpp
+{
+	class Database;
+	struct Primitive;
+	struct Type;
+	struct Enum;
+	struct TemplateType;
+	struct Class;
+
+
+	namespace internal
+	{
+		struct DatabaseMem;
+
+		//
+		// All primitive arrays are sorted in order of increasing name hash. This will perform an
+		// O(logN) binary search over the array looking for the name you specify.
+		//
+		const Primitive* FindPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash);
+
+		//
+		// Similar to the previous FindPrimitive, except that it returns a range of matching
+		// primitives - useful for searching primitives with names that can be overloaded.
+		//
+		Range FindOverloadedPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash);
+	}
+
+
+	//
+	// A descriptive text name with a unique 32-bit hash value for mapping primitives.
+	//
+	struct clcpp_attr(reflect_part) Name
+	{
+		Name();
+		bool operator == (const Name& rhs) const { return hash == rhs.hash; }
+		unsigned int hash;
+		const char* text;
+	};
+
+
+	//
+	// Rather than create a new Type for "X" vs "const X", bloating the database,
+	// this stores the qualifier separately. Additionally, the concept of whether
+	// a type is a pointer, reference or not is folded in here as well.
+	//
+	struct clcpp_attr(reflect_part) Qualifier
+	{
+		enum Operator
+		{
+			VALUE,
+			POINTER,
+			REFERENCE
+		};
+
+		Qualifier();
+		Qualifier(Operator op, bool is_const);
+
+		bool operator == (const Qualifier& rhs) const
+		{
+			return op == rhs.op && is_const == rhs.is_const;
+		}
+
+		Operator op;
+		bool is_const;
+	};
+
+
+	//
+	// Description of a reflected container
+	//
+	struct clcpp_attr(reflect_part) ContainerInfo
+	{
+		enum
+		{
+			HAS_KEY = 1,
+			IS_C_ARRAY = 2
+		};
+
+		ContainerInfo();
+
+		// Name of the parent type or field
+		Name name;
+
+		// Pointers to the iterator types responsible for reading and writing elements of the container
+		const Type* read_iterator_type;
+		const Type* write_iterator_type;
+
+		unsigned int flags;
+
+		// In the case of a C-Array, the number of elements in the array
+		unsigned int count;
+	};
+
+
+	//
+	// Base class for all types of C++ primitives that are reflected
+	//
+	struct clcpp_attr(reflect_part) Primitive
+	{
+		enum Kind
+		{
+			KIND_NONE,
+			KIND_ATTRIBUTE,
+			KIND_FLAG_ATTRIBUTE,
+			KIND_INT_ATTRIBUTE,
+			KIND_FLOAT_ATTRIBUTE,
+			KIND_PRIMITIVE_ATTRIBUTE,
+			KIND_TEXT_ATTRIBUTE,
+			KIND_TYPE,
+			KIND_ENUM_CONSTANT,
+			KIND_ENUM,
+			KIND_FIELD,
+			KIND_FUNCTION,
+			KIND_TEMPLATE_TYPE,
+			KIND_TEMPLATE,
+			KIND_CLASS,
+			KIND_NAMESPACE,
+		};
+
+		Primitive(Kind k);
+
+		Kind kind;
+		Name name;
+		const Primitive* parent;
+
+		// Database this primitive belongs to
+		Database* database;
+	};
+
+
+	//
+	// Base attribute type for collecting different attribute types together
+	//
+	struct clcpp_attr(reflect_part) Attribute : public Primitive
+	{
+		static const Kind KIND = KIND_ATTRIBUTE;
+
+		Attribute();
+		Attribute(Kind k);
+
+		// Safe utility functions for casting to derived types
+		const struct IntAttribute* AsIntAttribute() const;
+		const struct FloatAttribute* AsFloatAttribute() const;
+		const struct PrimitiveAttribute* AsPrimitiveAttribute() const;
+		const struct TextAttribute* AsTextAttribute() const;
+	};
+
+
+	//
+	// Representations of the different types of attribute available
+	//
+	struct clcpp_attr(reflect_part) FlagAttribute : public Attribute
+	{
+		static const Kind KIND = KIND_FLAG_ATTRIBUTE;
+		FlagAttribute() : Attribute(KIND) { }
+
+		//
+		// Flag attributes are always stored in an array of Attribute pointers. Checking
+		// to see if an attribute is applied to a primitive involves searching the array
+		// looking for the attribute by hash name.
+		//
+		// For flag attributes that are referenced so often that such a search becomes a
+		// performance issue, they are also stored as bit flags in a 32-bit value.
+		//
+		enum
+		{
+			// "transient" - These primitives are ignored during serialisation
+			TRANSIENT		= 0x01,
+
+			// If an attribute starts with "load_" or "save_" then these flags are set to indicate there
+			// are custom loading functions assigned
+			CUSTOM_LOAD		= 0x02,
+			CUSTOM_SAVE		= 0x04,
+		};
+	};
+	struct clcpp_attr(reflect_part) IntAttribute : public Attribute
+	{
+		static const Kind KIND = KIND_INT_ATTRIBUTE;
+		IntAttribute() : Attribute(KIND), value(0) { }
+		int value;
+	};
+	struct clcpp_attr(reflect_part) FloatAttribute : public Attribute
+	{
+		static const Kind KIND = KIND_FLOAT_ATTRIBUTE;
+		FloatAttribute() : Attribute(KIND), value(0) { }
+		float value;
+	};
+	struct clcpp_attr(reflect_part) PrimitiveAttribute : public Attribute
+	{
+		static const Kind KIND = KIND_PRIMITIVE_ATTRIBUTE;
+		PrimitiveAttribute() : Attribute(KIND), primitive(0) { }
+		const Primitive* primitive;
+	};
+	struct clcpp_attr(reflect_part) TextAttribute : public Attribute
+	{
+		static const Kind KIND = KIND_TEXT_ATTRIBUTE;
+		TextAttribute() : Attribute(KIND), value(0) { }
+		const char* value;
+	};
+
+
+	//
+	// A basic built-in type that classes/structs can also inherit from
+	// Only one base type is supported until it becomes necessary to do otherwise.
+	//
+	struct clcpp_attr(reflect_part) Type : public Primitive
+	{
+		static const Kind KIND = KIND_TYPE;
+
+		Type();
+		Type(Kind k);
+
+		// Does this type derive from the specified type, by hash?
+		bool DerivesFrom(unsigned int type_name_hash) const;
+
+		// Safe utility functions for casting to derived types
+		const Enum* AsEnum() const;
+		const TemplateType* AsTemplateType() const;
+		const Class* AsClass() const;
+
+		// Size of the type in bytes
+        clcpp::size_type size;
+
+		// Types this one derives from. Can be either a Class or TemplateType.
+		CArray<const Type*> base_types;
+
+		// This is non-null if the type is a registered container
+		ContainerInfo* ci;
+	};
+
+
+	//
+	// A name/value pair for enumeration constants
+	//
+	struct clcpp_attr(reflect_part) EnumConstant : public Primitive
+	{
+		static const Kind KIND = KIND_ENUM_CONSTANT;
+
+		EnumConstant();
+
+		int value;
+	};
+
+
+	//
+	// A typed enumeration of name/value constant pairs
+	//
+	struct clcpp_attr(reflect_part) Enum : public Type
+	{
+		static const Kind KIND = KIND_ENUM;
+
+		Enum();
+
+		// All sorted by name
+		CArray<const EnumConstant*> constants;
+		CArray<const Attribute*> attributes;
+
+		// Bits representing some of the flag attributes in the attribute array
+		unsigned int flag_attributes;
+	};
+
+
+	//
+	// Can be either a class/struct field or a function parameter
+	//
+	struct clcpp_attr(reflect_part) Field : public Primitive
+	{
+		static const Kind KIND = KIND_FIELD;
+
+		Field();
+
+		bool IsFunctionParameter() const;
+
+		// Type info
+		const Type* type;
+		Qualifier qualifier;
+
+		// Index of the field parameter within its parent function or byte offset within its parent class
+		int offset;
+
+		// If this is set then the field is a function parameter
+		unsigned int parent_unique_id;
+
+		// All sorted by name
+		CArray<const Attribute*> attributes;
+
+		// Bits representing some of the flag attributes in the attribute array
+		unsigned int flag_attributes;
+
+		// This is non-null if the field is a C-Array of constant size
+		ContainerInfo* ci;
+	};
+
+
+	//
+	// A function or class method with a list of parameters and a return value. When this is a method
+	// within a class with calling convention __thiscall, the this parameter is explicitly specified
+	// as the first parameter.
+	//
+	struct clcpp_attr(reflect_part) Function : public Primitive
+	{
+		static const Kind KIND = KIND_FUNCTION;
+
+		Function();
+
+		// Callable address
+        clcpp::pointer_type address;
+
+		// An ID unique to this function among other functions that have the same name
+		// This is not really useful at runtime and exists purely to make the database
+		// exporting code simpler.
+		unsigned int unique_id;
+
+		const Field* return_parameter;
+
+		// All sorted by name
+		CArray<const Field*> parameters;
+		CArray<const Attribute*> attributes;
+
+		// Bits representing some of the flag attributes in the attribute array
+		unsigned int flag_attributes;
+	};
+
+
+	//
+	// Template types are instantiations of templates with fully specified parameters.
+	// They don't specify the primitives contained within as these can vary between instantiation,
+	// leading to prohibitive memory requirements.
+	//
+	struct clcpp_attr(reflect_part) TemplateType : public Type
+	{
+		static const Kind KIND = KIND_TEMPLATE_TYPE;
+
+		static const int MAX_NB_ARGS = 4;
+
+		TemplateType();
+
+		// A pointer to the type of each template argument
+		const Type* parameter_types[MAX_NB_ARGS];
+
+		// Specifies whether each argument is a pointer
+		bool parameter_ptrs[MAX_NB_ARGS];
+	};
+
+
+	//
+	// A template is not a type but a record of a template declaration without specified parameters
+	// that instantiations can reference.
+	//
+	struct clcpp_attr(reflect_part) Template : public Primitive
+	{
+		static const Kind KIND = KIND_TEMPLATE;
+
+		Template();
+
+		// All sorted by name
+		CArray<const TemplateType*> instances;
+	};
+
+
+	//
+	// Description of a C++ struct or class with containing fields, functions, classes, etc.
+	//
+	struct clcpp_attr(reflect_part) Class : public Type
+	{
+		static const Kind KIND = KIND_CLASS;
+
+		Class();
+
+		const Function* constructor;
+		const Function* destructor;
+
+		// All sorted by name
+		CArray<const Enum*> enums;
+		CArray<const Class*> classes;
+		CArray<const Function*> methods;
+		CArray<const Field*> fields;
+		CArray<const Attribute*> attributes;
+		CArray<const Template*> templates;
+
+		// Bits representing some of the flag attributes in the attribute array
+		unsigned int flag_attributes;
+	};
+
+
+	//
+	// A C++ namespace containing collections of various other reflected C++ primitives
+	//
+	struct clcpp_attr(reflect_part) Namespace : public Primitive
+	{
+		static const Kind KIND = KIND_NAMESPACE;
+
+		Namespace();
+
+		// All sorted by name
+		CArray<const Namespace*> namespaces;
+		CArray<const Type*> types;
+		CArray<const Enum*> enums;
+		CArray<const Class*> classes;
+		CArray<const Function*> functions;
+		CArray<const Template*> templates;
+	};
+
+
+	//
+	// Typed wrappers for calling FindPrimitive/FindOverloadedPrimitive on arbitrary arrays
+	// of primitives. Ensures the types can be cast to Primitive and aliases the arrays to
+	// cut down on generated code.
+	//
+	template <typename TYPE>
+	inline const TYPE* FindPrimitive(const CArray<const TYPE*>& primitives, unsigned int hash)
+	{
+		// This is both a compile-time and runtime assert
+		internal::Assert(TYPE::KIND != Primitive::KIND_NONE);
+		return (TYPE*)internal::FindPrimitive((const CArray<const Primitive*>&)primitives, hash);
+	}
+	template <typename TYPE>
+	inline Range FindOverloadedPrimitive(const CArray<const TYPE*>& primitives, unsigned int hash)
+	{
+		// This is both a compile-time and runtime assert
+		internal::Assert(TYPE::KIND != Primitive::KIND_NONE);
+		return internal::FindOverloadedPrimitive((const CArray<const Primitive*>&)primitives, hash);
+	}
+
+
+	class clcpp_attr(reflect_part) Database
+	{
+	public:
+		enum
+		{
+			// When a database is loaded, the function pointers stored within are rebased
+			// using the load address of the calling module. Use this flag to disable
+			// this behaviour.
+			OPT_DONT_REBASE_FUNCTIONS = 0x00000001,
+		};
+
+		Database();
+		~Database();
+
+		bool Load(IFile* file, IAllocator* allocator, unsigned int options);
+		bool Load(IFile* file, IAllocator* allocator, pointer_type base_address, unsigned int options);
+
+		// This returns the name as it exists in the name database, with the text pointer
+		// pointing to within the database's allocated name data
+		Name GetName(unsigned int hash) const;
+		Name GetName(const char* text) const;
+
+		// Return either a type, enum, template type or class by hash
+		const Type* GetType(unsigned int hash) const;
+
+		// Retrieve namespaces using their fully-scoped names
+		const Namespace* GetNamespace(unsigned int hash) const;
+
+		// Retrieve the global namespace, that allows you to reach every primitive
+		const Namespace* GetGlobalNamespace() const;
+
+		// Retrieve templates using their fully-scoped names
+		const Template* GetTemplate(unsigned int hash) const;
+
+		// Retrieve functions by their fully-scoped names, with the option of getting
+		// a range of matching overloaded functions
+		const Function* GetFunction(unsigned int hash) const;
+		Range GetOverloadedFunction(unsigned int hash) const;
+
+		bool IsLoaded() const { return m_DatabaseMem != 0; }
+
+	private:
+		// Disable copying
+		Database(const Database&);
+		Database& operator = (const Database&);
+
+		internal::DatabaseMem* m_DatabaseMem;
+
+		// Allocator used to load the database
+		IAllocator* m_Allocator;
+	};
+};
 
 
 
