@@ -140,7 +140,22 @@ namespace clutl
 		{
 			INDENT_MASK = 0x0F,
 			FORMAT_OUTPUT = 0x10,
-			EMIT_HEX_FLOATS = 0x20
+			EMIT_HEX_FLOATS = 0x20,
+
+			// Serialising pointer hashes in hexadecimal is more compact than decimal, however it's not compliant
+			// with the JSON standard.
+			EMIT_HEX_POINTERS = 0x40,
+
+			// When saving class fields, default behaviour is to save them in the order that they appear in the class
+			// field array. This array is typically sorted in order of name hash so that look-up by name can use
+			// a binary search.
+			//
+			// This flag will ensure fields are saved in the order that they are declared by sorting them by their
+			// byte offset first.
+			//
+			// Note that use of this flag will slow serialisation as the inner loop will have to do loop quadratically
+			// over the field array.
+			SORT_CLASS_FIELDS_BY_OFFSET = 0x80,
 		};
 	};
 
