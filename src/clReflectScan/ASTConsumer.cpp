@@ -934,11 +934,8 @@ void ASTConsumer::MakeFunction(clang::NamedDecl* decl, const std::string& functi
 	}
 
 	// Generate a hash unique to this function among other functions of the same name
-	// This is so that its parameters/return code can re-parent themselves correctly
-	cldb::Field* return_parameter_ptr = 0;
-	if (return_parameter.type.text != "void")
-		return_parameter_ptr = &return_parameter;
-	cldb::u32 unique_id = cldb::CalculateFunctionUniqueID(return_parameter_ptr, parameters);
+	// This is so that its parameters can re-parent themselves correctly
+	cldb::u32 unique_id = cldb::CalculateFunctionUniqueID(parameters);
 
 	// Parent each parameter to the function
 	return_parameter.parent_unique_id = unique_id;

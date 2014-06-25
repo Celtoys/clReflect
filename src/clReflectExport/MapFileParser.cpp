@@ -184,13 +184,10 @@ namespace
 			return;
 		}
 
-		// Parse the return parameter and only remember it if it's non-void
+		// Skip the return parameter as it can't be used to overload a function
 		bool is_this_call = false;
 		const char* ptr = function_signature.c_str();
-		cldb::Field return_parameter = MatchParameter(db, ptr, ptr + func_pos, is_this_call);
-		cldb::Field* return_parameter_ptr = 0;
-		if (!IsVoidParameter(return_parameter))
-			return_parameter_ptr = &return_parameter;
+		MatchParameter(db, ptr, ptr + func_pos, is_this_call);
 
 		// Isolate the parameters in the signature
 		size_t l_pos = function_signature.find('(', func_pos);
@@ -240,7 +237,7 @@ namespace
 		}
 
 		// Calculate the ID of the matching function
-		cldb::u32 unique_id = cldb::CalculateFunctionUniqueID(return_parameter_ptr, parameters);
+		cldb::u32 unique_id = cldb::CalculateFunctionUniqueID(parameters);
 
 		// Search through all functions of the same name
 		cldb::u32 function_hash = clcpp::internal::HashNameString(function_name.c_str());
@@ -364,7 +361,7 @@ namespace
 		// Generate a unique ID that binds the function and parameter together
 		std::vector<cldb::Field> parameters;
 		parameters.push_back(parameter);
-		cldb::u32 unique_id = cldb::CalculateFunctionUniqueID(0, parameters);
+		cldb::u32 unique_id = cldb::CalculateFunctionUniqueID(parameters);
 
 		// Create the function and bind the parameter to it
 		cldb::Function function(

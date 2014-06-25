@@ -28,16 +28,10 @@ namespace
 }
 
 
-cldb::u32 cldb::CalculateFunctionUniqueID(const Field* return_parameter, const std::vector<Field>& parameters)
+cldb::u32 cldb::CalculateFunctionUniqueID(const std::vector<Field>& parameters)
 {
-	// The return parameter is optional as it may be void
-	cldb::u32 unique_id = 0;
-	if (return_parameter != 0)
-	{
-		unique_id = CalcFieldHash(*return_parameter);
-	}
-
 	// Mix with all parameter field hashes
+	cldb::u32 unique_id = 0;
 	for (size_t i = 0; i < parameters.size(); i++)
 	{
 		cldb::u32 field_hash = CalcFieldHash(parameters[i]);

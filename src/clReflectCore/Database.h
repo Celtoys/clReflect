@@ -33,7 +33,7 @@ namespace cldb
 	// Calculate the unique ID for binding a function to its parameters
 	//
 	struct Field;
-	u32 CalculateFunctionUniqueID(const Field* return_parameter, const std::vector<Field>& parameters);
+	u32 CalculateFunctionUniqueID(const std::vector<Field>& parameters);
 
 
 	//
