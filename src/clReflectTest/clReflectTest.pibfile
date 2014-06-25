@@ -26,10 +26,12 @@ libs = [
 ]
 
 lib_paths_debug = [
+    WindowsPlatform.LibDir,
 	"../../build/bin/debug",
 ]
 
 lib_paths_release = [
+    WindowsPlatform.LibDir,
 	"../../build/bin/release",
 ]
 
@@ -72,7 +74,7 @@ if len(scan_cpp_files) == len(cltest.cpp_files):
 	cltest.obj_files += [ env.CPPFile(cpp_codegen) ]
 
 # Run clscan on all C++ located files, merge the result into one database and generate the C++ file
-clr_scan = [ clReflect.CppScan(sys_include_paths, include_paths, env.NewFile(i)) for i in scan_cpp_files ]
+clr_scan = [ clReflect.CppScan(sys_include_paths, include_paths, [ ], env.NewFile(i)) for i in scan_cpp_files ]
 clr_merge = clReflect.Merge("clRefectTest.csv", clr_scan, env.NewFile(cpp_codegen))
 
 # Generate the exported reflection database

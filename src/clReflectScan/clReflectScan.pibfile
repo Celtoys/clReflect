@@ -50,16 +50,19 @@ libs = [
 ]
 
 lib_paths_debug = [
+    WindowsPlatform.LibDir,
     os.path.join(llvm_build, "lib/debug"),
     "../../build/bin/debug",
 ]
 
 lib_paths_release = [
+    WindowsPlatform.LibDir,
     os.path.join(llvm_build, "lib/release"),
     "../../build/bin/release",
 ]
 
 lib_paths_minrelease = [
+    WindowsPlatform.LibDir,
 	os.path.join(llvm_build, "lib/minsizerel"),
     "../../build/bin/release",
 ]

@@ -1,5 +1,6 @@
 
 include_paths = [
+    WindowsPlatform.IncludeDir,
 	"..",
 	"../../inc",
 ]
@@ -16,10 +17,12 @@ libs = [
 ]
 
 lib_paths_debug = [
+    WindowsPlatform.LibDir,
 	"../../build/bin/debug",
 ]
 
 lib_paths_release = [
+    WindowsPlatform.LibDir,
 	"../../build/bin/release",
 ]
 
