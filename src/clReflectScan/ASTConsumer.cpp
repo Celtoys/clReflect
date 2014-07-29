@@ -145,7 +145,7 @@ namespace
 	// A wrapper around a clang's CV-qualified types
 	struct ClangASTType
 	{
-		ClangASTType(clang::QualType& qt)
+        ClangASTType(clang::QualType qt)
 		{
 			Set(qt);
 		}
