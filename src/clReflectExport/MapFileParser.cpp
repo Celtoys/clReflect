@@ -171,36 +171,31 @@ namespace
 	}
 
 	
-	void AddFunctionAddress(cldb::Database& db, const std::string& function_name, const std::string& function_signature, unsigned int function_address)
+	bool AddFunctionAddress(cldb::Database& db, const std::string& function_name, const std::string& function_signature, clcpp::pointer_type function_address, bool is_this_call, bool is_const)
 	{
 		if (function_address == 0)
-			return;
+			return false;
 
 		// Find where the return type ends
 		size_t func_pos = function_signature.find(function_name);
 		if (func_pos == std::string::npos)
 		{
 			LOG(main, ERROR, "Couldn't locate function name in signature for '%s'", function_name.c_str());
-			return;
+			return false;
 		}
-
-		// Skip the return parameter as it can't be used to overload a function
-		bool is_this_call = false;
-		const char* ptr = function_signature.c_str();
-		MatchParameter(db, ptr, ptr + func_pos, is_this_call);
 
 		// Isolate the parameters in the signature
 		size_t l_pos = function_signature.find('(', func_pos);
 		if (l_pos == std::string::npos)
 		{
 			LOG(main, ERROR, "Couldn't locate left bracket in signature for '%s'", function_name.c_str());
-			return;
+			return false;
 		}
 		size_t r_pos = function_signature.find(')', l_pos);
 		if (r_pos == std::string::npos)
 		{
 			LOG(main, ERROR, "Couldn't locate right bracket in signature for '%s'", function_name.c_str());
-			return;
+			return false;
 		}
 
 		std::vector<cldb::Field> parameters;
@@ -211,7 +206,7 @@ namespace
 			if (rsep == std::string::npos)
 			{
 				LOG(main, ERROR, "Function declaration says it's __thiscall but no type found in the name of '%s'", function_name.c_str());
-				return;
+				return false;
 			}
 
 			// Construct the type name
@@ -223,11 +218,12 @@ namespace
 			cldb::Field this_parameter;
 			this_parameter.type = db.GetName(type_name);
 			this_parameter.qualifier.op = cldb::Qualifier::POINTER;
+			this_parameter.qualifier.is_const = is_const;
 			parameters.push_back(this_parameter);
 		}
 
 		// Parse the parameters
-		ptr = function_signature.c_str() + l_pos + 1;
+		const char* ptr = function_signature.c_str() + l_pos + 1;
 		const char* end = function_signature.c_str() + r_pos;
 		while (ptr < end)
 		{
@@ -249,9 +245,11 @@ namespace
 			if (function.unique_id == unique_id)
 			{
 				function.address = function_address;
-				break;
+				return true;
 			}
 		}
+
+		return false;
 	}
 
 
@@ -267,7 +265,7 @@ namespace
 	}
 
 
-	void AddGetTypeAddress(cldb::Database& db, const std::string& function_name, unsigned int function_address, bool is_get_type)
+	void AddGetTypeAddress(cldb::Database& db, const std::string& function_name, clcpp::pointer_type function_address, bool is_get_type)
 	{
 		if (function_address == 0)
 			return;
@@ -309,7 +307,7 @@ namespace
 	}
 
 
-	void AddClassImplFunction(cldb::Database& db, const std::string& function_signature, unsigned int function_address, bool is_constructor)
+	void AddClassImplFunction(cldb::Database& db, const std::string& function_signature, clcpp::pointer_type function_address, bool is_constructor)
 	{
 		if (function_address == 0)
 			return;
@@ -379,13 +377,13 @@ namespace
 	}
 
 
-	void AddConstructFunction(cldb::Database& db, const std::string& function_signature, unsigned int function_address)
+	void AddConstructFunction(cldb::Database& db, const std::string& function_signature, clcpp::pointer_type function_address)
 	{
 		AddClassImplFunction(db, function_signature, function_address, true);
 	}
 
 
-	void AddDestructFunction(cldb::Database& db, const std::string& function_signature, unsigned int function_address)
+	void AddDestructFunction(cldb::Database& db, const std::string& function_signature, clcpp::pointer_type function_address)
 	{
 		AddClassImplFunction(db, function_signature, function_address, false);
 	}
@@ -435,13 +433,13 @@ namespace
 		}
 
 
-		unsigned int ParseAddressField(const char* line, const char* function_name)
+		clcpp::pointer_type ParseAddressField(const char* line, const char* function_name)
 		{
 			// First parse the address as hex
 			char token[1024];
 			line = SkipWhitespace(line);
 			line = ConsumeToken(line, ' ', token, sizeof(token));
-			unsigned int function_address = hextoi(token);
+			clcpp::pointer_type function_address = hextoi(token);
 	
 			// Double-check that the map file knows this is a function
 			line = SkipWhitespace(line);
@@ -486,32 +484,45 @@ namespace
 					if (IsConstructFunction(function_name))
 					{
 						std::string function_signature = UndecorateFunctionSignature(token);
-						unsigned int function_address = ParseAddressField(line, function_name.c_str());
+						clcpp::pointer_type function_address = ParseAddressField(line, function_name.c_str());
 						AddConstructFunction(db, function_signature, function_address);
 					}
 					else if (IsDestructFunction(function_name))
 					{
 						std::string function_signature = UndecorateFunctionSignature(token);
-						unsigned int function_address = ParseAddressField(line, function_name.c_str());
+						clcpp::pointer_type function_address = ParseAddressField(line, function_name.c_str());
 						AddDestructFunction(db, function_signature, function_address);
 					}
 					else if (IsGetTypeFunction(function_name))
 					{
-						unsigned int function_address = ParseAddressField(line, function_name.c_str());
+						clcpp::pointer_type function_address = ParseAddressField(line, function_name.c_str());
 						AddGetTypeAddress(db, function_name, function_address, true);
 					}
 					else if (IsGetTypeNameHashFunction(function_name))
 					{
-						unsigned int function_address = ParseAddressField(line, function_name.c_str());
+						clcpp::pointer_type function_address = ParseAddressField(line, function_name.c_str());
 						AddGetTypeAddress(db, function_name, function_address, false);
 					}
 	
 					// Otherwise see if it's a function in the database
 					else if (const cldb::Function* function = db.GetFirstPrimitive<cldb::Function>(function_name.c_str()))
 					{
-						std::string function_signature = UndecorateFunctionSignature(token);
-						unsigned int function_address = ParseAddressField(line, function_name.c_str());
-						AddFunctionAddress(db, function_name, function_signature, function_address);
+						std::string function_signature = UndecorateFunctionSignature(token);						
+						clcpp::pointer_type function_address = ParseAddressField(line, function_name.c_str());
+
+						bool is_this_call = false;
+						const char* ptr = function_signature.c_str();
+						size_t func_pos = function_signature.find(function_name);
+
+						if (func_pos == std::string::npos)
+						{
+							LOG(main, ERROR, "Couldn't locate function name in signature for '%s'", function_name.c_str());
+							return;
+						}
+
+						// Skip the return parameter as it can't be used to overload a function
+						cldb::Field returnValue = MatchParameter(db, ptr, ptr + func_pos, is_this_call);
+						AddFunctionAddress(db, function_name, function_signature, function_address, is_this_call, returnValue.qualifier.is_const);
 					}
 				}
 	
@@ -723,7 +734,25 @@ namespace
 			// Otherwise see if it's a function in the database
 			else if (const cldb::Function* function = db.GetFirstPrimitive<cldb::Function>(function_name.c_str()))
 			{
-				AddFunctionAddress(db, function_name, function_signature, function_address);
+				size_t const_pos = function_signature.rfind("const");
+				const bool is_function_const = const_pos == (function_signature.size() - 5);
+
+				// try to add as this call (member function of class / struct etc.)
+				if(AddFunctionAddress(db, function_name, function_signature, function_address, true, is_function_const) == false)
+				{
+					LOG(main, WARNING, "Couldn't store address for function with signature '%s' as this_call. Try to find static version of function.\n", function_signature.c_str());
+
+					// if it is not a method then it has to be a static method or "not member function"
+					const bool isAddressStored = AddFunctionAddress(db, function_name, function_signature, function_address, false, is_function_const);
+					if(isAddressStored == false)
+					{
+						LOG(main, ERROR, "Couldn't store address for function with signature '%s'. No static or \"this call\" function with same unique id found ! \n", function_signature.c_str());
+					}
+					else
+					{
+						LOG(main, INFO, "Static Function with same unique id found and address stored for function with signature '%s' ! \n", function_signature.c_str());
+					}
+				}
 			}
 		}
 
@@ -802,7 +831,7 @@ namespace
 		{
 			bool text_region = false;
 
-			unsigned long function_address, function_size;
+			clcpp::pointer_type function_address, function_size;
 			char signature_buffer[1024];
 
 			while (const char* line = ReadLine(fp))

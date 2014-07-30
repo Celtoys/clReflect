@@ -463,6 +463,7 @@ namespace
 		{
 		case (RST_Full): result = PAR_Reflect; break;
 		case (RST_Partial): result = PAR_ReflectPartial; break;
+		default: break;
 		}
 
 		// Reflection attributes are stored as clang annotation attributes
@@ -542,6 +543,8 @@ namespace
 				case (cldb::Primitive::KIND_TEXT_ATTRIBUTE):
 					AddAttribute(db, (cldb::TextAttribute*)attribute);
 					break;
+				default:
+					break;
 				}
 			}
 		}
@@ -598,6 +601,9 @@ void ASTConsumer::WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl)
 		case (clang::Decl::Function):
 		case (clang::Decl::Enum):
 			AddDecl(named_decl, "", 0);
+			break;
+		default:
+			break;
 		}
 	}
 }
@@ -640,6 +646,7 @@ void ASTConsumer::AddDecl(clang::NamedDecl* decl, const std::string& parent_name
 		case (clang::Decl::CXXMethod): AddMethodDecl(decl, name, parent_name); break;
 		case (clang::Decl::Field): AddFieldDecl(decl, name, parent_name, layout); break;
 		case (clang::Decl::ClassTemplate): AddClassTemplateDecl(decl, name, parent_name); break;
+		default: break;
 		}
 	}
 

@@ -46,7 +46,7 @@ namespace
 	// casting job.
 	#define POINTER_TO_HASH(p) ((cldb::u32) ((clcpp::pointer_type) (p)))
 
-	#define HASH_TO_POINTER(h) ((void*) (h))
+	#define HASH_TO_POINTER(h) ((void*) ((clcpp::pointer_type) h))
 
 	// A basic malloc allocator implementation
 	class Malloc : public clcpp::IAllocator
@@ -339,7 +339,7 @@ namespace
 				// When the last constant gets written, the constant count gets overwritten with
 				// the constant pointer and should no longer be updated
 				if (cur_count != nb_constants)
-					(parent->*carray)[nb_constants - 1] = (CHILD_TYPE*)cur_count;
+					(parent->*carray)[nb_constants - 1] = (CHILD_TYPE*)((clcpp::pointer_type)cur_count);
 			}
 		}
 	}
@@ -924,6 +924,8 @@ namespace
 					break;
 				case (clcpp::Primitive::KIND_CLASS):
 					LOG(main, WARNING, "Class field '%s' within '%s' couldn't find type reference to '%s'\n", primitive.name.text, primitive.parent->name.text, unresolved);
+					break;
+				default:
 					break;
 				}
 			}
@@ -1520,6 +1522,8 @@ namespace
 				break;
 			case clcpp::Primitive::KIND_TEXT_ATTRIBUTE:
 				LogPrimitive((clcpp::TextAttribute&)attr);
+				break;
+			default:
 				break;
 		}
 	}

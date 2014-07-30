@@ -124,7 +124,7 @@ namespace clcpp
 
 		// type field used in printf/scanf
 		#define CLCPP_SIZE_TYPE_HEX_FORMAT "lX"
-		#define CLCPP_POINTER_TYPE_HEX_FORMAT "lX"
+		#define CLCPP_POINTER_TYPE_HEX_FORMAT "llX"
 
 	#else
 

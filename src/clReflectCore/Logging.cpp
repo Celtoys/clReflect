@@ -271,6 +271,7 @@ void logging::Log(StreamHandle handle, Tag tag, bool do_prefix, const char* form
 		{
 		case (TAG_WARNING): strcat(prefix, "WARNING: "); break;
 		case (TAG_ERROR): strcat(prefix, "ERROR: "); break;
+		default: break;
 		}
 	}
 

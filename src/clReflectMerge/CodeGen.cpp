@@ -107,14 +107,42 @@ void CodeGen::WriteToFile(const char* filename)
 
 namespace
 {
-	std::string UnscopeName(const char* name)
+	std::string ExtractNamePart(const char* name, bool extractScope)
 	{
 		// Reverse search for the scope operator and remove everything before it
 		std::string str = name;
 		std::string::size_type si = str.rfind("::");
+
 		if (si != std::string::npos)
-			str = str.substr(si + 2);
+		{
+			if(extractScope == false)
+			{
+				str = str.substr(si + 2);
+			}
+			else
+			{
+				str = str.substr(0, si);
+			}
+		}
+
 		return str;
+	}
+
+
+	std::string UnscopeName(const char* name)
+	{
+		return ExtractNamePart(name, false);
+	}
+
+
+	std::string ScopeName(const char* name)
+	{
+		return ExtractNamePart(name, true);
+	}
+
+	bool IsClcppScope(const char* name)
+	{
+		return ScopeName(name) == "clcpp";
 	}
 
 
@@ -328,6 +356,18 @@ namespace
 	}
 
 
+	std::string NameWithGlobalScope(const Primitive& prim)
+	{
+		// Explicitly scope global namespace types so that they don't get confused with the ones in clcpp
+		std::string name = prim.name;
+		if (prim.type != PT_Type && prim.parent == 0)
+		{
+			name = "::" + name;
+		}
+		return name;
+	}
+
+
 	void GenGetTypes(CodeGen& cg, const std::vector<Primitive>& primitives, unsigned int prim_types)
 	{
 		for (size_t i = 0; i < primitives.size(); i++)
@@ -335,11 +375,7 @@ namespace
 			const Primitive& prim = primitives[i];
 			if ((prim.type & prim_types) != 0)
 			{
-				// Explicitly scope global namespace types so that they don't get confused with the ones in clcpp
-				std::string name = prim.name;
-				if (prim.type != PT_Type && prim.parent == 0)
-					name = "::" + name;
-
+				std::string name = NameWithGlobalScope(prim);
 				cg.Line("template <> const Type* GetType< %s >() { return clcppTypePtrs[%d]; }", name.c_str(), i);
 				cg.Line("template <> unsigned int GetTypeNameHash< %s >() { return clcppTypeNameHashes[%d]; }", name.c_str(), i);
 			}

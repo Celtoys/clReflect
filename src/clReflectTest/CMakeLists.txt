@@ -42,7 +42,7 @@ if(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
       /MAP)
   endif()
 
-  if (CMAKE_COMPILER_IS_GNUCXX)
+  if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
     # On Linux/Mac, executables have no extensions
     set(CL_REFLECT_TEST_MAP "${CL_REFLECT_TEST_EXECUTABLE}.map")
 
@@ -54,7 +54,7 @@ if(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
 
     set_target_properties(clReflectTest PROPERTIES LINK_FLAGS
       "${CL_REFLECT_TEST_MAP_CMD_ARGUMENT}")
-  endif (CMAKE_COMPILER_IS_GNUCXX)
+  endif (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
 
   # uses map file during exporting
   set(GEN_MAP_ARGUMENTS -map ${CL_REFLECT_TEST_MAP})
@@ -83,11 +83,12 @@ elseif(CMAKE_COMPILER_IS_GNUCXX)
 endif()
 
 if ((${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
-  set(sys_inc_dirs "/usr/lib/gcc/i686-apple-darwin11/4.2.1/include")
+  #set(sys_inc_dirs "/usr/lib/gcc/i686-apple-darwin11/4.2.1/include")
+  set(sys_inc_dirs "/usr/lib/clang/4.2/include")
 endif ()
 
 foreach(sys_inc ${sys_inc_dirs})
-  set(GEN_CPPBIN_INCLUDE_PATH ${GEN_CPPBIN_INCLUDE_PATH} -isystem ${sys_inc})
+  set(GEN_CPPBIN_INCLUDE_PATH ${GEN_CPPBIN_INCLUDE_PATH} -i ${sys_inc})
 endforeach(sys_inc)
 
 foreach(src_file ${CL_REFLECT_TEST_SOURCES})

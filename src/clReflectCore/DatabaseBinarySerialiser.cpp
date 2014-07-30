@@ -128,6 +128,7 @@ namespace
 					case (cldb::meta::FIELD_TYPE_BASIC): CopyBasicFields(db, dest, source, table.size(), type.packed_size, type.size, field.size); break;
 					case (cldb::meta::FIELD_TYPE_NAME): CopyStridedData<CopyNameToHash>(db, dest, source, table.size(), type.packed_size, type.size, field.size); break;
 					case (cldb::meta::FIELD_TYPE_STRING): CopyStridedData<CopyStringToHash>(db, dest, source, table.size(), type.packed_size, type.size, field.size); break;
+					default: break;
 					}
 				}
 			}
@@ -315,6 +316,7 @@ namespace
 					case (cldb::meta::FIELD_TYPE_BASIC): CopyBasicFields(db, dest, source, table.size(), type.size, type.packed_size, field.size); break;
 					case (cldb::meta::FIELD_TYPE_NAME): CopyStridedData<CopyHashToName>(db, dest, source, table.size(), type.size, type.packed_size, field.size); break;
 					case (cldb::meta::FIELD_TYPE_STRING): CopyStridedData<CopyHashToString>(db, dest, source, table.size(), type.size, type.packed_size, field.size); break;
+					default: break;
 					}
 				}
 			}
