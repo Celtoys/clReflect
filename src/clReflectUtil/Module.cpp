@@ -96,17 +96,24 @@ bool clutl::Module::Load(clcpp::Database* host_db, const char* filename)
 
 	// Get the module reflection database
 	typedef clcpp::Database* (*GetReflectionDatabaseFunc)();
-	GetReflectionDatabaseFunc GetReflectionDatabase = (GetReflectionDatabaseFunc)GetSharedLibraryFunction(m_Handle, "GetReflectionDatabase");
+	GetReflectionDatabaseFunc GetReflectionDatabase = (GetReflectionDatabaseFunc)GetFunction("GetReflectionDatabase");
 	if (GetReflectionDatabase)
 		m_ReflectionDB = GetReflectionDatabase();
 
 	// Ask the DLL to register and interface implementations it has
 	typedef void (*AddReflectionImplsFunc)(Module*);
-	AddReflectionImplsFunc AddReflectionImpls = (AddReflectionImplsFunc)GetSharedLibraryFunction(m_Handle, "AddReflectionImpls");
+	AddReflectionImplsFunc AddReflectionImpls = (AddReflectionImplsFunc)GetFunction("AddReflectionImpls");
 	if (AddReflectionImpls)
 		AddReflectionImpls(this);
 
 	return true;
+}
+
+
+void* clutl::Module::GetFunction(const char* name) const
+{
+	clcpp::internal::Assert(m_Handle != 0);
+	return GetSharedLibraryFunction(m_Handle, name);
 }
 
 
