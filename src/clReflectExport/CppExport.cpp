@@ -771,7 +771,7 @@ namespace
 				bits |= clcpp::FlagAttribute::TRANSIENT;
 			else if (startswith(attribute.name.text, "load_"))
 				bits |= clcpp::FlagAttribute::CUSTOM_LOAD;
-			else if (startswith(attribute.name.text, "save"))
+			else if (startswith(attribute.name.text, "save_"))
 				bits |= clcpp::FlagAttribute::CUSTOM_SAVE;
 
 			// A custom flag allows the programmer to manually specify values to OR in

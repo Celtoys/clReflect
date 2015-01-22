@@ -50,6 +50,8 @@ namespace clutl
 		//
 		bool Load(clcpp::Database* host_db, const char* filename);
 
+		void* GetFunction(const char* name) const;
+		
 		//
 		// Registers an interface implementation from with AddReflectionImpls. Note that none of the
 		// types need to be in-scope when you call this; they only need to be forward-declared.
@@ -66,7 +68,7 @@ namespace clutl
 			SetInterfaceImpl(iface_type, impl_type);
 		}
 
-		const clcpp::Database* GetReflectionDB() { return m_ReflectionDB; }
+		const clcpp::Database* GetReflectionDB() const { return m_ReflectionDB; }
 
 	private:
 		void SetInterfaceImpl(clcpp::Type* iface_type, const clcpp::Type* impl_type);
