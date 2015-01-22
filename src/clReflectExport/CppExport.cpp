@@ -760,6 +760,8 @@ namespace
 	{
 		// Cache attribute names
 		static unsigned int transient_hash = clcpp::internal::HashNameString("transient");
+		static unsigned int pre_save_hash = clcpp::internal::HashNameString("pre_save");
+		static unsigned int post_load_hash = clcpp::internal::HashNameString("post_load");
 		static unsigned int custom_flag = clcpp::internal::HashNameString("custom_flag");
 
 		// Merge all detected common flags
@@ -769,6 +771,10 @@ namespace
 			const clcpp::Attribute& attribute = *attributes[i];
 			if (attribute.name.hash == transient_hash)
 				bits |= clcpp::FlagAttribute::TRANSIENT;
+			else if (attribute.name.hash == pre_save_hash)
+				bits |= clcpp::FlagAttribute::PRE_SAVE;
+			else if (attribute.name.hash == post_load_hash)
+				bits |= clcpp::FlagAttribute::POST_LOAD;
 			else if (startswith(attribute.name.text, "load_"))
 				bits |= clcpp::FlagAttribute::CUSTOM_LOAD;
 			else if (startswith(attribute.name.text, "save_"))

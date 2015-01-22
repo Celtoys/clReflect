@@ -400,6 +400,23 @@ namespace
 		}
 
 		ParserMembers(ctx, t, object, type);
+		
+		if (type && type->kind == clcpp::Primitive::KIND_CLASS)
+		{
+			const clcpp::Class* class_type = type->AsClass();
+
+			// Run any attached post-load functions
+			if (class_type->flag_attributes & clcpp::FlagAttribute::POST_LOAD)
+			{
+				static unsigned int hash = clcpp::internal::HashNameString("post_load");
+				if (const clcpp::Attribute* attr = clcpp::FindPrimitive(class_type->attributes, hash))
+				{
+					const clcpp::PrimitiveAttribute* name_attr = attr->AsPrimitiveAttribute();
+					if (name_attr->primitive != 0)
+						clcpp::CallFunction((clcpp::Function*)name_attr->primitive, object);
+				}
+			}
+		}
 	}
 }
 
@@ -866,6 +883,18 @@ namespace
 				}
 
 				return;
+			}
+		}
+
+		// Call any attached pre-save function
+		if (class_type->flag_attributes & clcpp::FlagAttribute::PRE_SAVE)
+		{
+			static unsigned int hash = clcpp::internal::HashNameString("pre_save");
+			if (const clcpp::Attribute* attr = clcpp::FindPrimitive(class_type->attributes, hash))
+			{
+				const clcpp::PrimitiveAttribute* name_attr = attr->AsPrimitiveAttribute();
+				if (name_attr->primitive != 0)
+					clcpp::CallFunction((clcpp::Function*)name_attr->primitive, object);
 			}
 		}
 

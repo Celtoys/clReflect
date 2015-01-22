@@ -599,6 +599,12 @@ namespace clcpp
 			// are custom loading functions assigned
 			CUSTOM_LOAD		= 0x02,
 			CUSTOM_SAVE		= 0x04,
+
+			// Function to call before saving an object, specified with "pre_save" attribute
+			PRE_SAVE		= 0x08,
+
+			// Function to call after loading an object, specified with "post_load" attribute
+			POST_LOAD		= 0x10,
 		};
 	};
 	struct clcpp_attr(reflect_part) IntAttribute : public Attribute
