@@ -677,21 +677,54 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, 
 	clang::CXXRecordDecl* record_decl = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
 	assert(record_decl != 0 && "Failed to cast to record declaration");
 
-	// Ignore forward declarations
+	// Check for forward-declared types
+	bool forward_decl = false;
 	if (record_decl->isThisDeclarationADefinition() == clang::VarDecl::DeclarationOnly)
-		return;
+	{
+		//
+		// This classification of CXXRecord also comes through the AST like so:
+		//
+		//    namespace ns
+		//    {
+		//        class ClassName { };
+		//    }
+		//
+		//    CXXRecord ns::ClassName
+		//       CXXRecord ns::ClassName::ClassName
+		//       CXXConstructor ns::ClassName::ClassName
+		//
+		// So before every constructor of a class, there's a superfluous CXX declaration of the same name.
+		// Not sure why it's here, however the "free standing" flag is documented in the code to mark
+		// these cases:
+		//
+		//    namespace ns
+		//    {
+		//       class ClassName;
+		//    }
+		//
+		//    CXXRecord ns::ClassName
+		//
+		// And these are the exact cases that represent a reflected forward-declaration!
+		//
 
-	if (record_decl->getNumVBases())
+		if (!record_decl->isFreeStanding())
+			return;
+		forward_decl = true;
+	}
+
+	// Ignore classes with virtual bases
+	if (!forward_decl && record_decl->getNumVBases())
 	{
 		Status().Print(record_decl->getLocation(), m_ASTContext.getSourceManager(), va("Class '%s' has an unsupported virtual base class", name.c_str()));
 		return;
 	}
 
+	// Name gets added to the database if it's not already there
 	cldb::Name type_name = m_DB.GetName(name.c_str());
 
 	// Parse base classes
 	std::vector<cldb::Name> base_names;
-	if (record_decl->getNumBases())
+	if (!forward_decl && record_decl->getNumBases())
 	{
 		for (clang::CXXRecordDecl::base_class_const_iterator base_it = record_decl->bases_begin(); base_it != record_decl->bases_end(); base_it++)
 		{
@@ -717,19 +750,36 @@ void ASTConsumer::AddClassDecl(clang::NamedDecl* decl, const std::string& name, 
 	}
 	else
 	{
-		// Add to the database
 		LOG(ast, INFO, "class %s", name.c_str());
-		for (size_t i = 0; i < base_names.size(); i++)
-			LOG_APPEND(ast, INFO, (i == 0) ? " : %s" : ", %s", base_names[i].text.c_str());
-		LOG_NEWLINE(ast);
-		const clang::ASTRecordLayout& layout = m_ASTContext.getASTRecordLayout(record_decl);
-		cldb::u32 size = layout.getSize().getQuantity();
-		bool is_class = record_decl->getTagKind() == clang::TTK_Class;
-		m_DB.AddPrimitive(cldb::Class(
-			m_DB.GetName(name.c_str()),
-			m_DB.GetName(parent_name.c_str()),
-			size, is_class));
-		AddContainedDecls(decl, name, &layout);
+
+		// Ensure there's at least an empty class definition in the database for this name
+		cldb::Class* class_ptr = m_DB.GetFirstPrimitive<cldb::Class>(name.c_str());
+		if (class_ptr == nullptr)
+		{
+			bool is_class = record_decl->getTagKind() == clang::TTK_Class;
+			m_DB.AddPrimitive(cldb::Class(m_DB.GetName(name.c_str()), m_DB.GetName(parent_name.c_str()), is_class));
+			class_ptr = m_DB.GetFirstPrimitive<cldb::Class>(name.c_str());
+		}
+
+		if (!forward_decl)
+		{
+			// Fill in the missing class size
+			const clang::ASTRecordLayout& layout = m_ASTContext.getASTRecordLayout(record_decl);
+			class_ptr->size = layout.getSize().getQuantity();
+
+			for (size_t i = 0; i < base_names.size(); i++)
+				LOG_APPEND(ast, INFO, (i == 0) ? " : %s" : ", %s", base_names[i].text.c_str());
+			LOG_NEWLINE(ast);
+
+			// Populate class contents
+			AddContainedDecls(decl, name, &layout);
+		}
+
+		else
+		{
+			// Forward-declaration log
+			LOG_NEWLINE(ast);
+		}
 	}
 }
 

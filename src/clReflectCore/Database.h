@@ -476,6 +476,11 @@ namespace cldb
 			, is_class(false)
 		{
 		}
+		Class(Name n, Name p, bool ic)
+			: Type(Primitive::KIND_CLASS, n, p, 0)
+			, is_class(ic)
+		{
+		}
 		Class(Name n, Name p, u32 s, bool ic)
 			: Type(Primitive::KIND_CLASS, n, p, s)
 			, is_class(ic)
@@ -620,6 +625,19 @@ namespace cldb
 			Add(prim.name, prim);
 		}
 
+		template <typename TYPE> TYPE* GetFirstPrimitive(const char* name_string)
+		{
+			// Get the store associated with this type
+			DBMap<TYPE>& store = GetDBMap<TYPE>();
+
+			// Return the first instance of an object with this name
+			u32 name = clcpp::internal::HashNameString(name_string);
+			typename DBMap<TYPE>::iterator i = store.find(name);
+			if (i != store.end())
+				return &i->second;
+
+			return 0;
+		}
 		template <typename TYPE> const TYPE* GetFirstPrimitive(const char* name_string) const
 		{
 			// Get the store associated with this type
