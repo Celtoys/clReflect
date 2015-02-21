@@ -470,6 +470,8 @@ namespace cldb
 	//
 	struct Class : public Type
 	{
+		static const u32 FORWARD_DECL_SIZE = 0xFFFFFFFF;
+
 		// Constructors for default construction and complete construction
 		Class()
 			: Type(Primitive::KIND_CLASS)
@@ -477,7 +479,7 @@ namespace cldb
 		{
 		}
 		Class(Name n, Name p, bool ic)
-			: Type(Primitive::KIND_CLASS, n, p, 0)
+			: Type(Primitive::KIND_CLASS, n, p, FORWARD_DECL_SIZE)
 			, is_class(ic)
 		{
 		}

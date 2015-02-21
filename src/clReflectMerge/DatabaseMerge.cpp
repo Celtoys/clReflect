@@ -22,7 +22,9 @@ namespace
 
 		// This has to be the same class included multiple times in different translation units
 		// Ensure that their descriptions match up as best as possible at this point
-		if (class_a.size != class_b.size)
+		if (class_a.size != cldb::Class::FORWARD_DECL_SIZE &&
+			class_b.size != cldb::Class::FORWARD_DECL_SIZE &&
+			class_a.size != class_b.size)
 			LOG(main, WARNING, "Class %s differs in size during merge\n", class_name);
 	}
 
