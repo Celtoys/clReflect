@@ -15,6 +15,9 @@
 #include "clcpp.h"
 
 
+clcpp_reflect_part(clcpp::RefParam)
+
+
 namespace clcpp
 {
 	//
@@ -40,6 +43,11 @@ namespace clcpp
 		RefParam(TYPE& reference)
 			: m_Reference(reference)
 		{
+		}
+
+		TYPE& Ref() const
+		{
+			return m_Reference;
 		}
 
 	private:
