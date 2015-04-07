@@ -41,6 +41,8 @@ namespace
 			&& *text != ' '
 			&& *text != ','
 			&& *text != ')'
+			&& *text != '<'
+			&& *text != '>'
 			&& dest != end)
 		{
 			*dest++ = *text++;
@@ -127,6 +129,15 @@ namespace
 				// What's remaining must be the type name
 				if (skip == false)
 					strcat(type_name, token);
+			}
+
+			// Need template chars to mark specific token boundaries (for keyword skipping)
+			// yet be added to the function signature
+			if (*ptr == '<' || *ptr == '>')
+			{
+				token[0] = *ptr; token[1] = 0;
+				strcat(type_name, token);
+				ptr++;
 			}
 
 			if (*ptr == ',' || *ptr == ')')
