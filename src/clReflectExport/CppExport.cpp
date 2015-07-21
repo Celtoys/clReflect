@@ -1003,7 +1003,7 @@ namespace
 		{
 			const clcpp::Field* field = fields[i];
 			if (field->type == 0)
-				unstable_remove(fields, i);
+				stable_remove(fields, i);
 			else
 				i++;
 		}
@@ -1031,7 +1031,7 @@ namespace
 
 			// Remove from the container if invalid
 			if (invalid)
-				unstable_remove(functions, i);
+				stable_remove(functions, i);
 			else
 				i++;
 		}
@@ -1160,7 +1160,6 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	// Build base classes arrays after the type primitive array has been sorted
 	BuildBaseClassArrays(cppexp, db);
 
-
 	// Each class may have constructor/destructor methods in their method list. Run through
 	// each class and make pointers to these in the class. This is done after sorting so that
 	// local searches can take advantage of clcpp::FindPrimitive.
@@ -1182,13 +1181,13 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
 	// Primitives reference each other via their names (hash codes). This code first of all copies
 	// hashes into the pointers and then patches them up via lookup. If the input database doesn't
 	// contain primitives that others reference then at this point, certain primitives will contain
-	// effectively garbage pointers. Do a check here for that.
+	// effectively garbage pointers. Do a check here for that and set any garbage pointers to null.
 	VerifyPrimitives(cppexp);
 
 	// Remove references to primitives with null pointers in the exported database.
 	// Don't want the runtime crashing because it encountered any unexpected null pointers.
 	// The memory for the primitives is left allocated, however this shouldn't be an issue
-	// if your compile is without warnings!
+	// if you compile is without warnings!
 	IsolateInvalidPrimitives(cppexp);
 
 	return true;

@@ -101,6 +101,18 @@ inline void unstable_remove(clcpp::CArray<TYPE>& array, unsigned int index)
 
 
 template <typename TYPE>
+inline void stable_remove(clcpp::CArray<TYPE>& array, unsigned int index)
+{
+	// Removes an element from the list without reallocating any memory
+	// Maintains array element order by copying from the end
+	clcpp::internal::Assert(index < array.size);
+	for (unsigned int i = index; index < array.size - 1; index++)
+		array.data[i] = array.data[i + 1];
+	array.size--;
+}
+
+
+template <typename TYPE>
 inline void deep_copy(clcpp::CArray<TYPE>& dest, const clcpp::CArray<TYPE>& src, clcpp::IAllocator* allocator)
 {
 	allocator = allocator;
