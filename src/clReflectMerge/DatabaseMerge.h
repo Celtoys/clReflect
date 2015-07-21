@@ -15,4 +15,4 @@ namespace cldb
 }
 
 
-void MergeDatabases(cldb::Database& dest_db, const cldb::Database& src_db);
+void MergeDatabases(cldb::Database& dest_db, const cldb::Database& src_db, const char* filename);

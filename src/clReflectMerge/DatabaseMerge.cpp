@@ -16,6 +16,9 @@
 
 namespace
 {
+	const char* g_FilenameMergingDB = 0;
+
+
 	void CheckClassMergeFailure(const cldb::Class& class_a, const cldb::Class& class_b)
 	{
 		const char* class_name = class_a.name.text.c_str();
@@ -25,7 +28,7 @@ namespace
 		if (class_a.size != cldb::Class::FORWARD_DECL_SIZE &&
 			class_b.size != cldb::Class::FORWARD_DECL_SIZE &&
 			class_a.size != class_b.size)
-			LOG(main, WARNING, "Class %s differs in size during merge\n", class_name);
+			LOG(main, WARNING, "Class %s differs in size during merge (source file %s)\n", class_name, g_FilenameMergingDB);
 	}
 
 
@@ -95,8 +98,10 @@ namespace
 }
 
 
-void MergeDatabases(cldb::Database& dest_db, const cldb::Database& src_db)
+void MergeDatabases(cldb::Database& dest_db, const cldb::Database& src_db, const char* filename)
 {
+	g_FilenameMergingDB = filename;
+
 	// Merge name maps
 	for (cldb::NameMap::const_iterator i = src_db.m_Names.begin(); i != src_db.m_Names.end(); ++i)
 		dest_db.GetName(i->second.text.c_str());
@@ -134,4 +139,6 @@ void MergeDatabases(cldb::Database& dest_db, const cldb::Database& src_db)
 	// Merge uniquely named non-primitives
 	MergeUniques<cldb::ContainerInfo>(dest_db, src_db);
 	MergeUniques<cldb::TypeInheritance>(dest_db, src_db);
+
+	g_FilenameMergingDB = 0;
 }

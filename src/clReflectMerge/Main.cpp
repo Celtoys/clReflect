@@ -55,8 +55,8 @@ int main(int argc, const char* argv[])
 			}
 		}
 
-		// Merge into the main one
-		MergeDatabases(db, loaded_db);
+		// Merge into the main oent
+		MergeDatabases(db, loaded_db, filename);
 	}
 
 	// Save the result
