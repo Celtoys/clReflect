@@ -106,7 +106,7 @@ inline void stable_remove(clcpp::CArray<TYPE>& array, unsigned int index)
 	// Removes an element from the list without reallocating any memory
 	// Maintains array element order by copying from the end
 	clcpp::internal::Assert(index < array.size);
-	for (unsigned int i = index; index < array.size - 1; index++)
+	for (unsigned int i = index; i < array.size - 1; i++)
 		array.data[i] = array.data[i + 1];
 	array.size--;
 }
