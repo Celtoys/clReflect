@@ -26,12 +26,12 @@ libs = [
 ]
 
 lib_paths_debug = [
-    WindowsPlatform.LibDir,
+    WindowsPlatform.x86LibDir,
 	"../../build/bin/debug",
 ]
 
 lib_paths_release = [
-    WindowsPlatform.LibDir,
+    WindowsPlatform.x86LibDir,
 	"../../build/bin/release",
 ]
 
