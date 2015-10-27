@@ -1,0 +1,11 @@
+build/*
+cmake-build/*
+*.ncb
+*.suo
+*.pib
+*.user
+*.sln
+*.vcproj
+.svn/*
+extern/llvm-build/*
+extern/llvm-build-gnu/*
