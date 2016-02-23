@@ -15,6 +15,7 @@ namespace clcpp
 {
 	struct Qualifier;
 	struct Type;
+	struct Field;
 	struct Class;
 }
 
@@ -28,10 +29,14 @@ namespace clutl
 	};
 
 
-	// Implement this interface to receive a callback on each visited field
+	// Implement this interface to receive a callback on each visited field.
+	// This includes visits to objects within containers.
+	// When visiting entries in a container, the 'field' pointer will point to the container field
+	// itself and will have a different type to that pointed to by 'type'. The 'type' pointer will
+	// be the type of the objects in the container.
 	struct IFieldVisitor
 	{
-		virtual void Visit(void* object, const clcpp::Type* type, const clcpp::Qualifier& qualifier) const = 0;
+		virtual void Visit(void* object, const clcpp::Field* field, const clcpp::Type* type, const clcpp::Qualifier& qualifier) const = 0;
 	};
 
 

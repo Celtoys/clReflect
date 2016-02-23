@@ -51,8 +51,13 @@ namespace clutl
 
 		const char* GetData() const { return m_Data; }
 		unsigned int GetBytesWritten() const { return m_DataWrite - m_Data; }
+		unsigned int GetBytesAllocated() const { return m_DataEnd - m_Data; }
 
 	private:
+		// Disable copying
+		WriteBuffer(const WriteBuffer&);
+		WriteBuffer& operator= (const WriteBuffer&);
+
 		char* m_Data;
 		char* m_DataEnd;
 		char* m_DataWrite;
@@ -79,6 +84,10 @@ namespace clutl
 		unsigned int GetBytesRemaining() const { return m_DataEnd - m_DataRead; }
 
 	private:
+		// Disable copying
+		ReadBuffer(const ReadBuffer&);
+		ReadBuffer& operator= (const ReadBuffer&);
+
 		const char* m_Data;
 		const char* m_DataEnd;
 		const char* m_DataRead;

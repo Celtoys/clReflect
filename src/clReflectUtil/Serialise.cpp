@@ -30,11 +30,6 @@ clutl::WriteBuffer::WriteBuffer()
 	, m_DataEnd(0)
 	, m_DataWrite(0)
 {
-	// Use a default capacity to prevent Write having to do too much checking
-	unsigned int default_capacity = 32;
-	m_Data = new char[default_capacity];
-	m_DataEnd = m_Data + default_capacity;
-	m_DataWrite = m_Data;
 }
 
 
@@ -69,15 +64,18 @@ void* clutl::WriteBuffer::Alloc(unsigned int length)
 	if (m_DataWrite + length > m_DataEnd)
 	{
 		// Repeatedly calculate a new capacity of 1.5x until the new data fits
-		unsigned int new_capacity = m_DataEnd - m_Data;
+		unsigned int new_capacity = (m_Data == 0) ? 32 : m_DataEnd - m_Data;
 		unsigned int write_pos = m_DataWrite - m_Data;
 		while (write_pos + length > new_capacity)
 			new_capacity += new_capacity / 2;
 
 		// Allocate the new data and copy over
 		char* new_data = new char[new_capacity];
-		memcpy(new_data, m_Data, m_DataWrite - m_Data);
-		delete [] m_Data;
+		if (m_Data != 0)
+		{
+			memcpy(new_data, m_Data, m_DataWrite - m_Data);
+			delete [] m_Data;
+		}
 
 		// Swap in the new buffer
 		m_Data = new_data;
@@ -119,8 +117,10 @@ void clutl::WriteBuffer::WriteChar(char c)
 
 void clutl::WriteBuffer::SeekRel(int offset)
 {
-	clcpp::internal::Assert(m_DataWrite + offset <= m_DataEnd && "Seek overflow");
-	m_DataWrite += offset;
+	char* data_write = m_DataWrite + offset;
+	clcpp::internal::Assert(data_write >= m_Data && "Seek underflow");
+	clcpp::internal::Assert(data_write <= m_DataEnd && "Seek overflow");
+	m_DataWrite = data_write;
 }
 
 

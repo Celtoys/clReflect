@@ -82,6 +82,7 @@ namespace clcpp
 	//
 	template <typename A0> inline void CallFunction(const Function* function, const A0& a0)
 	{
+		internal::Assert(function->parameters.size == 1);
 		typedef void (*CallFunc)(A0);
 		CallFunc call_func = (CallFunc)function->address;
 		internal::Assert(call_func != 0);
@@ -94,6 +95,7 @@ namespace clcpp
 	//
 	template <typename A0, typename A1> inline void CallFunction(const Function* function, const A0& a0, const A1& a1)
 	{
+		internal::Assert(function->parameters.size == 2);
 		typedef void (*CallFunc)(A0, A1);
 		CallFunc call_func = (CallFunc)function->address;
 		internal::Assert(call_func != 0);

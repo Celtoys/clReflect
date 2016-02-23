@@ -18,8 +18,8 @@
 // This is an example object management API that you can use, ignore or base your own
 // designs upon.
 //
-clcpp_reflect_part(clutl)
-namespace clutl
+clcpp_reflect_part(clobj)
+namespace clobj
 {
 	//
 	// Custom flag attributes for quickly determining if a type inherits from Object or ObjectGroup
@@ -44,6 +44,7 @@ namespace clutl
 		{
 		}
 
+
 		//
 		// Make all deriving types carry a virtual function table. Since many use-cases may require
 		// the use of virtual functions, this ensures safety and convenience.
@@ -57,7 +58,7 @@ namespace clutl
 		// automatically assign the type pointer, without the use of templates and in the general
 		// case.
 		//
-		virtual ~Object() { }
+		virtual ~Object();
 
 		template <typename TYPE>
 		TYPE* Cast()
@@ -83,41 +84,6 @@ namespace clutl
 
 
 	//
-	// Object API 2
-	// A new base object API, for more C++ like construction of objects
-	// Allows direct use of new operator with access to constructors
-	// ObjectGroup types need special construction though, because this API needs to be usable without GetType
-	// Hang on... aren't object groups redundant?
-	// If I have an object with some collections, I should be able to run FindObject/etc on that!
-	// The collection interface will need some form of FindObject by id implementation
-	//
-	struct clcpp_attr(reflect_part, custom_flag = 0x10000000, custom_flag_inherit) Object2
-	{
-		Object2();
-
-		//
-		// Derived type must call this in its constructor. Doing it way means the object doesn't have
-		// to be virtual as CreateObject does not need to assign the type pointer.
-		// What about unique ID? And parent object group? These would need to be assigned using reflection,
-		// rather than casting and directly assigning.
-		//
-		template <typename TYPE>
-		void SetObjectType(const TYPE* this_ptr)
-		{
-			this->type = clcpp::GetType<TYPE>();
-		}
-
-		void SetObjectUniqueID(unsigned int unique_id);
-
-		// Type of the object
-		const clcpp::Type* type;
-
-		// Relative, unique ID for referencing the object within whatever container is tracking it
-		unsigned int unique_id;
-	};
-
-
-	//
 	// Create an object of the given type by allocating and constructing it.
 	// This function has 3 possible modes of operation, based on which parameters you specify:
 	//
@@ -128,8 +94,6 @@ namespace clutl
 	Object* CreateObject(const clcpp::Type* type, unsigned int unique_id = 0, ObjectGroup* object_group = 0);
 
 	void DestroyObject(const Object* object);
-
-	 void DestroyObject(const Object2* object);
 
 
 	//
@@ -147,17 +111,14 @@ namespace clutl
 		Object* FindObjectSearchParents(unsigned int unique_id) const;
 		Object* FindObjectRelative(unsigned int* unique_ids, unsigned int nb_ids) const;
 
-		friend Object* clutl::CreateObject(const clcpp::Type*, unsigned int, ObjectGroup*);
-		friend void clutl::DestroyObject(const Object*);
-
 		// For manual construction of objects with explicit specification of construction parameters
 		// Object type and ID must be correctly setup before calling this
 		void AddObject(Object* object);
+		void RemoveObject(Object* object);
 
 	private:
 		struct HashEntry;
 
-		void RemoveObject(const Object* object);
 		void AddHashEntry(Object* object);
 		void RemoveHashEntry(unsigned int hash);
 		void Resize(bool increase);
@@ -201,33 +162,137 @@ namespace clutl
 	};
 
 
+	// Disable clang warning about rvalue references being a C++11 extension
+	#ifdef __clang__
+	#pragma clang push
+	#pragma clang diagnostic ignored "-Wc++11-extensions"
+	#endif
+
+
 	//
-	// Helper for safely deleting an object and nulling the pointer.
-	// Needs to be templated so that a pointer reference can be passed.
+	// Use this to create instances of types that derive from Object. It does 4 things:
+	//
+	//    * Automatically assigns the object type after construction.
+	//    * Sets the object unique ID after construction.
+	//    * Adds the object to a group after construction.
+	//    * Optionally perfectly forwards parameters onto the constructor of the type.
+	//
+	// Use cases:
+	//
+	//    // Create Type with no name and no group
+	//    Type* o = clobj::New<Type>();
+	//
+	//    // Create Type with specified unique ID and group
+	//    // Group pointer is optional, allowing the object to just be named
+	//    Type* o = clobj::New<Type>(1234, group);
+	//
+	//    // Same as above, but now forwarding parameters onto constructor
+	//    Type* o = clobj::New<Type>()(a, b, c);
+	//    Type* o = clobj::New<Type>(1234, group)(a, b, c);
+	//
+	// It achieves this without being intrusive to the implementation in the following ways:
+	//
+	//    * Getting the type could be achieved by adding a virtual function to each class definition.
+	//    * Setting the type in the constructor requires it to be passed down from the top, with
+	//      mid-derivers having to forward them on.
+	//    * Setting of ID and group could be manual function calls after creation which is tedious for
+	//      the user.
+	//    * Setting of ID and group could be implemented in the constructor of all derivers. This is not
+	//      only tedious for the implementation but becomes harder in the face of name/group permutations.
 	//
 	template <typename TYPE>
-	inline void Delete(TYPE*& object)
+	class New
 	{
-		if (object != 0)
+	public:
+		// No unique ID and no group
+		New()
+			: m_UniqueID(0)
+			, m_Group(0)
 		{
-			DestroyObject(object);
-			object = 0;
 		}
-	}
-}
+
+		// Assign a unique ID and optionally add to a group
+		New(unsigned int unique_id, ObjectGroup* group = 0)
+			: m_UniqueID(unique_id)
+			, m_Group(group)
+		{
+		}
+
+		// Create object with the default constructor
+		// Casts this New object directly to the object created
+		operator TYPE* () const
+		{
+			TYPE* object = new TYPE();
+			return (TYPE*)SetObject(object, clcpp::GetType<TYPE>());
+		}
+
+		// Create object with constructor from forwarded parameters
+		template <typename A0>
+		TYPE* operator () (A0&& a0)
+		{
+			TYPE* object = new TYPE(static_cast<A0&&>(a0));
+			return (TYPE*)SetObject(object, clcpp::GetType<TYPE>());
+		}
+		template <typename A0, typename A1>
+		TYPE* operator () (A0&& a0, A1&& a1)
+		{
+			TYPE* object = new TYPE(static_cast<A0&&>(a0), static_cast<A1&&>(a1));
+			return (TYPE*)SetObject(object, clcpp::GetType<TYPE>());
+		}
+		template <typename A0, typename A1, typename A2>
+		TYPE* operator () (A0&& a0, A1&& a1, A2&& a2)
+		{
+			TYPE* object = new TYPE(static_cast<A0&&>(a0), static_cast<A1&&>(a1), static_cast<A2&&>(a2));
+			return (TYPE*)SetObject(object, clcpp::GetType<TYPE>());
+		}
+		template <typename A0, typename A1, typename A2, typename A3>
+		TYPE* operator () (A0&& a0, A1&& a1, A2&& a2, A3&& a3)
+		{
+			TYPE* object = new TYPE(static_cast<A0&&>(a0), static_cast<A1&&>(a1), static_cast<A2&&>(a2), static_cast<A3&&>(a3));
+			return (TYPE*)SetObject(object, clcpp::GetType<TYPE>());
+		}
+		template <typename A0, typename A1, typename A2, typename A3, typename A4>
+		TYPE* operator () (A0&& a0, A1&& a1, A2&& a2, A3&& a3, A4&& a4)
+		{
+			TYPE* object = new TYPE(static_cast<A0&&>(a0), static_cast<A1&&>(a1), static_cast<A2&&>(a2), static_cast<A3&&>(a3), static_cast<A4&&>(a4));
+			return (TYPE*)SetObject(object, clcpp::GetType<TYPE>());
+		}
+		template <typename A0, typename A1, typename A2, typename A3, typename A4, typename A5>
+		TYPE* operator () (A0&& a0, A1&& a1, A2&& a2, A3&& a3, A4&& a4, A5&& a5)
+		{
+			TYPE* object = new TYPE(static_cast<A0&&>(a0), static_cast<A1&&>(a1), static_cast<A2&&>(a2), static_cast<A3&&>(a3), static_cast<A4&&>(a4), static_cast<A5&&>(a5));
+			return (TYPE*)SetObject(object, clcpp::GetType<TYPE>());
+		}
+		template <typename A0, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
+		TYPE* operator () (A0&& a0, A1&& a1, A2&& a2, A3&& a3, A4&& a4, A5&& a5, A6&& a6)
+		{
+			TYPE* object = new TYPE(static_cast<A0&&>(a0), static_cast<A1&&>(a1), static_cast<A2&&>(a2), static_cast<A3&&>(a3), static_cast<A4&&>(a4), static_cast<A5&&>(a5), static_cast<A6>(a6));
+			return (TYPE*)SetObject(object, clcpp::GetType<TYPE>());
+		}
+
+	private:
+		Object* SetObject(Object* object, const clcpp::Type* type) const
+		{
+			// Pass type with hope that the compiler generates smaller code as a result
+			object->type = type;
+
+			// Set the rest of the object from properties passed to constructor
+			object->unique_id = m_UniqueID;
+			object->object_group = m_Group;
+
+			// Add to any object group
+			if (m_Group != 0)
+				m_Group->AddObject(object);
+
+			return object;
+		}
+
+		unsigned int m_UniqueID;
+		ObjectGroup* m_Group;
+	};
 
 
-//
-// Helpers for creating typed objects.
-// Exposed publically as Koenig lookup doesn't apply to template parameters.
-//
-template <typename TYPE>
-inline TYPE* New()
-{
-	return static_cast<TYPE*>(clutl::CreateObject(clcpp::GetType<TYPE>()));
-}
-template <typename TYPE>
-inline TYPE* New(clutl::ObjectGroup* group, unsigned int unique_id = 0)
-{
-	return static_cast<TYPE*>(clutl::CreateObject(clcpp::GetType<TYPE>(), unique_id, group));
+	#ifdef __clang__
+	#pragma clang push
+	#endif
 }

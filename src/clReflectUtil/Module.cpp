@@ -100,12 +100,6 @@ bool clutl::Module::Load(clcpp::Database* host_db, const char* filename)
 	if (GetReflectionDatabase)
 		m_ReflectionDB = GetReflectionDatabase();
 
-	// Ask the DLL to register and interface implementations it has
-	typedef void (*AddReflectionImplsFunc)(Module*);
-	AddReflectionImplsFunc AddReflectionImpls = (AddReflectionImplsFunc)GetFunction("AddReflectionImpls");
-	if (AddReflectionImpls)
-		AddReflectionImpls(this);
-
 	return true;
 }
 
@@ -114,25 +108,4 @@ void* clutl::Module::GetFunction(const char* name) const
 {
 	clcpp::internal::Assert(m_Handle != 0);
 	return GetSharedLibraryFunction(m_Handle, name);
-}
-
-
-void clutl::Module::SetInterfaceImpl(clcpp::Type* iface_type, const clcpp::Type* impl_type)
-{
-	clcpp::internal::Assert(m_HostReflectionDB != 0);
-	clcpp::internal::Assert(m_ReflectionDB != 0);
-
-	// Get non-const access to the interface class primitive
-	clcpp::internal::Assert(iface_type != 0);
-	clcpp::Class* iface_class = const_cast<clcpp::Class*>(iface_type->AsClass());
-
-	// Get read access to the implementation class primitive
-	clcpp::internal::Assert(impl_type != 0);
-	const clcpp::Class* impl_class = impl_type->AsClass();
-
-	// Copy all information required to construct an implementation object
-	// Note that implementation details, such as list of fields, are excluded
-	iface_class->size = impl_class->size;
-	iface_class->constructor = impl_class->constructor;
-	iface_class->destructor = impl_class->destructor;
 }

@@ -15,10 +15,10 @@
 
 // Store this here, rather than using GetTypeNameHash so that this library
 // can be used without generating an implementation of GetTypeNameHash.
-static unsigned int g_ObjectGroupHash = clcpp::internal::HashNameString("clutl::ObjectGroup");
+static unsigned int g_ObjectGroupHash = clcpp::internal::HashNameString("clobj::ObjectGroup");
 
 
-struct clutl::ObjectGroup::HashEntry
+struct clobj::ObjectGroup::HashEntry
 {
 	HashEntry() : hash(0), object(0) { }
 	unsigned int hash;
@@ -26,7 +26,7 @@ struct clutl::ObjectGroup::HashEntry
 };
 
 
-clutl::Object* clutl::CreateObject(const clcpp::Type *type, unsigned int unique_id, ObjectGroup* object_group)
+clobj::Object* clobj::CreateObject(const clcpp::Type *type, unsigned int unique_id, ObjectGroup* object_group)
 {
 	if (type == 0)
 		return 0;
@@ -51,7 +51,7 @@ clutl::Object* clutl::CreateObject(const clcpp::Type *type, unsigned int unique_
 
 		// Allocate and call the constructor
 		object = (Object*)new char[type->size];
-		typedef void (*CallFunc)(clutl::Object*);
+		typedef void (*CallFunc)(clobj::Object*);
 		CallFunc call_func = (CallFunc)class_type->constructor->address;
 		call_func(object);
 	}
@@ -66,16 +66,12 @@ clutl::Object* clutl::CreateObject(const clcpp::Type *type, unsigned int unique_
 }
 
 
-void clutl::DestroyObject(const Object* object)
+void clobj::DestroyObject(const Object* object)
 {
 	// These represent fatal code errors
 	clcpp::internal::Assert(object != 0);
 	clcpp::internal::Assert(object->type != 0);
-
-	// Remove from any attached object group
-	if (object->object_group != 0)
-		object->object_group->RemoveObject(object);
-
+	
 	if (object->type->name.hash == g_ObjectGroupHash)
 	{
 		// ObjecGroup class does not have a registered destructor
@@ -87,7 +83,7 @@ void clutl::DestroyObject(const Object* object)
 		// Call the destructor and release the memory
 		const clcpp::Class* class_type = object->type->AsClass();
 		clcpp::internal::Assert(class_type->destructor != 0);
-		typedef void (*CallFunc)(const clutl::Object*);
+		typedef void (*CallFunc)(const clobj::Object*);
 		CallFunc call_func = (CallFunc)class_type->destructor->address;
 		call_func(object);
 		delete [] (char*)object;
@@ -95,43 +91,14 @@ void clutl::DestroyObject(const Object* object)
 }
 
 
-clutl::Object2::Object2()
-	: type(0)
-	, unique_id(0)
+clobj::Object::~Object()
 {
+	if (object_group != 0)
+		object_group->RemoveObject(this);
 }
 
 
-void clutl::Object2::SetObjectUniqueID(unsigned int unique_id)
-{
-	this->unique_id = unique_id;
-}
-
-
-void clutl::DestroyObject(const clutl::Object2* object)
-{
-	// Skip on null pointer must occur earlier
-	clcpp::internal::Assert(object != 0);
-
-	// Need a valid type pointer in order to call destructor
-	clcpp::internal::Assert(object->type != 0);
-
-	// Call the destructor
-	const clcpp::Class* class_type = object->type->AsClass();
-	clcpp::internal::Assert(class_type->destructor != 0);
-	typedef void (*CallFunc)(const clutl::Object2*);
-	CallFunc call_func = (CallFunc)class_type->destructor->address;
-	call_func(object);
-
-	// Non-vector delete to ensure compiler doesn't think it has allocated extra data beside the object
-	// TODO: Could just drag in free at a later point
-	delete (char*)object;
-}
-
-
-
-
-clutl::ObjectGroup::ObjectGroup()
+clobj::ObjectGroup::ObjectGroup()
 	: m_MaxNbObjects(8)
 	, m_NbObjects(0)
 	, m_NbOccupiedEntries(0)
@@ -142,30 +109,33 @@ clutl::ObjectGroup::ObjectGroup()
 }
 
 
-clutl::ObjectGroup::~ObjectGroup()
+clobj::ObjectGroup::~ObjectGroup()
 {
 	if (m_NamedObjects != 0)
 		delete [] m_NamedObjects;
 }
 
 
-void clutl::ObjectGroup::AddObject(Object* object)
+void clobj::ObjectGroup::AddObject(Object* object)
 {
+	clcpp::internal::Assert(object->unique_id != 0);
+	AddHashEntry(object);
 	object->object_group = this;
-	if (object->unique_id != 0)
-		AddHashEntry(object);
 }
 
 
-void clutl::ObjectGroup::RemoveObject(const Object* object)
+void clobj::ObjectGroup::RemoveObject(Object* object)
 {
 	// Remove from the hash table if it's named
 	if (object->unique_id != 0)
+	{
 		RemoveHashEntry(object->unique_id);
+		object->object_group = 0;
+	}
 }
 
 
-clutl::Object* clutl::ObjectGroup::FindObject(unsigned int unique_id) const
+clobj::Object* clobj::ObjectGroup::FindObject(unsigned int unique_id) const
 {
 	// Linear probe from the natural hash location for matching hash
 	const unsigned int index_mask = m_MaxNbObjects - 1;
@@ -186,7 +156,7 @@ clutl::Object* clutl::ObjectGroup::FindObject(unsigned int unique_id) const
 }
 
 
-clutl::Object* clutl::ObjectGroup::FindObjectSearchParents(unsigned int unique_id) const
+clobj::Object* clobj::ObjectGroup::FindObjectSearchParents(unsigned int unique_id) const
 {
 	// Search up through the object group hierarchy
 	const ObjectGroup* group = this;
@@ -204,7 +174,7 @@ clutl::Object* clutl::ObjectGroup::FindObjectSearchParents(unsigned int unique_i
 }
 
 
-clutl::Object* clutl::ObjectGroup::FindObjectRelative(unsigned int* unique_ids, unsigned int nb_ids) const
+clobj::Object* clobj::ObjectGroup::FindObjectRelative(unsigned int* unique_ids, unsigned int nb_ids) const
 {
 	// Locate the containing object group
 	const ObjectGroup* object_group = this;
@@ -229,7 +199,7 @@ clutl::Object* clutl::ObjectGroup::FindObjectRelative(unsigned int* unique_ids, 
 }
 
 
-void clutl::ObjectGroup::AddHashEntry(Object* object)
+void clobj::ObjectGroup::AddHashEntry(Object* object)
 {
 	// Linear probe from the natural hash location for a free slot, reusing any dummy slots
 	unsigned int hash = object->unique_id;
@@ -256,7 +226,7 @@ void clutl::ObjectGroup::AddHashEntry(Object* object)
 }
 
 
-void clutl::ObjectGroup::RemoveHashEntry(unsigned int hash)
+void clobj::ObjectGroup::RemoveHashEntry(unsigned int hash)
 {
 	// Linear probe from the natural hash location for matching hash
 	const unsigned int index_mask = m_MaxNbObjects - 1;
@@ -271,7 +241,7 @@ void clutl::ObjectGroup::RemoveHashEntry(unsigned int hash)
 }
 
 
-void clutl::ObjectGroup::Resize(bool increase)
+void clobj::ObjectGroup::Resize(bool increase)
 {
 	// Backup existing table
 	unsigned int old_max_nb_objects = m_MaxNbObjects;
@@ -301,7 +271,7 @@ void clutl::ObjectGroup::Resize(bool increase)
 }
 
 
-clutl::ObjectIterator::ObjectIterator(const ObjectGroup* object_group)
+clobj::ObjectIterator::ObjectIterator(const ObjectGroup* object_group)
 	: m_ObjectGroup(object_group)
 	, m_Position(0)
 {
@@ -310,27 +280,27 @@ clutl::ObjectIterator::ObjectIterator(const ObjectGroup* object_group)
 }
 
 
-clutl::Object* clutl::ObjectIterator::GetObject() const
+clobj::Object* clobj::ObjectIterator::GetObject() const
 {
 	clcpp::internal::Assert(IsValid());
 	return m_ObjectGroup->m_NamedObjects[m_Position].object;
 }
 
 
-void clutl::ObjectIterator::MoveNext()
+void clobj::ObjectIterator::MoveNext()
 {
 	m_Position++;
 	ScanForEntry();
 }
 
 
-bool clutl::ObjectIterator::IsValid() const
+bool clobj::ObjectIterator::IsValid() const
 {
 	return m_Position < m_ObjectGroup->m_MaxNbObjects;
 }
 
 
-void clutl::ObjectIterator::ScanForEntry()
+void clobj::ObjectIterator::ScanForEntry()
 {
 	// Search for the next non-empty slot
 	while (m_Position < m_ObjectGroup->m_MaxNbObjects &&
