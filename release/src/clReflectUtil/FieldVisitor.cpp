@@ -15,16 +15,16 @@
 
 namespace
 {
-	void VisitTemplateTypeFields(char* object, const clcpp::TemplateType* template_type, const clutl::IFieldVisitor& visitor, clutl::VisitFieldType visit_type);
+	void VisitTemplateTypeFields(char* object, const clcpp::Field* field, const clcpp::TemplateType* template_type, const clutl::IFieldVisitor& visitor, clutl::VisitFieldType visit_type);
 	void VisitClassFields(char* object, const clcpp::Class* class_type, const clutl::IFieldVisitor& visitor, clutl::VisitFieldType visit_type);
 
 
-	void VisitField(char* object, const clcpp::Type* type, const clcpp::Qualifier& qualifier, const clutl::IFieldVisitor& visitor, clutl::VisitFieldType visit_type)
+	void VisitField(char* object, const clcpp::Field* field, const clcpp::Type* type, const clcpp::Qualifier& qualifier, const clutl::IFieldVisitor& visitor, clutl::VisitFieldType visit_type)
 	{
 		// Chain to callback for pointers - no deep following
 		if (qualifier.op == clcpp::Qualifier::POINTER)
 		{
-			visitor.Visit(object, type, qualifier);
+			visitor.Visit(object, field, type, qualifier);
 			return;
 		}
 
@@ -34,7 +34,7 @@ namespace
 		case clcpp::Primitive::KIND_TYPE:
 		case clcpp::Primitive::KIND_ENUM:
 			if (visit_type == clutl::VFT_All)
-				visitor.Visit(object, type, qualifier);
+				visitor.Visit(object, field, type, qualifier);
 			break;
 
 		case clcpp::Primitive::KIND_CLASS:
@@ -42,7 +42,7 @@ namespace
 			break;
 
 		case clcpp::Primitive::KIND_TEMPLATE_TYPE:
-			VisitTemplateTypeFields(object, type->AsTemplateType(), visitor, visit_type);
+			VisitTemplateTypeFields(object, field, type->AsTemplateType(), visitor, visit_type);
 			break;
 
 		default:
@@ -51,33 +51,33 @@ namespace
 	}
 
 
-	void VisitContainerFields(clcpp::ReadIterator& reader, const clutl::IFieldVisitor& visitor, clutl::VisitFieldType visit_type)
+	void VisitContainerFields(clcpp::ReadIterator& reader, const clcpp::Field* field, const clutl::IFieldVisitor& visitor, clutl::VisitFieldType visit_type)
 	{
 		// Visit each entry in the container - keys are discarded
 		clcpp::Qualifier qualifer(reader.m_ValueIsPtr ? clcpp::Qualifier::POINTER : clcpp::Qualifier::VALUE, false);
 		for (unsigned int i = 0; i < reader.m_Count; i++)
 		{
 			clcpp::ContainerKeyValue kv = reader.GetKeyValue();
-			VisitField((char*)kv.value, reader.m_ValueType, qualifer, visitor, visit_type);
+			VisitField((char*)kv.value, field, reader.m_ValueType, qualifer, visitor, visit_type);
 			reader.MoveNext();
 		}
 	}
 
 
-	void VisitTemplateTypeFields(char* object, const clcpp::TemplateType* template_type, const clutl::IFieldVisitor& visitor, clutl::VisitFieldType visit_type)
+	void VisitTemplateTypeFields(char* object, const clcpp::Field* field, const clcpp::TemplateType* template_type, const clutl::IFieldVisitor& visitor, clutl::VisitFieldType visit_type)
 	{
 		// Visit the template type container if there are any entries
 		if (template_type->ci != 0)
 		{
 			clcpp::ReadIterator reader(template_type, object);
 			if (reader.m_Count != 0)
-				VisitContainerFields(reader, visitor, visit_type);
+				VisitContainerFields(reader, field, visitor, visit_type);
 			return;
 		}
 
 		// Template types have no fields; just bases
 		for (unsigned int i = 0; i < template_type->base_types.size; i++)
-			VisitField(object, template_type->base_types[i], clcpp::Qualifier(), visitor, visit_type);
+			VisitField(object, 0, template_type->base_types[i], clcpp::Qualifier(), visitor, visit_type);
 	}
 
 
@@ -94,21 +94,21 @@ namespace
 			{
 				clcpp::ReadIterator reader(field, object + field->offset);
 				if (reader.m_Count != 0)
-					VisitContainerFields(reader, visitor, visit_type);
+					VisitContainerFields(reader, field, visitor, visit_type);
 				continue;
 			}
 
-			VisitField(object + field->offset, field->type, field->qualifier, visitor, visit_type);
+			VisitField(object + field->offset, field, field->type, field->qualifier, visitor, visit_type);
 		}
 
 		// Visit the base types at the same offset
 		for (unsigned int i = 0; i < class_type->base_types.size; i++)
-			VisitField(object, class_type->base_types[i], clcpp::Qualifier(), visitor, visit_type);
+			VisitField(object, 0, class_type->base_types[i], clcpp::Qualifier(), visitor, visit_type);
 	}
 }
 
 
 void clutl::VisitFields(void* object, const clcpp::Type* type, const IFieldVisitor& visitor, VisitFieldType visit_type)
 {
-	VisitField((char*)object, type, clcpp::Qualifier(), visitor, visit_type);
+	VisitField((char*)object, 0, type, clcpp::Qualifier(), visitor, visit_type);
 }

@@ -19,8 +19,14 @@
 
 #elif defined(CLCPP_PLATFORM_POSIX)
 
-	extern "C" void * dlopen(const char * __path, int __mode);
-	
+	#if defined(__linux__)
+		extern "C" void * dlopen(const char * __path, int __mode);
+		extern "C" void * dlsym(void * handle, const char * name);
+	#elif defined(__APPLE__)
+		// os x linker will bind it
+		extern int start_base_address_hack __asm("section$start$__TEXT$__text");
+	#endif
+
 #endif
 
 
@@ -298,7 +304,12 @@ namespace
 	#if defined(CLCPP_PLATFORM_WINDOWS)
 		return (clcpp::pointer_type)GetModuleHandleA(0);
 	#elif defined(CLCPP_PLATFORM_POSIX)
-		return (clcpp::pointer_type)dlopen(0, 0);
+		#if defined(__linux__)
+			void * global_symbols = dlopen(0, 0);
+			return (clcpp::pointer_type)dlsym(global_symbols, "_start");
+		#elif defined(__APPLE__)
+			return (clcpp::pointer_type) &start_base_address_hack;
+		#endif
 	#endif
 	}
 }

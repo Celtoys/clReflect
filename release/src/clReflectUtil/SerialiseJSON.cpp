@@ -30,12 +30,6 @@
 #endif
 
 
-// Pointers are serialised in hash values in hexadecimal format, which isn't compliant with
-// the JSON format.
-// Undef this if you want pointers to be serialised as base 10 unsigned integers, instead.
-#define SAVE_POINTER_HASH_AS_HEX
-
-
 static void SetupTypeDispatchLUT();
 
 
@@ -406,6 +400,23 @@ namespace
 		}
 
 		ParserMembers(ctx, t, object, type);
+		
+		if (type && type->kind == clcpp::Primitive::KIND_CLASS)
+		{
+			const clcpp::Class* class_type = type->AsClass();
+
+			// Run any attached post-load functions
+			if (class_type->flag_attributes & clcpp::FlagAttribute::POST_LOAD)
+			{
+				static unsigned int hash = clcpp::internal::HashNameString("post_load");
+				if (const clcpp::Attribute* attr = clcpp::FindPrimitive(class_type->attributes, hash))
+				{
+					const clcpp::PrimitiveAttribute* name_attr = attr->AsPrimitiveAttribute();
+					if (name_attr->primitive != 0)
+						clcpp::CallFunction((clcpp::Function*)name_attr->primitive, object);
+				}
+			}
+		}
 	}
 }
 
@@ -606,18 +617,21 @@ namespace
 	}
 
 
-	void SavePtr(clutl::WriteBuffer& out, const void* object, clutl::IPtrSave* ptr_save)
+	void SavePtr(clutl::WriteBuffer& out, const void* object, clutl::IPtrSave* ptr_save, unsigned int flags)
 	{
 		// Get the filtered pointer from the caller
 		void* ptr = *(void**)object;
 		unsigned int hash = ptr_save->SavePtr(ptr);
 
-	#ifdef SAVE_POINTER_HASH_AS_HEX
-		out.WriteStr("0x");
-		SaveHexInteger(out, hash);
-	#else
-		SaveUnsignedInteger(out, hash);
-	#endif
+		if ((flags & clutl::JSONFlags::EMIT_HEX_POINTERS) != 0)
+		{
+			out.WriteStr("0x");
+			SaveHexInteger(out, hash);
+		}
+		else
+		{
+			SaveUnsignedInteger(out, hash);
+		}
 	}
 
 
@@ -644,7 +658,7 @@ namespace
 				if (ptr_save == 0 || !ptr_save->CanSavePtr(ptr, field, reader.m_ValueType))
 					continue;
 
-				SavePtr(out, kv.value, ptr_save);
+				SavePtr(out, kv.value, ptr_save, flags);
 			}
 			else
 			{
@@ -732,46 +746,93 @@ namespace
 		if (field->ci != 0)
 			SaveFieldArray(out, object, field, ptr_save, flags);
 		else if (field->qualifier.op == clcpp::Qualifier::POINTER)
-			SavePtr(out, object, ptr_save);
+			SavePtr(out, object, ptr_save, flags);
 		else
 			SaveObject(out, object, field, field->type, ptr_save, flags);
 	}
 
 
-	void SaveClassFields(clutl::WriteBuffer& out, const char* object, const clcpp::Class* class_type, clutl::IPtrSave* ptr_save, unsigned int& flags, bool& field_written)
+	void SaveClassField(clutl::WriteBuffer& out, const char* object, const clcpp::Field* field, clutl::IPtrSave* ptr_save, unsigned int& flags, bool& field_written)
 	{
-		// Save each field in the class
-		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
-		unsigned int nb_fields = fields.size;
-		for (unsigned int i = 0; i < nb_fields; i++)
+		if (field->qualifier.op == clcpp::Qualifier::POINTER)
 		{
-			// Don't save values for transient fields
-			const clcpp::Field* field = fields[i];
-			if (field->flag_attributes & clcpp::FlagAttribute::TRANSIENT)
-				continue;
-
-			if (field->qualifier.op == clcpp::Qualifier::POINTER)
-			{
-				// Ask the caller if they want to save this pointer
-				void* ptr = *(void**)(object + field->offset);
-				if (ptr_save == 0 || !ptr_save->CanSavePtr(ptr, field, field->type))
-					continue;
-			}
-
-			// Comma separator for multiple fields
-			if (field_written)
-			{
-				out.WriteChar(',');
-				NewLine(out, flags);
-			}
-
-			// Write the field name and object
-			SaveString(out, field->name.text);
-			out.WriteChar(':');
-			SaveFieldObject(out, object + field->offset, field, ptr_save, flags);
-			field_written = true;
+			// Ask the caller if they want to save this pointer
+			void* ptr = *(void**)(object + field->offset);
+			if (ptr_save == 0 || !ptr_save->CanSavePtr(ptr, field, field->type))
+				return;
 		}
 
+		// Comma separator for multiple fields
+		if (field_written)
+		{
+			out.WriteChar(',');
+			NewLine(out, flags);
+		}
+
+		// Write the field name and object
+		SaveString(out, field->name.text);
+		out.WriteChar(':');
+		SaveFieldObject(out, object + field->offset, field, ptr_save, flags);
+		field_written = true;
+	}
+
+
+	void SaveClassFields(clutl::WriteBuffer& out, const char* object, const clcpp::Class* class_type, clutl::IPtrSave* ptr_save, unsigned int& flags, bool& field_written)
+	{
+		const clcpp::CArray<const clcpp::Field*>& fields = class_type->fields;
+		unsigned int nb_fields = fields.size;
+
+		if ((flags & clutl::JSONFlags::SORT_CLASS_FIELDS_BY_OFFSET) != 0)
+		{
+			int last_field_offset = -1;
+
+			// Save fields in offset-sorted order
+			// This is a brute-force O(n^2) implementation as I don't want to allocate any heap memory or stack memory
+			// with an upper bound. As the source array is also const and needs to be used elsewhere, sorting in-place
+			// is also not an option.
+			for (unsigned int i = 0; i < nb_fields; i++)
+			{
+				int lowest_field_offset = (1 << 31) - 1;
+				int lowest_field_index = -1;
+
+				// Search for the next field with the lowest offset
+				for (unsigned int j = 0; j < nb_fields; j++)
+				{
+					// Skip transient fields
+					const clcpp::Field* field = fields[j];
+					if (field->flag_attributes & clcpp::FlagAttribute::TRANSIENT)
+						continue;
+
+					if (field->offset > last_field_offset && field->offset < lowest_field_offset)
+					{
+						lowest_field_offset = field->offset;
+						lowest_field_index = j;
+					}
+				}
+
+				// Use of transient implies not all fields may be serialised
+				if (lowest_field_index != -1)
+				{
+					const clcpp::Field* field = fields[lowest_field_index];
+					SaveClassField(out, object, field, ptr_save, flags, field_written);
+					last_field_offset = lowest_field_offset;
+				}
+			}
+		}
+
+		else
+		{
+			// Save fields in array order
+			for (unsigned int i = 0; i < nb_fields; i++)
+			{
+				// Skip transient fields
+				const clcpp::Field* field = fields[i];
+				if (field->flag_attributes & clcpp::FlagAttribute::TRANSIENT)
+					continue;
+
+				SaveClassField(out, object, field, ptr_save, flags, field_written);
+			}
+		}
 	}
 
 
@@ -822,6 +883,18 @@ namespace
 				}
 
 				return;
+			}
+		}
+
+		// Call any attached pre-save function
+		if (class_type->flag_attributes & clcpp::FlagAttribute::PRE_SAVE)
+		{
+			static unsigned int hash = clcpp::internal::HashNameString("pre_save");
+			if (const clcpp::Attribute* attr = clcpp::FindPrimitive(class_type->attributes, hash))
+			{
+				const clcpp::PrimitiveAttribute* name_attr = attr->AsPrimitiveAttribute();
+				if (name_attr->primitive != 0)
+					clcpp::CallFunction((clcpp::Function*)name_attr->primitive, object);
 			}
 		}
 

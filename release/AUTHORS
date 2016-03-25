@@ -13,3 +13,9 @@ Rui Figueira (https://bitbucket.org/ruifig)
 
 Paul Holden (https://bitbucket.org/hulkholden)
 	Initial CMake build port.
+
+Adrian Hirst (https://bitbucket.org/captainspank)
+	OSX Xcode 4.4.1 fixes.
+
+Konstantin Metlov (https://bitbucket.org/kmetlov)
+	Linux build fixes.
