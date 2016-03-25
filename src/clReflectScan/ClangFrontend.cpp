@@ -69,7 +69,7 @@ ClangParser::ClangParser(Arguments& args)
 
 	// Setup the language parsing options for C++
 	clang::LangOptions& lang_options = *m_CompilerInvocation->getLangOpts();
-	m_CompilerInvocation->setLangDefaults(lang_options, clang::IK_CXX, clang::LangStandard::lang_cxx03);
+	m_CompilerInvocation->setLangDefaults(lang_options, clang::IK_CXX, clang::LangStandard::lang_cxx11);
 	lang_options.CPlusPlus = 1;
 	lang_options.Bool = 1;
 	lang_options.RTTI = 0;
