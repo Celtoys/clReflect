@@ -123,14 +123,50 @@ namespace
 		if (!t.IsValid())
 			return;
 
-		// With enum fields, lookup the enum constant by name and assign if it exists
+		// With enum fields use name lookup to match constants
 		if (type && type->kind == clcpp::Primitive::KIND_ENUM)
 		{
 			const clcpp::Enum* enum_type = type->AsEnum();
-			unsigned int constant_hash = clcpp::internal::HashData(t.val.string, t.length);
-			const clcpp::EnumConstant* constant = clcpp::FindPrimitive(enum_type->constants, constant_hash);
-			if (constant)
-				*(int*)object = constant->value;
+
+			// Is the enum a series of flags?
+			static unsigned int hash = clcpp::internal::HashNameString("flags");
+			bool are_flags = clcpp::FindPrimitive(enum_type->attributes, hash) != 0 ? true : false;
+			if (are_flags)
+			{
+				int pos = 0;
+				bool found_flags = false;
+				while (pos < t.length)
+				{
+					// Seek to end of the symbol
+					int start_pos = pos;
+					while (pos < t.length && t.val.string[pos] != '|')
+						pos++;
+
+					// OR in flag if it can be found
+					unsigned int constant_hash = clcpp::internal::HashData(t.val.string + start_pos, pos - start_pos);
+					const clcpp::EnumConstant* constant = clcpp::FindPrimitive(enum_type->constants, constant_hash);
+					if (constant)
+					{
+						if (found_flags)
+							*(int*)object |= constant->value;
+						else
+							*(int*)object = constant->value;
+
+						// Only initialise to enum values of some are found
+						found_flags = true;
+					}
+
+					// Skip over | or beyond end-of-string
+					pos++;
+				}
+			}
+			else
+			{
+				unsigned int constant_hash = clcpp::internal::HashData(t.val.string, t.length);
+				const clcpp::EnumConstant* constant = clcpp::FindPrimitive(enum_type->constants, constant_hash);
+				if (constant)
+					*(int*)object = constant->value;
+			}
 		}
 	}
 
@@ -600,20 +636,58 @@ namespace
 
 	void SaveEnum(clutl::WriteBuffer& out, const char* object, const clcpp::Enum* enum_type)
 	{
-		// Do a linear search for an enum with a matching value
 		int value = *(int*)object;
-		const char* enum_name = "clReflect_JSON_EnumValueNotFound";
-		for (unsigned int i = 0; i < enum_type->constants.size; i++)
-		{
-			if (enum_type->constants[i]->value == value)
-			{
-				enum_name = enum_type->constants[i]->name.text;
-				break;
-			}
-		}
 
-		// Write the enum name as the value
-		SaveString(out, enum_name);
+		// Is the enum a series of flags?
+		static unsigned int hash = clcpp::internal::HashNameString("flags");
+		bool are_flags = clcpp::FindPrimitive(enum_type->attributes, hash) != 0 ? true : false;
+		if (are_flags && value != 0)
+		{
+			// Linear search of all enum values testing to see if they're set as flags
+			bool enum_written = false;
+			for (unsigned int i = 0; i < enum_type->constants.size; i++)
+			{
+				int enum_value = enum_type->constants[i]->value;
+				if ((value & enum_value) != 0)
+				{
+					// Save as a series of OR operations
+					if (enum_written)
+						out.WriteChar('|');
+					else
+						out.WriteChar('\"');
+					out.WriteStr(enum_type->constants[i]->name.text);
+
+					// Clear out flag and keep going if it's not finished
+					value &= ~enum_value;
+					enum_written = true;
+					if (value == 0)
+						break;
+				}
+			}
+
+			if (enum_written)
+				out.WriteChar('\"');
+			else
+				SaveString(out, "clReflect_JSON_EnumFlagNotFound");
+		}
+		else
+		{
+			// Do a linear search for an enum with a matching value
+			// Also comes through here looking for match when value=0
+			const char* enum_name = "clReflect_JSON_EnumValueNotFound";
+			for (unsigned int i = 0; i < enum_type->constants.size; i++)
+			{
+				int enum_value = enum_type->constants[i]->value;
+				if (enum_value == value)
+				{
+					enum_name = enum_type->constants[i]->name.text;
+					break;
+				}
+			}
+
+			// Write the enum name as the value
+			SaveString(out, enum_name);
+		}
 	}
 
 
