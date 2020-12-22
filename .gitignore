@@ -7,5 +7,6 @@ cmake-build/*
 *.sln
 *.vcproj
 .svn/*
+extern/llvm/*
 extern/llvm-build/*
 extern/llvm-build-gnu/*
