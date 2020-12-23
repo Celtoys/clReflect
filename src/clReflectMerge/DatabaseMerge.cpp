@@ -127,9 +127,9 @@ void MergeDatabases(cldb::Database& dest_db, const cldb::Database& src_db, const
 	// Class/template type symbol names can't be overloaded but extra checks can be used to make sure
 	// the same primitive isn't violating the One Definition Rule
 	MergeUniques<cldb::TemplateType>(dest_db, src_db);
-        MergeClasses(dest_db, src_db);
+    MergeClasses(dest_db, src_db);
 
-        // Add enum constants as if they are overloadable
+    // Add enum constants as if they are overloadable
 	// NOTE: Technically don't need to do this enum constants are scoped. However, I might change
 	// that in future so this code will become useful.
 	MergeOverloads<cldb::EnumConstant>(dest_db, src_db);

@@ -23,10 +23,10 @@
 // Explicitly stated dependencies in stdlib.h
 // Non-standard, writes at most n bytes to dest with printf formatting
 #if defined(CLCPP_PLATFORM_WINDOWS)
-	extern "C" int _snprintf(char* dest, unsigned int n, const char* fmt, ...);
-	#define snprintf _snprintf
+extern "C" int _snprintf(char* dest, unsigned int n, const char* fmt, ...);
+#define snprintf _snprintf
 #else
-	extern "C" int snprintf(char* dest, unsigned int n, const char* fmt, ...);
+extern "C" int snprintf(char* dest, unsigned int n, const char* fmt, ...);
 #endif
 
 
@@ -40,9 +40,9 @@ namespace
 	// ----------------------------------------------------------------------------------------------------
 
 
-	typedef void (*SaveNumberFunc)(clutl::WriteBuffer&, const char*, unsigned int flags);
-	typedef void (*LoadIntegerFunc)(char*, clcpp::int64);
-	typedef void (*LoadDecimalFunc)(char*, double);
+	typedef void(*SaveNumberFunc)(clutl::WriteBuffer&, const char*, unsigned int flags);
+	typedef void(*LoadIntegerFunc)(char*, clcpp::int64);
+	typedef void(*LoadDecimalFunc)(char*, double);
 
 
 	struct TypeDispatch
@@ -270,6 +270,10 @@ namespace
 			return;
 		}
 
+		// TODO: Save a field specifying container size. This makes hand-authored JSON a little
+		//       trickier but massively speeds up the general case of game read/written JSON.
+		//       Could make a fallback case for when no container size is specified.
+
 		clcpp::WriteIterator writer;
 		if (field && field->ci)
 		{
@@ -334,15 +338,15 @@ namespace
 		case clutl::JSON_TOKEN_INTEGER: return ParserInteger(ctx, Expect(ctx, t, clutl::JSON_TOKEN_INTEGER), object, type, op);
 		case clutl::JSON_TOKEN_DECIMAL: return ParserDecimal(Expect(ctx, t, clutl::JSON_TOKEN_DECIMAL), object, type);
 		case clutl::JSON_TOKEN_LBRACE:
-			{
-				if (type)
-					ParserObject(ctx, t, object, type);
-				else
-					ParserObject(ctx, t, 0, 0);
+		{
+			if (type)
+				ParserObject(ctx, t, object, type);
+			else
+				ParserObject(ctx, t, 0, 0);
 
-				Expect(ctx, t, clutl::JSON_TOKEN_RBRACE);
-				break;
-			}
+			Expect(ctx, t, clutl::JSON_TOKEN_RBRACE);
+			break;
+		}
 		case clutl::JSON_TOKEN_LBRACKET: return ParserArray(ctx, t, object, type, field);
 		case clutl::JSON_TOKEN_TRUE: return ParserLiteralValue(ctx, Expect(ctx, t, clutl::JSON_TOKEN_TRUE), 1, object, type, op);
 		case clutl::JSON_TOKEN_FALSE: return ParserLiteralValue(ctx, Expect(ctx, t, clutl::JSON_TOKEN_FALSE), 0, object, type, op);
@@ -436,7 +440,7 @@ namespace
 		}
 
 		ParserMembers(ctx, t, object, type);
-		
+
 		if (type && type->kind == clcpp::Primitive::KIND_CLASS)
 		{
 			const clcpp::Class* class_type = type->AsClass();
@@ -522,7 +526,7 @@ namespace
 		}
 
 		// Loop through the value with radix 10
-		do 
+		do
 		{
 			clcpp::int64 next_integer = integer / 10;
 			*--tptr = char('0' + (integer - next_integer * 10));
@@ -549,7 +553,7 @@ namespace
 		char* tptr = end;
 
 		// Loop through the value with radix 10
-		do 
+		do
 		{
 			clcpp::uint64 next_integer = integer / 10;
 			*--tptr = char('0' + (integer - next_integer * 10));
@@ -572,7 +576,7 @@ namespace
 		char* tptr = end;
 
 		// Loop through the value with radix 16
-		do 
+		do
 		{
 			clcpp::uint64 next_integer = integer / 16;
 			*--tptr = "0123456789ABCDEF"[integer - next_integer * 16];
