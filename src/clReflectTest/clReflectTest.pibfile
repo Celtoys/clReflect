@@ -82,6 +82,3 @@ cpp_map_file = env.NewFile(cltest.output.GetOutputFiles(env)[1])
 clr_export = clReflect.CppExport("clReflectTest.cppbin", clr_merge, cpp_map_file)
 
 env.Build([ clr_merge, cltest.output, clr_export ], "cltest")
-
-pibfile = "clReflectTest.pibfile"
-VCGenerateProjectFile(env, "clReflectTest", cltest.cpp_files + cltest.hpp_files + [ pibfile ], cltest.output, pibfile = pibfile)
