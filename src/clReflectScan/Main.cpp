@@ -8,11 +8,9 @@
 // ===============================================================================
 //
 
-#include "ClangFrontend.h"
 #include "ASTConsumer.h"
 #include "ReflectionSpecs.h"
 
-#include "clReflectCore/Arguments.h"
 #include "clReflectCore/Logging.h"
 #include "clReflectCore/Database.h"
 #include "clReflectCore/DatabaseTextSerialiser.h"
@@ -20,51 +18,22 @@
 
 #include "clang/AST/ASTContext.h"
 
+#include "clang/Tooling/CommonOptionsParser.h"
+#include "clang/Tooling/Tooling.h"
+#include "clang/Tooling/CompilationDatabase.h"
+#include "clang/Tooling/CommonOptionsParser.h"
+#include "llvm/Support/CommandLine.h"
+
 #include <stdio.h>
 #include <time.h>
 
 
 namespace
 {
-	bool FileExists(const char* filename)
-	{
-		// For now, just try to open the file
-		FILE* fp = fopen(filename, "r");
-		if (fp == 0)
-		{
-			return false;
-		}
-		fclose(fp);
-		return true;
-	}
-
-	
 	bool EndsWith(const std::string& str, const std::string& end)
 	{
 		return str.rfind(end) == str.length() - end.length();
 	}
-
-	void WriteIncludedHeaders(const ClangParser& ast_parser, const char* outputfile, const char* input_filename)
-	{
-		std::vector< std::pair<ClangParser::HeaderType, std::string> > header_files;
-		ast_parser.GetIncludedFiles(header_files);
-
-		FILE* fp = fopen(outputfile, "wt");
-		// Print to output, noting that the source file will also be in the list
-		for (size_t i = 0; i < header_files.size(); i++)
-		{
-			if (header_files[i].second != input_filename)
-			{
-				fprintf(fp, "%c %s",
-					(header_files[i].first==ClangParser::HeaderType_User) ? 'u' : ( (header_files[i].first==ClangParser::HeaderType_System) ? 's' : 'e'),
-					header_files[i].second.c_str());
-				fprintf(fp, "\n");
-			}
-		}
-
-		fclose(fp);
-	}
-
 
 	void WriteDatabase(const cldb::Database& db, const std::string& filename)
 	{
@@ -77,20 +46,60 @@ namespace
 			cldb::WriteBinaryDatabase(filename.c_str(), db);
 		}
 	}
+	
+	using ParseTUHandler = std::function<void(clang::ASTContext&, clang::TranslationUnitDecl*)>;
 
-
-	void TestDBReadWrite(const cldb::Database& db)
+	// Top-level AST consumer that passes an entire TU to the provided callback
+	class ReflectConsumer : public clang::ASTConsumer
 	{
-		cldb::WriteTextDatabase("output.csv", db);
-		cldb::WriteBinaryDatabase("output.bin", db);
+	public:
+		ReflectConsumer(ParseTUHandler handler)
+			: m_handler(handler)
+		{
+		}
 
-		cldb::Database indb_text;
-		cldb::ReadTextDatabase("output.csv", indb_text);
-		cldb::WriteTextDatabase("output2.csv", indb_text);
+		void HandleTranslationUnit(clang::ASTContext& context)
+		{
+			m_handler(context, context.getTranslationUnitDecl());
+		}
 
-		cldb::Database indb_bin;
-		cldb::ReadBinaryDatabase("output.bin", indb_bin);
-		cldb::WriteBinaryDatabase("output2.bin", indb_bin);
+	private:
+		ParseTUHandler m_handler;
+	};
+
+	// Frontend action to create the ReflectConsumer
+	class ReflectFrontendAction : public clang::ASTFrontendAction
+	{
+	public:
+		ReflectFrontendAction(ParseTUHandler handler)
+			: m_handler(handler)
+		{
+		}
+		
+		std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(clang::CompilerInstance& compiler, llvm::StringRef file)
+		{
+			return std::unique_ptr<clang::ASTConsumer>(new ReflectConsumer(m_handler));
+		}
+
+	private:
+		ParseTUHandler m_handler;
+	};
+
+	// Custom FrontendActionFactory creator that allows me to pass in arbitrary arguments
+	std::unique_ptr<clang::tooling::FrontendActionFactory> NewReflectFrontendActionFactory(ParseTUHandler handler)
+	{
+		struct ReflectFrontendActionFactory : public clang::tooling::FrontendActionFactory
+		{
+			std::unique_ptr<clang::FrontendAction> create() override
+			{
+				return std::make_unique<ReflectFrontendAction>(handler);
+			}
+			ParseTUHandler handler;
+		};
+
+		auto* factory = new ReflectFrontendActionFactory();
+		factory->handler = handler;
+		return std::unique_ptr<clang::tooling::FrontendActionFactory>(factory);
 	}
 }
 
@@ -101,50 +110,53 @@ int main(int argc, const char* argv[])
 
 	LOG_TO_STDOUT(main, ALL);
 
-	// Leave early if there aren't enough arguments
-	Arguments args(argc, argv);
-	if (args.Count() < 2)
+	// Command-line options
+	static llvm::cl::OptionCategory ToolCategoryOption("clreflect options");
+	static llvm::cl::cat ToolCategory(ToolCategoryOption);
+	static llvm::cl::opt<std::string> ReflectionSpecLog("spec_log",
+		llvm::cl::desc("Specify reflection spec log filename"), ToolCategory, llvm::cl::value_desc("filename"));
+	static llvm::cl::opt<std::string> ASTLog("ast_log",
+		llvm::cl::desc("Specify AST log filename"), ToolCategory, llvm::cl::value_desc("filename"));
+	static llvm::cl::opt<std::string> Output("output",
+		llvm::cl::desc("Specify database output file, depending on extension"), ToolCategory, llvm::cl::value_desc("filename"));
+	static llvm::cl::opt<bool> Timing("timing",
+		llvm::cl::desc("Print some rough timing info"), ToolCategory);
+
+    // Parse command-line options
+	auto options_parser = clang::tooling::CommonOptionsParser::create(argc, argv, ToolCategoryOption, llvm::cl::OneOrMore);
+	if (!options_parser)
 	{
-		LOG(main, ERROR, "Not enough arguments\n");
 		return 1;
 	}
 
-	// Does the input file exist?
-	const char* input_filename = argv[1];
-	if (!FileExists(input_filename))
-	{
-		LOG(main, ERROR, "Couldn't find the input file %s\n", input_filename);
-		return 1;
-	}
+	// Create the clang tool that parses the input files
+	clang::tooling::ClangTool tool(options_parser->getCompilations(), options_parser->getSourcePathList());
 
 	float prologue = clock();
 
-	// Parse the AST
-	ClangParser parser(args);
-	if (!parser.ParseAST(input_filename))
+    // Gather reflection specs for the translation unit
+	ReflectionSpecs reflection_specs(ReflectionSpecLog);
+	if (tool.run(NewReflectFrontendActionFactory([&reflection_specs](clang::ASTContext&, clang::TranslationUnitDecl* tu_decl){
+		reflection_specs.Gather(tu_decl);
+	}).get()) != 0)
 	{
-		LOG(main, ERROR, "Errors parsing the AST\n");
 		return 1;
 	}
 
-	float parsing = clock();
-
-	// Gather reflection specs for the translation unit
-	clang::ASTContext& ast_context = parser.GetASTContext();
-	std::string spec_log = args.GetProperty("-spec_log");
-	ReflectionSpecs reflection_specs(args.Have("-reflect_specs_all"), spec_log);
-	reflection_specs.Gather(ast_context.getTranslationUnitDecl());
-
-	float specs = clock();
+    float specs = clock();
 
 	// On the second pass, build the reflection database
 	cldb::Database db;
 	db.AddBaseTypePrimitives();
-	std::string ast_log = args.GetProperty("-ast_log");
-	ASTConsumer ast_consumer(ast_context, db, reflection_specs, ast_log);
-	ast_consumer.WalkTranlationUnit(ast_context.getTranslationUnitDecl());
+    ASTConsumer ast_consumer(db, reflection_specs, ASTLog);
+	if (tool.run(NewReflectFrontendActionFactory([&ast_consumer](clang::ASTContext& context, clang::TranslationUnitDecl* tu_decl){
+		ast_consumer.WalkTranlationUnit(&context, tu_decl);
+	}).get()) != 0)
+	{
+		return 1;
+	}
 
-	float build = clock();
+    float build = clock();
 
 	// Add all the container specs
 	const ReflectionSpecContainer::MapType& container_specs = reflection_specs.GetContainerSpecs();
@@ -154,31 +166,21 @@ int main(int argc, const char* argv[])
 		db.AddContainerInfo(i->first, c.read_iterator_type, c.write_iterator_type, c.has_key);
 	}
 
-	// Write included header files if requested
-	std::string output_headers = args.GetProperty("-output_headers");
-	if (output_headers!="")
-		WriteIncludedHeaders(parser, output_headers.c_str(), input_filename);
-
 	// Write to a text/binary database depending upon extension
-	std::string output = args.GetProperty("-output");
-	if (output != "")
-		WriteDatabase(db, output);
-
-	float dbwrite = clock();
-
-	if (args.Have("-test_db"))
-		TestDBReadWrite(db);
+	if (Output != "")
+	{
+		WriteDatabase(db, Output);
+	}
 
 	float end = clock();
 
 	// Print some rough profiling info
-	if (args.Have("-timing"))
+	if (Timing)
 	{
 		printf("Prologue:   %.3f\n", (prologue - start) / CLOCKS_PER_SEC);
-		printf("Parsing:    %.3f\n", (parsing - prologue) / CLOCKS_PER_SEC);
-		printf("Specs:      %.3f\n", (specs - parsing) / CLOCKS_PER_SEC);
+		printf("Specs:      %.3f\n", (specs - prologue) / CLOCKS_PER_SEC);
 		printf("Building:   %.3f\n", (build - specs) / CLOCKS_PER_SEC);
-		printf("Database:   %.3f\n", (dbwrite - build) / CLOCKS_PER_SEC);
+		printf("Database:   %.3f\n", (end - build) / CLOCKS_PER_SEC);
 		printf("Total time: %.3f\n", (end - start) / CLOCKS_PER_SEC);
 	}
 

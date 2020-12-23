@@ -13,6 +13,7 @@
 #include <clReflectCore/Database.h>
 #include <clReflectCore/Logging.h>
 
+#include <clang/AST/Attr.h>
 #include <clang/AST/Decl.h>
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/DeclGroup.h>
@@ -64,9 +65,7 @@ namespace
 	}
 }
 
-
-ReflectionSpecs::ReflectionSpecs(bool reflect_all, const std::string& spec_log)
-	: m_ReflectAll(reflect_all)
+ReflectionSpecs::ReflectionSpecs(const std::string& spec_log)
 {
 	LOG_TO_STDOUT(spec, WARNING);
 	LOG_TO_STDOUT(spec, ERROR);
@@ -103,8 +102,8 @@ void ReflectionSpecs::Gather(clang::TranslationUnitDecl* tu_decl)
 
 		if (type == RST_Full || type == RST_Partial)
 		{
-			AddReflectionSpec(reflect_spec.substr(5), type);
-		}
+            AddReflectionSpec(reflect_spec.substr(5).str(), type);
+                }
 
 		else if (type == RST_Container)
 		{
@@ -120,9 +119,9 @@ void ReflectionSpecs::Gather(clang::TranslationUnitDecl* tu_decl)
 
 			// Parse the type info
 			ReflectionSpecContainer rsc;
-			rsc.read_iterator_type = info[2];
-			rsc.write_iterator_type = info[3];
-			rsc.has_key = false;
+            rsc.read_iterator_type = info[2].str();
+            rsc.write_iterator_type = info[3].str();
+            rsc.has_key = false;
 
 			// Parse the key info
 			if (info[4] == "haskey")
@@ -145,18 +144,13 @@ void ReflectionSpecs::Gather(clang::TranslationUnitDecl* tu_decl)
 
 ReflectionSpecType ReflectionSpecs::Get(const std::string& name) const
 {
-	// Check the optional override first
-	if (m_ReflectAll)
-		return RST_Full;
-
-	// Search for a reflection spec attached to this symbol
+    // Search for a reflection spec attached to this symbol
 	ReflectionSpecMap::const_iterator i = m_ReflectionSpecs.find(name);
 	if (i == m_ReflectionSpecs.end())
 		return RST_None;
 
 	return i->second;
 }
-
 
 void ReflectionSpecs::AddReflectionSpec(const std::string& symbol, ReflectionSpecType type)
 {

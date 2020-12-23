@@ -6,9 +6,9 @@ llvm_source = "../../extern/llvm"
 llvm_build = "../../extern/llvm-build"
 
 include_paths = [
-    os.path.join(llvm_source, "include"),
+    os.path.join(llvm_source, "llvm/include"),
     os.path.join(llvm_build, "include"),
-    os.path.join(llvm_source, "tools/clang/include"),
+    os.path.join(llvm_source, "clang/include"),
     os.path.join(llvm_build, "tools/clang/include"),
 	"..",
 	"../../inc",
@@ -30,28 +30,42 @@ disabled_warnings = [
 ]
 
 libs = [
-    "clangParse.lib",
-    "clangSema.lib",
-    "clangAnalysis.lib",
+    "LLVMBinaryFormat.lib",
+    "LLVMBitStreamReader.lib",
+    "LLVMCore.lib",
+    "LLVMDemangle.lib",
+    "LLVMFrontendOpenMP.lib",
+    "LLVMMC.lib",
+    "LLVMMCParser.lib",
+    "LLVMOption.lib",
+    "LLVMProfileData.lib",
+    "LLVMRemarks.lib",
+    "LLVMSupport.lib",
+    
     "clangAST.lib",
-    "clangFrontend.lib",
-    "clangLex.lib",
+    "clangAnalysis.lib",
     "clangBasic.lib",
-    "clangSerialization.lib",
     "clangDriver.lib",
     "clangEdit.lib",
-    "LLVMSupport.lib",
-    "LLVMCore.lib",
-    "LLVMMC.lib",
+    "clangFrontend.lib",
+    "clangLex.lib",
+    "clangParse.lib",
+    "clangSema.lib",
+    "clangSerialization.lib",
+    "clangTooling.lib",
+    "clangToolingCore.lib",
+
     "advapi32.lib",
     "shell32.lib",
-    "clcpp.lib",
+    "version.lib",
+
     "clcore.lib",
+    "clcpp.lib",
 ]
 
 lib_paths_debug = [
     WindowsPlatform.x86LibDir,
-    os.path.join(llvm_build, "lib/debug"),
+    os.path.join(llvm_build, "Debug/lib"),
     "../../build/bin/debug",
 ]
 
@@ -63,7 +77,7 @@ lib_paths_release = [
 
 lib_paths_minrelease = [
     WindowsPlatform.x86LibDir,
-	os.path.join(llvm_build, "lib/minsizerel"),
+	os.path.join(llvm_build, "MinSizeRel/lib"),
     "../../build/bin/release",
 ]
 

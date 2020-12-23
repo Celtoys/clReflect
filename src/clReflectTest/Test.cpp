@@ -379,36 +379,148 @@ namespace FuncReturns
 	const clcpp::uint64* FunctionRetConstUnsignedInt64Ptr() { return 0; }
 
 	// --- References
-	bool& FunctionRetBoolRef() { return *(bool*)0; }
-	char& FunctionRetCharRef() { return *(char*)0; }
-	wchar_t& FunctionRetWCharRef() { return *(wchar_t*)0; }
-	short& FunctionRetShortRef() { return *(short*)0; }
-	int& FunctionRetIntRef() { return *(int*)0; }
-	long& FunctionRetLongRef() { return *(long*)0; }
-	unsigned char& FunctionRetUnsignedCharRef() { return *(unsigned char*)0; }
-	unsigned short& FunctionRetUnsignedShortRef() { return *(unsigned short*)0; }
-	unsigned int& FunctionRetUnsignedIntRef() { return *(unsigned int*)0; }
-	unsigned long& FunctionRetUnsignedLongRef() { return *(unsigned long*)0; }
-	float& FunctionRetFloatRef() { return *(float*)0; }
-	double& FunctionRetDoubleRef() { return *(double*)0; }
-	clcpp::int64& FunctionRetInt64Ref() { return *(clcpp::int64*)0; }
-	clcpp::uint64& FunctionRetUnsignedInt64Ref() { return *(clcpp::uint64*)0; }
+    bool& FunctionRetBoolRef()
+    {
+        static bool v;
+        return v;
+    }
+    char& FunctionRetCharRef()
+    {
+        static char v;
+        return v;
+    }
+    wchar_t& FunctionRetWCharRef()
+    {
+        static wchar_t v;
+        return v;
+    }
+    short& FunctionRetShortRef()
+    {
+        static short v;
+        return v;
+    }
+    int& FunctionRetIntRef()
+    {
+        static int v;
+        return v;
+    }
+    long& FunctionRetLongRef()
+    {
+        static long v;
+        return v;
+    }
+    unsigned char& FunctionRetUnsignedCharRef()
+    {
+        static unsigned char v;
+        return v;
+    }
+    unsigned short& FunctionRetUnsignedShortRef()
+    {
+        static unsigned short v;
+        return v;
+    }
+    unsigned int& FunctionRetUnsignedIntRef()
+    {
+        static unsigned int v;
+        return v;
+    }
+    unsigned long& FunctionRetUnsignedLongRef()
+    {
+        static unsigned long v;
+        return v;
+    }
+    float& FunctionRetFloatRef()
+    {
+        static float v;
+        return v;
+    }
+    double& FunctionRetDoubleRef()
+    {
+        static double v;
+        return v;
+    }
+    clcpp::int64& FunctionRetInt64Ref()
+    {
+        static clcpp::int64 v;
+        return v;
+    }
+    clcpp::uint64& FunctionRetUnsignedInt64Ref()
+    {
+        static clcpp::uint64 v;
+        return v;
+    }
 
-	// --- Const References
-	const bool& FunctionRetBoolConstRef() { return *(bool*)0; }
-	const char& FunctionRetCharConstRef() { return *(char*)0; }
-	const wchar_t& FunctionRetWCharConstRef() { return *(wchar_t*)0; }
-	const short& FunctionRetShortConstRef() { return *(short*)0; }
-	const int& FunctionRetIntConstRef() { return *(int*)0; }
-	const long& FunctionRetLongConstRef() { return *(long*)0; }
-	const unsigned char& FunctionRetUnsignedCharConstRef() { return *(unsigned char*)0; }
-	const unsigned short& FunctionRetUnsignedShortConstRef() { return *(unsigned short*)0; }
-	const unsigned int& FunctionRetUnsignedIntConstRef() { return *(unsigned int*)0; }
-	const unsigned long& FunctionRetUnsignedLongConstRef() { return *(unsigned long*)0; }
-	const float& FunctionRetFloatConstRef() { return *(float*)0; }
-	const double& FunctionRetDoubleConstRef() { return *(double*)0; }
-	const clcpp::int64& FunctionRetConstInt64Ref() { return *(clcpp::int64*)0; }
-	const clcpp::uint64& FunctionRetConstUnsignedInt64Ref() { return *(const clcpp::uint64*)0; }
+    // --- Const References
+    const bool& FunctionRetBoolConstRef()
+    {
+        static bool v;
+        return v;
+    }
+    const char& FunctionRetCharConstRef()
+    {
+        static char v;
+        return v;
+    }
+    const wchar_t& FunctionRetWCharConstRef()
+    {
+        static wchar_t v;
+        return v;
+    }
+    const short& FunctionRetShortConstRef()
+    {
+        static short v;
+        return v;
+    }
+    const int& FunctionRetIntConstRef()
+    {
+        static int v;
+        return v;
+    }
+    const long& FunctionRetLongConstRef()
+    {
+        static long v;
+        return v;
+    }
+    const unsigned char& FunctionRetUnsignedCharConstRef()
+    {
+        static unsigned char v;
+        return v;
+    }
+    const unsigned short& FunctionRetUnsignedShortConstRef()
+    {
+        static unsigned short v;
+        return v;
+    }
+    const unsigned int& FunctionRetUnsignedIntConstRef()
+    {
+        static unsigned int v;
+        return v;
+    }
+    const unsigned long& FunctionRetUnsignedLongConstRef()
+    {
+        static unsigned long v;
+        return v;
+    }
+    const float& FunctionRetFloatConstRef()
+    {
+        static float v;
+        return v;
+    }
+    const double& FunctionRetDoubleConstRef()
+    {
+        static double v;
+        return v;
+    }
+    const clcpp::int64& FunctionRetConstInt64Ref()
+    {
+        static clcpp::int64 v;
+        return v;
+    }
+    const clcpp::uint64& FunctionRetConstUnsignedInt64Ref()
+    {
+        static clcpp::uint64 v;
+        return v;
+    }
 }
 
 

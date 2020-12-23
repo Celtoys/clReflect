@@ -48,9 +48,9 @@ enum ReflectionSpecType
 class ReflectionSpecs
 {
 public:
-	ReflectionSpecs(bool reflect_all, const std::string& spec_log);
+    ReflectionSpecs(const std::string& spec_log);
 
-	void Gather(clang::TranslationUnitDecl* tu_decl);
+    void Gather(clang::TranslationUnitDecl* tu_decl);
 
 	ReflectionSpecType Get(const std::string& name) const;
 
@@ -59,9 +59,7 @@ public:
 private:
 	void AddReflectionSpec(const std::string& symbol, ReflectionSpecType type);
 
-	bool m_ReflectAll;
-
-	typedef std::map<std::string, ReflectionSpecType> ReflectionSpecMap;
+    typedef std::map<std::string, ReflectionSpecType> ReflectionSpecMap;
 	ReflectionSpecMap m_ReflectionSpecs;
 
 	ReflectionSpecContainer::MapType m_ContainerSpecs;

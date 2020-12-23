@@ -29,15 +29,19 @@ namespace clang
 class ASTConsumer
 {
 public:
-	ASTConsumer(clang::ASTContext& context, cldb::Database& db, const ReflectionSpecs& rspecs, const std::string& ast_log);
-	~ASTConsumer();
+    ASTConsumer(cldb::Database& db, const ReflectionSpecs& rspecs, const std::string& ast_log);
 
-	void WalkTranlationUnit(clang::TranslationUnitDecl* tu_decl);
+    void WalkTranlationUnit(clang::ASTContext* ast_context, clang::TranslationUnitDecl* tu_decl);
 
-	cldb::Database& GetDB() { return m_DB; }
-	clang::ASTContext& GetASTContext() { return m_ASTContext; }
-	const ReflectionSpecs& GetReflectionSpecs() { return m_ReflectionSpecs; }
-	clang::PrintingPolicy& GetPrintingPolicy() { return *m_PrintingPolicy; }
+    cldb::Database& GetDB() { return m_DB; }
+    clang::ASTContext& GetASTContext()
+    {
+        return *m_ASTContext;
+    }
+    const ReflectionSpecs& GetReflectionSpecs()
+    {
+        return m_ReflectionSpecs;
+    }
 
 private:
 	void AddDecl(clang::NamedDecl* decl, const std::string& parent_name, const clang::ASTRecordLayout* layout);
@@ -54,11 +58,9 @@ private:
 
 	cldb::Database& m_DB;
 
-	clang::ASTContext& m_ASTContext;
+    clang::ASTContext* m_ASTContext;
 
-	const ReflectionSpecs& m_ReflectionSpecs;
+    const ReflectionSpecs& m_ReflectionSpecs;
 
-	clang::PrintingPolicy* m_PrintingPolicy;
-
-	bool m_AllowReflect;
+    bool m_AllowReflect;
 };
