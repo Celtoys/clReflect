@@ -7,4 +7,4 @@ tr -d '\r' < ../llvm/autoconf/config.guess > tmp.guess
 cp tmp.guess ../llvm/autoconf/config.guess
 rm tmp.guess
 
-cmake -G "Unix Makefiles" ../llvm && make
+cmake -G "Unix Makefiles" -DLLVM_ENABLE_PROJECTS="clang" ../llvm/llvm && make
