@@ -28,6 +28,3 @@ config.LibOptions.NoDefaultLibs = True
 # Build the library
 clutil = CppBuild(env, [ "." ], "clutil.lib")
 clutil.hpp_files += Glob("../../inc/clutl", "*.h")
-
-pibfile = "clReflectUtil.pibfile"
-VCGenerateProjectFile(env, "clReflectUtil", clutil.cpp_files + clutil.hpp_files + [ pibfile ], clutil.output, replacements = [ ("..\\..\\inc\\clutl", "Public API\\clutl") ], pibfile = pibfile)

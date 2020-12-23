@@ -44,6 +44,3 @@ config.LinkOptions.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
 
 # Build the executable
 clmerge = CppBuild(env, [ "." ], "clmerge.exe", libs)
-
-pibfile = "clReflectMerge.pibfile"
-VCGenerateProjectFile(env, "clReflectMerge", clmerge.cpp_files + clmerge.hpp_files + [ pibfile ], clmerge.output, pibfile = pibfile)

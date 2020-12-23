@@ -25,6 +25,3 @@ config.CPPOptions.CRTType = MSVCPlatform.VCCRTType.MT_DLL
 
 # Build the library
 clcore = CppBuild(env, [ "." ], "clcore.lib")
-
-pibfile = "clReflectCore.pibfile"
-VCGenerateProjectFile(env, "clReflectCore", clcore.cpp_files + clcore.hpp_files + [ pibfile ], clcore.output, pibfile = pibfile)

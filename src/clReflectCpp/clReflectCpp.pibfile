@@ -28,6 +28,3 @@ config.LibOptions.NoDefaultLibs = True
 # Build the library
 clcpp = CppBuild(env, [ "." ], "clcpp.lib")
 clcpp.hpp_files += Glob("../../inc/clcpp", "*.h")
-
-pibfile = "clReflectCpp.pibfile"
-VCGenerateProjectFile(env, "clReflectCpp", clcpp.cpp_files + clcpp.hpp_files + [ pibfile ], clcpp.output, replacements = [ ("..\\..\\inc\\clcpp", "Public API\\clcpp") ], pibfile = pibfile)

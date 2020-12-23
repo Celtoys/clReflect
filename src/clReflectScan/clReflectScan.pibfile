@@ -89,6 +89,3 @@ config.LinkOptions.Subsystem = MSVCPlatform.VCSubsystem.CONSOLE
 
 # Build the executable
 clscan = CppBuild(env, [ "." ], "clscan.exe", libs)
-
-pibfile = "clReflectScan.pibfile"
-VCGenerateProjectFile(env, "clReflectScan", clscan.cpp_files + clscan.hpp_files + [ pibfile ], clscan.output, pibfile = pibfile)
