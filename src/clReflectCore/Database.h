@@ -125,7 +125,9 @@ namespace cldb
 			KIND_NAMESPACE,
 		};
 
-		// Constructors for default construction and complete construction
+                Primitive() {}
+
+                // Constructors for default construction and complete construction
 		Primitive(Kind k)
 			: kind(k)
 		{

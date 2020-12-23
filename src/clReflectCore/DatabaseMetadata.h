@@ -14,50 +14,6 @@
 
 #include "Database.h"
 
-
-#ifdef __GNUC__
-
-	// The offsetof macro of g++ version does not work with pointer to members.
-	//
-	// First g++ would expand
-	// offset(type, field)
-	// macro into:
-	// ((size_t)(&((type *)0)-> field))
-	//
-	// Note that with g++ whose version is later than 3.5, offsetof would actually
-	// expand to __builtin_offsetof, the behaviour remains the same
-	//
-	// So if we feed in data like following(example taken from line 86
-	// in DatabaseMetadata.h):
-	//
-	// offsetof(CONTAINER_TYPE, *member)
-	// It would expand to:
-	// ((size_t)(&((CONTAINER_TYPE *)0)-> *member))
-	//
-	// First, with default macro expansion rule, g++ would add a space between
-	// "->" and "*member", causing "->*" operator to become two operators, thus
-	// breaking our code
-	// Second, even if we eliminate the space some how, according to c++ operator
-	// precedence, & is first evaluated on ((CONTAINER_TYPE *)0), then the result
-	// is evaluated on ->*member, which is the wrong order.
-	//
-	// Considering all these cases, we provide a custom offsetof macro here which
-	// is compatible with pointer to member given our requirements.
-	//
-	// TODO: We could've moved this into clReflectCore, but this macro is used in
-	// clReflectCore, clReflectExport as well as clReflectTest. And currently we do
-	// not have a header in clReflectCore for containing this sort of util macros(like
-	// the Core.h here). Anyway, we may move this when we have such a header.
-	#define POINTER_OFFSETOF(type, field) ((size_t)(&(((type *)0)->##field)))
-
-#else
-
-	// For MSVC, we can just use official offsetof macro
-	#define POINTER_OFFSETOF(type, field) offsetof(type, field)
-
-#endif  /* __GNUC__ */
-
-
 namespace cldb
 {
 	namespace meta
@@ -93,8 +49,26 @@ namespace cldb
 			static const int packed_size = sizeof(cldb::u32);
 		};
 
+        template <typename FieldType, typename ObjectType>
+        struct OffsetOfImpl
+        {
+            static ObjectType object;
+            static constexpr size_t offset(FieldType ObjectType::*member)
+            {
+                return size_t(&(OffsetOfImpl<FieldType, ObjectType>::object.*member)) -
+                       size_t(&OffsetOfImpl<FieldType, ObjectType>::object);
+            }
+        };
+        template <typename FieldType, typename ObjectType>
+        ObjectType OffsetOfImpl<FieldType, ObjectType>::object;
 
-		//
+        template <typename FieldType, typename ObjectType>
+        inline constexpr size_t OffsetOf(FieldType ObjectType::*member)
+        {
+            return OffsetOfImpl<FieldType, ObjectType>::offset(member);
+        }
+
+        //
 		// Description of a field within a database type
 		//
 		struct DatabaseField
@@ -109,9 +83,9 @@ namespace cldb
 			{
 				type = FieldTypeTraits<FIELD_TYPE>::type;
 				count = 1;
-				offset = POINTER_OFFSETOF(CONTAINER_TYPE, *member);
+                offset = OffsetOf(member);
 
-				size = sizeof(FIELD_TYPE);
+                size = sizeof(FIELD_TYPE);
 				packed_size = FieldTypeTraits<FIELD_TYPE>::packed_size;
 
 				// This will only get calculated when the field is added to a type
@@ -123,8 +97,8 @@ namespace cldb
 			{
 				type = FieldTypeTraits<FIELD_TYPE>::type;
 				count = N;
-				offset = POINTER_OFFSETOF(CONTAINER_TYPE, *member);
-				size = sizeof(FIELD_TYPE);
+                offset = OffsetOf(member);
+                size = sizeof(FIELD_TYPE);
 				packed_size = FieldTypeTraits<FIELD_TYPE>::packed_size;
 
 				// This will only get calculated when the field is added to a type

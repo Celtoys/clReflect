@@ -545,7 +545,9 @@ namespace clcpp
 			KIND_NAMESPACE,
 		};
 
-		Primitive(Kind k);
+                Primitive() {}
+
+                Primitive(Kind k);
 
 		Kind kind;
 		Name name;
