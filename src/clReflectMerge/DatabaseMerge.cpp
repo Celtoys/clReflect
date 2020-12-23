@@ -18,57 +18,69 @@ namespace
 {
 	const char* g_FilenameMergingDB = 0;
 
-
-	void CheckClassMergeFailure(const cldb::Class& class_a, const cldb::Class& class_b)
-	{
-		const char* class_name = class_a.name.text.c_str();
-
-		// This has to be the same class included multiple times in different translation units
-		// Ensure that their descriptions match up as best as possible at this point
-		if (class_a.size != cldb::Class::FORWARD_DECL_SIZE &&
-			class_b.size != cldb::Class::FORWARD_DECL_SIZE &&
-			class_a.size != class_b.size)
-			LOG(main, WARNING, "Class %s differs in size during merge (source file %s)\n", class_name, g_FilenameMergingDB);
-	}
-
-
 	template <typename TYPE>
-	void MergeUniques(
-		cldb::Database& dest_db,
-		const cldb::Database& src_db,
-		void (*check_failure)(const TYPE&, const TYPE&) = 0)
+	void MergeUniques(cldb::Database &dest_db, const cldb::Database &src_db)
 	{
-		cldb::DBMap<TYPE>& dest_map = dest_db.GetDBMap<TYPE>();
-		const cldb::DBMap<TYPE>& src_store = src_db.GetDBMap<TYPE>();
+		cldb::DBMap<TYPE> &dest_map = dest_db.GetDBMap<TYPE>();
+		const cldb::DBMap<TYPE> &src_store = src_db.GetDBMap<TYPE>();
 
 		// Add primitives that don't already exist for primitives where the symbol name can't be overloaded
-		for (typename cldb::DBMap<TYPE>::const_iterator src = src_store.begin();
-			src != src_store.end();
-			++src)
+		for (typename cldb::DBMap<TYPE>::const_iterator src = src_store.begin(); src != src_store.end(); ++src)
 		{
 			typename cldb::DBMap<TYPE>::const_iterator dest = dest_map.find(src->first);
 			if (dest == dest_map.end())
+			{
 				dest_db.AddPrimitive(src->second);
-
-			else if (check_failure != 0)
-				check_failure(src->second, dest->second);
+			}
 		}
 	}
 
+    void MergeClasses(cldb::Database& dest_db, const cldb::Database& src_db)
+    {
+        cldb::DBMap<cldb::Class> &dest_map = dest_db.GetDBMap<cldb::Class>();
+        const cldb::DBMap<cldb::Class>& src_map = src_db.GetDBMap<cldb::Class>();
 
-	template <typename TYPE>
-	void MergeOverloads(
-		cldb::Database& dest_db,
-		const cldb::Database& src_db)
-	{
+        // Addclasses that don't already exist for classes where the symbol name can't be overloaded
+		for (typename cldb::DBMap<cldb::Class>::const_iterator src = src_map.begin(); src != src_map.end(); ++src)
+		{
+			typename cldb::DBMap<cldb::Class>::iterator dest = dest_map.find(src->first);
+
+			if (dest == dest_map.end())
+			{
+				dest_db.AddPrimitive(src->second);
+			}
+			else
+			{
+				const cldb::Class &dst_class = dest->second;
+				const cldb::Class &src_class = src->second;
+
+				// Ensure forward-declarations down't overwrite defined classes
+				if (dst_class.size == cldb::Class::FORWARD_DECL_SIZE && src_class.size != cldb::Class::FORWARD_DECL_SIZE)
+				{
+					dest->second = src_class;
+				}
+
+				// This has to be the same class included multiple times in different translation units
+				// Ensure that their descriptions match up as best as possible at this point
+				else if (dst_class.size != cldb::Class::FORWARD_DECL_SIZE && src_class.size != cldb::Class::FORWARD_DECL_SIZE &&
+						dst_class.size != src_class.size)
+				{
+					LOG(main, WARNING, "Class %s differs in size during merge (source file %s)\n",
+						dst_class.name.text.c_str(), g_FilenameMergingDB);
+				}
+			}
+		}
+    }
+
+    template <typename TYPE>
+    void MergeOverloads(cldb::Database& dest_db, const cldb::Database& src_db)
+    {
 		cldb::DBMap<TYPE>& dest_map = dest_db.GetDBMap<TYPE>();
 		const cldb::DBMap<TYPE>& src_map = src_db.GetDBMap<TYPE>();
 
 		// Unconditionally add primitives that don't already exist
-		for (typename cldb::DBMap<TYPE>::const_iterator src = src_map.begin();
-			src != src_map.end();
-			++src)
-		{
+        for (typename cldb::DBMap<TYPE>::const_iterator src = src_map.begin(); src != src_map.end(); ++src)
+        {
 			typename cldb::DBMap<TYPE>::const_iterator dest = dest_map.find(src->first);
 			if (dest == dest_map.end())
 			{
@@ -115,9 +127,9 @@ void MergeDatabases(cldb::Database& dest_db, const cldb::Database& src_db, const
 	// Class/template type symbol names can't be overloaded but extra checks can be used to make sure
 	// the same primitive isn't violating the One Definition Rule
 	MergeUniques<cldb::TemplateType>(dest_db, src_db);
-	MergeUniques<cldb::Class>(dest_db, src_db, CheckClassMergeFailure);
+        MergeClasses(dest_db, src_db);
 
-	// Add enum constants as if they are overloadable
+        // Add enum constants as if they are overloadable
 	// NOTE: Technically don't need to do this enum constants are scoped. However, I might change
 	// that in future so this code will become useful.
 	MergeOverloads<cldb::EnumConstant>(dest_db, src_db);
