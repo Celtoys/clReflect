@@ -17,12 +17,11 @@
 #include "clReflectCore/DatabaseBinarySerialiser.h"
 
 #include "clang/AST/ASTContext.h"
-
 #include "clang/Tooling/CommonOptionsParser.h"
-#include "clang/Tooling/Tooling.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "clang/Tooling/CommonOptionsParser.h"
+#include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
+#include <llvm/Support/TargetSelect.h>
 
 #include <stdio.h>
 #include <time.h>
@@ -129,7 +128,11 @@ int main(int argc, const char* argv[])
 		return 1;
 	}
 
-	// Create the clang tool that parses the input files
+    // Initialize inline ASM parsing
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmParser();
+
+    // Create the clang tool that parses the input files
 	clang::tooling::ClangTool tool(options_parser->getCompilations(), options_parser->getSourcePathList());
 
 	float prologue = clock();

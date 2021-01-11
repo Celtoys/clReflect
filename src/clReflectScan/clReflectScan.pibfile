@@ -30,18 +30,31 @@ disabled_warnings = [
 ]
 
 libs = [
+    "LLVMAnalysis.lib",
     "LLVMBinaryFormat.lib",
     "LLVMBitStreamReader.lib",
+    "LLVMCFGuard.lib",
+    "LLVMCodeGen.lib",
     "LLVMCore.lib",
     "LLVMDemangle.lib",
     "LLVMFrontendOpenMP.lib",
+    "LLVMGlobalISel.lib",
     "LLVMMC.lib",
+    "LLVMMCDisassembler.lib",
     "LLVMMCParser.lib",
     "LLVMOption.lib",
     "LLVMProfileData.lib",
     "LLVMRemarks.lib",
+    "LLVMScalarOpts.lib",
+    "LLVMSelectionDAG.lib",
     "LLVMSupport.lib",
-    
+    "LLVMTarget.lib",
+    "LLVMTransformUtils.lib",
+    "LLVMX86AsmParser.lib",
+    "LLVMX86CodeGen.lib",
+    "LLVMX86Desc.lib",
+    "LLVMX86Info.lib",
+
     "clangAST.lib",
     "clangAnalysis.lib",
     "clangBasic.lib",
