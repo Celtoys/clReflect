@@ -113,7 +113,15 @@ namespace
 				strcat(type_name, " ");
 			}
 
-			else
+            // Clang will rewrite any MS extension types it finds in the AST as their correct C++ equivalents.
+            // UnDecorateSymbolName will preserve these, however.
+            // We need to ensure we are using the same type names as the Clang AST to provide a valid match.
+            else if (!strcmp(token, "__int64"))
+            {
+                strcat(type_name, "long long");
+            }
+
+            else
 			{
 				// First check to see if this token is to be ignored
 				bool skip = false;
