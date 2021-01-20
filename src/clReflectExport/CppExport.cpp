@@ -770,17 +770,17 @@ namespace
 		{
 			const clcpp::Attribute& attribute = *attributes[i];
 			if (attribute.name.hash == transient_hash)
-				bits |= clcpp::FlagAttribute::TRANSIENT;
-			else if (attribute.name.hash == pre_save_hash)
-				bits |= clcpp::FlagAttribute::PRE_SAVE;
-			else if (attribute.name.hash == post_load_hash)
-				bits |= clcpp::FlagAttribute::POST_LOAD;
-			else if (startswith(attribute.name.text, "load_"))
-				bits |= clcpp::FlagAttribute::CUSTOM_LOAD;
-			else if (startswith(attribute.name.text, "save_"))
-				bits |= clcpp::FlagAttribute::CUSTOM_SAVE;
+                bits |= attrFlag_Transient;
+            else if (attribute.name.hash == pre_save_hash)
+                bits |= attrFlag_PreSave;
+            else if (attribute.name.hash == post_load_hash)
+                bits |= attrFlag_PostLoad;
+            else if (startswith(attribute.name.text, "load_"))
+                bits |= attrFlag_CustomLoad;
+            else if (startswith(attribute.name.text, "save_"))
+                bits |= attrFlag_CustomSave;
 
-			// A custom flag allows the programmer to manually specify values to OR in
+            // A custom flag allows the programmer to manually specify values to OR in
 			else if (attribute.name.hash == custom_flag)
 			{
 				if (attribute.kind == clcpp::Primitive::KIND_INT_ATTRIBUTE)

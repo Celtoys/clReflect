@@ -294,9 +294,13 @@ namespace
 		}
 
 		if (writer.IsInitialised())
+		{
 			ParserElements(ctx, t, &writer, writer.m_ValueType, writer.m_ValueIsPtr ? clcpp::Qualifier::POINTER : clcpp::Qualifier::VALUE);
+		}
 		else
+		{
 			ParserElements(ctx, t, 0, 0, clcpp::Qualifier::VALUE);
+		}
 
 		Expect(ctx, t, clutl::JSON_TOKEN_RBRACKET);
 	}
@@ -316,7 +320,7 @@ namespace
 			const clcpp::Class* class_type = type->AsClass();
 
 			// Does this class have a custom load function?
-			if (class_type->flag_attributes & clcpp::FlagAttribute::CUSTOM_LOAD)
+            if (class_type->flag_attributes & attrFlag_CustomLoad)
 			{
 				// Look it up
 				static unsigned int hash = clcpp::internal::HashNameString("load_json");
@@ -399,7 +403,7 @@ namespace
 			field = FindFieldsRecursive(class_type, field_hash);
 
 			// Don't load values for transient fields
-			if (field && (field->flag_attributes & clcpp::FlagAttribute::TRANSIENT))
+            if (field && (field->flag_attributes & attrFlag_Transient))
 				field = 0;
 		}
 
@@ -430,7 +434,9 @@ namespace
 	void ParserObject(clutl::JSONContext& ctx, clutl::JSONToken& t, char* object, const clcpp::Type* type)
 	{
 		if (!Expect(ctx, t, clutl::JSON_TOKEN_LBRACE).IsValid())
+		{
 			return;
+		}
 
 		// Empty object?
 		if (t.type == clutl::JSON_TOKEN_RBRACE)
@@ -446,14 +452,16 @@ namespace
 			const clcpp::Class* class_type = type->AsClass();
 
 			// Run any attached post-load functions
-			if (class_type->flag_attributes & clcpp::FlagAttribute::POST_LOAD)
+            if ((class_type->flag_attributes & attrFlag_PostLoad) != 0)
 			{
 				static unsigned int hash = clcpp::internal::HashNameString("post_load");
 				if (const clcpp::Attribute* attr = clcpp::FindPrimitive(class_type->attributes, hash))
 				{
 					const clcpp::PrimitiveAttribute* name_attr = attr->AsPrimitiveAttribute();
-					if (name_attr->primitive != 0)
-						clcpp::CallFunction((clcpp::Function*)name_attr->primitive, object);
+					if (name_attr->primitive != nullptr)
+					{
+						clcpp::CallFunction(static_cast<const clcpp::Function*>(name_attr->primitive), object);
+					}
 				}
 			}
 		}
@@ -878,7 +886,7 @@ namespace
 				{
 					// Skip transient fields
 					const clcpp::Field* field = fields[j];
-					if (field->flag_attributes & clcpp::FlagAttribute::TRANSIENT)
+                    if (field->flag_attributes & attrFlag_Transient)
 						continue;
 
 					if (field->offset > last_field_offset && field->offset < lowest_field_offset)
@@ -905,7 +913,7 @@ namespace
 			{
 				// Skip transient fields
 				const clcpp::Field* field = fields[i];
-				if (field->flag_attributes & clcpp::FlagAttribute::TRANSIENT)
+                if (field->flag_attributes & attrFlag_Transient)
 					continue;
 
 				SaveClassField(out, object, field, ptr_save, flags, field_written);
@@ -932,7 +940,7 @@ namespace
 	void SaveClass(clutl::WriteBuffer& out, const char* object, const clcpp::Class* class_type, clutl::IPtrSave* ptr_save, unsigned int flags)
 	{
 		// Is there a custom loading function for this class?
-		if (class_type->flag_attributes & clcpp::FlagAttribute::CUSTOM_SAVE)
+        if (class_type->flag_attributes & attrFlag_CustomSave)
 		{
 			// Look it up
 			static unsigned int hash = clcpp::internal::HashNameString("save_json");
@@ -965,7 +973,7 @@ namespace
 		}
 
 		// Call any attached pre-save function
-		if (class_type->flag_attributes & clcpp::FlagAttribute::PRE_SAVE)
+        if (class_type->flag_attributes & attrFlag_PreSave)
 		{
 			static unsigned int hash = clcpp::internal::HashNameString("pre_save");
 			if (const clcpp::Attribute* attr = clcpp::FindPrimitive(class_type->attributes, hash))

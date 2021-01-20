@@ -65,6 +65,10 @@
 
 #endif // CLCPP_USING_MSVC
 
+//
+// Indirection for stringify so that macro values work
+//
+#define CLCPP_STRINGIFY(...) #__VA_ARGS__
 
 //
 // Generate a unique symbol with the given prefix
@@ -242,11 +246,15 @@ inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
 			CLCPP_UNIQUE(container_info) { };																\
 		}
 
-
-	#define clcpp_attr(...) __attribute__((annotate("attr:" #__VA_ARGS__)))
-	#define clcpp_push_attr(...) struct CLCPP_UNIQUE(push_attr) { } __attribute__((annotate(#__VA_ARGS__)));
-	#define clcpp_pop_attr(...) struct CLCPP_UNIQUE(pop_attr) { } __attribute__((annotate(#__VA_ARGS__)));
-
+    #define clcpp_attr(...) __attribute__((annotate("attr:" CLCPP_STRINGIFY(__VA_ARGS__))))
+    #define clcpp_push_attr(...) \
+        struct CLCPP_UNIQUE(push_attr) \
+        { \
+        } __attribute__((annotate(CLCPP_STRINGIFY(__VA_ARGS__))));
+    #define clcpp_pop_attr(...) \
+        struct CLCPP_UNIQUE(pop_attr) \
+        { \
+        } __attribute__((annotate(CLCPP_STRINGIFY(__VA_ARGS__))));
 
 	//
 	// Clang does not need to see these
@@ -303,6 +311,20 @@ inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
 
 
 #endif
+
+// "transient" - These primitives are ignored during serialisation
+#define attrFlag_Transient	0x00000001
+
+// If an attribute starts with "load_" or "save_" then these flags are set to indicate there
+// are custom loading functions assigned
+#define attrFlag_CustomLoad 0x00000002
+#define attrFlag_CustomSave 0x00000004
+
+// Function to call before saving an object, specified with "pre_save" attribute
+#define attrFlag_PreSave	0x00000008
+
+// Function to call after loading an object, specified with "post_load" attribute
+#define attrFlag_PostLoad	0x00000010
 
 
 
@@ -579,35 +601,18 @@ namespace clcpp
 	//
 	// Representations of the different types of attribute available
 	//
+	// Flag attributes are always stored in an array of Attribute pointers. Checking
+	// to see if an attribute is applied to a primitive involves searching the array
+	// looking for the attribute by hash name.
+	//
+	// For flag attributes that are referenced so often that such a search becomes a
+	// performance issue, they are also stored as bit flags in a 32-bit value.
+	//
+	//
 	struct clcpp_attr(reflect_part) FlagAttribute : public Attribute
 	{
 		static const Kind KIND = KIND_FLAG_ATTRIBUTE;
 		FlagAttribute() : Attribute(KIND) { }
-
-		//
-		// Flag attributes are always stored in an array of Attribute pointers. Checking
-		// to see if an attribute is applied to a primitive involves searching the array
-		// looking for the attribute by hash name.
-		//
-		// For flag attributes that are referenced so often that such a search becomes a
-		// performance issue, they are also stored as bit flags in a 32-bit value.
-		//
-		enum
-		{
-			// "transient" - These primitives are ignored during serialisation
-			TRANSIENT		= 0x01,
-
-			// If an attribute starts with "load_" or "save_" then these flags are set to indicate there
-			// are custom loading functions assigned
-			CUSTOM_LOAD		= 0x02,
-			CUSTOM_SAVE		= 0x04,
-
-			// Function to call before saving an object, specified with "pre_save" attribute
-			PRE_SAVE		= 0x08,
-
-			// Function to call after loading an object, specified with "post_load" attribute
-			POST_LOAD		= 0x10,
-		};
 	};
 	struct clcpp_attr(reflect_part) IntAttribute : public Attribute
 	{

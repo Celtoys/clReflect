@@ -227,8 +227,10 @@ namespace
 
 	void SaveClassField(clutl::WriteBuffer& out, const char* object, const clcpp::Field* field)
 	{
-		if ((field->flag_attributes & clcpp::FlagAttribute::TRANSIENT) != 0)
+        	if ((field->flag_attributes & attrFlag_Transient) != 0)
+		{
 			return;
+		}
 
 		ChunkHeaderWriter header_writer(out, field->type->name.hash, field->name.hash);
 
@@ -416,7 +418,7 @@ namespace
 		// Read the header and skip the chunk if the field doesn't exist or its destination is transient
 		ChunkHeader header(in);
 		const clcpp::Field* field = clcpp::FindPrimitive(class_type->fields, header.name_hash);
-		if (field == 0 || (field->flag_attributes & clcpp::FlagAttribute::TRANSIENT) != 0)
+        if (field == nullptr || (field->flag_attributes & attrFlag_Transient) != 0)
 		{
 			in.SeekRel(header.data_size);
 			return;
