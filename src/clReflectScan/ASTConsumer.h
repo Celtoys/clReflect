@@ -11,20 +11,17 @@
 
 #include "clReflectCore/Database.h"
 
-
 class ReflectionSpecs;
-
 
 namespace clang
 {
-	class ASTContext;
-	class ASTRecordLayout;
-	class NamedDecl;
-	class TranslationUnitDecl;
-	class QualType;
-	struct PrintingPolicy;
+    class ASTContext;
+    class ASTRecordLayout;
+    class NamedDecl;
+    class TranslationUnitDecl;
+    class QualType;
+    struct PrintingPolicy;
 }
-
 
 class ASTConsumer
 {
@@ -33,7 +30,10 @@ public:
 
     void WalkTranlationUnit(clang::ASTContext* ast_context, clang::TranslationUnitDecl* tu_decl);
 
-    cldb::Database& GetDB() { return m_DB; }
+    cldb::Database& GetDB()
+    {
+        return m_DB;
+    }
     clang::ASTContext& GetASTContext()
     {
         return *m_ASTContext;
@@ -44,19 +44,21 @@ public:
     }
 
 private:
-	void AddDecl(clang::NamedDecl* decl, const std::string& parent_name, const clang::ASTRecordLayout* layout);
-	void AddNamespaceDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
-	void AddClassDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
-	void AddEnumDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
-	void AddFunctionDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
-	void AddMethodDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
-	void AddFieldDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name, const clang::ASTRecordLayout* layout);
-	void AddClassTemplateDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
-	void AddContainedDecls(clang::NamedDecl* decl, const std::string& parent_name, const clang::ASTRecordLayout* layout);
+    void AddDecl(clang::NamedDecl* decl, const std::string& parent_name, const clang::ASTRecordLayout* layout);
+    void AddNamespaceDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
+    void AddClassDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
+    void AddEnumDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
+    void AddFunctionDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
+    void AddMethodDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
+    void AddFieldDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name,
+                      const clang::ASTRecordLayout* layout);
+    void AddClassTemplateDecl(clang::NamedDecl* decl, const std::string& name, const std::string& parent_name);
+    void AddContainedDecls(clang::NamedDecl* decl, const std::string& parent_name, const clang::ASTRecordLayout* layout);
 
-	void MakeFunction(clang::NamedDecl* decl, const std::string& function_name, const std::string& parent_name, std::vector<cldb::Field>& parameters);
+    void MakeFunction(clang::NamedDecl* decl, const std::string& function_name, const std::string& parent_name,
+                      std::vector<cldb::Field>& parameters);
 
-	cldb::Database& m_DB;
+    cldb::Database& m_DB;
 
     clang::ASTContext* m_ASTContext;
 

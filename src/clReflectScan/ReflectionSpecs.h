@@ -11,39 +11,35 @@
 
 #pragma once
 
-
 #include <map>
 #include <string>
 
-
 namespace clang
 {
-	class TranslationUnitDecl;
+    class TranslationUnitDecl;
 }
 
 namespace cldb
 {
-	class Database;
+    class Database;
 }
-
 
 // Info for reflecting a container
 struct ReflectionSpecContainer
 {
-	typedef std::map<std::string, ReflectionSpecContainer> MapType;
-	std::string read_iterator_type;
-	std::string write_iterator_type;
-	bool has_key;
+    typedef std::map<std::string, ReflectionSpecContainer> MapType;
+    std::string read_iterator_type;
+    std::string write_iterator_type;
+    bool has_key;
 };
 
 enum ReflectionSpecType
 {
-	RST_None,
-	RST_Full,
-	RST_Partial,
-	RST_Container
+    RST_None,
+    RST_Full,
+    RST_Partial,
+    RST_Container
 };
-
 
 class ReflectionSpecs
 {
@@ -52,15 +48,18 @@ public:
 
     void Gather(clang::TranslationUnitDecl* tu_decl);
 
-	ReflectionSpecType Get(const std::string& name) const;
+    ReflectionSpecType Get(const std::string& name) const;
 
-	const ReflectionSpecContainer::MapType& GetContainerSpecs() const { return m_ContainerSpecs; }
+    const ReflectionSpecContainer::MapType& GetContainerSpecs() const
+    {
+        return m_ContainerSpecs;
+    }
 
 private:
-	void AddReflectionSpec(const std::string& symbol, ReflectionSpecType type);
+    void AddReflectionSpec(const std::string& symbol, ReflectionSpecType type);
 
     typedef std::map<std::string, ReflectionSpecType> ReflectionSpecMap;
-	ReflectionSpecMap m_ReflectionSpecs;
+    ReflectionSpecMap m_ReflectionSpecs;
 
-	ReflectionSpecContainer::MapType m_ContainerSpecs;
+    ReflectionSpecContainer::MapType m_ContainerSpecs;
 };
