@@ -469,37 +469,41 @@ namespace
 		default: break;
 		}
 
-		// Reflection attributes are stored as clang annotation attributes
-		clang::specific_attr_iterator<clang::AnnotateAttr> i = decl->specific_attr_begin<clang::AnnotateAttr>();
-		if (i == decl->specific_attr_end<clang::AnnotateAttr>())
-			return result;
+        // Walk all annotation attributes attached to this decl
+        std::vector<std::pair<clang::AnnotateAttr*, cldb::Attribute*>> attributes;
+        for (clang::AnnotateAttr* annotate_attr : decl->specific_attrs<clang::AnnotateAttr>())
+        {
+            // Get the annotation text
+            llvm::StringRef attribute_text = annotate_attr->getAnnotation();
 
-		// Get the annotation text
-		clang::AnnotateAttr* attribute = *i;
-		llvm::StringRef attribute_text = attribute->getAnnotation();
+            // Figure out what operations to apply to the attributes
+            if (attribute_text.startswith("attr:"))
+            {
+                attribute_text = attribute_text.substr(sizeof("attr"));
+            }
 
-		// Figure out what operations to apply to the attributes
-		if (attribute_text.startswith("attr:"))
-			attribute_text = attribute_text.substr(sizeof("attr"));
+            // Decipher the source location of the attribute for error reporting
+            clang::SourceLocation location = annotate_attr->getLocation();
+            clang::PresumedLoc presumed_loc = srcmgr.getPresumedLoc(location);
+            const char* filename = presumed_loc.getFilename();
+            int line = presumed_loc.getLine();
 
-		// Decipher the source location of the attribute for error reporting
-		clang::SourceLocation location = attribute->getLocation();
-		clang::PresumedLoc presumed_loc = srcmgr.getPresumedLoc(location);
-		const char* filename = presumed_loc.getFilename();
-		int line = presumed_loc.getLine();
+            // Parse all attributes in the text
+            for (cldb::Attribute* attribute : ::ParseAttributes(db, attribute_text.str().c_str(), filename, line))
+            {
+                attributes.push_back({annotate_attr, attribute});
+            }
+        }
 
-		// Parse all attributes in the text
-		std::vector<cldb::Attribute*> attributes = ::ParseAttributes(db, attribute_text.str().c_str(), filename, line);
-
-		// Look for a reflection spec as the first attribute
+        // Look for a reflection spec as the first attribute
 		size_t attr_search_start = 0;
 		static unsigned int reflect_hash = clcpp::internal::HashNameString("reflect");
 		static unsigned int reflect_part_hash = clcpp::internal::HashNameString("reflect_part");
 		static unsigned int noreflect_hash = clcpp::internal::HashNameString("noreflect");
 		if (attributes.size())
 		{
-			unsigned int name_hash = attributes[0]->name.hash;
-			if (name_hash == reflect_hash)
+            unsigned int name_hash = attributes[0].second->name.hash;
+            if (name_hash == reflect_hash)
 				result = PAR_Reflect;
 			else if (name_hash == reflect_part_hash)
 				result = PAR_ReflectPartial;
@@ -517,15 +521,19 @@ namespace
 		{
 			for (size_t i = attr_search_start; i < attributes.size(); i++)
 			{
-				cldb::Attribute* attribute = attributes[i];
+                cldb::Attribute* attribute = attributes[i].second;
 
-				if (result != PAR_Normal)
+                if (result != PAR_Normal)
 				{
 					// Check that no attribute after the initial one contains a reflection spec
-					unsigned int name_hash = attributes[i]->name.hash;
-					if (name_hash == reflect_hash || name_hash == reflect_part_hash || name_hash == noreflect_hash)
-						Status().Print(location, srcmgr, va("'%s' attribute unexpected and ignored", attributes[i]->name.text.c_str()));
-				}
+                    clang::SourceLocation location = attributes[i].first->getLocation();
+                    unsigned int name_hash = attribute->name.hash;
+                    if (name_hash == reflect_hash || name_hash == reflect_part_hash || name_hash == noreflect_hash)
+                    {
+                        Status().Print(location, srcmgr,
+                                       va("'%s' attribute unexpected and ignored", attribute->name.text.c_str()));
+                    }
+                }
 
 				// Add the attributes to the database, parented to the calling declaration
 				attribute->parent = db.GetName(parent.c_str());
@@ -554,9 +562,11 @@ namespace
 
 		// Delete the allocated attributes
 		for (size_t i = 0; i < attributes.size(); i++)
-			delete attributes[i];
+        {
+            delete attributes[i].second;
+        }
 
-		return result;
+        return result;
 	}
 }
 
