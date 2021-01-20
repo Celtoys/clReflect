@@ -763,8 +763,9 @@ namespace
 		static unsigned int pre_save_hash = clcpp::internal::HashNameString("pre_save");
 		static unsigned int post_load_hash = clcpp::internal::HashNameString("post_load");
 		static unsigned int custom_flag = clcpp::internal::HashNameString("custom_flag");
+        static unsigned int replicate_hash = clcpp::internal::HashNameString("replicate");
 
-		// Merge all detected common flags
+        // Merge all detected common flags
 		unsigned int bits = 0;
 		for (unsigned int i = 0; i < attributes.size; i++)
 		{
@@ -775,6 +776,8 @@ namespace
                 bits |= attrFlag_PreSave;
             else if (attribute.name.hash == post_load_hash)
                 bits |= attrFlag_PostLoad;
+            else if (attribute.name.hash == replicate_hash)
+                bits |= attrFlag_Replicate;
             else if (startswith(attribute.name.text, "load_"))
                 bits |= attrFlag_CustomLoad;
             else if (startswith(attribute.name.text, "save_"))

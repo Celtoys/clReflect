@@ -326,7 +326,8 @@ inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
 // Function to call after loading an object, specified with "post_load" attribute
 #define attrFlag_PostLoad	0x00000010
 
-
+// Mark classes or fields to be network-replicated
+#define attrFlag_Replicate 0x00000020
 
 // ===============================================================================
 //                Core Functionality Required by the Runtime C++ API
