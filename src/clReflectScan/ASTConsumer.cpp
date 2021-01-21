@@ -922,17 +922,6 @@ void ASTConsumer::AddClassTemplateDecl(clang::NamedDecl* decl, const std::string
             return;
         }
 
-        // Then verify that each argument is of the correct type
-        for (clang::TemplateParameterList::const_iterator i = parameters->begin(); i != parameters->end(); ++i)
-        {
-            if (llvm::dyn_cast<clang::TemplateTypeParmDecl>(*i) == 0)
-            {
-                Status().Print(template_decl->getLocation(), m_ASTContext->getSourceManager(),
-                               va("Unsupported template argument type for '%s'", name.c_str()));
-                return;
-            }
-        }
-
         m_DB.AddPrimitive(cldb::Template(m_DB.GetName(name.c_str()), m_DB.GetName(parent_name.c_str())));
         LOG(ast, INFO, "template %s\n", name.c_str());
     }
