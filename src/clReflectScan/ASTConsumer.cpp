@@ -980,18 +980,16 @@ void ASTConsumer::MakeFunction(clang::NamedDecl* decl, const std::string& functi
     {
         clang::ParmVarDecl* param_decl = *i;
 
-        // Check for unnamed parameters
+        // Auto name unnamed parameters
         llvm::StringRef param_name = param_decl->getName();
-        if (param_name.empty())
+        std::string param_name_str = param_name.str();
+        if (param_name_str.empty())
         {
-            Status().Print(function_decl->getLocation(), m_ASTContext->getSourceManager(),
-                           va("Unnamed function parameters not supported - skipping reflection of '%s'", function_name.c_str()));
-            return;
+            param_name_str = std::string("unnamed") + itoa(index);
         }
 
         // Collect a list of constructed parameters in case evaluating one of them fails
         cldb::Field parameter;
-        std::string param_name_str = param_name.str();
         status = MakeField(*this, param_decl->getType(), param_name_str.c_str(), function_name, index++, parameter, 0);
         if (status.HasWarnings())
         {
