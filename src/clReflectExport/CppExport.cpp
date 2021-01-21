@@ -1200,22 +1200,32 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
     // Construct schemas for all memory-mapped clcpp types
 
     PtrSchema& schema_database =
-        relocator.AddSchema<clcpp::internal::DatabaseMem>()(&clcpp::internal::DatabaseMem::name_text_data)(
-            &clcpp::internal::DatabaseMem::names, array_ofs)(&clcpp::internal::DatabaseMem::types, array_ofs)(
-            &clcpp::internal::DatabaseMem::enum_constants, array_ofs)(&clcpp::internal::DatabaseMem::enums, array_ofs)(
-            &clcpp::internal::DatabaseMem::fields, array_ofs)(&clcpp::internal::DatabaseMem::functions, array_ofs)(
-            &clcpp::internal::DatabaseMem::classes, array_ofs)(&clcpp::internal::DatabaseMem::template_types, array_ofs)(
-            &clcpp::internal::DatabaseMem::templates, array_ofs)(&clcpp::internal::DatabaseMem::namespaces, array_ofs)(
-            &clcpp::internal::DatabaseMem::text_attribute_data)(&clcpp::internal::DatabaseMem::flag_attributes, array_ofs)(
-            &clcpp::internal::DatabaseMem::int_attributes, array_ofs)(&clcpp::internal::DatabaseMem::float_attributes, array_ofs)(
-            &clcpp::internal::DatabaseMem::primitive_attributes, array_ofs)(
-            &clcpp::internal::DatabaseMem::text_attributes, array_ofs)(&clcpp::internal::DatabaseMem::type_primitives, array_ofs)(
-            &clcpp::internal::DatabaseMem::container_infos, array_ofs)(&clcpp::Namespace::namespaces,
-                                                                       array_ofs + global_namespace_offset)(
-            &clcpp::Namespace::types, array_ofs + global_namespace_offset)(&clcpp::Namespace::enums,
-                                                                           array_ofs + global_namespace_offset)(
-            &clcpp::Namespace::classes, array_ofs + global_namespace_offset)(&clcpp::Namespace::functions,
-                                                                             array_ofs + global_namespace_offset);
+        relocator.AddSchema<clcpp::internal::DatabaseMem>()
+        (&clcpp::internal::DatabaseMem::name_text_data)
+        (&clcpp::internal::DatabaseMem::names, array_ofs)
+        (&clcpp::internal::DatabaseMem::types, array_ofs)
+        (&clcpp::internal::DatabaseMem::enum_constants, array_ofs)
+        (&clcpp::internal::DatabaseMem::enums, array_ofs)
+        (&clcpp::internal::DatabaseMem::fields, array_ofs)
+        (&clcpp::internal::DatabaseMem::functions, array_ofs)
+        (&clcpp::internal::DatabaseMem::classes, array_ofs)
+        (&clcpp::internal::DatabaseMem::template_types, array_ofs)
+        (&clcpp::internal::DatabaseMem::templates, array_ofs)
+        (&clcpp::internal::DatabaseMem::namespaces, array_ofs)
+        (&clcpp::internal::DatabaseMem::text_attribute_data)
+        (&clcpp::internal::DatabaseMem::flag_attributes, array_ofs)
+        (&clcpp::internal::DatabaseMem::int_attributes, array_ofs)
+        (&clcpp::internal::DatabaseMem::float_attributes, array_ofs)
+        (&clcpp::internal::DatabaseMem::primitive_attributes, array_ofs)
+        (&clcpp::internal::DatabaseMem::text_attributes, array_ofs)
+        (&clcpp::internal::DatabaseMem::type_primitives, array_ofs)
+        (&clcpp::internal::DatabaseMem::container_infos, array_ofs)
+        (&clcpp::Namespace::namespaces, array_ofs + global_namespace_offset)
+        (&clcpp::Namespace::types, array_ofs + global_namespace_offset)
+        (&clcpp::Namespace::enums, array_ofs + global_namespace_offset)
+        (&clcpp::Namespace::classes, array_ofs + global_namespace_offset)
+        (&clcpp::Namespace::functions, array_ofs + global_namespace_offset)
+        (&clcpp::Namespace::templates, array_ofs + global_namespace_offset);
 
     PtrSchema& schema_name = relocator.AddSchema<clcpp::Name>()(&clcpp::Name::text);
 
