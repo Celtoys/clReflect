@@ -12,19 +12,16 @@
 
 #pragma once
 
-
 #include <clcpp/clcpp.h>
-
 
 namespace cldb
 {
-	class Database;
+    class Database;
 }
-
 
 struct MapFileParser
 {
 public:
-	MapFileParser(cldb::Database& db, const char* filename);
-	clcpp::pointer_type m_PreferredLoadAddress;
+    MapFileParser(cldb::Database& db, const char* filename);
+    clcpp::pointer_type m_PreferredLoadAddress;
 };

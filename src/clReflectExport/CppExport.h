@@ -11,37 +11,33 @@
 
 #pragma once
 
-
 #include "StackAllocator.h"
 #include <map>
 #include <vector>
 
-
 namespace cldb
 {
-	class Database;
+    class Database;
 }
-
 
 struct CppExport
 {
-	CppExport(clcpp::pointer_type function_base_address)
-		: allocator(5 * 1024 * 1024)	// 5MB should do for now
-		, function_base_address(function_base_address)
-		, db(0)
-	{
-	}
+    CppExport(clcpp::pointer_type function_base_address)
+        : allocator(5 * 1024 * 1024) // 5MB should do for now
+        , function_base_address(function_base_address)
+        , db(0)
+    {
+    }
 
-	StackAllocator allocator;
+    StackAllocator allocator;
 
-	clcpp::pointer_type function_base_address;
-	clcpp::internal::DatabaseMem* db;
+    clcpp::pointer_type function_base_address;
+    clcpp::internal::DatabaseMem* db;
 
-	// Hash of names for easier debugging
-	typedef std::map<unsigned int, const char*> NameMap;
-	NameMap name_map;
+    // Hash of names for easier debugging
+    typedef std::map<unsigned int, const char*> NameMap;
+    NameMap name_map;
 };
-
 
 bool BuildCppExport(const cldb::Database& db, CppExport& cppexp);
 void SaveCppExport(CppExport& cppexport, const char* filename);
