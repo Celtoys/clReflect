@@ -599,6 +599,7 @@ void ASTConsumer::WalkTranlationUnit(clang::ASTContext* ast_context, clang::Tran
         case (clang::Decl::CXXRecord):
         case (clang::Decl::Function):
         case (clang::Decl::Enum):
+        case (clang::Decl::ClassTemplate):
             AddDecl(named_decl, "", 0);
             break;
         default:
