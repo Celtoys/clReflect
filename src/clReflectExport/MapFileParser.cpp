@@ -12,9 +12,11 @@
 
 #if defined(CLCPP_USING_MSVC)
 
-    #define WIN32_LEAN_AND_MEAN
-    #include <DbgHelp.h>
+// clang-format off
+	#define WIN32_LEAN_AND_MEAN
     #include <windows.h>
+    #include <DbgHelp.h>
+// clang-format on
 
 #else
 
