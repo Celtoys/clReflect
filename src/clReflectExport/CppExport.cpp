@@ -813,42 +813,44 @@ namespace
 		static unsigned int custom_flag = clcpp::internal::HashNameString("custom_flag");
 		static unsigned int custom_flag_inherit = clcpp::internal::HashNameString("custom_flag_inherit");
 
-		// Collect all custom attribute bits and set the mask determining inheritance
-		unsigned int custom_bits = 0, custom_bits_mask = 0;
-		for (unsigned int i = 0; i < class_prim.attributes.size; i++)
+        // Collect all custom attribute bits and set the mask determining inheritance
+        unsigned int custom_flags = 0, custom_flags_mask = 0;
+        for (unsigned int i = 0; i < class_prim.attributes.size; i++)
 		{
 			const clcpp::Attribute& attribute = *class_prim.attributes[i];
 			if (attribute.name.hash == custom_flag && attribute.kind == clcpp::Primitive::KIND_INT_ATTRIBUTE)
-				custom_bits |= ((clcpp::IntAttribute&)attribute).value;
-			else if (attribute.name.hash == custom_flag_inherit)
-				custom_bits_mask = 0xFFFFFFFF;
-		}
+                custom_flags |= ((clcpp::IntAttribute&)attribute).value;
+            else if (attribute.name.hash == custom_flag_inherit)
+                custom_flags_mask = 0xFFFFFFFF;
+        }
 
-		return custom_bits & custom_bits_mask;
-	}
+        // Merge custom flags with pre-defined flags that should also be inherited
+        unsigned int inherited_flag_mask = attrFlag_Transient | attrFlag_Replicate;
+        return (class_prim.flag_attributes & inherited_flag_mask) | (custom_flags & custom_flags_mask);
+    }
 
 
 	unsigned int InheritFlagAttributes(clcpp::Type* primitive)
 	{
-		unsigned int custom_bits = 0;
+        unsigned int inherited_flags = 0;
 
-		// Depth-first, pull custom bits up from base classes
+        // Depth-first, pull custom bits up from base classes
 		for (unsigned int i = 0; i < primitive->base_types.size; i++)
 		{
 			clcpp::Type* base_type = const_cast<clcpp::Type*>(primitive->base_types[i]);
-			custom_bits |= InheritFlagAttributes(base_type);
-		}
+            inherited_flags |= InheritFlagAttributes(base_type);
+        }
 
 		// Merge in the bits of this class
 		if (primitive->kind == clcpp::Primitive::KIND_CLASS)
 		{
 			clcpp::Class& class_prim = *(clcpp::Class*)primitive;
-			custom_bits |= GetInheritedFlagAttributes(class_prim);
-			class_prim.flag_attributes |= custom_bits;
-		}
+            inherited_flags |= GetInheritedFlagAttributes(class_prim);
+            class_prim.flag_attributes |= inherited_flags;
+        }
 
-		return custom_bits;
-	}
+        return inherited_flags;
+    }
 
 
 	void InheritFlagAttributes(CppExport& cppexp)
