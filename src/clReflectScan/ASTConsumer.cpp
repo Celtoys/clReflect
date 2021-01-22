@@ -434,6 +434,28 @@ namespace
         }
     }
 
+    bool IsForwardDeclaration(clang::NamedDecl* decl)
+    {
+        // Must be a struct/union/class
+        clang::CXXRecordDecl* record_decl = llvm::dyn_cast<clang::CXXRecordDecl>(decl);
+        if (record_decl == nullptr)
+        {
+            return false;
+        }
+
+        // See AddClassDecl comments for this behaviour
+        if (record_decl->isThisDeclarationADefinition() != clang::VarDecl::DeclarationOnly)
+        {
+            return false;
+        }
+        if (!record_decl->isFreeStanding())
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     enum ParseAttributesResult
     {
         PAR_Normal,
@@ -560,6 +582,19 @@ namespace
         for (size_t i = 0; i < attributes.size(); i++)
         {
             delete attributes[i].second;
+        }
+
+        // TEMPORARY: If you add a pointer to a forward-declared type *without* marking that forward declaration as reflected,
+        // the field itself won't get reflected. This is a huge burden that can cause bugs when one has a non-forward-declared
+        // view of the type and another does not.
+        //
+        // I intend to fix this by changing how types are reflected: all types encountered are partially reflected by default.
+        // Any other types need the reflect attribute to be fully reflected. This is a big change, however.
+        //
+        // For now, this specific case can be fixed by partially reflecting all forward-declarations.
+        if (IsForwardDeclaration(decl))
+        {
+            result = PAR_ReflectPartial;
         }
 
         return result;
