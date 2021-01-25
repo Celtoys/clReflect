@@ -487,6 +487,15 @@ namespace
             break;
         }
 
+        // The underlying class declaration for templates contains the attached attributes
+        if (clang::ClassTemplateDecl* template_decl = llvm::dyn_cast<clang::ClassTemplateDecl>(decl))
+        {
+            if (template_decl->getTemplatedDecl() != nullptr)
+            {
+                decl = template_decl->getTemplatedDecl();
+            }
+        }
+
         // Walk all annotation attributes attached to this decl
         std::vector<std::pair<clang::AnnotateAttr*, cldb::Attribute*>> attributes;
         for (clang::AnnotateAttr* annotate_attr : decl->specific_attrs<clang::AnnotateAttr>())
