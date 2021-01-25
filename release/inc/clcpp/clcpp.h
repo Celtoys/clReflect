@@ -94,6 +94,34 @@
 #endif
 
 
+#if defined(CLCPP_DLL) && !defined(__clcpp_parse__)
+	#if defined (CLCPP_PLATFORM_WINDOWS)
+		#if defined (CLCPP_IMPL)
+			#define CLCPP_API __declspec(dllexport)
+		#else
+			#define CLCPP_API __declspec(dllimport)
+		#endif
+	#elif defined (CLCPP_PLATFORM_POSIX)
+		#if defined (CLCPP_IMPL)
+			#define CLCPP_API __attribute__((visibility("default")))
+		#else
+			#define CLCPP_API
+		#endif
+	#endif
+#else
+	#define CLCPP_API
+#endif
+
+
+#if defined(CLCPP_PLATFORM_WINDOWS)
+
+	// Disable warning C4251: 'clcpp::Type::base_types' : struct 'clcpp::CArray<const clcpp::Type *>' needs to have dll-interface to be used by clients of struct 'clcpp::Type'
+	// ...and many more warnings like it...
+	#pragma warning(disable: 4251)
+
+#endif
+
+
 namespace clcpp
 {
     // Defining cross platform size type and pointer type
@@ -343,7 +371,7 @@ namespace clcpp
 		//
 		// Trivial assert
 		//
-		void Assert(bool expression);
+		CLCPP_API void Assert(bool expression);
 
 
 		//
@@ -364,19 +392,19 @@ namespace clcpp
 		//
 		// Hashes the specified data into a 32-bit value
 		//
-		unsigned HashData(const void* data, int length, unsigned int seed = 0);
+		CLCPP_API unsigned int HashData(const void* data, int length, unsigned int seed = 0);
 
 
 		//
 		// Hashes the full string into a 32-bit value
 		//
-		unsigned int HashNameString(const char* name_string, unsigned int seed = 0);
+		CLCPP_API unsigned int HashNameString(const char* name_string, unsigned int seed = 0);
 
 
 		//
 		// Combines two hashes by using the first one as a seed and hashing the second one
 		//
-		unsigned int MixHashes(unsigned int a, unsigned int b);
+		CLCPP_API unsigned int MixHashes(unsigned int a, unsigned int b);
 	}
 
 
@@ -395,7 +423,8 @@ namespace clcpp
 	// This is the client version that is stripped of all mutable functionality. It's designed to be
 	// used as part of a memory map, supporting no C++ destructor logic.
 	//
-	template <typename TYPE> struct CArray
+	template <typename TYPE>
+	struct CArray
 	{
 		CArray() : size(0), data(0), allocator(0)
 		{
@@ -467,20 +496,20 @@ namespace clcpp
 		// All primitive arrays are sorted in order of increasing name hash. This will perform an
 		// O(logN) binary search over the array looking for the name you specify.
 		//
-		const Primitive* FindPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash);
+		CLCPP_API const Primitive* FindPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash);
 
 		//
 		// Similar to the previous FindPrimitive, except that it returns a range of matching
 		// primitives - useful for searching primitives with names that can be overloaded.
 		//
-		Range FindOverloadedPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash);
+		CLCPP_API Range FindOverloadedPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash);
 	}
 
 
 	//
 	// A descriptive text name with a unique 32-bit hash value for mapping primitives.
 	//
-	struct clcpp_attr(reflect_part) Name
+	struct CLCPP_API clcpp_attr(reflect_part) Name
 	{
 		Name();
 		bool operator == (const Name& rhs) const { return hash == rhs.hash; }
@@ -494,7 +523,7 @@ namespace clcpp
 	// this stores the qualifier separately. Additionally, the concept of whether
 	// a type is a pointer, reference or not is folded in here as well.
 	//
-	struct clcpp_attr(reflect_part) Qualifier
+	struct CLCPP_API clcpp_attr(reflect_part) Qualifier
 	{
 		enum Operator
 		{
@@ -519,7 +548,7 @@ namespace clcpp
 	//
 	// Description of a reflected container
 	//
-	struct clcpp_attr(reflect_part) ContainerInfo
+	struct CLCPP_API clcpp_attr(reflect_part) ContainerInfo
 	{
 		enum
 		{
@@ -546,7 +575,7 @@ namespace clcpp
 	//
 	// Base class for all types of C++ primitives that are reflected
 	//
-	struct clcpp_attr(reflect_part) Primitive
+	struct CLCPP_API clcpp_attr(reflect_part) Primitive
 	{
 		enum Kind
 		{
@@ -584,7 +613,7 @@ namespace clcpp
 	//
 	// Base attribute type for collecting different attribute types together
 	//
-	struct clcpp_attr(reflect_part) Attribute : public Primitive
+	struct CLCPP_API clcpp_attr(reflect_part) Attribute : public Primitive
 	{
 		static const Kind KIND = KIND_ATTRIBUTE;
 
@@ -645,7 +674,7 @@ namespace clcpp
 	// A basic built-in type that classes/structs can also inherit from
 	// Only one base type is supported until it becomes necessary to do otherwise.
 	//
-	struct clcpp_attr(reflect_part) Type : public Primitive
+	struct CLCPP_API clcpp_attr(reflect_part) Type : public Primitive
 	{
 		static const Kind KIND = KIND_TYPE;
 
@@ -674,7 +703,7 @@ namespace clcpp
 	//
 	// A name/value pair for enumeration constants
 	//
-	struct clcpp_attr(reflect_part) EnumConstant : public Primitive
+	struct CLCPP_API clcpp_attr(reflect_part) EnumConstant : public Primitive
 	{
 		static const Kind KIND = KIND_ENUM_CONSTANT;
 
@@ -687,7 +716,7 @@ namespace clcpp
 	//
 	// A typed enumeration of name/value constant pairs
 	//
-	struct clcpp_attr(reflect_part) Enum : public Type
+	struct CLCPP_API clcpp_attr(reflect_part) Enum : public Type
 	{
 		static const Kind KIND = KIND_ENUM;
 
@@ -705,7 +734,7 @@ namespace clcpp
 	//
 	// Can be either a class/struct field or a function parameter
 	//
-	struct clcpp_attr(reflect_part) Field : public Primitive
+	struct CLCPP_API clcpp_attr(reflect_part) Field : public Primitive
 	{
 		static const Kind KIND = KIND_FIELD;
 
@@ -739,7 +768,7 @@ namespace clcpp
 	// within a class with calling convention __thiscall, the this parameter is explicitly specified
 	// as the first parameter.
 	//
-	struct clcpp_attr(reflect_part) Function : public Primitive
+	struct CLCPP_API clcpp_attr(reflect_part) Function : public Primitive
 	{
 		static const Kind KIND = KIND_FUNCTION;
 
@@ -769,7 +798,7 @@ namespace clcpp
 	// They don't specify the primitives contained within as these can vary between instantiation,
 	// leading to prohibitive memory requirements.
 	//
-	struct clcpp_attr(reflect_part) TemplateType : public Type
+	struct CLCPP_API clcpp_attr(reflect_part) TemplateType : public Type
 	{
 		static const Kind KIND = KIND_TEMPLATE_TYPE;
 
@@ -789,7 +818,7 @@ namespace clcpp
 	// A template is not a type but a record of a template declaration without specified parameters
 	// that instantiations can reference.
 	//
-	struct clcpp_attr(reflect_part) Template : public Primitive
+	struct CLCPP_API clcpp_attr(reflect_part) Template : public Primitive
 	{
 		static const Kind KIND = KIND_TEMPLATE;
 
@@ -803,7 +832,7 @@ namespace clcpp
 	//
 	// Description of a C++ struct or class with containing fields, functions, classes, etc.
 	//
-	struct clcpp_attr(reflect_part) Class : public Type
+	struct CLCPP_API clcpp_attr(reflect_part) Class : public Type
 	{
 		static const Kind KIND = KIND_CLASS;
 
@@ -828,7 +857,7 @@ namespace clcpp
 	//
 	// A C++ namespace containing collections of various other reflected C++ primitives
 	//
-	struct clcpp_attr(reflect_part) Namespace : public Primitive
+	struct CLCPP_API clcpp_attr(reflect_part) Namespace : public Primitive
 	{
 		static const Kind KIND = KIND_NAMESPACE;
 
@@ -865,7 +894,7 @@ namespace clcpp
 	}
 
 
-	class clcpp_attr(reflect_part) Database
+	class CLCPP_API clcpp_attr(reflect_part) Database
 	{
 	public:
 		enum

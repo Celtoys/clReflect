@@ -315,7 +315,7 @@ namespace
 }
 
 
-void clcpp::internal::Assert(bool expression)
+CLCPP_API void clcpp::internal::Assert(bool expression)
 {
 	if (expression == false)
 	{
@@ -337,19 +337,19 @@ void clcpp::internal::Assert(bool expression)
 }
 
 
-unsigned int clcpp::internal::HashData(const void* data, int length, unsigned int seed)
+CLCPP_API unsigned int clcpp::internal::HashData(const void* data, int length, unsigned int seed)
 {
 	return MurmurHash3(data, length, seed);
 }
 
 
-unsigned int clcpp::internal::HashNameString(const char* name_string, unsigned int seed)
+CLCPP_API unsigned int clcpp::internal::HashNameString(const char* name_string, unsigned int seed)
 {
 	return MurmurHash3(name_string, strlen(name_string), seed);
 }
 
 
-unsigned int clcpp::internal::MixHashes(unsigned int a, unsigned int b)
+CLCPP_API unsigned int clcpp::internal::MixHashes(unsigned int a, unsigned int b)
 {
 	return MurmurHash3(&b, sizeof(unsigned int), a);
 }
@@ -362,7 +362,7 @@ clcpp::Range::Range()
 }
 
 
-const clcpp::Primitive* clcpp::internal::FindPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash)
+CLCPP_API const clcpp::Primitive* clcpp::internal::FindPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash)
 {
 	int index = BinarySearch<const Primitive*, const Primitive*, GetPrimitivePtrHash>(primitives, hash);
 	if (index == -1)
@@ -371,7 +371,7 @@ const clcpp::Primitive* clcpp::internal::FindPrimitive(const CArray<const Primit
 }
 
 
-clcpp::Range clcpp::internal::FindOverloadedPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash)
+CLCPP_API clcpp::Range clcpp::internal::FindOverloadedPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash)
 {
 	// Search for the first entry
 	int index = BinarySearch<const Primitive*, const Primitive*, GetPrimitivePtrHash>(primitives, hash);

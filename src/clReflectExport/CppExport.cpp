@@ -806,7 +806,7 @@ namespace
         }
 
         // Merge custom flags with pre-defined flags that should also be inherited
-        unsigned int inherited_flag_mask = attrFlag_Transient | attrFlag_Replicate;
+        unsigned int inherited_flag_mask = attrFlag_Replicate;
         return (class_prim.flag_attributes & inherited_flag_mask) | (custom_flags & custom_flags_mask);
     }
 
