@@ -134,25 +134,25 @@ int main(int argc, const char* argv[])
 
     float prologue = clock();
 
-    // Gather reflection specs for the translation unit
     ReflectionSpecs reflection_specs(ReflectionSpecLog);
-    if (tool.run(NewReflectFrontendActionFactory([&reflection_specs](clang::ASTContext&, clang::TranslationUnitDecl* tu_decl) {
-                     reflection_specs.Gather(tu_decl);
-                 }).get()) != 0)
-    {
-        return 1;
-    }
-
-    float specs = clock();
-
-    // On the second pass, build the reflection database
     cldb::Database db;
-    db.AddBaseTypePrimitives();
     ASTConsumer ast_consumer(db, reflection_specs, ASTLog);
-    if (tool.run(
-            NewReflectFrontendActionFactory([&ast_consumer](clang::ASTContext& context, clang::TranslationUnitDecl* tu_decl) {
-                ast_consumer.WalkTranlationUnit(&context, tu_decl);
-            }).get()) != 0)
+
+    float parsing, specs;
+
+    if (tool.run(NewReflectFrontendActionFactory([&](clang::ASTContext& context, clang::TranslationUnitDecl* tu_decl) {
+                    // Measures parsing and creation of the AST
+                    parsing = clock();
+
+                    // Gather reflection specs for the translation unit
+                    reflection_specs.Gather(tu_decl);
+
+                    specs = clock();
+
+                    // On the second pass, build the reflection database
+                    db.AddBaseTypePrimitives();
+                    ast_consumer.WalkTranlationUnit(&context, tu_decl);
+                }).get()) != 0)
     {
         return 1;
     }
@@ -179,7 +179,8 @@ int main(int argc, const char* argv[])
     if (Timing)
     {
         printf("Prologue:   %.3f\n", (prologue - start) / CLOCKS_PER_SEC);
-        printf("Specs:      %.3f\n", (specs - prologue) / CLOCKS_PER_SEC);
+        printf("Parsing:    %.3f\n", (parsing - prologue) / CLOCKS_PER_SEC);
+        printf("Specs:      %.3f\n", (specs - parsing) / CLOCKS_PER_SEC);
         printf("Building:   %.3f\n", (build - specs) / CLOCKS_PER_SEC);
         printf("Database:   %.3f\n", (end - build) / CLOCKS_PER_SEC);
         printf("Total time: %.3f\n", (end - start) / CLOCKS_PER_SEC);
