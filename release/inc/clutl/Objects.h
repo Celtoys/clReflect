@@ -183,13 +183,6 @@ namespace clobj
 	};
 
 
-	// Disable clang warning about rvalue references being a C++11 extension
-	#ifdef __clang__
-	#pragma clang push
-	#pragma clang diagnostic ignored "-Wc++11-extensions"
-	#endif
-
-
 	//
 	// Use this to create instances of types that derive from Object. It does 4 things:
 	//
@@ -311,9 +304,4 @@ namespace clobj
 		unsigned int m_UniqueID;
 		ObjectGroup* m_Group;
 	};
-
-
-	#ifdef __clang__
-	#pragma clang push
-	#endif
 }
