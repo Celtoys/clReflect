@@ -738,6 +738,8 @@ namespace clcpp
 
 		Enum();
 
+		const char* GetValueName(int value) const;
+
 		// All sorted by name
 		CArray<const EnumConstant*> constants;
 		CArray<const Attribute*> attributes;
@@ -983,4 +985,17 @@ namespace clcpp
 	//
 	template <typename TYPE> unsigned int GetTypeNameHash();
 	template <typename TYPE> const Type* GetType();
+
+
+	//
+	// Map any reflected enum value to its string name
+	//
+	template <typename EnumValueType>
+	const char* GetEnumValueName(EnumValueType value)
+	{
+		const clcpp::Type* type = clcpp::GetType<EnumValueType>();
+		if (type->kind == clcpp::Type::KIND_ENUM)
+			return type->AsEnum()->GetValueName((int)value);
+		return 0;
+	}
 }

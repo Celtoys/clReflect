@@ -531,6 +531,20 @@ clcpp::Enum::Enum()
 }
 
 
+const char* clcpp::Enum::GetValueName(int value) const
+{
+	// Linear search for a matching constant value
+	for (unsigned int i = 0; i < constants.size; i++)
+	{
+		const clcpp::EnumConstant* constant = constants[i];
+		if (constant->value == value)
+			return constant->name.text;
+	}
+
+	return 0;
+}
+
+
 clcpp::Field::Field()
 	: Primitive(KIND)
 	, type(0)
