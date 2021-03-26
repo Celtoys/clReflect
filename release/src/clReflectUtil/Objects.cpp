@@ -271,12 +271,22 @@ void clobj::ObjectGroup::Resize(bool increase)
 }
 
 
-clobj::ObjectIterator::ObjectIterator(const ObjectGroup* object_group)
-	: m_ObjectGroup(object_group)
+clobj::ObjectIterator::ObjectIterator(const ObjectGroup* object_group, IteratorType type)
+	: m_Type(type)
+	, m_GroupsToScan(0)
+	, m_NbGroupsToScan(0)
+	, m_GroupsCapacity(0)
+	, m_ObjectGroup(object_group)
 	, m_Position(0)
 {
 	// Search for the first non-empty slot
 	ScanForEntry();
+}
+
+
+clobj::ObjectIterator::~ObjectIterator()
+{
+	delete [] m_GroupsToScan;
 }
 
 
@@ -296,14 +306,88 @@ void clobj::ObjectIterator::MoveNext()
 
 bool clobj::ObjectIterator::IsValid() const
 {
-	return m_Position < m_ObjectGroup->m_MaxNbObjects;
+	return m_ObjectGroup != 0;
 }
 
 
 void clobj::ObjectIterator::ScanForEntry()
 {
-	// Search for the next non-empty slot
-	while (m_Position < m_ObjectGroup->m_MaxNbObjects &&
-		m_ObjectGroup->m_NamedObjects[m_Position].object == 0)
-		m_Position++;
+	while (m_ObjectGroup != 0)
+	{
+		// Search for the next non-empty slot
+		bool found_object = false;
+		for ( ; m_Position < m_ObjectGroup->m_MaxNbObjects; m_Position++)
+		{
+			Object* object = m_ObjectGroup->m_NamedObjects[m_Position].object;
+			if (object != 0)
+			{
+				// Add object groups to the scan stack
+				if (m_Type == IteratorRecursive && object->type->kind == clcpp::Primitive::KIND_CLASS)
+				{
+					const clcpp::Class* class_type = (clcpp::Class*)object->type;
+					if ((class_type->flag_attributes & FLAG_ATTR_IS_OBJECT_GROUP) != 0)
+					{
+						// Only add the group for scan if it has objects in it
+						const ObjectGroup* object_group = (ObjectGroup*)object;
+						if (object_group->m_NbObjects > 0)
+							PushGroup(object_group);
+					}
+				}
+
+				found_object = true;
+				break;
+			}
+		}
+
+		if (found_object)
+			break;
+
+		if (m_NbGroupsToScan > 0)
+		{
+			// Nothing found, let's check the next group
+			m_ObjectGroup = PopGroup();
+			m_Position = 0;
+		}
+		else
+		{
+			// No more groups, terminate search
+			m_ObjectGroup = 0;
+		}
+	}
+}
+
+
+void clobj::ObjectIterator::PushGroup(const ObjectGroup* group)
+{
+	// Initial array allocation
+	if (m_GroupsToScan == 0)
+	{
+		m_GroupsCapacity = 4;
+		m_GroupsToScan = new const ObjectGroup*[m_GroupsCapacity];
+		m_NbGroupsToScan = 0;
+	}
+
+	// Array overflow
+	else if (m_NbGroupsToScan == m_GroupsCapacity)
+	{
+		// Allocate a new bigger array and copy over groups
+		unsigned int new_capacity = m_GroupsCapacity * 2;
+		const ObjectGroup** new_groups = new const ObjectGroup*[new_capacity];
+		for (unsigned int i = 0; i < m_GroupsCapacity; i++)
+			new_groups[i] = m_GroupsToScan[i];
+		
+		// Delete the old and swap in the new
+		delete [] m_GroupsToScan;
+		m_GroupsToScan = new_groups;
+		m_GroupsCapacity = new_capacity;
+	}
+
+	m_GroupsToScan[m_NbGroupsToScan++] = group;
+}
+
+
+const clobj::ObjectGroup* clobj::ObjectIterator::PopGroup()
+{
+	clcpp::internal::Assert(m_NbGroupsToScan > 0);
+	return m_GroupsToScan[--m_NbGroupsToScan];
 }

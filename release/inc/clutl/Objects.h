@@ -136,13 +136,24 @@ namespace clobj
 
 
 	//
+	// Object iterator type
+	//
+	enum IteratorType
+	{
+		IteratorSingle,
+		IteratorRecursive,
+	};
+
+
+	//
 	// Iterator for visiting all created objects in an object group.
 	// The iterator is invalidated if objects are added/removed from the group.
 	//
 	class CLCPP_API ObjectIterator
 	{
 	public:
-		ObjectIterator(const ObjectGroup* object_group);
+		ObjectIterator(const ObjectGroup* object_group, IteratorType type = IteratorSingle);
+		~ObjectIterator();
 
 		// Get the current object under iteration
 		Object* GetObject() const;
@@ -155,8 +166,18 @@ namespace clobj
 		bool IsValid() const;
 
 	private:
+		void PushGroup(const ObjectGroup* object_group);
+		const ObjectGroup* PopGroup();
 		void ScanForEntry();
 
+		IteratorType m_Type;
+
+		// On-demand allocated group stack for recursive iteration
+		const ObjectGroup** m_GroupsToScan;
+		unsigned int m_NbGroupsToScan;
+		unsigned int m_GroupsCapacity;
+
+		// Current group/entry under iteration
 		const ObjectGroup* m_ObjectGroup;
 		unsigned int m_Position;
 	};
