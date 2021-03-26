@@ -734,6 +734,23 @@ clcpp::Range clcpp::Database::GetOverloadedFunction(unsigned int hash) const
 	return SearchNeighbours<Function, const Primitive&, GetPrimitiveHash>(m_DatabaseMem->functions, hash, index);
 }
 
+const clcpp::Type** clcpp::Database::GetTypes(unsigned int& out_nb_types) const
+{
+    out_nb_types = m_DatabaseMem->type_primitives.size;
+    return m_DatabaseMem->type_primitives.data;
+}
+
+void clcpp::Database::SetTypes(const clcpp::Type** types, unsigned int nb_types)
+{
+    m_DatabaseMem->type_primitives.data = types;
+    m_DatabaseMem->type_primitives.size = nb_types;
+}
+
+const clcpp::Function* clcpp::Database::GetFunctions(unsigned int& out_nb_functions) const
+{
+    out_nb_functions = m_DatabaseMem->functions.size;
+    return m_DatabaseMem->functions.data;
+}
 
 clcpp::internal::DatabaseMem::DatabaseMem()
 	: function_base_address(0)

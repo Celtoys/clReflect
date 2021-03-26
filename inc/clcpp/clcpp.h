@@ -951,7 +951,12 @@ namespace clcpp
 		const Function* GetFunction(unsigned int hash) const;
 		Range GetOverloadedFunction(unsigned int hash) const;
 
-		bool IsLoaded() const { return m_DatabaseMem != 0; }
+        const clcpp::Type** GetTypes(unsigned int& out_nb_types) const;
+        void SetTypes(const clcpp::Type** types, unsigned int nb_types);
+
+        const clcpp::Function* GetFunctions(unsigned int& out_nb_functions) const;
+
+        bool IsLoaded() const { return m_DatabaseMem != 0; }
 
 	private:
 		// Disable copying
@@ -968,7 +973,7 @@ namespace clcpp
 
 
 // ===============================================================================
-//                  Constant-time, String-less Typeof Operator
+//                                  Utilities
 // ===============================================================================
 
 
