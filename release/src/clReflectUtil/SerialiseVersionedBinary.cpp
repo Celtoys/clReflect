@@ -515,14 +515,14 @@ namespace
 	}
 }
 
-void clutl::SaveVersionedBinary(WriteBuffer& out, const void* object, const clcpp::Type* type)
+CLCPP_API void clutl::SaveVersionedBinary(WriteBuffer& out, const void* object, const clcpp::Type* type)
 {
 	ChunkHeaderWriter header_writer(out, type->name.hash, 0);
 	SaveObject(out, (const char*)object, type);
 }
 
 
-void clutl::LoadVersionedBinary(ReadBuffer& in, void* object, const clcpp::Type* type)
+CLCPP_API void clutl::LoadVersionedBinary(ReadBuffer& in, void* object, const clcpp::Type* type)
 {
 	ChunkHeader header(in);
 	LoadObject(in, (char*)object, type, header.data_size, header.type_hash);

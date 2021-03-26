@@ -1033,14 +1033,14 @@ namespace
 }
 
 
-void clutl::SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, IPtrSave* ptr_save, unsigned int flags)
+CLCPP_API void clutl::SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, IPtrSave* ptr_save, unsigned int flags)
 {
 	SetupTypeDispatchLUT();
 	SaveObject(out, (char*)object, 0, type, ptr_save, flags);
 }
 
 
-void clutl::SaveJSON(WriteBuffer& out, const void* object, const clcpp::Field* field, IPtrSave* ptr_save, unsigned int flags)
+CLCPP_API void clutl::SaveJSON(WriteBuffer& out, const void* object, const clcpp::Field* field, IPtrSave* ptr_save, unsigned int flags)
 {
 	SetupTypeDispatchLUT();
 	SaveFieldObject(out, (char*)object, field, ptr_save, flags);

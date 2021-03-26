@@ -94,7 +94,7 @@ namespace clcpp
 	//
 	// This also stores general information useful at runtime for iterating over a container.
 	//
-	struct Iterator
+	struct CLCPP_API Iterator
 	{
 		Iterator()
 			: m_Count(0)
@@ -121,7 +121,7 @@ namespace clcpp
 	//
 	// Read iterator implementation wrapper
 	//
-	class ReadIterator : public Iterator
+	class CLCPP_API ReadIterator : public Iterator
 	{
 	public:
 		// Construct from a template type
@@ -148,7 +148,7 @@ namespace clcpp
 	//
 	// Write iterator implementation wrapper
 	//
-	class WriteIterator : public Iterator
+	class CLCPP_API WriteIterator : public Iterator
 	{
 	public:
 		WriteIterator();

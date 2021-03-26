@@ -11,11 +11,9 @@
 
 #pragma once
 
-
 #include <clcpp/clcpp.h>
 
-
-clcpp_reflect_part(clutl)
+clcpp_reflect_part(clutl);
 namespace clutl
 {
 	struct Object;
@@ -25,7 +23,7 @@ namespace clutl
 	//
 	// Growable write byte buffer
 	//
-	class WriteBuffer
+	class CLCPP_API attrReflect WriteBuffer
 	{
 	public:
 		WriteBuffer();
@@ -68,7 +66,7 @@ namespace clutl
 	// Lightweight read buffer that uses the contents of a write buffer that must exist
 	// for the life time of this read buffer.
 	//
-	class ReadBuffer
+	class CLCPP_API attrReflect ReadBuffer
 	{
 	public:
 		ReadBuffer(const WriteBuffer& write_buffer);
@@ -105,11 +103,11 @@ namespace clutl
 
 
 	// Binary serialisation
-	void SaveVersionedBinary(WriteBuffer& out, const void* object, const clcpp::Type* type);
-	void LoadVersionedBinary(ReadBuffer& in, void* object, const clcpp::Type* type);
+	CLCPP_API void SaveVersionedBinary(WriteBuffer& out, const void* object, const clcpp::Type* type);
+	CLCPP_API void LoadVersionedBinary(ReadBuffer& in, void* object, const clcpp::Type* type);
 
 
-	struct JSONError
+	struct CLCPP_API JSONError
 	{
 		enum Code
 		{
@@ -169,15 +167,15 @@ namespace clutl
 	};
 
 
-	// JSON serialisation
-	JSONError LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type);
-	JSONError LoadJSON(JSONContext& ctx, void* object, const clcpp::Field* field);
+    // JSON serialisation
+    CLCPP_API JSONError LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type);
+    CLCPP_API JSONError LoadJSON(JSONContext& ctx, void* object, const clcpp::Field* field);
 
 	// Save an object of a given type to the write buffer.
 	// If ptr_save is null, no pointers are serialised.
-	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, IPtrSave* ptr_save, unsigned int flags = 0);
+	CLCPP_API void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, IPtrSave* ptr_save, unsigned int flags = 0);
 
 	// Save an object described by the given field to the write buffer.
 	// If ptr_save is null, no pointers are serialised.
-	void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Field* field, IPtrSave* ptr_save, unsigned int flags = 0);
+	CLCPP_API void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Field* field, IPtrSave* ptr_save, unsigned int flags = 0);
 }

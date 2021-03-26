@@ -40,7 +40,7 @@ namespace clutl
 	// Each parameter is represented as a type/pointer pair, describing how the parameter is passed and
 	// where the parameter is located in memory.
 	//
-	class ParameterData
+	class CLCPP_API ParameterData
 	{
 	public:
 		static const int MAX_NB_FIELDS = 16;
@@ -75,7 +75,7 @@ namespace clutl
 	// When deserialising a chunk of data that has to be passed as to a function as parameters,
 	// this serves as the deserialisation source, allocating and constructing the required objects.
 	//
-	class ParameterObjectCache
+	class CLCPP_API ParameterObjectCache
 	{
 	public:
 		~ParameterObjectCache();
@@ -99,9 +99,9 @@ namespace clutl
 
 
 
-	bool BuildParameterObjectCache_JSON(ParameterObjectCache& poc, const clcpp::Function* function, ReadBuffer& parameter_source);
+	CLCPP_API bool BuildParameterObjectCache_JSON(ParameterObjectCache& poc, const clcpp::Function* function, ReadBuffer& parameter_source);
 
 
-	bool CallFunction_x86_32_msvc_cdecl(const clcpp::Function* function, const ParameterData& parameters);
-	bool CallFunction_x86_32_msvc_thiscall(const clcpp::Function* function, const ParameterData& parameters);
+	CLCPP_API bool CallFunction_x86_32_msvc_cdecl(const clcpp::Function* function, const ParameterData& parameters);
+	CLCPP_API bool CallFunction_x86_32_msvc_thiscall(const clcpp::Function* function, const ParameterData& parameters);
 }

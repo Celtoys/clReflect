@@ -26,7 +26,7 @@ namespace clutl
 	//
 	// Represents a DLL on Windows, the only supported platform, currently
 	//
-	class Module
+	class CLCPP_API Module
 	{
 	public:
 		Module();

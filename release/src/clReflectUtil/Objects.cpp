@@ -26,7 +26,7 @@ struct clobj::ObjectGroup::HashEntry
 };
 
 
-clobj::Object* clobj::CreateObject(const clcpp::Type *type, unsigned int unique_id, ObjectGroup* object_group)
+CLCPP_API clobj::Object* clobj::CreateObject(const clcpp::Type *type, unsigned int unique_id, ObjectGroup* object_group)
 {
 	if (type == 0)
 		return 0;
@@ -66,7 +66,7 @@ clobj::Object* clobj::CreateObject(const clcpp::Type *type, unsigned int unique_
 }
 
 
-void clobj::DestroyObject(const Object* object)
+CLCPP_API void clobj::DestroyObject(const Object* object)
 {
 	// These represent fatal code errors
 	clcpp::internal::Assert(object != 0);
