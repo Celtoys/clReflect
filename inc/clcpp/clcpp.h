@@ -149,24 +149,25 @@ namespace clcpp
     // address, we do not provide ptrdiff_t type here for simplicity. Instead
     // we merge the use cases of ptrdiff_t into size_type(comparing
     // a negative ptrdiff_t type variable with a size_t will be a disaster).
-    #if defined(CLCPP_USING_64_BIT)
-
+	#if defined(CLCPP_SIZE_TYPE)
+		typedef CLCPP_SIZE_TYPE size_type;
+	#elif defined(CLCPP_USING_64_BIT)
 		typedef unsigned long size_type;
-		typedef unsigned long long pointer_type;
-
-		// type field used in printf/scanf
 		#define CLCPP_SIZE_TYPE_HEX_FORMAT "lX"
-		#define CLCPP_POINTER_TYPE_HEX_FORMAT "llX"
-
 	#else
-
 		typedef unsigned int size_type;
-		typedef unsigned int pointer_type;
-
 		#define CLCPP_SIZE_TYPE_HEX_FORMAT "X"
-		#define CLCPP_POINTER_TYPE_HEX_FORMAT "X"
+	#endif
 
-	#endif // CLCPP_USING_64_BIT
+	#if defined(CLCPP_POINTER_TYPE)
+		typedef CLCPP_POINTER_TYPE pointer_type;
+	#elif defined(CLCPP_USING_64_BIT)
+		typedef unsigned long long pointer_type;
+		#define CLCPP_POINTER_TYPE_HEX_FORMAT "llX"
+	#else
+		typedef unsigned int pointer_type;
+		#define CLCPP_POINTER_TYPE_HEX_FORMAT "X"
+	#endif
 
 	// cross platform type definitions
 	#if defined(CLCPP_USING_MSVC)
