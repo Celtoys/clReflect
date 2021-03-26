@@ -15,6 +15,7 @@
 #include <clutl/Serialise.h>
 
 
+clcpp_reflect_part(clutl)
 namespace clutl
 {
 	enum JSONTokenType
@@ -41,7 +42,7 @@ namespace clutl
 
 
 	// Partially reflected so that it can be used for reflecting custom serialisation functions
-	struct clcpp_attr(reflect_part) JSONToken
+	struct CLCPP_API clcpp_attr(reflect_part) JSONToken
 	{
 		JSONToken()
 			: type(JSON_TOKEN_NONE)
@@ -81,7 +82,7 @@ namespace clutl
 	// The main lexer/parser context, for keeping tracking of errors and providing a level of
 	// text parsing abstraction above the data buffer.
 	//
-	class JSONContext
+	class CLCPP_API JSONContext
 	{
 	public:
 		JSONContext(clutl::ReadBuffer& read_buffer);
@@ -128,5 +129,5 @@ namespace clutl
 	};
 
 
-	clutl::JSONToken LexerNextToken(clutl::JSONContext& ctx);
+	CLCPP_API clutl::JSONToken LexerNextToken(clutl::JSONContext& ctx);
 }

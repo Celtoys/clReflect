@@ -34,7 +34,7 @@ namespace clobj
 	//
 	// Base object class for objects that require runtime knowledge of their type
 	//
-	struct clcpp_attr(reflect_part, custom_flag = 0x10000000, custom_flag_inherit) Object
+	struct CLCPP_API clcpp_attr(reflect_part, custom_flag = 0x10000000, custom_flag_inherit) Object
 	{
 		// Default constructor
 		Object()
@@ -91,16 +91,16 @@ namespace clobj
 	//    2. Create a named object.
 	//    3. Create a named object that is also tracked in an object group.
 	//
-	Object* CreateObject(const clcpp::Type* type, unsigned int unique_id = 0, ObjectGroup* object_group = 0);
+	CLCPP_API Object* CreateObject(const clcpp::Type* type, unsigned int unique_id = 0, ObjectGroup* object_group = 0);
 
-	void DestroyObject(const Object* object);
+	CLCPP_API void DestroyObject(const Object* object);
 
 
 	//
 	// Hash table based storage of collections of objects.
 	// The ObjectGroup is an object itself, allowing groups to be nested within other groups.
 	//
-	class clcpp_attr(reflect_part, custom_flag = 0x20000000, custom_flag_inherit) ObjectGroup : public Object
+	class CLCPP_API clcpp_attr(reflect_part, custom_flag = 0x20000000, custom_flag_inherit) ObjectGroup : public Object
 	{
 	public:
 		ObjectGroup();
@@ -136,13 +136,24 @@ namespace clobj
 
 
 	//
+	// Object iterator type
+	//
+	enum IteratorType
+	{
+		IteratorSingle,
+		IteratorRecursive,
+	};
+
+
+	//
 	// Iterator for visiting all created objects in an object group.
 	// The iterator is invalidated if objects are added/removed from the group.
 	//
-	class ObjectIterator
+	class CLCPP_API ObjectIterator
 	{
 	public:
-		ObjectIterator(const ObjectGroup* object_group);
+		ObjectIterator(const ObjectGroup* object_group, IteratorType type = IteratorSingle);
+		~ObjectIterator();
 
 		// Get the current object under iteration
 		Object* GetObject() const;
@@ -155,18 +166,21 @@ namespace clobj
 		bool IsValid() const;
 
 	private:
+		void PushGroup(const ObjectGroup* object_group);
+		const ObjectGroup* PopGroup();
 		void ScanForEntry();
 
+		IteratorType m_Type;
+
+		// On-demand allocated group stack for recursive iteration
+		const ObjectGroup** m_GroupsToScan;
+		unsigned int m_NbGroupsToScan;
+		unsigned int m_GroupsCapacity;
+
+		// Current group/entry under iteration
 		const ObjectGroup* m_ObjectGroup;
 		unsigned int m_Position;
 	};
-
-
-	// Disable clang warning about rvalue references being a C++11 extension
-	#ifdef __clang__
-	#pragma clang push
-	#pragma clang diagnostic ignored "-Wc++11-extensions"
-	#endif
 
 
 	//
@@ -290,9 +304,4 @@ namespace clobj
 		unsigned int m_UniqueID;
 		ObjectGroup* m_Group;
 	};
-
-
-	#ifdef __clang__
-	#pragma clang push
-	#endif
 }

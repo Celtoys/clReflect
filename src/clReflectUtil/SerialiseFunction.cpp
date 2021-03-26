@@ -133,7 +133,7 @@ void clutl::ParameterObjectCache::DeleteObjects()
 }
 
 
-bool clutl::BuildParameterObjectCache_JSON(clutl::ParameterObjectCache& poc, const clcpp::Function* function, clutl::ReadBuffer& parameter_source)
+CLCPP_API bool clutl::BuildParameterObjectCache_JSON(clutl::ParameterObjectCache& poc, const clcpp::Function* function, clutl::ReadBuffer& parameter_source)
 {
 	// Reuse the incoming cache
 	poc.Init(function);
@@ -265,7 +265,7 @@ static bool CallFunction_x86_32_msvc(const clcpp::Function* function, const clut
 }
 
 
-bool clutl::CallFunction_x86_32_msvc_cdecl(const clcpp::Function* function, const ParameterData& parameters)
+CLCPP_API bool clutl::CallFunction_x86_32_msvc_cdecl(const clcpp::Function* function, const ParameterData& parameters)
 {
 	unsigned int nb_params = function->parameters.size;
 	if (nb_params != parameters.GetNbParameters())
@@ -275,7 +275,7 @@ bool clutl::CallFunction_x86_32_msvc_cdecl(const clcpp::Function* function, cons
 }
 
 
-bool clutl::CallFunction_x86_32_msvc_thiscall(const clcpp::Function* function, const clutl::ParameterData& parameters)
+CLCPP_API bool clutl::CallFunction_x86_32_msvc_thiscall(const clcpp::Function* function, const clutl::ParameterData& parameters)
 {
 	unsigned int nb_params = function->parameters.size;
 	if (nb_params != parameters.GetNbParameters())

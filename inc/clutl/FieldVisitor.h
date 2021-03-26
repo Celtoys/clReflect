@@ -11,13 +11,7 @@
 #pragma once
 
 
-namespace clcpp
-{
-	struct Qualifier;
-	struct Type;
-	struct Field;
-	struct Class;
-}
+#include <clcpp/clcpp.h>
 
 
 namespace clutl
@@ -42,5 +36,10 @@ namespace clutl
 
 	// Shallow visitation of all fields in an object, including the entries of any containers, any
 	// base classes and nested data types.
-	void VisitFields(void* object, const clcpp::Type* type, const IFieldVisitor& visitor, VisitFieldType visit_type);
+	CLCPP_API void VisitFields(
+		void* object,
+		const clcpp::Type* type,
+		const IFieldVisitor& visitor,
+		VisitFieldType visit_type,
+		unsigned int stop_flags);
 }

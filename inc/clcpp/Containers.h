@@ -94,7 +94,7 @@ namespace clcpp
 	//
 	// This also stores general information useful at runtime for iterating over a container.
 	//
-	struct Iterator
+	struct CLCPP_API Iterator
 	{
 		Iterator()
 			: m_Count(0)
@@ -121,19 +121,22 @@ namespace clcpp
 	//
 	// Read iterator implementation wrapper
 	//
-	class ReadIterator : public Iterator
+	class CLCPP_API ReadIterator : public Iterator
 	{
 	public:
-		// Construct from a template type
-		ReadIterator(const TemplateType* type, const void* container_object);
+        ReadIterator();
+        ~ReadIterator();
 
-		// Construct from a field; can only be used to construct read iterators for
+        // Construct from a type
+        void Initialise(const Type* type, const void* container_object);
+
+        // Construct from a field; can only be used to construct read iterators for
 		// C-Array fields.
-		ReadIterator(const Field* field, const void* container_object);
+        void Initialise(const Field* field, const void* container_object);
 
-		~ReadIterator();
+		bool IsInitialised() const;
 
-		// Calls directly into the iterator implementation
+        // Calls directly into the iterator implementation
 		ContainerKeyValue GetKeyValue() const
 		{
 			return ((IReadIterator*)m_ImplData)->GetKeyValue();
@@ -142,20 +145,23 @@ namespace clcpp
 		{
 			((IReadIterator*)m_ImplData)->MoveNext();
 		}
-	};
+
+    private:
+        bool m_Initialised;
+    };
 
 
 	//
 	// Write iterator implementation wrapper
 	//
-	class WriteIterator : public Iterator
+	class CLCPP_API WriteIterator : public Iterator
 	{
 	public:
 		WriteIterator();
 		~WriteIterator();
 
-		// Construct from a template type with the number of elements you're going to write
-		void Initialise(const TemplateType* type, void* container_object, int count);
+		// Construct from a type with the number of elements you're going to write
+		void Initialise(const Type* type, void* container_object, int count);
 
 		// Construct from a field; can only be used to construct write iterators for
 		// C-Array fields.

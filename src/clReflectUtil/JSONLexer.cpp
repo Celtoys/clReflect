@@ -439,7 +439,7 @@ void clutl::JSONContext::PopState(clutl::JSONToken& token)
 }
 
 
-clutl::JSONToken clutl::LexerNextToken(clutl::JSONContext& ctx)
+CLCPP_API clutl::JSONToken clutl::LexerNextToken(clutl::JSONContext& ctx)
 {
 start:
 	// Read the current character and return an empty token at stream end
