@@ -8,16 +8,11 @@
 // ===============================================================================
 //
 
-
 #pragma once
-
-
 
 // ===============================================================================
 //                     Base compiler/platform identification
 // ===============================================================================
-
-
 
 //
 // Checking for compiler type
@@ -29,8 +24,7 @@
     #if defined(__APPLE__)
         #define CLCPP_USING_GNUC_MAC
     #endif // __APPLE__
-#endif // _MSC_VER
-
+#endif     // _MSC_VER
 
 //
 // Check for operating systems
@@ -40,7 +34,6 @@
 #elif defined(__linux__) || defined(__APPLE__)
     #define CLCPP_PLATFORM_POSIX
 #endif
-
 
 //
 // Checking if we are running on 32 bit or 64 bit
@@ -73,10 +66,9 @@
 //
 // Generate a unique symbol with the given prefix
 //
-#define CLCPP_JOIN2(x, y) x ## y
+#define CLCPP_JOIN2(x, y) x##y
 #define CLCPP_JOIN(x, y) CLCPP_JOIN2(x, y)
 #define CLCPP_UNIQUE(x) CLCPP_JOIN(x, __COUNTER__)
-
 
 //
 // Compiler-specific attributes
@@ -93,16 +85,15 @@
 
 #endif
 
-
 #if defined(CLCPP_DLL) && !defined(__clcpp_parse__)
-    #if defined (CLCPP_PLATFORM_WINDOWS)
-        #if defined (CLCPP_IMPL)
+    #if defined(CLCPP_PLATFORM_WINDOWS)
+        #if defined(CLCPP_IMPL)
             #define CLCPP_API __declspec(dllexport)
         #else
             #define CLCPP_API __declspec(dllimport)
         #endif
-    #elif defined (CLCPP_PLATFORM_POSIX)
-        #if defined (CLCPP_IMPL)
+    #elif defined(CLCPP_PLATFORM_POSIX)
+        #if defined(CLCPP_IMPL)
             #define CLCPP_API __attribute__((visibility("default")))
         #else
             #define CLCPP_API
@@ -112,78 +103,76 @@
     #define CLCPP_API
 #endif
 
-
 #if defined(CLCPP_PLATFORM_WINDOWS)
 
-    // Disable warning C4251: 'clcpp::Type::base_types' : struct 'clcpp::CArray<const clcpp::Type *>' needs to have dll-interface to be used by clients of struct 'clcpp::Type'
+    // Disable warning C4251: 'clcpp::Type::base_types' : struct 'clcpp::CArray<const clcpp::Type *>' needs to have dll-interface
+    // to be used by clients of struct 'clcpp::Type'
     // ...and many more warnings like it...
-    #pragma warning(disable: 4251)
+    #pragma warning(disable : 4251)
 
 #endif
 
-
 namespace clcpp
 {
-    // Defining cross platform size type and pointer type
-    //
-    // TL;DR version: use pointer_type to holding value casted from a pointer
-    // use size_type to hold memory index, offset, length, etc.
-    //
-    //
-    // size_type is a type that can hold any array index, i.e. size_type
-    // is used to hold size of a memory block. It is also used to hold the
-    // offset of one address from a base address. Remember size_type is an
-    // unsigned type, so it only can hold positive offsets.
-    //
-    // pointer_type is a type for holding address value casting from a pointer.
-    //
-    // In C99, size_type is exactly size_t, and pointer_type is exactly intptr_t
-    // (or uintptr_t), we provide a different name and put it in clcpp here
-    // so as not to pollute default namespace.
-    //
-    // Although the actual types here are the same, the c standard
-    // does not enforce these two data to be the same. So we separate them in case
-    // we met some platforms fof which these two have different type widths.
-    //
-    // Since all offsets used in clReflect are positive offsets from a base
-    // address, we do not provide ptrdiff_t type here for simplicity. Instead
-    // we merge the use cases of ptrdiff_t into size_type(comparing
-    // a negative ptrdiff_t type variable with a size_t will be a disaster).
-    #if defined(CLCPP_SIZE_TYPE)
-        typedef CLCPP_SIZE_TYPE size_type;
-    #elif defined(CLCPP_USING_64_BIT)
-        typedef unsigned long size_type;
-        #define CLCPP_SIZE_TYPE_HEX_FORMAT "lX"
-    #else
-        typedef unsigned int size_type;
-        #define CLCPP_SIZE_TYPE_HEX_FORMAT "X"
-    #endif
+// Defining cross platform size type and pointer type
+//
+// TL;DR version: use pointer_type to holding value casted from a pointer
+// use size_type to hold memory index, offset, length, etc.
+//
+//
+// size_type is a type that can hold any array index, i.e. size_type
+// is used to hold size of a memory block. It is also used to hold the
+// offset of one address from a base address. Remember size_type is an
+// unsigned type, so it only can hold positive offsets.
+//
+// pointer_type is a type for holding address value casting from a pointer.
+//
+// In C99, size_type is exactly size_t, and pointer_type is exactly intptr_t
+// (or uintptr_t), we provide a different name and put it in clcpp here
+// so as not to pollute default namespace.
+//
+// Although the actual types here are the same, the c standard
+// does not enforce these two data to be the same. So we separate them in case
+// we met some platforms fof which these two have different type widths.
+//
+// Since all offsets used in clReflect are positive offsets from a base
+// address, we do not provide ptrdiff_t type here for simplicity. Instead
+// we merge the use cases of ptrdiff_t into size_type(comparing
+// a negative ptrdiff_t type variable with a size_t will be a disaster).
+#if defined(CLCPP_SIZE_TYPE)
+    typedef CLCPP_SIZE_TYPE size_type;
+#elif defined(CLCPP_USING_64_BIT)
+    typedef unsigned long size_type;
+    #define CLCPP_SIZE_TYPE_HEX_FORMAT "lX"
+#else
+    typedef unsigned int size_type;
+    #define CLCPP_SIZE_TYPE_HEX_FORMAT "X"
+#endif
 
-    #if defined(CLCPP_POINTER_TYPE)
-        typedef CLCPP_POINTER_TYPE pointer_type;
-    #elif defined(CLCPP_USING_64_BIT)
-        typedef unsigned long long pointer_type;
-        #define CLCPP_POINTER_TYPE_HEX_FORMAT "llX"
-    #else
-        typedef unsigned int pointer_type;
-        #define CLCPP_POINTER_TYPE_HEX_FORMAT "X"
-    #endif
+#if defined(CLCPP_POINTER_TYPE)
+    typedef CLCPP_POINTER_TYPE pointer_type;
+#elif defined(CLCPP_USING_64_BIT)
+    typedef unsigned long long pointer_type;
+    #define CLCPP_POINTER_TYPE_HEX_FORMAT "llX"
+#else
+    typedef unsigned int pointer_type;
+    #define CLCPP_POINTER_TYPE_HEX_FORMAT "X"
+#endif
 
-    // cross platform type definitions
-    #if defined(CLCPP_USING_MSVC)
+// cross platform type definitions
+#if defined(CLCPP_USING_MSVC)
 
     typedef long long int64;
     typedef unsigned long long uint64;
     typedef unsigned int uint32;
 
-    #else
+#else
 
-        typedef long long int64;
-        typedef unsigned long long uint64;
-        typedef unsigned int uint32;
+    typedef long long int64;
+    typedef unsigned long long uint64;
+    typedef unsigned int uint32;
 
-    #endif // _MSC_VER
-
+#endif // _MSC_VER
 
     namespace internal
     {
@@ -198,29 +187,26 @@ namespace clcpp
         // forwards to its own placement new, treating it like an allocator that returns the wrapped
         // pointer.
         //
-        struct PtrWrapper { };
+        struct PtrWrapper
+        {
+        };
     }
 }
-
 
 //
 // Placement new for the PtrWrapper logic specified above, which required matching delete
 //
-inline void* operator new (clcpp::size_type size, const clcpp::internal::PtrWrapper& p)
+inline void* operator new(clcpp::size_type size, const clcpp::internal::PtrWrapper& p)
 {
     return (void*)&p;
 }
-inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
+inline void operator delete(void*, const clcpp::internal::PtrWrapper&)
 {
 }
-
-
 
 // ===============================================================================
 //              Macros for Tagging C++ Code with Reflection Metadata
 // ===============================================================================
-
-
 
 // This is a customized macro added into clReflectScan, we use this to distinguish a clReflect scanning
 // from a normal compiling using clang as compiler.
@@ -228,51 +214,47 @@ inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
 // compiler on Mac OS X
 #ifdef __clcpp_parse__
 
-
     //
     // Injects a unique structure within the clcpp_internal namespace that only the Clang frontend
     // can see so that it can register the specified symbol for reflection.
     // Can only be called from the global namespace and results in the primitive and any children
     // being fully reflected.
     //
-    #define clcpp_reflect(name)						\
-                                                    \
-        namespace clcpp_internal					\
-        {											\
-            struct									\
-            __attribute__((annotate("full-"#name)))	\
-            CLCPP_UNIQUE(cldb_reflect) { };			\
+    #define clcpp_reflect(name) \
+\
+        namespace clcpp_internal \
+        { \
+            struct __attribute__((annotate("full-" #name))) CLCPP_UNIQUE(cldb_reflect) \
+            { \
+            }; \
         }
-
 
     //
     // Similar to clcpp_reflect with the only difference being that the primitive being specified
     // is being partially reflected. Anything that is a child of that primitive has to be
     // explicitly reflected as a result.
     //
-    #define clcpp_reflect_part(name)				\
-                                                    \
-        namespace clcpp_internal					\
-        {											\
-            struct									\
-            __attribute__((annotate("part-"#name)))	\
-            CLCPP_UNIQUE(cldb_reflect) { };	\
+    #define clcpp_reflect_part(name) \
+\
+        namespace clcpp_internal \
+        { \
+            struct __attribute__((annotate("part-" #name))) CLCPP_UNIQUE(cldb_reflect) \
+            { \
+            }; \
         }
-
 
     //
     // A container must have iterators if you want to use reflection to inspect it. Call this from
     // the global namespace in the neighbourhood of any iterator implementations and it will
     // partially reflect the iterators and allow the parent container to be used with reflection.
     //
-    #define clcpp_container_iterators(container, read_iterator, write_iterator, keyinfo)							\
-        clcpp_reflect_part(read_iterator)																			\
-        clcpp_reflect_part(write_iterator)																			\
-        namespace clcpp_internal																					\
-        {																											\
-            struct																									\
-            __attribute__((annotate("container-" #container "-" #read_iterator "-" #write_iterator "-" #keyinfo)))	\
-            CLCPP_UNIQUE(container_info) { };																\
+    #define clcpp_container_iterators(container, read_iterator, write_iterator, keyinfo) \
+        clcpp_reflect_part(read_iterator) clcpp_reflect_part(write_iterator) namespace clcpp_internal \
+        { \
+            struct __attribute__((annotate("container-" #container "-" #read_iterator "-" #write_iterator "-" #keyinfo))) \
+            CLCPP_UNIQUE(container_info) \
+            { \
+            }; \
         }
 
     #define clcpp_attr(...) __attribute__((annotate("attr:" CLCPP_STRINGIFY(__VA_ARGS__))))
@@ -292,9 +274,7 @@ inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
     #define clcpp_impl_destruct(type)
     #define clcpp_impl_class(type)
 
-
 #else
-
 
     //
     // The main compiler does not need to see these
@@ -306,38 +286,32 @@ inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
     #define clcpp_push_attr(...)
     #define clcpp_pop_attr(...)
 
-
     //
     // Introduces overloaded construction function into the clcpp::internal namespace for the type you
     // specify. This function ends up in the list of methods in the specified type for easy access.
     // This can only be used from global namespace.
     //
-    #define clcpp_impl_construct(type)							\
-        CLCPP_EXPORT void clcppConstructObject(type* object)	\
-        {														\
-            clcpp::internal::CallConstructor(object);			\
+    #define clcpp_impl_construct(type) \
+        CLCPP_EXPORT void clcppConstructObject(type* object) \
+        { \
+            clcpp::internal::CallConstructor(object); \
         }
-
 
     //
     // Introduces overloaded destruction function into the clcpp::internal namespace for the type you
     // specify. This function ends up in the list of methods in the specified type for easy access.
     // This can only be used from global namespace.
     //
-    #define clcpp_impl_destruct(type)							\
-        CLCPP_EXPORT void clcppDestructObject(type* object)		\
-        {														\
-            clcpp::internal::CallDestructor(object);			\
-        }														\
-
+    #define clcpp_impl_destruct(type) \
+        CLCPP_EXPORT void clcppDestructObject(type* object) \
+        { \
+            clcpp::internal::CallDestructor(object); \
+        }
 
     //
     // Introduces construction/destruction functions for the specified type.
     //
-    #define clcpp_impl_class(type)	\
-        clcpp_impl_construct(type)	\
-        clcpp_impl_destruct(type)
-
+    #define clcpp_impl_class(type) clcpp_impl_construct(type) clcpp_impl_destruct(type)
 
 #endif
 
@@ -357,7 +331,7 @@ inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
 #define attrLoadDep clcpp_attr(load_dep)
 
 // "transient" - These primitives are ignored during serialisation
-#define attrFlag_Transient	0x00000001
+#define attrFlag_Transient 0x00000001
 
 // If an attribute starts with "load_" or "save_" then these flags are set to indicate there
 // are custom loading functions assigned
@@ -365,10 +339,10 @@ inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
 #define attrFlag_CustomSave 0x00000004
 
 // Function to call before saving an object, specified with "pre_save" attribute
-#define attrFlag_PreSave	0x00000008
+#define attrFlag_PreSave 0x00000008
 
 // Function to call after loading an object, specified with "post_load" attribute
-#define attrFlag_PostLoad	0x00000010
+#define attrFlag_PostLoad 0x00000010
 
 // Mark classes or fields to be network-replicated
 #define attrFlag_Replicate 0x00000020
@@ -377,9 +351,7 @@ inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
 //                Core Functionality Required by the Runtime C++ API
 // ===============================================================================
 
-
-
-clcpp_reflect_part(clcpp)
+clcpp_reflect_part(clcpp);
 namespace clcpp
 {
     namespace internal
@@ -389,40 +361,37 @@ namespace clcpp
         //
         CLCPP_API void Assert(bool expression);
 
-
         //
         // Functions to abstract the calling of an object's constructor and destructor, for
         // debugging and letting the compiler do the type deduction. Makes it a little easier
         // to use the PtrWrapper abstraction.
         //
-        template <typename TYPE> inline void CallConstructor(TYPE* object)
+        template <typename TYPE>
+        inline void CallConstructor(TYPE* object)
         {
             new (*(PtrWrapper*)object) TYPE;
         }
-        template <typename TYPE> inline void CallDestructor(TYPE* object)
+        template <typename TYPE>
+        inline void CallDestructor(TYPE* object)
         {
             object->~TYPE();
         }
-
 
         //
         // Hashes the specified data into a 32-bit value
         //
         CLCPP_API unsigned int HashData(const void* data, int length, unsigned int seed = 0);
 
-
         //
         // Hashes the full string into a 32-bit value
         //
         CLCPP_API unsigned int HashNameString(const char* name_string, unsigned int seed = 0);
-
 
         //
         // Combines two hashes by using the first one as a seed and hashing the second one
         //
         CLCPP_API unsigned int MixHashes(unsigned int a, unsigned int b);
     }
-
 
     //
     // Simple allocator interface for abstracting allocations made by the runtime.
@@ -433,7 +402,6 @@ namespace clcpp
         virtual void Free(void* ptr) = 0;
     };
 
-
     //
     // Wrapper around a classic C-style array.
     // This is the client version that is stripped of all mutable functionality. It's designed to be
@@ -442,16 +410,19 @@ namespace clcpp
     template <typename TYPE>
     struct CArray
     {
-        CArray() : size(0), data(0), allocator(0)
+        CArray()
+            : size(0)
+            , data(0)
+            , allocator(0)
         {
         }
 
-        TYPE& operator [] (unsigned int index)
+        TYPE& operator[](unsigned int index)
         {
             internal::Assert(index < size);
             return data[index];
         }
-        const TYPE& operator [] (unsigned int index) const
+        const TYPE& operator[](unsigned int index) const
         {
             internal::Assert(index < size);
             return data[index];
@@ -461,7 +432,6 @@ namespace clcpp
         TYPE* data;
         IAllocator* allocator;
     };
-
 
     //
     // A simple file interface that the database loader will use. Clients must
@@ -474,7 +444,6 @@ namespace clcpp
         virtual bool Read(void* dest, size_type size) = 0;
     };
 
-
     //
     // Represents the range [start, end) for iterating over an array
     //
@@ -486,13 +455,9 @@ namespace clcpp
     };
 }
 
-
-
 // ===============================================================================
 //                    Runtime, Read-Only Reflection Database API
 // ===============================================================================
-
-
 
 namespace clcpp
 {
@@ -502,7 +467,6 @@ namespace clcpp
     struct Enum;
     struct TemplateType;
     struct Class;
-
 
     namespace internal
     {
@@ -521,18 +485,19 @@ namespace clcpp
         CLCPP_API Range FindOverloadedPrimitive(const CArray<const Primitive*>& primitives, unsigned int hash);
     }
 
-
     //
     // A descriptive text name with a unique 32-bit hash value for mapping primitives.
     //
     struct CLCPP_API clcpp_attr(reflect_part) Name
     {
         Name();
-        bool operator == (const Name& rhs) const { return hash == rhs.hash; }
+        bool operator==(const Name& rhs) const
+        {
+            return hash == rhs.hash;
+        }
         unsigned int hash;
         const char* text;
     };
-
 
     //
     // Rather than create a new Type for "X" vs "const X", bloating the database,
@@ -551,7 +516,7 @@ namespace clcpp
         Qualifier();
         Qualifier(Operator op, bool is_const);
 
-        bool operator == (const Qualifier& rhs) const
+        bool operator==(const Qualifier& rhs) const
         {
             return op == rhs.op && is_const == rhs.is_const;
         }
@@ -559,7 +524,6 @@ namespace clcpp
         Operator op;
         bool is_const;
     };
-
 
     //
     // Description of a reflected container
@@ -587,7 +551,6 @@ namespace clcpp
         unsigned int count;
     };
 
-
     //
     // Base class for all types of C++ primitives that are reflected
     //
@@ -613,7 +576,9 @@ namespace clcpp
             KIND_NAMESPACE,
         };
 
-        Primitive() {}
+        Primitive()
+        {
+        }
 
         Primitive(Kind k);
 
@@ -624,7 +589,6 @@ namespace clcpp
         // Database this primitive belongs to
         Database* database;
     };
-
 
     //
     // Base attribute type for collecting different attribute types together
@@ -643,7 +607,6 @@ namespace clcpp
         const struct TextAttribute* AsTextAttribute() const;
     };
 
-
     //
     // Representations of the different types of attribute available
     //
@@ -658,33 +621,51 @@ namespace clcpp
     struct clcpp_attr(reflect_part) FlagAttribute : public Attribute
     {
         static const Kind KIND = KIND_FLAG_ATTRIBUTE;
-        FlagAttribute() : Attribute(KIND) { }
+        FlagAttribute()
+            : Attribute(KIND)
+        {
+        }
     };
     struct clcpp_attr(reflect_part) IntAttribute : public Attribute
     {
         static const Kind KIND = KIND_INT_ATTRIBUTE;
-        IntAttribute() : Attribute(KIND), value(0) { }
+        IntAttribute()
+            : Attribute(KIND)
+            , value(0)
+        {
+        }
         int value;
     };
     struct clcpp_attr(reflect_part) FloatAttribute : public Attribute
     {
         static const Kind KIND = KIND_FLOAT_ATTRIBUTE;
-        FloatAttribute() : Attribute(KIND), value(0) { }
+        FloatAttribute()
+            : Attribute(KIND)
+            , value(0)
+        {
+        }
         float value;
     };
     struct clcpp_attr(reflect_part) PrimitiveAttribute : public Attribute
     {
         static const Kind KIND = KIND_PRIMITIVE_ATTRIBUTE;
-        PrimitiveAttribute() : Attribute(KIND), primitive(0) { }
+        PrimitiveAttribute()
+            : Attribute(KIND)
+            , primitive(0)
+        {
+        }
         const Primitive* primitive;
     };
     struct clcpp_attr(reflect_part) TextAttribute : public Attribute
     {
         static const Kind KIND = KIND_TEXT_ATTRIBUTE;
-        TextAttribute() : Attribute(KIND), value(0) { }
+        TextAttribute()
+            : Attribute(KIND)
+            , value(0)
+        {
+        }
         const char* value;
     };
-
 
     //
     // A basic built-in type that classes/structs can also inherit from
@@ -715,7 +696,6 @@ namespace clcpp
         ContainerInfo* ci;
     };
 
-
     //
     // A name/value pair for enumeration constants
     //
@@ -727,7 +707,6 @@ namespace clcpp
 
         int value;
     };
-
 
     //
     // A typed enumeration of name/value constant pairs
@@ -747,7 +726,6 @@ namespace clcpp
         // Bits representing some of the flag attributes in the attribute array
         unsigned int flag_attributes;
     };
-
 
     //
     // Can be either a class/struct field or a function parameter
@@ -780,7 +758,6 @@ namespace clcpp
         ContainerInfo* ci;
     };
 
-
     //
     // A function or class method with a list of parameters and a return value. When this is a method
     // within a class with calling convention __thiscall, the this parameter is explicitly specified
@@ -810,7 +787,6 @@ namespace clcpp
         unsigned int flag_attributes;
     };
 
-
     //
     // Template types are instantiations of templates with fully specified parameters.
     // They don't specify the primitives contained within as these can vary between instantiation,
@@ -831,7 +807,6 @@ namespace clcpp
         bool parameter_ptrs[MAX_NB_ARGS];
     };
 
-
     //
     // A template is not a type but a record of a template declaration without specified parameters
     // that instantiations can reference.
@@ -845,7 +820,6 @@ namespace clcpp
         // All sorted by name
         CArray<const TemplateType*> instances;
     };
-
 
     //
     // Description of a C++ struct or class with containing fields, functions, classes, etc.
@@ -871,7 +845,6 @@ namespace clcpp
         unsigned int flag_attributes;
     };
 
-
     //
     // A C++ namespace containing collections of various other reflected C++ primitives
     //
@@ -889,7 +862,6 @@ namespace clcpp
         CArray<const Function*> functions;
         CArray<const Template*> templates;
     };
-
 
     //
     // Typed wrappers for calling FindPrimitive/FindOverloadedPrimitive on arbitrary arrays
@@ -911,8 +883,7 @@ namespace clcpp
         return internal::FindOverloadedPrimitive((const CArray<const Primitive*>&)primitives, hash);
     }
 
-
-    class CLCPP_API clcpp_attr(reflect_part) Database
+    class CLCPP_API attrReflectPart Database
     {
     public:
         enum
@@ -956,12 +927,15 @@ namespace clcpp
 
         const clcpp::Function* GetFunctions(unsigned int& out_nb_functions) const;
 
-        bool IsLoaded() const { return m_DatabaseMem != 0; }
+        bool IsLoaded() const
+        {
+            return m_DatabaseMem != 0;
+        }
 
     private:
         // Disable copying
         Database(const Database&);
-        Database& operator = (const Database&);
+        Database& operator=(const Database&);
 
         internal::DatabaseMem* m_DatabaseMem;
 
@@ -970,13 +944,9 @@ namespace clcpp
     };
 };
 
-
-
 // ===============================================================================
 //                                  Utilities
 // ===============================================================================
-
-
 
 namespace clcpp
 {
@@ -988,9 +958,10 @@ namespace clcpp
     // THIS IMPLEMENTATION IS CURRENTLY IN DEVELOPMENT AND AWAITING FURTHER DOCUMENTATION
     //
     //
-    template <typename TYPE> unsigned int GetTypeNameHash();
-    template <typename TYPE> const Type* GetType();
-
+    template <typename TYPE>
+    unsigned int GetTypeNameHash();
+    template <typename TYPE>
+    const Type* GetType();
 
     //
     // Map any reflected enum value to its string name
