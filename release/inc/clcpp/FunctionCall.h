@@ -80,7 +80,8 @@ namespace clcpp
 	//
 	// Call a function with one parameter and no return value.
 	//
-	template <typename A0> inline void CallFunction(const Function* function, const A0& a0)
+	template <typename A0>
+	inline void CallFunction(const Function* function, const A0& a0)
 	{
 		internal::Assert(function->parameters.size == 1);
 		typedef void (*CallFunc)(A0);
@@ -93,12 +94,26 @@ namespace clcpp
 	//
 	// Call a function with two parameters and no return value.
 	//
-	template <typename A0, typename A1> inline void CallFunction(const Function* function, const A0& a0, const A1& a1)
+	template <typename A0, typename A1>
+	inline void CallFunction(const Function* function, const A0& a0, const A1& a1)
 	{
 		internal::Assert(function->parameters.size == 2);
 		typedef void (*CallFunc)(A0, A1);
 		CallFunc call_func = (CallFunc)function->address;
 		internal::Assert(call_func != 0);
 		call_func(a0, a1);
+	}
+
+	//
+	// Call a function with three parameters and no return value.
+	//
+	template <typename A0, typename A1, typename A2>
+	inline void CallFunction(const Function* function, const A0& a0, const A1& a1, const A2& a2)
+	{
+		internal::Assert(function->parameters.size == 3);
+		typedef void (*CallFunc)(A0, A1, A2);
+		CallFunc call_func = (CallFunc)function->address;
+		internal::Assert(call_func != 0);
+		call_func(a0, a1, a2);
 	}
 }
