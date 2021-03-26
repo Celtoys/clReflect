@@ -104,48 +104,60 @@ namespace
 
 	struct ContainerChunkHeader
 	{
-		ContainerChunkHeader(clutl::WriteBuffer& out, clcpp::ReadIterator& reader)
-			: count(reader.m_Count)
-			, value_type_hash(reader.m_ValueType->name.hash)
-			, value_type_size(0)
+		static unsigned int PeekCount(const clutl::ReadBuffer& in)
 		{
+			return *(unsigned int*)in.ReadAt(in.GetBytesRead());
+		}
+
+        ContainerChunkHeader(clutl::WriteBuffer& out, clcpp::ReadIterator& reader)
+            : count(reader.m_Count)
+			, keyTypeHash(reader.m_KeyType != nullptr ? reader.m_KeyType->name.hash : 0)
+			, keyTypeSize(reader.m_KeyType != nullptr ? reader.m_KeyType->size : 0)
+            , valueTypeHash(reader.m_ValueType != nullptr ? reader.m_ValueType->name.hash : 0)
+            , valueTypeSize(0)
+        {
 			if (reader.m_ValueIsPtr)
 			{
 				// Pointers are fixed size
-				value_type_size = sizeof(void*);
-			}
-			else if (reader.m_ValueType->kind == clcpp::Primitive::KIND_CLASS)
+                valueTypeSize = sizeof(void*);
+            }
+			else if (valueTypeHash == 0 || reader.m_ValueType->kind == clcpp::Primitive::KIND_CLASS)
 			{
-				// Classes potentially have variable size that needs to be
-				// stored with each entry
-				value_type_size = 0;
-			}
+				// Classes potentially have variable size that needs to be stored with each entry
+                valueTypeSize = 0;
+            }
 			else
 			{
 				// Everything else can trust the type size
-				value_type_size = reader.m_ValueType->size;
-			}
+                valueTypeSize = reader.m_ValueType->size;
+            }
 
 			// Immediately write values out
 			out.Write(&count, sizeof(count));
-			out.Write(&value_type_hash, sizeof(value_type_hash));
-			out.Write(&value_type_size, sizeof(value_type_size));
-		}
+			out.Write(&keyTypeHash, sizeof(keyTypeHash));
+			out.Write(&keyTypeSize, sizeof(keyTypeSize));
+            out.Write(&valueTypeHash, sizeof(valueTypeHash));
+            out.Write(&valueTypeSize, sizeof(valueTypeSize));
+        }
 
 		ContainerChunkHeader(clutl::ReadBuffer& in)
 		{
 			// Read values for later use
 			in.Read(&count, sizeof(count));
-			in.Read(&value_type_hash, sizeof(value_type_hash));
-			in.Read(&value_type_size, sizeof(value_type_size));
-		}
+            in.Read(&keyTypeHash, sizeof(keyTypeHash));
+            in.Read(&keyTypeSize, sizeof(keyTypeSize));
+            in.Read(&valueTypeHash, sizeof(valueTypeHash));
+            in.Read(&valueTypeSize, sizeof(valueTypeSize));
+        }
 
 		unsigned int count;
 
-		unsigned int value_type_hash;
+		unsigned int keyTypeHash;
+		unsigned int keyTypeSize;
 
-		unsigned int value_type_size;
-	};
+        unsigned int valueTypeHash;
+        unsigned int valueTypeSize;
+    };
 
 
 	void SaveObject(clutl::WriteBuffer& out, const char* object, const clcpp::Type* type);
@@ -157,7 +169,7 @@ namespace
 		out.Write(object, type->size);
 	}
 
-	
+
 	void SaveEnum(clutl::WriteBuffer& out, const char* object, const clcpp::Enum* enum_type)
 	{
 		// Do a linear search for an enum with a matching value
@@ -190,19 +202,28 @@ namespace
 		{
 			clcpp::ContainerKeyValue kv = reader.GetKeyValue();
 
+			// Write the key value
+			if (reader.m_KeyType != nullptr)
+			{
+				// TODO(don): Support for pointer keys
+				SaveObject(out, static_cast<const char*>(kv.key), reader.m_KeyType);
+			}
+
 			// If this is a value that could have variable data written, store a size next to it
 			SizeBackPatcher patcher;
-			if (header.value_type_size == 0)
+            if (header.valueTypeSize == 0)
+            {
 				patcher.Mark(out);
+			}
 
 			if (reader.m_ValueIsPtr)
 			{
-				// Ask the user if they want to save this pointer
-				//void* ptr = *(void**)kv.value;
-				//if (ptr_save == 0 || !ptr_save->CanSavePtr(ptr, field, reader.m_ValueType))
-				//	continue;
+                // Ask the user if they want to save this pointer
+                // void* ptr = *(void**)kv.value;
+                // if (ptr_save == 0 || !ptr_save->CanMapPtr(ptr, field, reader.m_ValueType))
+                //	continue;
 
-				//SavePtr(out, kv.value, ptr_save, flags);
+                //SavePtr(out, kv.value, ptr_save, flags);
 			}
 			else
 			{
@@ -226,10 +247,10 @@ namespace
 	}
 
 
-	void SaveClassField(clutl::WriteBuffer& out, const char* object, const clcpp::Field* field)
+	void SaveClassField(clutl::WriteBuffer& out, const char* object, const char* field_object, const clcpp::Field* field)
 	{
-        	if ((field->flag_attributes & attrFlag_Transient) != 0)
-		{
+        if ((field->flag_attributes & attrFlag_Transient) != 0)
+        {
 			return;
 		}
 
@@ -239,21 +260,25 @@ namespace
 		// TODO: Flag for marking custom saves on a field
 		if (field->attributes.size != 0)
 		{
-			static unsigned int hash = clcpp::internal::HashNameString("save_vbin");			
+			static unsigned int hash = clcpp::internal::HashNameString("save_vbin");
 			if (const clcpp::Attribute* attr = clcpp::FindPrimitive(field->attributes, hash))
 			{
 				// Call the function to write data
 				const clcpp::PrimitiveAttribute* name_attr = attr->AsPrimitiveAttribute();
-				clcpp::CallFunction((clcpp::Function*)name_attr->primitive, clcpp::ByRef(out), object);
+				clcpp::CallFunction((clcpp::Function*)name_attr->primitive, clcpp::ByRef(out), object, field_object);
 				return;
 			}
 		}
 
 		// ContainerInfos for fields can only be C-Arrays
-		if (field->ci != 0)
-			SaveFieldArray(out, object, field);
+		if (field->ci != nullptr)
+		{
+			SaveFieldArray(out, field_object, field);
+		}
 		else
-			SaveObject(out, object, field->type);
+		{
+			SaveObject(out, field_object, field->type);
+		}
 	}
 
 
@@ -265,13 +290,34 @@ namespace
 		{
 			const clcpp::Field* field = fields[i];
 			const char* field_object = object + field->offset;
-			SaveClassField(out, field_object, field);
+			SaveClassField(out, object, field_object, field);
 		}
+
+		// Recurse into base types
+		for (unsigned int i = 0; i < class_type->base_types.size; i++)
+		{
+			const clcpp::Type* base_type = class_type->base_types[i];
+			SaveClass(out, object, base_type->AsClass());
+		}
+	}
+
+
+	void SaveContainer(clutl::WriteBuffer& out, const char* object, const clcpp::Type* type)
+	{
+        clcpp::ReadIterator reader;
+        reader.Initialise(type, object);
+        SaveContainer(out, reader);
 	}
 
 
 	void SaveObject(clutl::WriteBuffer& out, const char* object, const clcpp::Type* type)
 	{
+		if (type->ci != nullptr)
+		{
+			SaveContainer(out, object, type);
+			return;
+		}
+
 		// Dispatch to a save function based on kind
 		switch (type->kind)
 		{
@@ -285,6 +331,10 @@ namespace
 
 		case (clcpp::Primitive::KIND_CLASS):
 			SaveClass(out, object, type->AsClass());
+			break;
+
+		case (clcpp::Primitive::KIND_TEMPLATE_TYPE):
+			SaveContainer(out, object, type);
 			break;
 
 		default:
@@ -351,8 +401,8 @@ namespace
 		}
 
 		// Ensure value types match
-		if (header.value_type_hash != writer.m_ValueType->name.hash)
-		{
+        if (header.valueTypeHash != 0 && header.valueTypeHash != writer.m_ValueType->name.hash)
+        {
 			// TODO: Warning
 			in.SeekRel(data_size);
 			return;
@@ -360,26 +410,42 @@ namespace
 
 		for (unsigned int i = 0; i < count; i++)
 		{
-			char* container_object = (char*)writer.AddEmpty();
-
-			// Check to see if this is a value type that may be variable size
-			unsigned int value_type_size = header.value_type_size;
-			if (value_type_size == 0)
-				in.Read(&value_type_size, sizeof(value_type_size));
-
-			if (writer.m_ValueIsPtr)
+			char* value_data;
+			if (writer.m_KeyType != nullptr)
 			{
-				// Ask the user if they want to save this pointer
-				//void* ptr = *(void**)kv.value;
-				//if (ptr_save == 0 || !ptr_save->CanSavePtr(ptr, field, reader.m_ValueType))
-				//	continue;
+				// Load the key value onto the stack
+				char key_data[128];
+				clcpp::internal::Assert(writer.m_KeyType->size < sizeof(key_data));
+				LoadObject(in, key_data, writer.m_KeyType, header.keyTypeSize, header.keyTypeHash);
 
-				//SavePtr(out, kv.value, ptr_save, flags);
+				// Allocate space for the new data with its key
+				value_data = static_cast<char*>(writer.AddEmpty(key_data));
 			}
 			else
 			{
-				LoadObject(in, container_object, writer.m_ValueType, value_type_size, header.value_type_hash);
+				value_data = static_cast<char*>(writer.AddEmpty());
 			}
+
+			// Check to see if this is a value type that may be variable size
+            unsigned int value_type_size = header.valueTypeSize;
+            if (value_type_size == 0)
+			{
+				in.Read(&value_type_size, sizeof(value_type_size));
+			}
+
+			if (writer.m_ValueIsPtr)
+			{
+                // Ask the user if they want to save this pointer
+                // void* ptr = *(void**)kv.value;
+                // if (ptr_save == 0 || !ptr_save->CanMapPtr(ptr, field, reader.m_ValueType))
+                //	continue;
+
+                //SavePtr(out, kv.value, ptr_save, flags);
+			}
+			else
+			{
+                LoadObject(in, value_data, writer.m_ValueType, value_type_size, writer.m_ValueType->name.hash);
+            }
 		}
 
 		int bytes_left = end_pos - in.GetBytesRead();
@@ -414,13 +480,34 @@ namespace
 	}
 
 
+	const clcpp::Field* FindFieldsRecursive(const clcpp::Class* type, unsigned int hash)
+	{
+		// Check fields of this class
+		if (const clcpp::Field* field = clcpp::FindPrimitive(type->fields, hash))
+		{
+			return field;
+		}
+
+		// Search up through the inheritance hierarchy
+		for (unsigned int i = 0; i < type->base_types.size; i++)
+		{
+			if (const clcpp::Field* field = FindFieldsRecursive(type->base_types[i]->AsClass(), hash))
+			{
+				return field;
+			}
+		}
+
+		return nullptr;
+	}
+
+
 	void LoadClassField(clutl::ReadBuffer& in, char* object, const clcpp::Class* class_type)
 	{
 		// Read the header and skip the chunk if the field doesn't exist or its destination is transient
 		ChunkHeader header(in);
-		const clcpp::Field* field = clcpp::FindPrimitive(class_type->fields, header.name_hash);
+		const clcpp::Field* field = FindFieldsRecursive(class_type, header.name_hash);
         if (field == nullptr || (field->flag_attributes & attrFlag_Transient) != 0)
-		{
+        {
 			in.SeekRel(header.data_size);
 			return;
 		}
@@ -430,14 +517,14 @@ namespace
 		// TODO: Flag for marking custom loads on a field
 		if (field->attributes.size != 0)
 		{
-			static unsigned int hash = clcpp::internal::HashNameString("load_vbin");			
+			static unsigned int hash = clcpp::internal::HashNameString("load_vbin");
 			if (const clcpp::Attribute* attr = clcpp::FindPrimitive(field->attributes, hash))
 			{
 				int end_pos = in.GetBytesRead() + header.data_size;
 
 				// Call the function to read the data
 				const clcpp::PrimitiveAttribute* name_attr = attr->AsPrimitiveAttribute();
-				clcpp::CallFunction((clcpp::Function*)name_attr->primitive, clcpp::ByRef(in), field_object);
+				clcpp::CallFunction((clcpp::Function*)name_attr->primitive, clcpp::ByRef(in), object, field_object);
 
 				// Correct any read errors in the custom function
 				int position = in.GetBytesRead();
@@ -456,7 +543,7 @@ namespace
 			}
 		}
 
-		if (field->ci != 0)
+		if (field->ci != nullptr)
 		{
 			// TODO: What happens if counts differ?
 			LoadFieldArray(in, field_object, field, header.data_size);
@@ -467,14 +554,23 @@ namespace
 		}
 	}
 
+	void LoadContainer(clutl::ReadBuffer& in, char* object, const clcpp::Type* type, unsigned int data_size);
 
 	void LoadClass(clutl::ReadBuffer& in, char* object, const clcpp::Class* class_type, unsigned int data_size)
 	{
-		// Loop until all the data for this class has been read
 		unsigned int end_pos = in.GetBytesRead() + data_size;
-		while (in.GetBytesRead() < end_pos)
+
+		if (class_type != nullptr && class_type->ci != nullptr)
 		{
-			LoadClassField(in, object, class_type);
+			LoadContainer(in, object, class_type, data_size);
+		}
+		else
+		{
+			// Loop until all the data for this class has been read
+			while (in.GetBytesRead() < end_pos)
+			{
+				LoadClassField(in, object, class_type);
+			}
 		}
 
 		if (in.GetBytesRead() != end_pos)
@@ -482,6 +578,18 @@ namespace
 			// TODO: Error! More than an internal error, as long as custom fields are read correctly
 			// TODO: Check custom field reads
 		}
+	}
+
+
+	void LoadContainer(clutl::ReadBuffer& in, char* object, const clcpp::Type* type, unsigned int data_size)
+	{
+		// Get count from the header
+		unsigned int count = ContainerChunkHeader::PeekCount(in);
+
+		// Create an array write iterator
+		clcpp::WriteIterator writer;
+		writer.Initialise(type, object, count);
+		LoadContainer(in, writer, data_size, count);
 	}
 
 
@@ -507,6 +615,10 @@ namespace
 
 		case (clcpp::Primitive::KIND_CLASS):
 			LoadClass(in, object, type->AsClass(), data_size);
+			break;
+
+		case (clcpp::Primitive::KIND_TEMPLATE_TYPE):
+			LoadContainer(in, object, type, data_size);
 			break;
 
 		default:
