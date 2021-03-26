@@ -73,8 +73,9 @@ namespace
 		// Visit the template type container if there are any entries
 		if (template_type->ci != 0)
 		{
-			clcpp::ReadIterator reader(template_type, object);
-			if (reader.m_Count != 0)
+            clcpp::ReadIterator reader;
+            reader.Initialise(template_type, object);
+            if (reader.m_Count != 0)
 				VisitContainerFields(reader, field, visitor, visit_type, stop_flags);
 			return;
 		}
@@ -96,8 +97,9 @@ namespace
 			// Visit the field container if there are any entries
 			if (field->ci != 0)
 			{
-				clcpp::ReadIterator reader(field, object + field->offset);
-				if (reader.m_Count != 0)
+                clcpp::ReadIterator reader;
+                reader.Initialise(field, object + field->offset);
+                if (reader.m_Count != 0)
 					VisitContainerFields(reader, field, visitor, visit_type, stop_flags);
 				continue;
 			}

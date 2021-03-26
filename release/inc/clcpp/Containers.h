@@ -124,16 +124,19 @@ namespace clcpp
 	class CLCPP_API ReadIterator : public Iterator
 	{
 	public:
-		// Construct from a template type
-		ReadIterator(const TemplateType* type, const void* container_object);
+        ReadIterator();
+        ~ReadIterator();
 
-		// Construct from a field; can only be used to construct read iterators for
+        // Construct from a type
+        void Initialise(const Type* type, const void* container_object);
+
+        // Construct from a field; can only be used to construct read iterators for
 		// C-Array fields.
-		ReadIterator(const Field* field, const void* container_object);
+        void Initialise(const Field* field, const void* container_object);
 
-		~ReadIterator();
+		bool IsInitialised() const;
 
-		// Calls directly into the iterator implementation
+        // Calls directly into the iterator implementation
 		ContainerKeyValue GetKeyValue() const
 		{
 			return ((IReadIterator*)m_ImplData)->GetKeyValue();
@@ -142,7 +145,10 @@ namespace clcpp
 		{
 			((IReadIterator*)m_ImplData)->MoveNext();
 		}
-	};
+
+    private:
+        bool m_Initialised;
+    };
 
 
 	//

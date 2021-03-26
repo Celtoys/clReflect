@@ -220,8 +220,9 @@ namespace
 	void SaveFieldArray(clutl::WriteBuffer& out, const char* object, const clcpp::Field* field)
 	{
 		// Construct a read iterator and serialise as container
-		clcpp::ReadIterator reader(field, object);
-		SaveContainer(out, reader);
+        clcpp::ReadIterator reader;
+        reader.Initialise(field, object);
+        SaveContainer(out, reader);
 	}
 
 

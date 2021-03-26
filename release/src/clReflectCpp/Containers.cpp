@@ -133,8 +133,21 @@ private:
     clcpp::size_type m_Size;
 };
 
+clcpp::ReadIterator::ReadIterator()
+    : m_Initialised(false)
+{
+}
 
-clcpp::ReadIterator::ReadIterator(const TemplateType* type, const void* container_object)
+clcpp::ReadIterator::~ReadIterator()
+{
+    // Destruct the read iterator
+    if (m_IteratorImplType != 0)
+        CallFunction(m_IteratorImplType->destructor, (IReadIterator*)m_ImplData);
+    else
+        clcpp::internal::CallDestructor((ArrayReadIterator*)m_ImplData);
+}
+
+void clcpp::ReadIterator::Initialise(const Type* type, const void* container_object)
 {
 	// Can't make a read iterator if there's no container interface
 	if (type->ci == 0)
@@ -153,8 +166,7 @@ clcpp::ReadIterator::ReadIterator(const TemplateType* type, const void* containe
 	((IReadIterator*)m_ImplData)->Initialise(type, container_object, *this);
 }
 
-
-clcpp::ReadIterator::ReadIterator(const Field* field, const void* container_object)
+void clcpp::ReadIterator::Initialise(const Field* field, const void* container_object)
 {
 	// Can't make a read iterator if there's no container interface
 	if (field->ci == 0)
@@ -166,17 +178,6 @@ clcpp::ReadIterator::ReadIterator(const Field* field, const void* container_obje
 	// Complete implementation-specific initialisation
 	((IReadIterator*)m_ImplData)->Initialise(field, container_object, *this);
 }
-
-
-clcpp::ReadIterator::~ReadIterator()
-{
-	// Destruct the read iterator
-	if (m_IteratorImplType != 0)
-		CallFunction(m_IteratorImplType->destructor, (IReadIterator*)m_ImplData);
-	else
-		clcpp::internal::CallDestructor((ArrayReadIterator*)m_ImplData);
-}
-
 
 clcpp::WriteIterator::WriteIterator()
 	: m_Initialised(false)

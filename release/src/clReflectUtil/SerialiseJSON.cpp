@@ -762,8 +762,9 @@ namespace
 	void SaveFieldArray(clutl::WriteBuffer& out, const char* object, const clcpp::Field* field, clutl::IPtrSave* ptr_save, unsigned int flags)
 	{
 		// Construct a read iterator and leave early if there are no elements
-		clcpp::ReadIterator reader(field, object);
-		if (reader.m_Count == 0)
+        clcpp::ReadIterator reader;
+        reader.Initialise(field, object);
+        if (reader.m_Count == 0)
 		{
 			out.WriteStr("[]");
 			return;
@@ -994,8 +995,9 @@ namespace
 	void SaveTemplateType(clutl::WriteBuffer& out, const char* object, const clcpp::Field* field, const clcpp::TemplateType* template_type, clutl::IPtrSave* ptr_save, unsigned int flags)
 	{
 		// Construct a read iterator and leave early if there are no elements
-		clcpp::ReadIterator reader(template_type, object);
-		if (reader.m_Count == 0)
+        clcpp::ReadIterator reader;
+        reader.Initialise(type, object);
+        if (reader.m_Count == 0)
 		{
 			out.WriteStr("[]");
 			return;
