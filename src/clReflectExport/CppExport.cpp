@@ -742,6 +742,8 @@ namespace
     unsigned int GetFlagAttributeBits(const clcpp::CArray<const clcpp::Attribute*>& attributes)
     {
         // Cache attribute names
+        static unsigned int disk_transient_hash = clcpp::internal::HashNameString("disk_transient");
+        static unsigned int network_transient_hash = clcpp::internal::HashNameString("network_transient");
         static unsigned int transient_hash = clcpp::internal::HashNameString("transient");
         static unsigned int pre_save_hash = clcpp::internal::HashNameString("pre_save");
         static unsigned int post_load_hash = clcpp::internal::HashNameString("post_load");
@@ -753,7 +755,11 @@ namespace
         for (unsigned int i = 0; i < attributes.size; i++)
         {
             const clcpp::Attribute& attribute = *attributes[i];
-            if (attribute.name.hash == transient_hash)
+            if (attribute.name.hash == disk_transient_hash)
+                bits |= attrFlag_DiskTransient;
+            else if (attribute.name.hash == network_transient_hash)
+                bits |= attrFlag_NetworkTransient;
+            else if (attribute.name.hash == transient_hash)
                 bits |= attrFlag_Transient;
             else if (attribute.name.hash == pre_save_hash)
                 bits |= attrFlag_PreSave;
