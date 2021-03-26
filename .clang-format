@@ -1,0 +1,36 @@
+BasedOnStyle: Microsoft
+
+AccessModifierOffset: -4
+
+AlignEscapedNewlines: DontAlign
+
+AllowShortBlocksOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Inline
+AllowShortLoopsOnASingleLine: false
+
+AlwaysBreakTemplateDeclarations: Yes
+
+BinPackArguments: true
+BinPackParameters: true
+
+BreakConstructorInitializers: BeforeComma
+
+ColumnLimit: 130
+
+Cpp11BracedListStyle: true
+
+DerivePointerAlignment: false
+PointerAlignment: Left
+
+FixNamespaceComments: false
+
+IndentPPDirectives: BeforeHash
+
+IndentWidth: 4
+
+Language: Cpp
+
+NamespaceIndentation: All
+
+UseTab: Never
