@@ -339,7 +339,7 @@ inline void operator delete(void*, const clcpp::internal::PtrWrapper&)
 #define attrFlag_NetworkTransient 0x00000002
 
 // "transient" - These primitives are ignored during serialisation to disk and the network
-#define attrFlag_Transient attrFlag_DiskTransient | attrFlag_NetworkTransient
+#define attrFlag_Transient (attrFlag_DiskTransient | attrFlag_NetworkTransient)
 
 // If an attribute starts with "load_" or "save_" then these flags are set to indicate there
 // are custom loading functions assigned
