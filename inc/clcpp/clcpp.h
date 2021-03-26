@@ -341,6 +341,21 @@ inline void operator delete (void*, const clcpp::internal::PtrWrapper&)
 
 #endif
 
+//
+// Shortcut for when you want only the `reflect` attribute.
+// This also gets around this bug for clangd: https://bugs.llvm.org/show_bug.cgi?id=46742
+// Note that bug causes a variety of other code highlighting issues.
+//
+#define attrReflect clcpp_attr(reflect)
+#define attrReflectPart clcpp_attr(reflect_part)
+#define attrNoReflect clcpp_attr(noreflect)
+#define attrTransient clcpp_attr(transient)
+#define attrCustomFlagInherit clcpp_attr(custom_flag_inherit)
+#define attrReplicate clcpp_attr(replicate)
+
+// Load dependency attribute for fields. Tells any serialisation tools to serialise the object being pointed to first.
+#define attrLoadDep clcpp_attr(load_dep)
+
 // "transient" - These primitives are ignored during serialisation
 #define attrFlag_Transient	0x00000001
 
