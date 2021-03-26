@@ -197,7 +197,7 @@ clcpp::WriteIterator::~WriteIterator()
 }
 
 
-void clcpp::WriteIterator::Initialise(const TemplateType* type, void* container_object, int count)
+void clcpp::WriteIterator::Initialise(const Type* type, void* container_object, int count)
 {
 	// Can't make a write iterator if there's no container interface
 	if (type->ci == 0)

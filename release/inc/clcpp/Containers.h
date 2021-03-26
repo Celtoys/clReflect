@@ -154,8 +154,8 @@ namespace clcpp
 		WriteIterator();
 		~WriteIterator();
 
-		// Construct from a template type with the number of elements you're going to write
-		void Initialise(const TemplateType* type, void* container_object, int count);
+		// Construct from a type with the number of elements you're going to write
+		void Initialise(const Type* type, void* container_object, int count);
 
 		// Construct from a field; can only be used to construct write iterators for
 		// C-Array fields.
