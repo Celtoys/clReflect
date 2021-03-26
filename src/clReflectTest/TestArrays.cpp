@@ -45,8 +45,9 @@ void TestArraysFunc(clcpp::Database& db)
 				*(int*)value_ptr = j;
 		}
 
-		clcpp::ReadIterator reader(field, (char*)&s + field->offset);
-		for (unsigned int j = 0; j < reader.m_Count; j++)
+        clcpp::ReadIterator reader;
+        reader.Initialise(field, (char*)&s + field->offset);
+        for (unsigned int j = 0; j < reader.m_Count; j++)
 		{
 			clcpp::ContainerKeyValue kv = reader.GetKeyValue();
 
