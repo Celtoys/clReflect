@@ -377,8 +377,8 @@ namespace
 			{
 				std::string name = NameWithGlobalScope(prim);
 				cg.Line("template <> const Type* GetType< %s >() { return clcppTypePtrs[%d]; }", name.c_str(), i);
-				cg.Line("template <> unsigned int GetTypeNameHash< %s >() { return clcppTypeNameHashes[%d]; }", name.c_str(), i);
-			}
+                cg.Line("template <> unsigned int GetTypeNameHash< %s >() { return 0x%x; }", name.c_str(), prim.hash);
+            }
 		}
 	}
 }
