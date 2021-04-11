@@ -38,8 +38,11 @@ int main(int argc, const char* argv[])
 	std::string cpp_codegen = args.GetProperty("-cpp_codegen");
 	if (cpp_codegen != "")
 		arg_start += 2;
+    std::string h_codegen = args.GetProperty("-h_codegen");
+    if (h_codegen != "")
+        arg_start += 2;
 
-	cldb::Database db;
+    cldb::Database db;
 	for (size_t i = arg_start; i < args.Count(); i++)
 	{
 		const char* filename = args[i].c_str();
@@ -64,8 +67,8 @@ int main(int argc, const char* argv[])
 	cldb::WriteTextDatabase(output_filename, db);
 
 	// Generate any required C++ code
-	if (cpp_codegen != "")
-		GenMergedCppImpl(cpp_codegen.c_str(), db);
+    if (cpp_codegen != "" || h_codegen != "")
+        GenMergedCppImpl(cpp_codegen.c_str(), h_codegen.c_str(), db);
 
-	return 0;
+    return 0;
 }

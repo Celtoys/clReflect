@@ -983,3 +983,6 @@ namespace clcpp
         return 0;
     }
 }
+
+template <typename Type>
+constexpr unsigned int clcppTypeHash();

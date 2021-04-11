@@ -66,6 +66,7 @@ config.LinkOptions.MapFile = True
 cltest = CppBuild(env, [ "." ], "cltest.exe", libs, build = False)
 
 cpp_codegen = "clcppcodegen.cpp"
+h_codegen = "clcppcodegen.h"
 
 # Generate the list of C++ files to scan - this excludes the generated C++ file
 # Only add the generated C++ file to the compilation list if it's not already there
@@ -75,7 +76,7 @@ if len(scan_cpp_files) == len(cltest.cpp_files):
 
 # Run clscan on all C++ located files, merge the result into one database and generate the C++ file
 clr_scan = [ clReflect.CppScan(sys_include_paths, include_paths, [ ], env.NewFile(i)) for i in scan_cpp_files ]
-clr_merge = clReflect.Merge("clRefectTest.csv", clr_scan, env.NewFile(cpp_codegen))
+clr_merge = clReflect.Merge("clRefectTest.csv", clr_scan, env.NewFile(cpp_codegen), env.NewFile(h_codegen))
 
 # Generate the exported reflection database
 cpp_map_file = env.NewFile(cltest.output.GetOutputFiles(env)[1])

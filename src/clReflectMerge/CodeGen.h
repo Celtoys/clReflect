@@ -42,5 +42,4 @@ private:
 	int m_Indent;
 };
 
-
-void GenMergedCppImpl(const char* filename, const cldb::Database& db);
+void GenMergedCppImpl(const char* cpp_filename, const char* h_filename, const cldb::Database& db);
