@@ -156,8 +156,10 @@ namespace
 		PT_Type = 1,
 		PT_Class = 2,
 		PT_Struct = 4,
-		PT_Enum = 8
-	};
+        PT_Enum = 8,
+        PT_EnumClass = 16,
+        PT_EnumStruct = 32,
+    };
 	struct Primitive
 	{
 		Primitive()
@@ -261,8 +263,23 @@ namespace
 				prim.name = db_en.name.text.c_str();
 				prim.hash = db_en.name.hash;
 				prim.parent = db_en.parent.hash;
-				prim.type = PT_Enum;
-				j->second.enums.push_back(prim);
+
+				switch (db_en.scoped)
+				{
+					case cldb::Enum::Scoped::None:
+						prim.type = PT_Enum;
+						j->second.enums.push_back(prim);
+						break;
+					case cldb::Enum::Scoped::Class:
+						prim.type = PT_EnumClass;
+						j->second.classes.push_back(prim);
+						break;
+					case cldb::Enum::Scoped::Struct:
+						prim.type = PT_EnumStruct;
+						j->second.classes.push_back(prim);
+						break;
+				}
+
 				j->second.nb_primitives++;
 				primitives.push_back(prim);
 			}
@@ -342,10 +359,21 @@ namespace
 		{
 			const Primitive& prim = ns->classes[i];
 			std::string name_str = UnscopeName(prim.name);
-			if (prim.type == PT_Class)
-				cg.Line("class %s;", name_str.c_str());
-			else if (prim.type == PT_Struct)
-				cg.Line("struct %s;", name_str.c_str());
+			switch (prim.type)
+			{
+				case PT_Class:
+					cg.Line("class %s;", name_str.c_str());
+					break;
+				case PT_Struct:
+					cg.Line("struct %s;", name_str.c_str());
+					break;
+				case PT_EnumClass:
+					cg.Line("enum class %s;", name_str.c_str());
+					break;
+				case PT_EnumStruct:
+					cg.Line("enum struct %s;", name_str.c_str());
+					break;
+			}
 		}
 
 		std::string::size_type end_point = cg.Size();
@@ -464,7 +492,7 @@ namespace
 		cg.Line("// Specialisations for GetType and GetTypeNameHash");
 		cg.Line("namespace clcpp");
 		cg.EnterScope();
-		GenGetTypes(cg, primitives, PT_Type | PT_Class | PT_Struct);
+		GenGetTypes(cg, primitives, PT_Type | PT_Class | PT_Struct | PT_EnumClass | PT_EnumStruct);
 		cg.Line("#if defined(CLCPP_USING_MSVC)");
 		GenGetTypes(cg, primitives, PT_Enum);
 		cg.Line("#endif");
@@ -483,7 +511,7 @@ namespace
 
 		// Generate the implementations
 		cg.Line("// Specialisations for constexpr clcppTypeHash");
-		GenGetTypesConstexpr(cg, primitives, PT_Type | PT_Class | PT_Struct);
+		GenGetTypesConstexpr(cg, primitives, PT_Type | PT_Class | PT_Struct | PT_EnumClass | PT_EnumStruct);
 		cg.Line("#if defined(CLCPP_USING_MSVC)");
 		GenGetTypesConstexpr(cg, primitives, PT_Enum);
 		cg.Line("#endif");

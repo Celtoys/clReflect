@@ -27,7 +27,11 @@ cldb::meta::DatabaseTypes::DatabaseTypes()
 		DatabaseField(&cldb::Type::size),
 	};
 
-	DatabaseField enum_constant_fields[] =
+    DatabaseField enum_fields[] = {
+        DatabaseField(&cldb::Enum::scoped),
+    };
+
+    DatabaseField enum_constant_fields[] =
 	{
 		DatabaseField(&cldb::EnumConstant::value),
 	};
@@ -96,8 +100,8 @@ cldb::meta::DatabaseTypes::DatabaseTypes()
 	m_PrimitiveType.Type<cldb::Primitive>().Fields(primitive_fields);
 	m_TypeType.Type<cldb::Type>().Base(&m_PrimitiveType).Fields(type_fields);
 	m_EnumConstantType.Type<cldb::EnumConstant>().Base(&m_PrimitiveType).Fields(enum_constant_fields);
-	m_EnumType.Type<cldb::Enum>().Base(&m_TypeType);
-	m_FieldType.Type<cldb::Field>().Base(&m_PrimitiveType).Fields(field_fields);
+    m_EnumType.Type<cldb::Enum>().Base(&m_TypeType).Fields(enum_fields);
+    m_FieldType.Type<cldb::Field>().Base(&m_PrimitiveType).Fields(field_fields);
 	m_FunctionType.Type<cldb::Function>().Base(&m_PrimitiveType).Fields(function_fields);
 	m_ClassType.Type<cldb::Class>().Base(&m_TypeType).Fields(class_type_fields);
 	m_TemplateType.Type<cldb::Template>().Base(&m_PrimitiveType);

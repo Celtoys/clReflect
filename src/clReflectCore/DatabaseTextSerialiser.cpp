@@ -94,8 +94,30 @@ namespace
 		fputs(primitive.is_class ? "\t1" : "\t0", fp);
 	}
 
+    void WriteEnumScoped(FILE* fp, cldb::Enum::Scoped scoped)
+    {
+        switch (scoped)
+        {
+        case (cldb::Enum::Scoped::None):
+            fputs("n", fp);
+            break;
+        case (cldb::Enum::Scoped::Class):
+            fputs("c", fp);
+            break;
+        case (cldb::Enum::Scoped::Struct):
+            fputs("s", fp);
+            break;
+        }
+    }
 
-	void WriteEnumConstant(FILE* fp, const cldb::EnumConstant& primitive, const cldb::Database& db)
+    void WriteEnum(FILE* fp, const cldb::Enum& primitive, const cldb::Database& db)
+    {
+        WriteType(fp, primitive, db);
+        fputs("\t", fp);
+        WriteEnumScoped(fp, primitive.scoped);
+    }
+
+    void WriteEnumConstant(FILE* fp, const cldb::EnumConstant& primitive, const cldb::Database& db)
 	{
 		WritePrimitive(fp, primitive, db);
 		fputs("\t", fp);
@@ -259,8 +281,8 @@ void cldb::WriteTextDatabase(const char* filename, const Database& db)
 	// Write all the primitive tables
 	WritePrimitives<Type>(fp, db, WriteType, "Types", "Name\t\tParent\t\tSize");
 	WritePrimitives<EnumConstant>(fp, db, WriteEnumConstant, "Enum Constants", "Name\t\tParent\t\tValue");
-	WritePrimitives<Enum>(fp, db, WriteType, "Enums", "Name\t\tParent\t\tSize");
-	WritePrimitives<Field>(fp, db, WriteField, "Fields", "Name\t\tParent\t\tType\t\tMod\tCst\tOffs\tUID");
+    WritePrimitives<Enum>(fp, db, WriteEnum, "Enums", "Name\t\tParent\t\tSize\t\tScoped");
+    WritePrimitives<Field>(fp, db, WriteField, "Fields", "Name\t\tParent\t\tType\t\tMod\tCst\tOffs\tUID");
 	WritePrimitives<Function>(fp, db, WriteFunction, "Functions", "Name\t\tParent\t\tUID");
 	WritePrimitives<Class>(fp, db, WriteClass, "Classes", "Name\t\tParent\t\tSize\t\tBase\t\tIs Class");
 	WritePrimitives<Template>(fp, db, WritePrimitive, "Templates", "Name\t\tParent");
@@ -404,8 +426,28 @@ namespace
 		db.AddPrimitive(primitive);
 	}
 
+    cldb::Enum::Scoped ParseEnumScoped(StringTokeniser& tok)
+    {
+        const char* mod = tok.Get();
+		
+        cldb::Enum::Scoped scoped;
+        switch (mod[0])
+        {
+        case ('n'):
+            scoped = cldb::Enum::Scoped::None;
+            break;
+        case ('c'):
+            scoped = cldb::Enum::Scoped::Class;
+            break;
+        case ('s'):
+            scoped = cldb::Enum::Scoped::Struct;
+            break;
+        }
 
-	void ParseEnum(char* line, cldb::Database& db)
+		return scoped;
+    }
+
+    void ParseEnum(char* line, cldb::Database& db)
 	{
 		StringTokeniser tok(line, "\t");
 
@@ -416,12 +458,13 @@ namespace
 		// Type parsing - discard the size
 		tok.GetHexInt();
 
-		// Add a new class to the database
-		cldb::Enum primitive(
-			db.GetName(name),
-			db.GetName(parent));
+        // Enum parsing
+        cldb::Enum::Scoped scoped = ParseEnumScoped(tok);
 
-		db.AddPrimitive(primitive);
+        // Add a new class to the database
+        cldb::Enum primitive(db.GetName(name), db.GetName(parent), scoped);
+
+        db.AddPrimitive(primitive);
 	}
 
 

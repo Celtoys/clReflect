@@ -852,9 +852,26 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const std::string& name, c
     clang::EnumDecl* enum_decl = llvm::dyn_cast<clang::EnumDecl>(decl);
     assert(enum_decl != 0 && "Failed to cast to enum declaration");
 
+    // Is this a C++11 scoped enum?
+    cldb::Enum::Scoped scoped = cldb::Enum::Scoped::None;
+    const char* scope_tag = "";
+    if (enum_decl->isScoped())
+    {
+        if (enum_decl->isScopedUsingClassTag())
+        {
+            scoped = cldb::Enum::Scoped::Class;
+            scope_tag = "class ";
+        }
+        else
+        {
+            scoped = cldb::Enum::Scoped::Struct;
+            scope_tag = "struct ";
+        }
+    }
+
     // Add to the database
-    LOG(ast, INFO, "enum %s\n", name.c_str());
-    m_DB.AddPrimitive(cldb::Enum(m_DB.GetName(name.c_str()), m_DB.GetName(parent_name.c_str())));
+    LOG(ast, INFO, "enum %s%s\n", scope_tag, name.c_str());
+    m_DB.AddPrimitive(cldb::Enum(m_DB.GetName(name.c_str()), m_DB.GetName(parent_name.c_str()), scoped));
 
     LOG_PUSH_INDENT(ast);
 

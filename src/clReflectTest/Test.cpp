@@ -11,9 +11,8 @@
 #include <clcpp/clcpp.h>
 #include <cstdio>
 
-
 // --------------------------------------------------------------------------------------------
-// Named global enumeration
+// Enumerations
 // --------------------------------------------------------------------------------------------
 enum clcpp_attr(reflect) NamedGlobalEnum
 {
@@ -30,6 +29,10 @@ enum clcpp_attr(reflect) NamedGlobalEnum
 	VALUE_32_BITS_SIGNED_MIN = -(1LL << 31),
 };
 
+enum class attrReflect ScopedEnum
+{
+    Value = 123
+};
 
 // --------------------------------------------------------------------------------------------
 // Forward declaration and implementation of various global function types

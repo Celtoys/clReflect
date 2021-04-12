@@ -264,8 +264,7 @@ namespace cldb
 
 		// Total size of the type, including alignment
         clcpp::size_type size;
-
-	};
+    };
 
 
 	//
@@ -278,10 +277,10 @@ namespace cldb
 			: Primitive(Primitive::KIND_ENUM_CONSTANT)
 		{
 		}
-		EnumConstant(Name n, Name p, int v)
-			: Primitive(Primitive::KIND_ENUM_CONSTANT, n, p)
-			, value(v)
-		{
+        EnumConstant(Name n, Name p, int v)
+            : Primitive(Primitive::KIND_ENUM_CONSTANT, n, p)
+            , value(v)
+        {
 		}
 
 		bool Equals(const EnumConstant& rhs) const
@@ -293,7 +292,7 @@ namespace cldb
 		// The standard assures that they're of integral size and is quite vague.
 		// For now I'm just assuming they're 32-bit signed.
 		int value;
-	};
+    };
 
 
 	//
@@ -301,16 +300,27 @@ namespace cldb
 	//
 	struct Enum : public Type
 	{
-		// Constructors for default construction and complete construction
+        // C++11 scoped enumeration classification (enum class|struct).
+        enum class Scoped
+        {
+            None,
+            Class,
+            Struct,
+        };
+
+        // Constructors for default construction and complete construction
 		Enum()
 			: Type(Primitive::KIND_ENUM)
 		{
 		}
-		Enum(Name n, Name p)
-			: Type(Primitive::KIND_ENUM, n, p, sizeof(int))
-		{
+        Enum(Name n, Name p, Scoped s)
+            : Type(Primitive::KIND_ENUM, n, p, sizeof(int))
+            , scoped(s)
+        {
 		}
-	};
+
+        Scoped scoped;
+    };
 
 
 	//
