@@ -984,5 +984,27 @@ namespace clcpp
     }
 }
 
+//
+// Compile-time typename hash
+//
+#ifdef __clcpp_parse__
+
+// This path is only compiled during a clscan pass and its intention is to ensure a unique value is returned from clcppTypeHash
+// without needing to include the generated header file. This solves the issue of requiring the generated header file to allow
+// clscan to compile successfully, before the dependent process clmerge generates the header file using the output of clscan.
+constexpr unsigned int clcppCompileTimeHash(const char* const str, const unsigned int value)
+{
+    return str[0] == 0 ? value : clcppCompileTimeHash(str + 1, (value ^ (unsigned int)str[0]) * 0x01000193);
+}
+template <typename Type>
+constexpr unsigned int clcppTypeHash()
+{
+    return clcppCompileTimeHash(__PRETTY_FUNCTION__, 0x01000193);
+}
+
+#else
+
 template <typename Type>
 constexpr unsigned int clcppTypeHash();
+
+#endif

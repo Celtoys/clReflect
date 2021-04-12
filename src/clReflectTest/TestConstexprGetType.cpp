@@ -1,6 +1,10 @@
 
-#include "clcppcodegen.h"
+#include <clcpp/clcpp.h>
 #include <cstdio>
+
+#ifndef __clcpp_parse__
+    #include "clcppcodegen.h"
+#endif
 
 struct Base
 {
