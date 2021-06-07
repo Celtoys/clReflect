@@ -166,16 +166,16 @@ namespace clutl
     };
 
     // JSON serialisation
-    CLCPP_API JSONError LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type);
-    CLCPP_API JSONError LoadJSON(JSONContext& ctx, void* object, const clcpp::Field* field);
+    CLCPP_API JSONError LoadJSON(ReadBuffer& in, void* object, const clcpp::Type* type, unsigned int transient_flags);
+    CLCPP_API JSONError LoadJSON(JSONContext& ctx, void* object, const clcpp::Field* field, unsigned int transient_flags);
 
     // Save an object of a given type to the write buffer.
     // If ptr_save is null, no pointers are serialised.
-    CLCPP_API void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, IPtrMap* ptr_map,
-                            unsigned int flags = 0);
+    CLCPP_API void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Type* type, IPtrMap* ptr_map, unsigned int flags,
+                            unsigned int transient_flags);
 
     // Save an object described by the given field to the write buffer.
     // If ptr_save is null, no pointers are serialised.
-    CLCPP_API void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Field* field, IPtrMap* ptr_map,
-                            unsigned int flags = 0);
+    CLCPP_API void SaveJSON(WriteBuffer& out, const void* object, const clcpp::Field* field, IPtrMap* ptr_map, unsigned int flags,
+                            unsigned int transient_flags);
 }
