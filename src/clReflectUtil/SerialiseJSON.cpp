@@ -239,23 +239,31 @@ namespace
     int ParserElements(clutl::JSONContext& ctx, clutl::JSONToken& t, clcpp::WriteIterator* writer, const clcpp::Type* type,
                        clcpp::Qualifier::Operator op, unsigned int transient_flags)
     {
-        // Expect a value first
-        if (writer != nullptr)
-        {
-            ParserValue(ctx, t, static_cast<char*>(writer->AddEmpty()), type, op, nullptr, transient_flags);
-        }
-        else
-        {
-            ParserValue(ctx, t, nullptr, nullptr, op, nullptr, transient_flags);
-        }
+        int count = 0;
 
-        if (t.type == clutl::JSON_TOKEN_COMMA)
+        while (true)
         {
+            count++;
+
+            // Expect a value first
+            if (writer != nullptr)
+            {
+                ParserValue(ctx, t, static_cast<char*>(writer->AddEmpty()), type, op, nullptr, transient_flags);
+            }
+            else
+            {
+                ParserValue(ctx, t, nullptr, nullptr, op, nullptr, transient_flags);
+            }
+
+            if (t.type != clutl::JSON_TOKEN_COMMA)
+            {
+                break;
+            }
+
             t = LexerNextToken(ctx);
-            return 1 + ParserElements(ctx, t, writer, type, op, transient_flags);
         }
 
-        return 1;
+        return count;
     }
 
     void ParserArray(clutl::JSONContext& ctx, clutl::JSONToken& t, char* object, const clcpp::Type* type,
