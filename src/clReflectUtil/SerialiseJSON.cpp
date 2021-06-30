@@ -664,7 +664,7 @@ namespace
         do
         {
             clcpp::uint64 next_integer = integer / 16;
-            *--tptr = "0123456789ABCDEF"[integer - next_integer * 16];
+            *--tptr = "0123456789abcdef"[integer - next_integer * 16];
             integer = next_integer;
         } while (integer != 0);
 
@@ -682,6 +682,12 @@ namespace
     void SaveUnsignedIntegerWithCast(clutl::WriteBuffer& out, const char* object, unsigned int)
     {
         SaveUnsignedInteger(out, *reinterpret_cast<const TYPE*>(object));
+    }
+    template <typename TYPE>
+    void SaveUnsignedHexIntegerWithCast(clutl::WriteBuffer& out, const char* object, unsigned int)
+    {
+        out.Write("0x", 2);
+        SaveHexInteger(out, *reinterpret_cast<const TYPE*>(object));
     }
 
     void SaveDecimal(clutl::WriteBuffer& out, double decimal, unsigned int flags)
@@ -1196,7 +1202,7 @@ static void SetupTypeDispatchLUT()
                         LoadDecimalWithCast<unsigned long>);
         AddTypeDispatch("long long", SaveIntegerWithCast<long long>, LoadIntegerWithCast<long long>,
                         LoadDecimalWithCast<long long>);
-        AddTypeDispatch("unsigned long long", SaveUnsignedIntegerWithCast<unsigned long long>,
+        AddTypeDispatch("unsigned long long", SaveUnsignedHexIntegerWithCast<unsigned long long>,
                         LoadIntegerWithCast<unsigned long long>, LoadDecimalWithCast<unsigned long long>);
 
         // Add all decimals
