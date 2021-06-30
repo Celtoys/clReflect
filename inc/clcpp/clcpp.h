@@ -325,6 +325,7 @@ inline void operator delete(void*, const clcpp::internal::PtrWrapper&)
 #define attrNoReflect clcpp_attr(noreflect)
 #define attrDiskTransient clcpp_attr(disk_transient)
 #define attrNetworkTransient clcpp_attr(network_transient)
+#define attrExportTransient clcpp_attr(export_transient)
 #define attrTransient clcpp_attr(transient)
 #define attrCustomFlagInherit clcpp_attr(custom_flag_inherit)
 #define attrReplicate clcpp_attr(replicate)
@@ -338,22 +339,25 @@ inline void operator delete(void*, const clcpp::internal::PtrWrapper&)
 // "network_transient" - These primitives are ignored during serialisation to the network
 #define attrFlag_NetworkTransient 0x00000002
 
+// "export_transient" - These primitives are ignored during serialisation for export
+#define attrFlag_ExportTransient 0x00000004
+
 // "transient" - These primitives are ignored during serialisation to disk and the network
-#define attrFlag_Transient (attrFlag_DiskTransient | attrFlag_NetworkTransient)
+#define attrFlag_Transient (attrFlag_DiskTransient | attrFlag_NetworkTransient | attrFlag_ExportTransient)
 
 // If an attribute starts with "load_" or "save_" then these flags are set to indicate there
 // are custom loading functions assigned
-#define attrFlag_CustomLoad 0x00000004
-#define attrFlag_CustomSave 0x00000008
+#define attrFlag_CustomLoad 0x00000008
+#define attrFlag_CustomSave 0x00000010
 
 // Function to call before saving an object, specified with "pre_save" attribute
-#define attrFlag_PreSave 0x00000010
+#define attrFlag_PreSave 0x00000020
 
 // Function to call after loading an object, specified with "post_load" attribute
-#define attrFlag_PostLoad 0x00000020
+#define attrFlag_PostLoad 0x00000040
 
 // Mark classes or fields to be network-replicated
-#define attrFlag_Replicate 0x00000040
+#define attrFlag_Replicate 0x00000080
 
 // ===============================================================================
 //                Core Functionality Required by the Runtime C++ API
