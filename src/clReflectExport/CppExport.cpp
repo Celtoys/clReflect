@@ -744,7 +744,7 @@ namespace
         // Cache attribute names
         static unsigned int disk_transient_hash = clcpp::internal::HashNameString("disk_transient");
         static unsigned int network_transient_hash = clcpp::internal::HashNameString("network_transient");
-        static unsigned int replicate_transient_hash = clcpp::internal::HashNameString("replicate_transient_hash");
+        static unsigned int replicate_transient_hash = clcpp::internal::HashNameString("replicate_transient");
         static unsigned int export_transient_hash = clcpp::internal::HashNameString("export_transient");
         static unsigned int transient_hash = clcpp::internal::HashNameString("transient");
         static unsigned int pre_save_hash = clcpp::internal::HashNameString("pre_save");
