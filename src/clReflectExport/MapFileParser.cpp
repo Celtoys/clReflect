@@ -413,7 +413,13 @@ namespace
         UnDecorateSymbolName(token, function_signature, sizeof(function_signature),
                              UNDNAME_COMPLETE | UNDNAME_NO_ACCESS_SPECIFIERS | UNDNAME_NO_ALLOCATION_MODEL |
                                  UNDNAME_NO_MEMBER_TYPE | UNDNAME_NO_SPECIAL_SYMS | UNDNAME_NO_THROW_SIGNATURES);
-        return function_signature;
+
+        // Remove these prefixes as a post-process as there's no undecorate config option
+        std::string function_signature_str = function_signature;
+        function_signature_str = StringReplace(function_signature_str, "struct ", "");
+        function_signature_str = StringReplace(function_signature_str, "class ", "");
+
+        return function_signature_str;
     }
 
     clcpp::pointer_type ParseAddressField(const char* line, const char* function_name)
