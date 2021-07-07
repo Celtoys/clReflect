@@ -92,11 +92,24 @@ void* clutl::ParameterObjectCache::AllocParameter(const clcpp::Field* field)
     void* param_object = m_Data.Alloc(param_size);
 
     // Call any class constructors
-    if (field->type->kind == clcpp::Primitive::KIND_CLASS && field->qualifier.op != clcpp::Qualifier::POINTER)
+    if (field->qualifier.op != clcpp::Qualifier::POINTER)
     {
-        const clcpp::Class* class_type = field->type->AsClass();
-        if (class_type->constructor)
-            CallFunction(class_type->constructor, param_object);
+        if (field->type->kind == clcpp::Primitive::KIND_CLASS)
+        {
+            const clcpp::Class* class_type = field->type->AsClass();
+            if (class_type->constructor != nullptr)
+            {
+                CallFunction(class_type->constructor, param_object);
+            }
+        }
+        else if (field->type->kind == clcpp::Primitive::KIND_TEMPLATE_TYPE)
+        {
+            const clcpp::TemplateType* template_type = field->type->AsTemplateType();
+            if (template_type->constructor != nullptr)
+            {
+                CallFunction(template_type->constructor, param_object);
+            }
+        }
     }
 
     // Keep track of the parameter before its written to
@@ -112,11 +125,24 @@ void clutl::ParameterObjectCache::DeleteObjects()
     for (unsigned int i = 0; i < nb_params; i++)
     {
         const ParameterData::ParamDesc& param = m_Parameters.GetParameter(i);
-        if (param.type->kind == clcpp::Primitive::KIND_CLASS && param.op != clcpp::Qualifier::POINTER)
+        if (param.op != clcpp::Qualifier::POINTER)
         {
-            const clcpp::Class* class_type = param.type->AsClass();
-            if (class_type->destructor)
-                CallFunction(class_type->destructor, param.object);
+            if (param.type->kind == clcpp::Primitive::KIND_CLASS)
+            {
+                const clcpp::Class* class_type = param.type->AsClass();
+                if (class_type->destructor != nullptr)
+                {
+                    CallFunction(class_type->destructor, param.object);
+                }
+            }
+            else if (param.type->kind == clcpp::Primitive::KIND_TEMPLATE_TYPE)
+            {
+                const clcpp::TemplateType* template_type = param.type->AsTemplateType();
+                if (template_type->destructor != nullptr)
+                {
+                    CallFunction(template_type->destructor, param.object);
+                }
+            }
         }
     }
 }
