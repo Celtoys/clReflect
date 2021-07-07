@@ -739,6 +739,45 @@ namespace
         }
     }
 
+    void FindTemplateTypeConstructors(CppExport& cppexp)
+    {
+        // Template Types don't yet store their methods as that increases memory use quite a bit
+        // That means, unlike FindClassConstructors, there is no per template-type method list to search
+        // Instead, populate a function map for quick lookup
+        std::map<uint32_t, clcpp::Function*> function_map;
+        clcpp::CArray<clcpp::Function>& functions = cppexp.db->functions;
+        for (unsigned int i = 0; i < functions.size; i++)
+        {
+            clcpp::Function& function = functions[i];
+            function_map.insert({function.name.hash, &function});
+        }
+
+        clcpp::CArray<clcpp::TemplateType>& types = cppexp.db->template_types;
+        for (unsigned int i = 0; i < types.size; i++)
+        {
+            clcpp::TemplateType& type = types[i];
+
+            std::string construct_name = std::string(type.name.text) + "::ConstructObject";
+            std::string destruct_name = std::string(type.name.text) + "::DestructObject";
+            unsigned int construct_hash = clcpp::internal::HashNameString(construct_name.c_str());
+            unsigned int destruct_hash = clcpp::internal::HashNameString(destruct_name.c_str());
+
+            // Lookup in the local function map
+            auto constructor = function_map.find(construct_hash);
+            if (constructor != function_map.end())
+            {
+                type.constructor = constructor->second;
+                constructor->second->parent = &type;
+            }
+            auto destructor = function_map.find(destruct_hash);
+            if (destructor != function_map.end())
+            {
+                type.destructor = destructor->second;
+                destructor->second->parent = &type;
+            }
+        }
+    }
+
     unsigned int GetFlagAttributeBits(const clcpp::CArray<const clcpp::Attribute*>& attributes)
     {
         // Cache attribute names
@@ -1157,6 +1196,7 @@ bool BuildCppExport(const cldb::Database& db, CppExport& cppexp)
     // each class and make pointers to these in the class. This is done after sorting so that
     // local searches can take advantage of clcpp::FindPrimitive.
     FindClassConstructors(cppexp);
+    FindTemplateTypeConstructors(cppexp);
 
     // For each attribute array in a primitive, calculate a 32-bit value that represents all
     // common flag attributes applied to that primitive.
@@ -1211,6 +1251,8 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 
     // Construct schemas for all memory-mapped clcpp types
 
+    // clang-format off
+
     PtrSchema& schema_database =
         relocator.AddSchema<clcpp::internal::DatabaseMem>()
         (&clcpp::internal::DatabaseMem::name_text_data)
@@ -1241,11 +1283,13 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
 
     PtrSchema& schema_name = relocator.AddSchema<clcpp::Name>()(&clcpp::Name::text);
 
-    PtrSchema& schema_primitive =
-        relocator.AddSchema<clcpp::Primitive>()(&clcpp::Name::text, name_offset_in_primitive)(&clcpp::Primitive::parent);
+    PtrSchema& schema_primitive = relocator.AddSchema<clcpp::Primitive>()
+        (&clcpp::Name::text, name_offset_in_primitive)
+        (&clcpp::Primitive::parent);
 
-    PtrSchema& schema_type =
-        relocator.AddSchema<clcpp::Type>(&schema_primitive)(&clcpp::Type::base_types, array_ofs)(&clcpp::Type::ci);
+    PtrSchema& schema_type = relocator.AddSchema<clcpp::Type>(&schema_primitive)
+        (&clcpp::Type::base_types, array_ofs)
+        (&clcpp::Type::ci);
 
     PtrSchema& schema_enum_constant = relocator.AddSchema<clcpp::EnumConstant>(&schema_primitive);
 
@@ -1258,14 +1302,23 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
     PtrSchema& schema_function = relocator.AddSchema<clcpp::Function>(&schema_primitive)(&clcpp::Function::return_parameter)(
         &clcpp::Function::parameters, array_ofs)(&clcpp::Function::attributes, array_ofs);
 
-    PtrSchema& schema_class =
-        relocator.AddSchema<clcpp::Class>(&schema_type)(&clcpp::Class::constructor)(&clcpp::Class::destructor)(
-            &clcpp::Class::enums, array_ofs)(&clcpp::Class::classes, array_ofs)(&clcpp::Class::methods, array_ofs)(
-            &clcpp::Class::fields, array_ofs)(&clcpp::Class::attributes, array_ofs)(&clcpp::Class::templates, array_ofs);
+    PtrSchema& schema_class = relocator.AddSchema<clcpp::Class>(&schema_type)
+        (&clcpp::Class::constructor)
+        (&clcpp::Class::destructor)
+        (&clcpp::Class::enums, array_ofs)
+        (&clcpp::Class::classes, array_ofs)
+        (&clcpp::Class::methods, array_ofs)
+        (&clcpp::Class::fields, array_ofs)
+        (&clcpp::Class::attributes, array_ofs)
+        (&clcpp::Class::templates, array_ofs);
 
-    PtrSchema& schema_template_type = relocator.AddSchema<clcpp::TemplateType>(&schema_type)(
-        &clcpp::TemplateType::parameter_types, sizeof(void*) * 0)(&clcpp::TemplateType::parameter_types, sizeof(void*) * 1)(
-        &clcpp::TemplateType::parameter_types, sizeof(void*) * 2)(&clcpp::TemplateType::parameter_types, sizeof(void*) * 3);
+    PtrSchema& schema_template_type = relocator.AddSchema<clcpp::TemplateType>(&schema_type)
+        (&clcpp::TemplateType::constructor)
+        (&clcpp::TemplateType::destructor)
+        (&clcpp::TemplateType::parameter_types, sizeof(void*) * 0)
+        (&clcpp::TemplateType::parameter_types, sizeof(void*) * 1)
+        (&clcpp::TemplateType::parameter_types, sizeof(void*) * 2)
+        (&clcpp::TemplateType::parameter_types, sizeof(void*) * 3);
 
     PtrSchema& schema_template = relocator.AddSchema<clcpp::Template>(&schema_primitive)(&clcpp::Template::instances, array_ofs);
 
@@ -1286,6 +1339,8 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
     PtrSchema& schema_container_info =
         relocator.AddSchema<clcpp::ContainerInfo>()(&clcpp::Name::text, name_offset_in_container_info)(
             &clcpp::ContainerInfo::read_iterator_type)(&clcpp::ContainerInfo::write_iterator_type);
+
+    // clang-format on
 
     // Add pointers from the base database object
     relocator.AddPointers(schema_database, cppexp.db);

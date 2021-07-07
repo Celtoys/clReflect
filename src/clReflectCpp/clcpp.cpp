@@ -527,6 +527,8 @@ clcpp::Function::Function()
 
 clcpp::TemplateType::TemplateType()
     : Type(KIND)
+    , constructor(0)
+    , destructor(0)
 {
     for (int i = 0; i < MAX_NB_ARGS; i++)
     {

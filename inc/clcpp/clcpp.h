@@ -809,6 +809,7 @@ namespace clcpp
     // They don't specify the primitives contained within as these can vary between instantiation,
     // leading to prohibitive memory requirements.
     //
+    // TODO(don): This should probably just derive from clcpp::Class to inherit constructor/destructor use
     struct CLCPP_API clcpp_attr(reflect_part) TemplateType : public Type
     {
         static const Kind KIND = KIND_TEMPLATE_TYPE;
@@ -816,6 +817,9 @@ namespace clcpp
         static const int MAX_NB_ARGS = 4;
 
         TemplateType();
+
+        const Function* constructor;
+        const Function* destructor;
 
         // A pointer to the type of each template argument
         const Type* parameter_types[MAX_NB_ARGS];
