@@ -391,6 +391,19 @@ namespace
         Remove(info.type_name, "struct ");
         Remove(info.type_name, "class ");
 
+        // I'm not sure what's going on internally here with the Clang API but the type name interface has changed again since
+        // updating so it's unclear what expected behaviour is. Given the following function:
+        //
+        //    void Do(Container<Type*>);
+        //
+        // type strings returned by clang are either Container<Type*> or Container<Type *>. It appears to be linked to whether
+        // the TU has access to the function definition but I can't be entirely sure of the behaviour, especially as there seems
+        // to be no means (in the current version) of changing that behaviour.
+        //
+        // Anyway, the workaround is to just replace the case we don't want.
+        info.type_name = StringReplace(info.type_name, " *", "*");
+        info.type_name = StringReplace(info.type_name, " &", "&");
+
         return Status();
     }
 
