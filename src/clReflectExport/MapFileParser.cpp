@@ -96,7 +96,7 @@ namespace
             // Check for any type prefixes
             else if (!strcmp(token, "unsigned") || !strcmp(token, "signed"))
             {
-                strcpy(type_name, token);
+                strcat(type_name, token);
                 strcat(type_name, " ");
             }
 
