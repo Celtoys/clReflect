@@ -28,15 +28,15 @@ namespace
 {
     struct PtrSchema
     {
-        clcpp::size_type stride;
-        clcpp::size_type ptrs_offset;
-        clcpp::size_type nb_ptrs;
+        size_t stride;
+        size_t ptrs_offset;
+        size_t nb_ptrs;
     };
 
     struct PtrRelocation
     {
         int schema_handle;
-        clcpp::size_type offset;
+        size_t offset;
         int nb_objects;
     };
 
@@ -217,7 +217,7 @@ namespace
             return 0;
 
         // Read the pointer offsets for all the schemas
-        clcpp::CArray<clcpp::size_type> ptr_offsets;
+        clcpp::CArray<size_t> ptr_offsets;
         if (!ReadArray(file, ptr_offsets, file_header.nb_ptr_offsets, allocator))
             return 0;
 
@@ -233,20 +233,20 @@ namespace
             PtrSchema& schema = (PtrSchema&)schemas[reloc.schema_handle];
 
             // Take a weak C-array pointer to the schema's pointer offsets (for bounds checking)
-            clcpp::CArray<clcpp::size_type> schema_ptr_offsets;
-            schema_ptr_offsets.data = (clcpp::size_type*)&ptr_offsets[schema.ptrs_offset];
-            schema_ptr_offsets.size = schema.nb_ptrs;
+            clcpp::CArray<size_t> schema_ptr_offsets;
+            schema_ptr_offsets.data = (size_t*)&ptr_offsets[schema.ptrs_offset];
+            schema_ptr_offsets.size = static_cast<unsigned int>(schema.nb_ptrs);
 
             // Iterate over all objects in the instruction
             for (int j = 0; j < reloc.nb_objects; j++)
             {
-                clcpp::size_type object_offset = reloc.offset + j * schema.stride;
+                size_t object_offset = reloc.offset + static_cast<size_t>(j) * schema.stride;
 
                 // All pointers in the schema
-                for (clcpp::size_type k = 0; k < schema.nb_ptrs; k++)
+                for (size_t k = 0; k < schema.nb_ptrs; k++)
                 {
-                    clcpp::size_type ptr_offset = object_offset + schema_ptr_offsets[k];
-                    clcpp::size_type& ptr = (clcpp::size_type&)*(base_data + ptr_offset);
+                    size_t ptr_offset = object_offset + schema_ptr_offsets[k];
+                    size_t& ptr = (size_t&)*(base_data + ptr_offset);
 
                     // Ensure the pointer relocation is within range of the memory map before patching
                     clcpp::internal::Assert(ptr <= file_header.data_size);

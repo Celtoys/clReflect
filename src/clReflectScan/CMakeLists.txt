@@ -32,7 +32,6 @@ link_directories("${LLVM_BASE_LIB_DIR}")
 add_clreflect_executable(clReflectScan
   ASTConsumer.cpp
   AttributeParser.cpp
-  ClangFrontend.cpp
   Main.cpp
   ReflectionSpecs.cpp
   )
