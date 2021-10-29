@@ -188,26 +188,14 @@ namespace
 
 	unsigned int Log2(unsigned int v)
 	{
-#ifdef _MSC_VER
-		// Branchless, taking into account v=0, x86 specific
-		_asm
-		{
-			mov eax, v
-			mov ebx, -1
-			bsr eax, eax
-			cmovz eax, ebx
-			mov v, eax
-		}
-#else
-        // we provides a c implementation here since we may compile on llvm
         if (v == 0)
         {
             v = -1;
-        } else
-        {
-            v = sizeof(unsigned int) * 8 - 1 - __builtin_clz(v);
         }
-#endif  // _MSC_VER
+        else
+        {
+            v = sizeof(unsigned int) * 8 - 1 - __lzcnt(v);
+        }
 		return v;
 	}
 }

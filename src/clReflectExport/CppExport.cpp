@@ -15,7 +15,7 @@
 //
 
 #include "CppExport.h"
-#include "PtrRelocator.h"
+
 
 #include <clReflectCore/Database.h>
 #include <clReflectCore/FileUtils.h>
@@ -23,7 +23,7 @@
 
 #include <clcpp/clcpp.h>
 #include <clcpp/clcpp_internal.h>
-
+#include "PtrRelocator.h"
 #include <algorithm>
 #include <string.h>
 
@@ -1443,16 +1443,16 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
     header.nb_ptr_relocations = relocations.size();
     header.data_size = cppexp.allocator.GetAllocatedSize();
     fwrite(&header, sizeof(header), 1, fp);
-
+    
     // Write the complete memory map
     fwrite(cppexp.allocator.GetData(), cppexp.allocator.GetAllocatedSize(), 1, fp);
 
     // Write the stride of each schema and the location of their pointers
-    size_t ptrs_offset = 0;
+    clcpp::pointer_type ptrs_offset = 0;
     for (size_t i = 0; i < schemas.size(); i++)
     {
         const PtrSchema& s = *schemas[i];
-        size_t nb_ptrs = s.ptr_offsets.size();
+        decltype(s.ptr_offsets)::size_type nb_ptrs = s.ptr_offsets.size();
         fwrite(&s.stride, sizeof(s.stride), 1, fp);
         fwrite(&ptrs_offset, sizeof(ptrs_offset), 1, fp);
         fwrite(&nb_ptrs, sizeof(nb_ptrs), 1, fp);
@@ -1463,11 +1463,12 @@ void SaveCppExport(CppExport& cppexp, const char* filename)
     for (size_t i = 0; i < schemas.size(); i++)
     {
         const PtrSchema& s = *schemas[i];
-        fwrite(&s.ptr_offsets.front(), sizeof(size_t), s.ptr_offsets.size(), fp);
+        
+        fwrite(&(s.ptr_offsets.front()), sizeof(decltype(s.ptr_offsets)::value_type) * s.ptr_offsets.size(), 1, fp);
     }
 
     // Write the relocations
-    fwrite(&relocations.front(), sizeof(PtrRelocation), relocations.size(), fp);
+    fwrite(&(relocations.front()), sizeof(PtrRelocation) * relocations.size(), 1, fp);
 
     fclose(fp);
 }
