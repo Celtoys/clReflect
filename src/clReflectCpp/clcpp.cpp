@@ -235,12 +235,12 @@ namespace
             // Take a weak C-array pointer to the schema's pointer offsets (for bounds checking)
             clcpp::CArray<size_t> schema_ptr_offsets;
             schema_ptr_offsets.data = (size_t*)&ptr_offsets[schema.ptrs_offset];
-            schema_ptr_offsets.size = static_cast<unsigned int>(schema.nb_ptrs);
+            schema_ptr_offsets.size = (unsigned int)schema.nb_ptrs;
 
             // Iterate over all objects in the instruction
             for (int j = 0; j < reloc.nb_objects; j++)
             {
-                size_t object_offset = reloc.offset + static_cast<size_t>(j) * schema.stride;
+                size_t object_offset = reloc.offset + (size_t)j * schema.stride;
 
                 // All pointers in the schema
                 for (size_t k = 0; k < schema.nb_ptrs; k++)
