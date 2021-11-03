@@ -303,7 +303,7 @@ CLCPP_API void clcpp::internal::Assert(bool expression)
 {
     if (expression == false)
     {
-#ifdef CLCPP_USING_MSVC
+#if defined(CLCPP_USING_MSVC) && defined(_M_IX86)
         __asm
         {
             int 3h
