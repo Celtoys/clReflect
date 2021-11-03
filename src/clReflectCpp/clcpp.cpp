@@ -303,7 +303,9 @@ CLCPP_API void clcpp::internal::Assert(bool expression)
 {
     if (expression == false)
     {
-#if defined(CLCPP_USING_MSVC) && defined(_M_IX86)
+#if defined(_M_IX86)
+
+#if defined(CLCPP_USING_MSVC)
         __asm
         {
             int 3h
@@ -311,6 +313,8 @@ CLCPP_API void clcpp::internal::Assert(bool expression)
 #else
         asm("int $0x3\n");
 #endif // CLCPP_USING_MSVC
+
+#endif
 
 // Leave the program with no continuation
 // Don't want people attaching the debugger and skipping over the break
