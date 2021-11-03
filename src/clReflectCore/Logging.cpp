@@ -18,8 +18,8 @@
 #include <map>
 
 
-#if defined(_MSC_VER)
-#include "immintrin.h"
+#if defined(_MSC_VER) && !defined(_M_IX86)
+    #include "immintrin.h"
 #endif
 
 namespace
@@ -213,10 +213,10 @@ namespace
 		{
 
 			v = sizeof(unsigned int) * 8 - 1
-#if defined(__GNUC__)  || defined( __clang__)
-				-__builtin_ia32_lzcnt_u32(v); // this require "-mlzcnt" compiler option
-#elif defined(_MSC_VER)
-				-_lzcnt_u32(v);
+#if defined(_MSC_VER) 
+				- _lzcnt_u32(v);
+#else
+                - __builtin_clz(v);
 #endif
 		}
 

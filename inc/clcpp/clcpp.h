@@ -196,7 +196,7 @@ namespace clcpp
 //
 // Placement new for the PtrWrapper logic specified above, which required matching delete
 //
-inline void* operator new(size_t size, const clcpp::internal::PtrWrapper& p)
+inline void* operator new(clcpp::size_type size, const clcpp::internal::PtrWrapper& p)
 {
     return (void*)&p;
 }
