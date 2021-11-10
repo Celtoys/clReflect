@@ -237,6 +237,7 @@ logging::StreamHandle logging::GetStreamHandle(const char* name)
 	return &g_StreamMap[name];
 }
 
+#define CL_MIN(a,b) (((a)<(b))?(a):(b))
 
 void logging::Log(StreamHandle handle, Tag tag, bool do_prefix, const char* format, ...)
 {
@@ -259,11 +260,11 @@ void logging::Log(StreamHandle handle, Tag tag, bool do_prefix, const char* form
 		if (tag == TAG_INFO)
 		{
 			// Kick the prefix off with indent characters
-			for (int i = 0; i < stream_set->indent_depth; i++)
+			for (int i = 0; i < CL_MIN(stream_set->indent_depth, 127); i++)
 			{
 				prefix[i] = '\t';
 			}
-			prefix[stream_set->indent_depth] = 0;
+			prefix[CL_MIN(stream_set->indent_depth, 127)] = 0;
 		}
 
 		// Add any tag annotations
