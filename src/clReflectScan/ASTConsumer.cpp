@@ -900,9 +900,7 @@ void ASTConsumer::AddEnumDecl(clang::NamedDecl* decl, const std::string& name, c
 
         // Clang doesn't construct the enum name as a C++ compiler would see it so do that first
         // NOTE: May want to revisit this later
-        std::string constant_name = constant_decl->getNameAsString();
-        if (parent_name != "")
-            constant_name = parent_name + "::" + constant_name;
+        std::string constant_name = name + constant_decl->getNameAsString();
 
         // Add to the database
         m_DB.AddPrimitive(cldb::EnumConstant(m_DB.GetName(constant_name.c_str()), m_DB.GetName(name.c_str()), value_int));
