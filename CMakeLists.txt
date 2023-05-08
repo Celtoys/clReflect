@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 2.8)
-project(clReflect)
+cmake_minimum_required(VERSION 3.0)
+project(clReflect] VERSION 0.5.12)
 
 # Add path for custom modules
 set(CMAKE_MODULE_PATH

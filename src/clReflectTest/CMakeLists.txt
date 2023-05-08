@@ -26,12 +26,10 @@ target_link_libraries(clReflectTest
 # Map file handling
 option(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST "Generate map file for test" ON)
 if(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
-  get_property(CL_REFLECT_TEST_EXECUTABLE TARGET clReflectTest PROPERTY LOCATION)
-
   # generates map file
   if (MSVC)
     # Generates path for map file
-    string(REPLACE ".exe" ".map" CL_REFLECT_TEST_MAP ${CL_REFLECT_TEST_EXECUTABLE})
+    string(REPLACE ".exe" ".map" CL_REFLECT_TEST_MAP "$<TARGET_FILE:clReflectTest>")
 
     # From what I see, currently cmake can set the map link flags,
     # but cmake does not support appending customized map file name(I may
@@ -44,7 +42,7 @@ if(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
 
   if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
     # On Linux/Mac, executables have no extensions
-    set(CL_REFLECT_TEST_MAP "${CL_REFLECT_TEST_EXECUTABLE}.map")
+    set(CL_REFLECT_TEST_MAP "$<TARGET_FILE:clReflectTest>.map")
 
     if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
       set(CL_REFLECT_TEST_MAP_CMD_ARGUMENT "-Wl,-map,${CL_REFLECT_TEST_MAP}")
