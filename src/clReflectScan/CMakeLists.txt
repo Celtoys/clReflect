@@ -12,8 +12,8 @@ endif (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
 set(LLVM_BUILD_DIR ${LLVM_BUILD_DIR_PREDICTION}
   CACHE PATH "Path to LLVM build.")
 
-Include_directories("${LLVM_INSTALL_DIR}/include/")
-include_directories("${LLVM_INSTALL_DIR}/tools/clang/include")
+Include_directories("${LLVM_INSTALL_DIR}/llvm/include/")
+include_directories("${LLVM_INSTALL_DIR}/clang/include")
 include_directories("${LLVM_BUILD_DIR}/include/")
 include_directories("${LLVM_BUILD_DIR}/tools/clang/include")
 
