@@ -309,7 +309,7 @@ CLCPP_API void clcpp::internal::Assert(bool expression)
             int 3h
         }
 #else
-        asm("int $0x3\n");
+    __builtin_debugtrap()
 #endif // CLCPP_USING_MSVC
 
 // Leave the program with no continuation
