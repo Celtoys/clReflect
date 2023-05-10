@@ -4,18 +4,17 @@
 set(LLVM_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../extern/llvm"
   CACHE PATH "Path to LLVM source.")
 
-set(LLVM_BUILD_DIR_PREDICTION "${CMAKE_CURRENT_SOURCE_DIR}/../../extern/llvm-build")
-if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
-  set(LLVM_BUILD_DIR_PREDICTION "${CMAKE_CURRENT_SOURCE_DIR}/../../extern/llvm-build-gnu")
-endif (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
+cmake_policy(SET CMP0057 NEW)
 
-set(LLVM_BUILD_DIR ${LLVM_BUILD_DIR_PREDICTION}
-  CACHE PATH "Path to LLVM build.")
+set( LLVM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../extern/llvm-build-gnu/lib/cmake/llvm" )
+set( CLANG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../extern/llvm-build-gnu/lib/cmake/clang" )
 
-Include_directories("${LLVM_INSTALL_DIR}/llvm/include/")
-include_directories("${LLVM_INSTALL_DIR}/clang/include")
-include_directories("${LLVM_BUILD_DIR}/include/")
-include_directories("${LLVM_BUILD_DIR}/tools/clang/include")
+find_package(LLVM REQUIRED CONFIG)
+find_package(CLANG REQUIRED CONFIG)
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+message(STATUS "Found CLANG ${CLANG_PACKAGE_VERSION}")
+message(STATUS "Using ClangConfig.cmake in: ${CLANG_DIR}")
 
 if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
   # GCC/Clang flags for stdint.h types
@@ -28,6 +27,16 @@ if (MSVC)
 endif (MSVC)
 
 link_directories("${LLVM_BASE_LIB_DIR}")
+
+## LLVM
+include_directories(${LLVM_INCLUDE_DIRS})
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+add_definitions(${LLVM_DEFINITIONS_LIST})
+
+# Clang
+include_directories(${CLANG_INCLUDE_DIRS})
+separate_arguments(CLANG_DEFINITIONS_LIST NATIVE_COMMAND ${CLANG_DEFINITIONS})
+add_definitions(${CLANG_DEFINITIONS_LIST})
 
 add_clreflect_executable(clReflectScan
   ASTConsumer.cpp
@@ -47,9 +56,7 @@ set(CL_REFLECT_SCAN_LIBS
   clangDriver
   clangAST
   clangEdit
-  LLVMSupport
-  LLVMCore
-  LLVMMC
+  clangTooling
   )
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
@@ -64,3 +71,8 @@ target_link_libraries(clReflectScan
   ${CL_REFLECT_SCAN_LIBS}
   ${CMAKE_DL_LIBS}
   )
+  
+# Find the LLVM libraries that correspond to the LLVM components
+# that we wish to use
+llvm_map_components_to_libnames(llvm_libs support core mc x86asmparser x86codegen )
+target_link_libraries(clReflectScan ${llvm_libs})
