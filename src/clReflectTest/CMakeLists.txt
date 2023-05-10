@@ -60,7 +60,7 @@ endif()
 # add project include path
 get_property(inc_dirs DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
 foreach(inc ${inc_dirs})
-  set(GEN_CPPBIN_INCLUDE_PATH ${GEN_CPPBIN_INCLUDE_PATH} -i ${inc})
+  set(GEN_CPPBIN_INCLUDE_PATH ${GEN_CPPBIN_INCLUDE_PATH} -I ${inc})
 endforeach(inc)
 
 # add system include path
@@ -85,7 +85,7 @@ if ((${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
 endif ()
 
 foreach(sys_inc ${sys_inc_dirs})
-  set(GEN_CPPBIN_INCLUDE_PATH ${GEN_CPPBIN_INCLUDE_PATH} -i ${sys_inc})
+  set(GEN_CPPBIN_INCLUDE_PATH ${GEN_CPPBIN_INCLUDE_PATH} -I ${sys_inc})
 endforeach(sys_inc)
 
 foreach(src_file ${CL_REFLECT_TEST_SOURCES})
@@ -100,6 +100,7 @@ foreach(src_file ${CL_REFLECT_TEST_SOURCES})
     -output ${CL_REFLECT_GEN_DIRECTORY}/${csv_file}
     -ast_log ${CL_REFLECT_GEN_DIRECTORY}/${astlog_file}
     -spec_log ${CL_REFLECT_GEN_DIRECTORY}/${speclog_file}
+    --
     ${GEN_CPPBIN_INCLUDE_PATH}
     DEPENDS clReflectScan ${src_file})
 
