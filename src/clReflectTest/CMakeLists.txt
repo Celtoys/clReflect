@@ -50,8 +50,7 @@ if(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
       set(CL_REFLECT_TEST_MAP_CMD_ARGUMENT "-Wl,-Map,${CL_REFLECT_TEST_MAP}")
     endif()
 
-    set_target_properties(clReflectTest PROPERTIES LINK_FLAGS
-      "${CL_REFLECT_TEST_MAP_CMD_ARGUMENT}")
+    target_link_options(clReflectTest PRIVATE "${CL_REFLECT_TEST_MAP_CMD_ARGUMENT}")
   endif (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
 
   # uses map file during exporting
