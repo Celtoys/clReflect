@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(clReflect] VERSION 0.5.12)
+project(clReflect] LANGUAGES CXX VERSION 0.5.12)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
