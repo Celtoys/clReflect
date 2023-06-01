@@ -47,7 +47,7 @@ namespace Funcs
 		wb.WriteStr(data);
 
 		clutl::ReadBuffer rb(wb);
-		if (!clutl::BuildParameterObjectCache_JSON(poc, function, rb))
+		if (!clutl::BuildParameterObjectCache_JSON(poc, function, rb, 0))
 			printf("   FAILED\n");
 		else
 		{

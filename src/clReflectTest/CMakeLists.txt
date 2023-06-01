@@ -26,12 +26,10 @@ target_link_libraries(clReflectTest
 # Map file handling
 option(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST "Generate map file for test" ON)
 if(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
-  get_property(CL_REFLECT_TEST_EXECUTABLE TARGET clReflectTest PROPERTY LOCATION)
-
   # generates map file
   if (MSVC)
     # Generates path for map file
-    string(REPLACE ".exe" ".map" CL_REFLECT_TEST_MAP ${CL_REFLECT_TEST_EXECUTABLE})
+    string(REPLACE ".exe" ".map" CL_REFLECT_TEST_MAP "$<TARGET_FILE:clReflectTest>")
 
     # From what I see, currently cmake can set the map link flags,
     # but cmake does not support appending customized map file name(I may
@@ -44,7 +42,7 @@ if(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
 
   if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
     # On Linux/Mac, executables have no extensions
-    set(CL_REFLECT_TEST_MAP "${CL_REFLECT_TEST_EXECUTABLE}.map")
+    set(CL_REFLECT_TEST_MAP "$<TARGET_FILE:clReflectTest>.map")
 
     if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
       set(CL_REFLECT_TEST_MAP_CMD_ARGUMENT "-Wl,-map,${CL_REFLECT_TEST_MAP}")
@@ -52,8 +50,7 @@ if(CL_REFLECT_GENERATE_MAP_FILE_FOR_TEST)
       set(CL_REFLECT_TEST_MAP_CMD_ARGUMENT "-Wl,-Map,${CL_REFLECT_TEST_MAP}")
     endif()
 
-    set_target_properties(clReflectTest PROPERTIES LINK_FLAGS
-      "${CL_REFLECT_TEST_MAP_CMD_ARGUMENT}")
+    target_link_options(clReflectTest PRIVATE "${CL_REFLECT_TEST_MAP_CMD_ARGUMENT}")
   endif (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_CLANGXX)
 
   # uses map file during exporting
@@ -63,7 +60,7 @@ endif()
 # add project include path
 get_property(inc_dirs DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
 foreach(inc ${inc_dirs})
-  set(GEN_CPPBIN_INCLUDE_PATH ${GEN_CPPBIN_INCLUDE_PATH} -i ${inc})
+  set(GEN_CPPBIN_INCLUDE_PATH ${GEN_CPPBIN_INCLUDE_PATH} -I ${inc})
 endforeach(inc)
 
 # add system include path
@@ -88,7 +85,7 @@ if ((${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
 endif ()
 
 foreach(sys_inc ${sys_inc_dirs})
-  set(GEN_CPPBIN_INCLUDE_PATH ${GEN_CPPBIN_INCLUDE_PATH} -i ${sys_inc})
+  set(GEN_CPPBIN_INCLUDE_PATH ${GEN_CPPBIN_INCLUDE_PATH} -I ${sys_inc})
 endforeach(sys_inc)
 
 foreach(src_file ${CL_REFLECT_TEST_SOURCES})
@@ -103,6 +100,7 @@ foreach(src_file ${CL_REFLECT_TEST_SOURCES})
     -output ${CL_REFLECT_GEN_DIRECTORY}/${csv_file}
     -ast_log ${CL_REFLECT_GEN_DIRECTORY}/${astlog_file}
     -spec_log ${CL_REFLECT_GEN_DIRECTORY}/${speclog_file}
+    --
     ${GEN_CPPBIN_INCLUDE_PATH}
     DEPENDS clReflectScan ${src_file})
 

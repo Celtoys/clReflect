@@ -1,5 +1,8 @@
-cmake_minimum_required(VERSION 2.8)
-project(clReflect)
+cmake_minimum_required(VERSION 3.0)
+project(clReflect] VERSION 0.5.12)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add path for custom modules
 set(CMAKE_MODULE_PATH
@@ -33,7 +36,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CL_REFLECT_LIB_DIRECTORY}")
 file(MAKE_DIRECTORY "${CL_REFLECT_GEN_DIRECTORY}")
 
 # Test for clang
-if (CMAKE_CXX_COMPILER MATCHES ".*clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if (CMAKE_CXX_COMPILER MATCHES ".*clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
   set(CMAKE_COMPILER_IS_CLANGXX 1)
 endif ()
 

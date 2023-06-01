@@ -268,6 +268,11 @@ namespace
 void cldb::WriteTextDatabase(const char* filename, const Database& db)
 {
 	FILE* fp = fopen(filename, "w");
+	if( !fp )
+	{
+		printf("Failed to open database file for writing: %s\n", filename );
+		exit(1);
+	}
 
 	// Write the header
 	fputs("\nclReflect Database\n", fp);

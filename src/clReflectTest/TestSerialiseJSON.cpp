@@ -38,7 +38,7 @@ namespace
 		write_buffer.Write(test, strlen(test));
 		clutl::ReadBuffer read_buffer(write_buffer);
 
-		clutl::JSONError error = clutl::LoadJSON(read_buffer, 0, (clcpp::Type*)0);
+		clutl::JSONError error = clutl::LoadJSON(read_buffer, 0, (clcpp::Type*)0, 0);
 		if (error.code == clutl::JSONError::NONE)
 		{
 			printf("PASS\n");
@@ -414,10 +414,10 @@ void TestSerialiseJSON(clcpp::Database& db)
 
 	clutl::WriteBuffer write_buffer;
 	jsontest::AllFields a;
-	clutl::SaveJSON(write_buffer, &a, clcpp::GetType<jsontest::AllFields>(), 0, clutl::JSONFlags::EMIT_HEX_FLOATS);
+	clutl::SaveJSON(write_buffer, &a, clcpp::GetType<jsontest::AllFields>(), 0, clutl::JSONFlags::EMIT_HEX_FLOATS, 0);
 	clutl::ReadBuffer read_buffer(write_buffer);
 	jsontest::AllFields b(jsontest::NO_INIT);
-	clutl::LoadJSON(read_buffer, &b, clcpp::GetType<jsontest::AllFields>());
+	clutl::LoadJSON(read_buffer, &b, clcpp::GetType<jsontest::AllFields>(), 0);
 
 	if (a == b)
 		printf("STRUCT PASS!\n");
